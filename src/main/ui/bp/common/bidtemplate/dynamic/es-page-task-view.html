@@ -1,0 +1,69 @@
+<dom-module id="es-page-task-view">
+	<template>
+<!-- 		<h4 style="fontSize:15px; padding:5px 5px 5px 0">TASK명 : [[taskName]]</h4> -->
+		<content></content>
+	</template>
+	<script>
+		CCWorkFlowView = Polymer({
+	    	
+			is: 'es-page-task-view',
+	    	properties: {
+				taskId : {
+					type: String,
+					reflectToAttribute: true
+				},
+				taskName : {
+					type : String
+				},
+				moduleUrl : {
+					type : String
+				},
+				params: {
+					type: Object
+				},
+			},
+			loadModule : function() {
+				var me = this,
+					success = function(moduleId) {
+						var module = document.createElement(moduleId);
+
+                        var initializedHandler = function() {
+                            me.module = module; //sc-mdi-window의 module 프로퍼티에 담아서 사용
+                            me.unlisten(module, "initialized", initializedHandler);
+                            if(module.load){
+        						me.callModuleLoadFunction();
+        					}else{
+        						//구현용 경고창
+        						console.warn('module에 load함수가 구현되어있지 않습니다.')
+        					}
+                        }
+                        me.listen(module, "initialized", initializedHandler);
+                        Polymer.dom(me).appendChild(module);
+                        Polymer.dom.flush();
+                    },
+					failure = function(event) {
+                    	//SCLoadMask.hide();
+						console.error("Wrong url...");
+					};
+					var importUrl = me.moduleUrl;
+					me.importLink(importUrl, success, failure);
+			},
+            callModuleLoadFunction : function(param){
+            	var me = this;
+            	if(me.module){
+            		if(me.module.load){
+            			var moduleParam = (param == null) ? me.params: param;
+            			me.module.load(moduleParam);
+            		}
+            	}
+            },
+            _destroy: function(){
+                this.module = null;
+				this.taskId = null;
+				this.taskName = null;
+				this.moduleUrl = null;
+				this.params = null;
+			}
+	  	});
+	</script>
+</dom-module>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings>
+		<setting name="callSettersOnNulls" value="true"/>
+		<setting name="jdbcTypeForNull" value="NULL" />
+		<setting name="localCacheScope" value="STATEMENT"/>
+	</settings>
+	<typeAliases>
+		<typeAlias alias="locale" type="java.util.Locale"/>
+	</typeAliases>
+	<typeHandlers>
+		<typeHandler handler="org.apache.ibatis.type.SqlTimestampTypeHandler" javaType="oracle.sql.TIMESTAMP"/>
+		<typeHandler handler="org.apache.ibatis.type.SqlTimestampTypeHandler" javaType="oracle.sql.TIMESTAMPLTZ"/>
+		<typeHandler handler="org.apache.ibatis.type.SqlTimestampTypeHandler" javaType="oracle.sql.TIMESTAMPTZ"/>		
+		<typeHandler handler="smartsuite.mybatis.typeHandler.LocaleTypeHandler" javaType="java.util.Locale"/>
+	</typeHandlers>
+	<!-- Return Type 으로 Page 인터페이스를 사용할 때 복수건에 대한 결과를 리턴하기 위해 사용 -->
+	<objectFactory type="smartsuite.mybatis.reflection.PageableObjectFactory"/>
+	<objectWrapperFactory type="smartsuite.mybatis.CustomizedObjectWrapperFactory"/>
+	<plugins>
+		<plugin interceptor="smartsuite.mybatis.plugin.page.interceptor.PageInterceptor">
+			<!-- DBMS 별로 dialect 클래스를 선언해야 한다. -->
+			<property name="dialectClass" value="${dialectClass}"/> 
+			<property name="pageableKey" value="_page" />
+			<property name="pageableQuery" value="auto" /> 
+		</plugin> 
+		<plugin interceptor="smartsuite.mybatis.plugin.parameter.interceptor.ParameterInjectInterceptor">
+			<property name="injectorClass" value="smartsuite.mybatis.DefaultParameterInjector"/> 
+			<property name="alternateParameterName" value="p" />
+		</plugin>
+		<plugin interceptor="smartsuite.mybatis.ResultSetLoggingInterceptor" >
+			<!-- ResultSet Count Level (row) -->
+			<property name="countLevelNormal"   value="1000"/> 
+			<property name="countLevelWarning"  value="5000"/>
+			<property name="countLevelCritical" value="10000"/>
+		</plugin>
+		<plugin interceptor="smartsuite.mybatis.SqlIdLoggingInterceptor" >
+			<property name="immdiatelyLogging"   value="false"/> 
+		</plugin>
+	</plugins>
+</configuration>

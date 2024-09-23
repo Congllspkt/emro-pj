@@ -1,0 +1,121 @@
+<dom-module id="es-mail-work-excel-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<sc-request-group init>
+		<!-- 가격선정방식 -->
+		<sc-ajax
+				id="findListCommonCodeAttributeCode"
+				url="findListCommonCodeAttributeCode.do"
+				body="{{codes.eml_task_typ_ccd.param}}"
+				last-response="{{codes.emailWorkCd}}">
+		</sc-ajax>
+	</sc-request-group>
+
+	<template>
+		<!-- EXCEL 목록 그리드 조회 -->
+		<sc-ajax id="findList"
+				 url="findListWorkExcelList.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex" use-state="false" use-selection="false" use-dummy="false" column-fit-style="evenFill"
+				 on-item-click="onItemClick">
+			<cc-grid-toolbar title-text="이메일 업무 목록">
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="work_nm" header-text="이메일 업무 유형" width="150" text-align="left" ></sc-data-column>
+				<sc-data-column data-field="work_cd" header-text="이메일 업무 코드" width="200" text-align="left" style-name="link"></sc-data-column>
+				<sc-data-column data-field="eml_task_nm" header-text="이메일 업무 명" width="300" text-align="left"></sc-data-column>
+				<!--<sc-data-column data-field="eml_task_expln" header-text="설명" width="250" text-align="left"></sc-data-column>-->
+			</sc-grid-columns>
+			<sc-grid-fields>
+			</sc-grid-fields>
+		</sc-grid>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-mail-work-excel-list',
+
+            properties:{
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value : function() {
+                        return {
+							ccd : "C059",
+							cstr_cnd_cd : "RMK"
+						};
+                    }
+                },
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+				// 공통코드 binding 객체
+				codes: {
+					type: Object,
+					reset: false,
+					value: function(){
+						return {
+							eml_task_typ_ccd: {
+								param: {
+									cstr_cnd_cd      : "RMK",
+									athg_uuid          : "EML_TASK_TYP_CCD"
+								},
+								result: []
+							},
+							emailWorkCd:[]
+						};
+					}
+				},
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function(){
+                var me = this;
+                me.onSearch();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "work_cd"){
+                    me.fire("selected-excel", data);
+                }
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 조회
+            onSearch: function(){
+                var me = this;
+                UT.request(me.$.findList);
+            },
+        });
+	</script>
+
+</dom-module>

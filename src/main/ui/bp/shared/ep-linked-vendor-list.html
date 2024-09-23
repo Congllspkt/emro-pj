@@ -1,0 +1,182 @@
+<dom-module id="ep-linked-vendor-list">
+<!-- 
+/**
+ *
+ *	@description : 협력사 검색 팝업
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @변경이력 : [2017. 01. 10.] Yeon-u Kim  9.1conversion
+ */
+-->
+    <style>
+       :host {
+            @apply(--fit-layout);
+        }
+    </style>
+    
+    <template>
+        
+        <sc-ajax id="findList" url="findListOperationOrganizationLinkVendor.do" body="{{findList.param}}" on-response="completeFindList"></sc-ajax>
+            
+        <div class="vbox fit">
+
+			<cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="협력사 코드"></sc-label>
+					<sc-text-field value="{{findList.param.erp_vd_cd}}"	max-length="200" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="협력사 명"></sc-label>
+					<sc-text-field value="{{findList.param.vd_nm}}" max-length="200" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+    
+            <sc-grid id="gridPanel" class="flex"	use-state="false"	selection-mode="[[formula('selectionMode')]]" use-selection="[[!singleSelect]]"
+            			on-item-click="onDataCellClicked">
+            	<cc-grid-toolbar>
+                	<sc-button text="선택" on-click="onSelectedList" hidden="[[singleSelect]]"></sc-button>
+            	</cc-grid-toolbar>
+            	<sc-grid-columns>
+            		<sc-data-column	data-field="erp_vd_cd"	header-text="협력사 코드"		width="150"	></sc-data-column>
+            		<sc-group-column	hide-child-headers="true"	header-text="협력사 명"			width="230"	text-align="center"	editable="false">
+                    	<sc-data-column	data-field="disp_vd_nm"		header-text="협력사 명"			width="200"	></sc-data-column>
+                    	<sc-image-column	singular-source="ui/assets/img/grid/ico_grd_select.png"	data-field="btn_select"	width="30"	text-align="center" editable="false"></sc-image-column>
+                    </sc-group-column>
+					<sc-data-column	data-field="bizregno"	header-text="사업자등록번호"	width="150"	item-label-function="itemBizRegNoLabelFn"></sc-data-column>
+            	</sc-grid-columns>
+            	<sc-grid-fields>
+            		<sc-grid-field	data-field="vd_cd"	></sc-grid-field>
+					<sc-grid-field	data-field="erp_vd_cd"	></sc-grid-field>
+					<sc-grid-field	data-field="vd_nm"	></sc-grid-field>
+					<sc-grid-field	data-field="vd_nm_en"	></sc-grid-field>
+					<sc-grid-field	data-field="bizregno"	></sc-grid-field>
+            	</sc-grid-fields>
+            </sc-grid>
+        </div>
+    </template>
+    <script>
+    Polymer({
+            is: "ep-linked-vendor-list",
+            properties: {
+            	titleText: {
+            		type: Object,
+            		value: function(){
+            			return this.translate('협력사 검색');
+            		}
+            	},
+                findList: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            param: {}
+                        };
+                    }
+                },
+                singleSelect: {
+                    type: Boolean,
+                    value: false
+                }
+            },
+            formulas: {
+            	selectionMode: function(){
+            		var me = this;
+            		return (me.get("singleSelect") ? "radio" : "check");
+            	}
+            },
+            // 화면 생성 완료
+            initialized: function(){
+                var me = this;
+            },
+            // find list url
+            getAjaxUrl: function() {
+                var me = this;
+                return me.$.findList.url;
+            },
+            
+            // 옵션 설정
+            setOptions: function(options) {
+                var me = this;
+                options = options || {};
+                me.set("singleSelect", UT.isBoolean(options.singleSelect) ? options.singleSelect: false);
+                me.set("autoComplete", UT.isBoolean(options.autoComplete) ? options.autoComplete : false);
+                me.applyFormula();
+                if (UT.isObject(options.defaultParam)) {
+                    me.set("findList.param", options.defaultParam);
+                }
+                if (UT.isArray(options.dataRows)) { // 배열 데이터
+                	me.$.gridPanel.setDataProvider(options.dataRows);
+                }
+            },
+            load : function(options){
+            	var me = this;
+            	if(UT.isNotEmpty(options)){
+            		me.setOptions(options);
+            	}
+				me.onFindList();
+            },
+            // 검색(조회)
+            onFindList: function() {
+                var me = this;
+                UT.request(me.$.findList);
+            },
+
+            // 검색(조회) 완료
+            completeFindList: function(e, res) {
+                var me = this;
+                me.$.gridPanel.setDataProvider(res.response);
+            },
+            //그리드 셀 클릭
+          //그리드이벤트
+            onDataCellClicked: function(e){
+            	var me = this,
+                data = e.detail.data,
+                item = e.detail.item;
+                var grid = me.$.gridPanel;
+                var current = grid.getCurrentCell();
+                
+                var index = current.rowIndex;
+                
+                var singleSelect = me.get("singleSelect");
+                
+                if(singleSelect){
+                	if(item.dataField === "btn_select"){
+                		//바로선택
+                    	me.selectedList([data]);
+                	}
+                }else{
+                	grid.selectionCheck(index,true,singleSelect);
+                }
+            },
+            
+            //선택 목록 반환
+            selectedList: function(selected){
+            	var me = this;
+            	if(UT.isEmpty(selected)){
+                	UT.alert("STD.N1600");
+                }else{
+                	me.fire("selected-items", selected);
+                	me.clear();
+                }
+            },
+            
+            // 선택 목록 반환
+            onSelectedList: function() {
+                var me = this,provider = me.$.gridPanel.getDataProvider();
+                var selected = provider.selectionCheckedItems();
+              //ZER-333
+                me.selectedList(selected);
+            },
+            clear: function(){
+            	var me = this;
+            	me.reset();
+            },
+			itemBizRegNoLabelFn: UT.convertBizRegNoFn,
+            // clear함수
+             behaviors:[
+                        Polymer.CCAutocompleteBehavior
+                    ]
+	});
+    </script>
+</dom-module>

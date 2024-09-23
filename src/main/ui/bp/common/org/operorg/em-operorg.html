@@ -1,0 +1,73 @@
+<sc-link rel="import" href="es-operorg-list.html"></sc-link>
+<sc-link rel="import" href="es-operorg-org-list.html"></sc-link>
+<sc-link rel="import" href="es-operorg-user-list.html"></sc-link>
+
+<dom-module id="em-operorg">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <cc-page-title-bar></cc-page-title-bar>
+        <div class="hbox flex">
+            <es-operorg-list id="operorgList" on-found-operorg="onFoundOperationOrganization"  on-selected-operorg="onSelectedOperationOrganization" class="flex-5"></es-operorg-list>
+            <div style="width:60px; position:relative;">
+                <div style="text-align:center; width:50px; position:absolute; bottom:50%;">
+                    <sc-button veto-fixed-size text="←" on-click="onAppendOperationOrganizationByLogicOrganization" i18n-disabled></sc-button><br/><br/>
+                    <sc-button veto-fixed-size text="→" on-click="onDeleteOperationOrganizationByLogicOrganization" i18n-disabled></sc-button>
+                </div>
+            </div>
+            <es-operorg-org-list id="orgList" title-text="논리 조직 목록" on-addto-operorg="onAddToOperationOrganization" class="flex-5" ></es-operorg-org-list>
+            <!--<sc-tab-navigation id="tabNavi" class="flex-5">
+                <es-operorg-org-list id="orgList" title-text="조직현황" on-addto-operorg="onAddToOperationOrganization"></es-operorg-org-list>
+                <es-operorg-user-list id="operuserList" title-text="사용자 목록" on-saved-user="onSavedUser"></es-operorg-user-list>
+            </sc-tab-navigation>-->
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-operorg",
+
+            // 운영조직 검색
+            onFoundOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.orgList.load(data); // 운영단위/회사코드 전달
+                //me.$.tabNavi.selectItem(me.$.orgList);
+            },
+
+            // 운영조직 선택
+            onSelectedOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.orgList.load(data); // 운영단위/회사코드 전달
+            },
+
+            // 조직 탭에서 선택된 조직을 운영조직으로 추가
+            onAddToOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.onAddList(data); // 운영조직으로 추가
+            },
+
+            // <- 를 통해 사용자가 운영조직을 선택 할 수 있도록 진행
+            onAppendOperationOrganizationByLogicOrganization: function(e, data) {
+                var me = this;
+                me.$.orgList.onAddList(data);
+            },
+            // -> 를 통해 사용자가 운영조직을 삭제할때
+            onDeleteOperationOrganizationByLogicOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.onDeleteList(data);
+            },
+
+            // 사용자 추가 저장
+            onSavedUser: function() {
+                var me = this;
+                me.$.operorgList.onFindList();
+            }
+        });
+    </script>
+
+</dom-module>

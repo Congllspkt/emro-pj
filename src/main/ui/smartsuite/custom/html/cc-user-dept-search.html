@@ -1,0 +1,239 @@
+<!--
+
+사용자-부서검색 자동완성 text field 커스텀 태그
+
+<cc-purc-grp value="{{입력 value}}" rresult-value-id="{{결과id}}" result-value-dept="{{결과부서}}"></cc-purc-grp>
+
+1. 주요 Property
+1) value : 해당 텍스트 필드 input value binding
+[string]
+
+2) result-value-id : 결과 object의 id 값 binding
+[string] [optional]
+
+3) result-value-dept : 결과 object의 dept 값 binding
+[string] [optional]
+
+
+2. value Proeprty
+1) value-class : 입력 텍스트 필드 크기
+[string] [optional]
+
+2) value-placeholder : 입력 텍스트 필드 placeholder
+[string] [optional]
+
+3) readonly, required, disabled 입력 텍스트 필드 제어
+[boolean] [optional]
+
+
+3. result Value Id Property
+1) result-id-class : 결과 ID 텍스트 필드 크기
+[string] [optional]
+
+2) result-id-placeholder : 결과 ID 텍스트 필드 placeholder
+[string] [optional]
+
+
+4. result Value Dept Property
+1) result-dept-class : 결과 Dept 텍스트 필드 크기
+[string] [optional]
+
+2) result-dept-placeholder : 결과 Dept 텍스트 필드 placeholder
+[string] [optional]
+
+
+5. trigger Field Property
+1) disabled-trigger : Trigger Field disabled 제어
+[boolean] [optional]
+
+2) hide-trigger : Trigger Field 숨김 제어
+[boolean] [optional]
+
+-->
+<!--
+ author : KJY
+ Since 2017. 12. 28.
+ 변경이력 : [2017. 12. 28.] KJY 최초작성
+            [2019. 04. 23.] DHLee 수정
+-->
+
+<sc-link rel="import" href="../../../bp/shared/ep-user-list.html"></sc-link>
+
+<dom-module id="cc-user-dept-search">
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <template>
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <sc-text-field class$="[[valueClass]] value-field"
+                       placeholder="[[valuePlaceholder]]"
+                       disabled="[[disabled]]"
+                       required="[[required]]"
+                       readonly="[[readonly]]"
+                       value="{{value}}"
+                       on-enter="onFindUser"
+                       on-keydown="onKeyDown"
+                       maxLength="200">
+        </sc-text-field>
+        <div class="hspace-5" hidden="[[hideTrigger]]"></div>
+        <sc-trigger-field trigger-cls="field-search" on-trigger-click="onShowPopupFindUser" disabled="[[disabledTrigger]]" hide-trigger="[[hideTrigger]]"></sc-trigger-field>
+        <div class="hspace-5"></div>
+        <sc-text-field value="{{resultValueId}}"   readonly="true" class$="[[resultIdClass]]"   placeholder="[[resultIdPlaceholder]]"></sc-text-field>
+        <div class="hspace-5"></div>
+        <sc-text-field value="{{resultValueDept}}" readonly="true" class$="[[resultDeptClass]]" placeholder="[[resultDeptPlaceholder]]"></sc-text-field>
+    </template>
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is : 'cc-user-dept-search',
+
+            behaviors : [
+                Polymer.CCSearchFieldBehavior
+            ],
+
+            properties : {
+                resultValueId : {
+                    type : Object,
+                    notify : true
+                },
+                resultValueDept : {
+                    type : Object,
+                    notify : true
+                },
+
+                // value Field
+                valueField: {
+                    type: String,
+                    value: "usr_nm"
+                },
+                valueFieldEn: {
+                    type: String,
+                    value: "usr_nm_en"
+                },
+
+
+                // result-Value Field
+                resultIdField: {
+                    type: String,
+                    value: "usr_id"
+                },
+
+                // result-Value Field
+                resultDeptField: {
+                    type: String,
+                    value: "dept_nm"
+                },
+
+                // Value Placeholder
+                valuePlaceholder : {
+                    type: String,
+                    value: ""
+                },
+
+                resultIdClass : {
+                    type: String,
+                },
+
+                resultDeptClass : {
+                    type: String,
+                },
+
+                noClose: {
+                    type: Boolean,
+                    value: false
+                },
+            },
+
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                    var target = me.querySelector(".value-field");
+                    if(target){
+                        target.addEventListener("mousedown", function(e){
+                            if (event.button == 2 || event.which == 3) {
+                                me.clearFlag = true;
+                            }
+                        });
+                    }
+                }
+            },
+
+            // Field ValueChaged
+            valueChanged: function () {
+                if (this.clearFlag) {
+                    this.set("resultValueId", "");
+                    this.set("resultValueDept", "");
+                }
+                this.clearFlag = false;
+            },
+
+            // text-field 검색
+            onFindUser : function(){
+                var me = this;
+
+                if (!me.readonly) {
+                    //사용자검색 팝업을 호출한다.
+                    var userPopup = me.createPopup();
+                    userPopup.show();
+                    userPopup.getWindowContent().load({
+                        defaultParam: {
+                            usr_nm: me.value
+                        },
+                        singleSelect: true,
+                        autoComplete: true
+                    });
+                }
+            },
+
+            // 검색버튼 클릭
+            onShowPopupFindUser : function(){
+                var me = this;
+                //사용자검색 팝업을 호출한다.
+                var userPopup = me.createPopup();
+                userPopup.show();
+                userPopup.getWindowContent().load({
+                    defaultParam: {
+                        usr_nm: me.value
+                    },
+                    singleSelect: true,
+                });
+            },
+
+            // Popup 생성
+            createPopup: function(){
+                var me = this;
+                return UT.popup('ep-user-list', me, '50%', '70%', {
+                    'selected-items' : function(popup, e) {
+                        var result = e.detail[0];
+                        if (result) {
+                            me.clearFlag = false;
+                            if(UT.multiLocaleCheck()){
+                                me.set("value",       result[me.valueFieldEn]);  // 코드명 영문
+                            }else{
+                                me.set("value",       result[me.valueField]);  // 코드명
+                            }
+                            me.set("resultValueId",   result[me.resultIdField]);
+                            me.set("resultValueDept", result[me.resultDeptField]);
+                            me.fire("result", result);
+                        }
+                        popup.close();
+                    }
+                }, {titleText : this.translate("사용자 검색")});
+            },
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="exchange-rate">
+	
+	<!-- 환율관리 데이터를 조회한다 -->
+	<select id="findListExchangeRate" resultType="map">
+	/* exchange-rate.findListExchangeRate */
+           SELECT ECR.TEN_ID 		/*시스템 아이디*/
+                 ,ECR.BAS_DT 	/*기준 일자*/
+                 ,ECR.BAS_CUR_CCD 	/*기준 통화*/
+                 ,ECR.CONV_CUR_CCD 	/*환산 통화*/
+                 ,ECR.BAS_RATE 	/*기준 율*/
+                 ,ECR.USD_CONVRATE	/*미화 환산율*/
+                 ,ECR.TMO_SELL_RATE
+                 ,ECR.TMO_BUY_RATE
+                 ,ECR.CASH_SELL_RATE
+                 ,ECR.CASH_BUY_RATE
+                 ,ECR.EXCHRATE_PRVDR
+                 ,ECR.UNIT_CUR_CONVRATE
+             FROM EXCHRATE ECR
+  LEFT OUTER JOIN DTLCD DC
+               ON DC.TEN_ID = ECR.TEN_ID
+              AND DC.CCD = 'C004'
+              AND DC.DTLCD = ECR.CONV_CUR_CCD
+            WHERE ECR.TEN_ID = #{g.tenant}
+		<if test='p.conv_cur_ccd != null and p.conv_cur_ccd != ""'>
+              AND ECR.CONV_CUR_CCD 	= #{p.conv_cur_ccd}  /* 통화 */
+		</if>
+		<if test="p.bas_dt != null and p.bas_dt !=''">
+              AND ECR.BAS_DT 	>= #{p.bas_dt}  /* 환율기준일 */
+		</if>
+		 ORDER BY ECR.BAS_DT, DC.DTLCD_SORT
+	</select>
+	
+	<!-- 환율관리 데이터를 INSERT 한다 -->
+	<insert id="insertExchangeRate">
+	/* exchange-rate.insertExchangeRate */
+		INSERT INTO EXCHRATE
+		(
+				 TEN_ID		/*시스템 아이디*/
+      			,BAS_DT	/*기준 일자*/
+				,BAS_CUR_CCD	/*기준 통화*/
+				,CONV_CUR_CCD	/*환산 통화*/
+				,BAS_RATE	/*기준 율*/
+				,TMO_SELL_RATE
+				,TMO_BUY_RATE
+				,CASH_SELL_RATE
+				,CASH_BUY_RATE
+				,USD_CONVRATE   /*미화 환산율*/
+				,EXCHRATE_PRVDR
+				,REGR_ID		/*등록자 아이디*/
+      			,REG_DTTM		/*등록 일시*/
+      			,UNIT_CUR_CONVRATE
+      	)
+      	VALUES
+      	(
+      			 #{g.tenant}
+      			,#{p.bas_dt}
+      			,#{p.bas_cur_ccd}
+      			,#{p.conv_cur_ccd}
+      			,#{p.bas_rate}
+      			,#{p.tmo_sell_rate}
+      			,#{p.tmo_buy_rate}
+      			,#{p.cash_sell_rate}
+      			,#{p.cash_buy_rate}
+      			,#{p.usd_convrate}
+      			,#{p.exchrate_prvdr}
+      			,#{g.username}
+      			,#{g.now}
+      			,#{p.unit_cur_convrate}
+      	)
+	</insert>
+	
+	<!-- 환율관리 데이터를 UPDATE 한다 -->
+	<update id="updateExchangeRate">
+	/* exchange-rate.updateExchangeRate */
+		UPDATE EXCHRATE
+		<trim prefix="set" prefixOverrides=",">
+				 MODR_ID 				= #{g.username}				/*수정자 아이디*/
+			  	,MOD_DTTM 				= #{g.now}					/*수정 일시*/
+				,BAS_RATE 				= #{p.bas_rate}
+				,USD_CONVRATE 			= #{p.usd_convrate}
+				,TMO_SELL_RATE			= #{p.tmo_sell_rate}
+				,TMO_BUY_RATE			= #{p.tmo_buy_rate}
+				,CASH_SELL_RATE			= #{p.cash_sell_rate}
+				,CASH_BUY_RATE			= #{p.cash_buy_rate}
+				,EXCHRATE_PRVDR			= #{p.exchrate_prvdr}
+				,UNIT_CUR_CONVRATE				= #{p.unit_cur_convrate}
+		</trim>
+		 WHERE TEN_ID 		= #{g.tenant}
+		   AND BAS_DT     = #{p.bas_dt}
+		   AND BAS_CUR_CCD      = #{p.bas_cur_ccd}
+		   AND CONV_CUR_CCD     = #{p.conv_cur_ccd}
+	</update>
+	
+	<!-- 환율관리 데이터를 DELETE 한다. -->
+	<delete id="deleteExchangeRate">
+	/* exchange-rate.deleteExchangeRate */
+		DELETE 
+		  FROM EXCHRATE
+		 WHERE TEN_ID 		= #{g.tenant}
+		   AND BAS_DT		= #{p.bas_dt}
+		   AND BAS_CUR_CCD      = #{p.bas_cur_ccd}
+		   AND CONV_CUR_CCD     = #{p.conv_cur_ccd}
+	</delete>
+	
+	<select id="getCountDateCur"	resultType="int">
+	/* exchange-rate.getCountDateCur */
+		SELECT COUNT(*)
+		FROM EXCHRATE
+		WHERE TEN_ID 		= #{g.tenant}
+		   AND BAS_DT		= #{p.bas_dt}
+		   AND BAS_CUR_CCD      = #{p.bas_cur_ccd}
+		   AND CONV_CUR_CCD     = #{p.conv_cur_ccd}
+	</select>
+</mapper>

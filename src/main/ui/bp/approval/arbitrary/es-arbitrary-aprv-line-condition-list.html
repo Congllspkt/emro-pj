@@ -1,0 +1,248 @@
+<sc-link rel="import" href="ep-arbitrary-aprv-line-condition-list.html"></sc-link>
+
+<dom-module id="es-arbitrary-aprv-line-condition-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-ajax id="searchList" url="selectListArbitraryAprvLineCondition.do" body="{{searchParam}}" on-response="completeSearchList"> <!-- 목록 조회 -->
+        </sc-ajax>
+
+        <sc-ajax id="factorList" url="selectListArbitraryDetailFactor.do" body="{{searchParam}}" on-response="completeFactorList"> <!-- 그리드 항목 목록 조회 -->
+        </sc-ajax>
+
+        <sc-ajax id="deleteList" url="deleteListArbitraryAprvLineCondition.do" on-response="completeDeleteList"> <!-- 목록 삭제 -->
+        </sc-ajax> 
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        
+        <sc-grid id="datagrid" use-state="false" use-selection="[[formula('isEditable')]]" class="flex">
+            
+            <cc-grid-toolbar title-text="[[titleText]]" i18n-disabled>
+                <sc-button text="추가" on-click="onAddData"    auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+                <sc-button text="삭제" on-click="onDeleteList" auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+            </cc-grid-toolbar>
+            
+            <sc-grid-columns>
+            </sc-grid-columns>
+            
+            <sc-grid-fields>
+                <sc-grid-field data-field="dapvl_uuid"     data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="dapvl_tbl_id"     data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="dapvl_apvlln_id" data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="dapvl_lno_uuid"    data-type="text"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-arbitrary-aprv-line-condition-list",
+            properties: {
+                headerData: { // 선택된 헤더
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                searchParam: { // 조회 조건
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                titleText: {
+                    type: String,
+                    value: ""
+                }
+            },
+
+            observers: ["changedHeaderData(headerData._force_edit_yn)"],
+            
+            changedHeaderData: function() {
+                var me = this;
+                me.applyFormula();
+            },
+            
+            formulas: {
+                isEditable: function() {
+                    var me = this;
+                    if (UT.isNotEmpty(me.searchParam.dapvl_uuid) && UT.isNotEmpty(me.searchParam.dapvl_tbl_id) && UT.isNotEmpty(me.searchParam.dapvl_apvlln_id)) {
+                        return me.headerData.dapvl_crn_sts_ccd === "CRNG" || me.formula("isForceEditable");
+                    } else {
+                        return false;
+                    }
+                },
+                isForceEditable: function() {
+                    var me = this;
+                    return me.headerData.dapvl_crn_sts_ccd === "CNFD" && me.headerData.ended_yn === "N" && me.headerData._force_edit_yn === "Y";
+                }
+            },
+
+            initialized: function() {
+                var me = this;
+                
+                me.set("titleText", me.translate("전결 조건 입력변수"));
+                me.applyFormula();
+            },
+            
+            load: function(param) {
+                var me = this;
+                var titleText = me.translate("전결 조건 입력변수");
+                
+                me.set("searchParam", param);
+                me.applyFormula();
+                
+                if (UT.isNotEmpty(me.searchParam.dapvl_apvlln_id)) {
+                    titleText += "-" + me.searchParam.dapvl_apvlln_id;
+                    me.onFactorList();
+                } else {
+                    me.$.datagrid.setColumns([]);
+                    me.$.datagrid.setDataProvider([]);
+                }
+                me.set("titleText", titleText);
+            },
+            
+            clear: function() {
+                var me = this;
+                me.set("searchParam", {});
+                me.set("titleText", me.translate("전결 조건 입력변수"));
+                me.$.datagrid.setColumns([]);
+                me.$.datagrid.setDataProvider([]);
+                me.applyFormula();
+            },
+            
+            // 테이블항목 목록조회
+            onFactorList: function() {
+                var me = this;
+                UT.request(me.$.factorList);
+            },
+
+            // 테이블항목 목록조회 완료
+            completeFactorList: function(e, res) {
+                var me = this;
+                var factors = res.response;
+                
+                if (UT.isNotEmpty(factors)) {
+                    var columns = [];
+                    for (var i = 0, len = factors.length; i < len; i++) {
+                        var grp = document.createElement("sc-group-column");
+                        grp.headerText = factors[i].dapvl_cnd_inpvar_nm;
+                        grp.width = 100;
+
+                        var keyCol = document.createElement("sc-data-column");
+                        keyCol.dataField = factors[i].dapvl_cnd_inpvar_uuid + "-key";
+                        keyCol.headerText = me.translate("Key");
+                        keyCol.textAlign = "left";
+                        keyCol.width = 100;
+                        grp.appendChild(keyCol);
+                        
+                        if (UT.isNotEmpty(factors[i].parm_nm)) {
+                            var nmCol = document.createElement("sc-data-column");
+                            nmCol.dataField = factors[i].dapvl_cnd_inpvar_uuid + "-nm";
+                            nmCol.headerText = me.translate("명");
+                            nmCol.textAlign = "left";
+                            nmCol.width = 100;
+                            
+                            grp.appendChild(nmCol);
+                            grp.width = 200;
+                        }
+                        columns.push(grp);
+                    }
+                    me.$.datagrid.setColumns(columns);
+                }
+                me.onSearchList();
+            },
+            
+            // 목록조회
+            onSearchList: function() {
+                var me = this;
+                UT.request(me.$.searchList);
+            },
+
+            // 목록조회 완료
+            completeSearchList: function(e, res) {
+                var me = this;
+                var result = res.response;
+                var rows = [];
+                if (UT.isNotEmpty(result)) {
+                    for (var i = 0, ilen = result.length; i < ilen; i++) {
+                        var row = {
+                            dapvl_uuid: result[i].dapvl_uuid,
+                            dapvl_tbl_id: result[i].dapvl_tbl_id,
+                            dapvl_apvlln_id: result[i].dapvl_apvlln_id,
+                            dapvl_lno_uuid: result[i].dapvl_lno_uuid
+                        };
+                        
+                        for (var j = 0, jlen = result[i].children.length; j < jlen; j++) {
+                            var field = result[i].children[j];
+                            row[field.dapvl_cnd_inpvar_uuid + "-key"] = field.parm_key_val;
+                            if (UT.isNotEmpty(field.parm_nm_val)) {
+                                row[field.dapvl_cnd_inpvar_uuid + "-nm"] = field.parm_nm_val;
+                            }
+                        }
+                        rows.push(row);
+                    }
+                }
+                me.$.datagrid.setDataProvider(rows);
+            },
+            
+            // 추가
+            onAddData: function() {
+                var me = this;
+
+                var addPopup = UT.popup("ep-arbitrary-aprv-line-condition-list", me, 800, 600, {
+                    "saved-aprv-line-conditions": function(popup, e) {
+                        me.onSearchList();
+                    },
+                    "sc-window-hided": function(popup, e) {
+                        popup.destroy();
+                    },
+                    "close": function(popup, e) {
+                        popup.close();
+                    }
+                }, {titleText: me.translate("전결 조건 입력변수")});
+                addPopup.show();
+                addPopup.getWindowContent().load(me.searchParam);
+            },
+            
+            // 삭제
+            onDeleteList: function() {
+                var me = this;
+                var provider = me.$.datagrid.getDataProvider();
+                var selected = provider.selectionCheckedItems();
+
+                if (UT.isEmpty(selected)) {
+                    UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // 삭제 하시겠습니까?
+                    var deleted = provider.removeItems();
+                    if (deleted.length > 0) {
+                        me.$.deleteList.body = {
+                            deleteAprvLineConditions: deleted
+                        };
+                        UT.request(me.$.deleteList);
+                    }
+                });
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this;
+                UT.alert("STD.N2500", function() { // 삭제하였습니다
+                    me.fire("deleted-aprv-line-conditions");
+                });
+            }
+            
+        });
+    </script>
+
+</dom-module>

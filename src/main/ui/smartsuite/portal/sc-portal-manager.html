@@ -1,0 +1,383 @@
+<!--
+ * @Desc 포탈 매니저/팔레트 엘리먼트
+ * @Author patrick.sung
+ * @Created 2016-03-28
+ -->
+<dom-module id="sc-portal-manager">
+    <template>
+        <style include="sc-portal-manager-style">
+            :host {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .components {
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+
+            .scrollable {
+                position: relative;
+            }
+
+            .overflowLimit {
+                overflow-y: hidden;
+            }
+        </style>
+        
+        <sc-ajax id="protocolLoadWidgetTypes" url="findComposableWidgetList.do" method="POST"
+                   handle-as="json" on-response="_onWidgetsLoaded"></sc-ajax>
+        <div>
+            <button type=button class="hideBtn"><span class="blind"></span></button>
+        </div>
+        <div style="display:none;">
+            <button type=button class="showBtn"><span class="blind"></span></button>
+        </div>
+        <div class="mgt15"></div>
+        <div class="btn_wrap">
+            <button type=button class="upperBtn" on-tap="_onUpperBtnTap"><span class="blind"></span></button>
+        </div>
+        <ul id="sidebar" class="sidebar_wrap overflowLimit">
+
+            <div id="component_list" class="scrollable">
+				<template is="dom-repeat" items="{{availableWidgets}}" as="component">
+					<div class="sidebar_list">
+                        <sc-portal-sprite on-drag="_onDrag" width="NaN" on-click="onClickItem"
+                                   height="NaN"
+                                   info$="[[component]]"
+                                   no-left-top-bound
+                                   no-right-bottom-bound class="components" prevent-selection>
+                            <div class="icon">
+                                <img src="[[component.icon_image]]" class="sidebar_ico" alt="[[translate(component.label)]]">
+                                <span class="name">[[translate(component.label)]]</span>
+                            </div>
+                        </sc-portal-sprite>
+                    </div>
+                </template>
+            </div>
+        </ul>
+        <div class="btn_wrap">
+            <button type=button class="lowerBtn" on-tap="_onlowerBtnTap"><span class="blind"></span></button>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-portal-manager',
+            
+            nonReusable: true,
+
+            get portletPath(){
+            	return  SCPortalLocation.portletPath;
+            },
+            
+            get iconImagePath(){
+            	return  SCPortalLocation.iconImagePath;
+            },
+            
+            properties: {
+                width: {
+                    type: String,
+                    value: '200',
+                    observer: '_widthChanged'
+                },
+                height: {
+                    type: String,
+                    value: '500',
+                    observer: '_heightChanged'
+                },
+                _zIndexIncrement: {
+                    type: Number,
+                    value: 0
+                },
+                
+                _ghostWidget: {
+                	type :  Object
+                }
+                ,
+                interactDraggableSelector : {
+               		type : String,
+               		value : 'sc-portal-sprite'
+               	},
+               	
+               	dragStartFunction: {
+               		type: Object	
+               	},
+               	
+               	dragFunction: {
+               		type:Object
+               	},
+               	
+               	dragEndFunction: {
+               		type: Object	
+               	},
+               	
+               	availableWidgets: {
+               		type:Object,
+               		observer: 'onChangeAvailableWidgets',
+               		value: function() {
+               			return [];
+               		}
+               	},
+               	
+               	useWidgets: {
+               		type:Object,
+               		value: function() {
+               			return [];
+               		}
+               	},
+               	
+               	widgetInfo: {
+               		type: Object
+               	},
+               	
+               	portalCls: {
+               		type:Object,
+               		observer: 'onChangePortalCls'
+               	},
+               	
+               	loadWidget: {
+               		type: Object,
+               		value: function() {
+               			return false;
+               		}
+               	},
+               	
+               	clickFunction: {
+               		type: Object
+               	},
+
+                homeTyp: {
+                    type:Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+            
+            behaviors: [
+            	Polymer.SCInteractDraggableBehavior,
+            	Polymer.BehaviorIDGenerator
+			],
+			
+			listeners : {
+    			'interact-drag-start' : '_onSpriteInteractDragStart',
+    			'interact-drag-end' : '_onSpriteInteractDragEnd',
+    		},			
+    		
+    		setDragFunction: function(startFunction, dragFunction, endFunction) {
+    			this.dragStartFunction = startFunction;
+    			this.dragFunction = dragFunction;
+    			this.dragEndFunction = endFunction;
+    		},
+    		
+    		setClickFunction: function(clickFunction) {
+    			this.clickFunction = clickFunction;
+    		},
+    		
+    		_onSpriteInteractDragStart : function(event) {
+    			if(this.dragStartFunction) {
+    				this.widgetInfo = event.detail.target.info;
+    				this.dragStartFunction(event);
+    			}
+    		},
+    		
+    		_onInteractDrag : function(event) {
+    			if(this.dragFunction) {
+    				this.dragFunction(event);
+    			}
+    		},
+    		
+    		onClickItem: function(event) {
+    			if(this.clickFunction) {
+    				this.widgetInfo = event.currentTarget.info;
+    				var targetWidget = undefined;
+        			var tmp = this.availableWidgets; 
+        			for(var i = 0; i < tmp.length; i++) {
+        				if(tmp[i].type === this.widgetInfo.type && tmp[i].title === this.widgetInfo.title) {
+        					targetWidget = tmp.splice(i, 1)[0];
+        					break;
+        				}	
+        			}
+        			this.useWidgets.push(targetWidget);
+        			this.availableWidgets = UT.copy(tmp);
+    				
+    				this.clickFunction(event);
+    			}
+    		},
+    		
+    		addTypeInList: function(type, title) {
+    			for(var i = 0; i < this.useWidgets.length; i++) {
+    				if(this.useWidgets[i].type === type && this.useWidgets[i].title === title) {
+    					var item = this.useWidgets.splice(i, 1)[0];
+    					this.availableWidgets.push(item);
+    					break;
+    				}
+    			}
+    			
+    			this.availableWidgets = UT.copy(this.availableWidgets);
+    		},
+    		
+    		_onSpriteInteractDragEnd : function(event){
+    			if(this.dragEndFunction) {
+    				var targetWidget = undefined;
+        			var tmp = this.availableWidgets; 
+        			for(var i = 0; i < tmp.length; i++) {
+        				if(tmp[i].type === this.widgetInfo.type && tmp[i].title === this.widgetInfo.title) {
+        					targetWidget = tmp.splice(i, 1)[0];
+        					break;
+        				}	
+        			}
+        			this.useWidgets.push(targetWidget);
+        			this.availableWidgets = UT.copy(tmp);
+    				
+    				this.dragEndFunction(event);
+    			}
+    		},
+
+            attached: function () {
+                if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+
+                    this.interactDraggable = true;
+                    this.$.component_list.style.top = '0px';
+                    // Home 에서 포탈을 호출할때만 (parentNode 가 veuGrid) , attached 시점에 포탈 생성
+                    if(!this.loadWidget && this.parentNode.id === 'vueGrid') {
+                        this.onChangePortalCls();
+                    }
+                }
+            },
+
+            onChangeAvailableWidgets: function(newItems, oldItems){
+            	
+            	if(newItems && newItems.length > 0){
+            		for(var i=0; i<newItems.length; i++){
+            			var sort = this.compOrds[newItems[i].type+newItems[i].title];
+            			newItems[i].sort = (sort==null) ? 90000+i : sort;
+            		}
+            	}
+            	
+            	newItems = newItems.sort(function(a, b){
+            		return a.sort - b.sort;
+            	});
+            },
+            
+            onChangePortalCls: function() {
+            	this.loadWidget = true;
+            	this.$.protocolLoadWidgetTypes.body = {
+                    portl_usr_typ_ccd: this.portalCls ? this.portalCls.usr_typ_ccd : SCSessionManager.currentUser.usr_typ_ccd
+                };
+                this.$.protocolLoadWidgetTypes.generateRequest();
+            },
+
+            _onUpperBtnTap: function (e) {
+/*                 var y = parseInt(this.$.component_list.style.top, 10);
+
+                if (y - 64 >= -this.$.component_list.offsetHeight){
+               		TweenLite.to(this.$.component_list, 0.2, {top: y - 64, ease: Expo.easeOut});
+                	this.$.component_list.scrollHeight -= 20;
+                } */
+                this.$.sidebar.scrollTop -= 20;
+                    
+            },
+
+            _onlowerBtnTap: function (e) {
+                /* var y = parseInt(this.$.component_list.style.top, 10);
+
+                if (y + 64 <= 0)
+                    TweenLite.to(this.$.component_list, 0.2, {top: y + 64, ease: Expo.easeOut}); */
+            	this.$.sidebar.scrollTop+= 20;
+            },
+
+            _onWidgetsLoaded: function (e) {
+                this.widgets = typeof e.detail.response.baseAttr == "string" ? JSON.parse(e.detail.response.baseAttr) : e.detail.response.baseAttr;
+                var baseList = e.detail.response.baseList;
+                
+                if(this.widgets.length === baseList.length){
+                	this.compOrds = {};
+                	for(var i=0; i<this.widgets.length; i++){
+                		this.compOrds[this.widgets[i].type+this.widgets[i].title] = baseList[i].sort;
+                	}
+                }
+                
+                this._zIndexIncrement = this.widgets.length;
+                this.fire('widget-loaded');
+            },
+            
+            setUseWidgets: function(useWidgets) {
+            	if(!this.widgets) {
+            		return;
+            	}
+            	
+            	var tmpuse = [];
+            	var tmpable= [];
+            	for(var i = 0; i < this.widgets.length; i++) {
+            		
+            		var use = false;
+            		for(var j = 0; j < useWidgets.length; j++) {
+            			if(useWidgets[j].type === this.widgets[i].type && useWidgets[j].title === this.widgets[i].title) {
+            				use = true;
+            				break;
+            			}
+            		}
+            		
+            		var tempOldWidgetPath = "/ui/lib/portal-widget/";
+            		if(this.widgets[i].icon_image.indexOf(tempOldWidgetPath) >= 0){
+            			this.widgets[i].icon_image = this.widgets[i].icon_image.replace(tempOldWidgetPath, "/"+this.portletPath);
+            		}
+            		
+            		if(use) {
+            			tmpuse.push(this.widgets[i]);
+        			} else {
+        				tmpable.push(this.widgets[i]);
+        			}
+            	}
+            	this.availableWidgets = tmpable;
+            	this.useWidgets = tmpuse;
+            },
+
+            toggleScrollable: function (allow) {
+                if (allow) {
+                    this.$.sidebar.classList.add('overflowLimit');
+                    this.$.component_list.classList.add('scrollable');
+                } else {
+                    this.$.sidebar.classList.remove('overflowLimit');
+                    this.$.component_list.classList.remove('scrollable');
+                }
+
+            },
+
+            _widthChanged: function (value) {
+                this.style.width = value.indexOf('%') !== -1 ? value : value + 'px';
+            },
+
+            _heightChanged: function (value) {
+                this.style.height = value.indexOf('%') !== -1 ? value : value + 'px';
+            },
+            
+            _destroy: function(){
+            	this._propertySetter('width', null);
+            	this._propertySetter('height', null);
+            	this._propertySetter('_zIndexIncrement', null);
+            	this._propertySetter('_ghostWidget', null);
+            	this._propertySetter('interactDraggableSelector', null);
+            	this._propertySetter('dragStartFunction', null);
+            	this._propertySetter('dragFunction', null);
+            	this._propertySetter('dragEndFunction', null);
+            	this._propertySetter('availableWidgets', null);
+            	this._propertySetter('useWidgets', null);
+            	this._propertySetter('widgetInfo', null);
+            	this._propertySetter('portalCls', null);
+            	this._propertySetter('loadWidget', null);
+            	this._propertySetter('clickFunction', null);
+            	this.widgets = null;
+            	this.style = null;
+            }
+        })
+    </script>
+</dom-module>

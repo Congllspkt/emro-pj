@@ -1,0 +1,14 @@
+** aspose라이브러리 관련 font 적용방법 **
+
+첨부된 font 파일을 was 특정 경로에 이동 (external-lib/font)
+
+font 경로를 edoc.properties의 font.path란에 기입한 후 was 재기동 
+
+(','로 path를 구분하며, path가 존재하지 않아도 서버기동시 에러 나지 않음)
+
+[참고] http://alm.emro.co.kr/browse/SMARTNINE-3033?jql=project%20%3D%20SMARTNINE
+
+
+계약서(Word)를 PDF로 변환 및 서명시, 시스템에 폰트가 존재하지 않으면 오류가나거나 Font가 깨질 가능성이 있음
+개발자 PC는 대부분은 윈도우이므로, 로컬에서는 따로 font를 작업해주지 않아도 되나 서버가 리눅스인 경우 custom하게 Font 경로를 지정해 주어야함(윈도우 서버도 설정을 권고)
+font 폴더는 기본적인 폰트(ttf)가 들어 있으며, 커스텀한 font를 사용하여야한다면 font폴더에 커스텀한 폰트(ttf)를 넣어주면 된다.

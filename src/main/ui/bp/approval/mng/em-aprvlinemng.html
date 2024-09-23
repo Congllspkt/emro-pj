@@ -1,0 +1,33 @@
+<sc-link rel="import" href="es-aprvlinemng-list.html"></sc-link>
+<dom-module id="em-aprvlinemng">
+<!-- 
+/**
+ *
+ *	@description : 결재선 관리
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @Since 2017. 2. 1.
+ * @변경이력 : [2017. 2. 1.] Yeon-u Kim 최초작성
+ */
+-->
+	<style>
+		:host {
+            @apply(--vbox-layout);
+        }
+	</style>
+	
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<es-aprvlinemng-list id="list" class="flex"></es-aprvlinemng-list>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'em-aprvlinemng',
+			properties : {
+			},
+		});
+	</script>
+</dom-module>

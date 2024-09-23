@@ -1,0 +1,23 @@
+<sc-link rel="import" href="es-logic-org-list.html"></sc-link>
+
+<dom-module id="em-logic-org">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <sc-pages id="pages" class="fit" selected="0">
+            <es-logic-org-list id="orgList"></es-logic-org-list>
+        </sc-pages>
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-logic-org",
+        });
+    </script>
+
+</dom-module>

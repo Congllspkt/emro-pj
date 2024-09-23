@@ -1,0 +1,511 @@
+<dom-module id="ep-template-calc-column">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+        
+        .calc-button {
+            width: 10px;
+            margin-top : 1px;
+            background: rgba(0,0,0,.4);
+            height: 18px;
+            border-radius: 15px;
+            padding: 3px 15px 2px 18px;
+            color: #ffffff;
+            font-weight: normal;
+        }
+        
+        .calc-keys {
+            border-collapse: collapse;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        .calc-keys li {
+            height: 28px;
+            border: 0;
+            vertical-align: middle;
+            text-align: left;
+            background:#f7fcfd;
+        }
+        .calc-keys li:first-child {border-top:0;}
+        .calc-keys li {
+            padding: 0 5px;
+            overflow: hidden
+        }
+        .calc-keys li>* {
+            vertical-align: middle
+        }
+    </style>
+    
+    <template>
+        <sc-code-group>
+            <sc-code code="BID001" value="{{codes.columnType}}" ></sc-code> <!-- 컬럼 타입 -->
+            <sc-code code="BID004" value="{{codes.columnClsType}}" ></sc-code> <!-- 컬럼 구분( 내부/외부 )-->
+            <sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+            <sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+            <sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+        </sc-code-group>
+
+
+        <sc-ajax
+            id="findBidTemplateHeadersColumnsForCalc"
+            url="findBidTemplateHeadersColumnsForCalc.do"
+            body="{{sheetInfo}}"
+            last-response="{{findListRecFactor}}">
+        </sc-ajax>
+
+
+        <sc-ajax
+            id="findBidTemplateSheetColumnInfo"
+            url="findBidTemplateSheetColumnInfo.do"
+            on-response="completeSheetColumnInfo">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r,auth-s"></cc-auth-checker>
+
+<!--
+    화면
+-->
+		<cc-page-title-bar>
+            <sc-button id="removeOne" text="제거"     on-click="onInputCalc" auth-s></sc-button>
+            <sc-button id="removeAll" text="모두제거" on-click="onInputCalc" auth-s></sc-button>
+            <sc-button                text="적용"     on-click="onApplyCalc" auth-s></sc-button>
+            <sc-button                text="취소"     on-click="onCancel"    auth-s></sc-button>
+		</cc-page-title-bar>
+
+        <div class="vbox flex">
+            <table class="tb-form">
+                <tr>
+                    <th>
+                        <sc-label text="컬럼 코드" ></sc-label>
+                    </th>
+                    <td colspan="3">
+                        <sc-text-field value="{{templateFactCalc.col_cd}}" required="true"  max-length="18"></sc-text-field>
+                    </td>
+                </tr>
+                <tr>
+                    <th>
+                        <sc-label text="컬럼 표시 이름" ></sc-label>
+                    </th>
+                    <td colspan="3">
+                        <sc-text-field value="{{templateFactCalc.col_nm}}" required="true"  max-length="50"></sc-text-field>
+                    </td>
+                </tr>
+                <tr>
+                    <th width="120">
+                        <sc-label text="계산식" ></sc-label>
+                    </th>
+                    <td colspan="3">
+                        <sc-textarea-field class="h-100" value="{{templateFactCalc.calculate_val}}" required="true" readOnly="true" max-length="1000"></sc-textarea-field>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="hbox flex">
+                <sc-panel title-text="입력키패드" class="vbox flex-3">
+                    <ul class="calc-keys" style="width:100%">
+                       <template is="dom-repeat" items="{{calcBtnGrpList}}" as="btnGrp">
+                           <li>
+                               <template is="dom-repeat" items="{{btnGrp.group}}" as="btn">
+                                   <sc-button id="{{btn}}" text="{{btn}}" on-click="onInputCalc" class="calc-button" i18n-disabled></sc-button>
+                               </template>
+                           </li>
+                       </template>
+                    </ul>
+
+                    <span class="desc">
+                    &nbsp;{{calcDescription}}
+                    <br>
+                   </span>
+                </sc-panel>
+
+                <div class="hspace-5"></div>
+
+                <sc-panel class="vbox flex-7">
+                	<sc-grid id="gridPanel" class="flex"  data-provider="{{findListRecFactor}}"	use-selection="false" use-state="false"
+                											on-item-double-click="onDataCellDblClicked">
+                     	<sc-grid-columns>
+							<sc-data-column	data-field="col_nm"	header-text="컬럼 이름"	width="200"	text-align="left"	style-name="link"></sc-data-column>
+							<sc-data-column	data-field="disp_nm"			header-text="표시 명"			width="200"	text-align="left"	></sc-data-column>
+                            <sc-combobox-column data-field="col_typ_cd" header-text="컬럼 타입" display-field="label" value-field="data" editable="false" items="{{codes.columnType}}"></sc-combobox-column>
+                            <sc-combobox-column data-field="col_cls" header-text="컬럼 구분" display-field="label" value-field="data" editable="false" items="{{codes.columnClsType}}"></sc-combobox-column>
+                            <sc-data-column data-field="col_len" data-type="number"	 header-text="컬럼 길이" width="150" text-align="right" editable="false"></sc-data-column>
+                            <sc-data-column data-field="point_len" data-type="number"  header-text="소수점 자리수" width="150" text-align="right" editable="false" ></sc-data-column>
+                            <sc-combobox-column data-field="point_cal_typ" header-text="소수점 포맷팅" item-editable-function="itemDecimalFunction" display-field="label" value-field="data" editable="false" items="{{codes.precHndlTyp}}"></sc-combobox-column>
+                     	</sc-grid-columns>
+                     	<sc-grid-fields>
+                     		<sc-grid-field	data-field="templ_sheet_id"	></sc-grid-field>
+                     		<sc-grid-field	data-field="col_cd"	></sc-grid-field>
+							<sc-grid-field	data-field="templ_sheet_col_id"	></sc-grid-field>
+                            <sc-grid-field	data-field="sheet_id"	></sc-grid-field>
+                            <sc-grid-field	data-field="sheet_nm"	></sc-grid-field>
+                            <sc-grid-field	data-field="sheet_typ"	></sc-grid-field>
+                     	</sc-grid-fields>
+                	</sc-grid>
+                </sc-panel>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-template-calc-column",
+            properties: {
+            	titleText:{
+                    type: String,
+    				value: "Template 계산식 추가"
+    			},
+                templateFactCalc : {
+                    type : Object,
+                    value : function() {
+                        return {
+                            calc : '',
+                            calculate_val : ''
+                        };
+                    }
+                },
+                // calcFormula
+                calcFormula : {
+                    type : Array,
+                    value : function(){
+                        return [];
+                    }
+                },
+                codes:{
+                    type: Object,
+                    reset: false,
+                    value : function(){
+                        return {
+                            columnType : [],
+                            columnClsType : [],
+                            fieldAlign : [],
+                            precHndlTyp : [],
+                            C022 : []
+                        };
+                    }
+                },
+                findListRecFactor : {
+                    type : Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+                // 화면 초기화 여부
+                isReady : {
+                    type : Boolean,
+                    value : false,
+//                     reset: false
+                },
+                // 계산식 설정 설명
+                calcDescription : {
+                    type : String,
+                    value : "",
+//                     reset : false
+                },
+                calcBtnGrpList : {
+                    type : Array,
+                    value : function(){
+                        return [{group : ["7", "8", "9", "/"]},
+                                {group : ["4", "5", "6", "*"]},
+                                {group : ["1", "2", "3", "-"]},
+                                {group : ["0", "(", ")", "+"]}];
+                    },
+                    reset: false
+                },
+
+
+                sheetInfo :{
+            	    type:Object,
+                    value : {}
+                },
+                templSheetColId :{
+            	    type:Object,
+                    value : {}
+                }
+            },
+
+            initialized: function() {
+                var me = this;
+
+            },
+            //그리그 셀 더블클릭 이벤트
+            onDataCellDblClicked: function(event){
+                var me = this,
+                data = event.detail.data,
+                item = event.detail.item,
+                provider = event.detail.provider,
+                fieldName = item.dataField;
+
+                // 실적항목명 click
+                if (fieldName === "col_nm") {
+                    var arr = me.get("calcFormula");
+                    var obj = {
+                            key : data.templ_sheet_col_id,
+                            code : data.col_cd,
+                            name : data.col_nm,
+                            label : "[" + data.col_nm + "]",
+                            val : "[" + data.templ_sheet_col_id + "]",
+                            itemType : 1
+                    };
+
+                    if(!me.isValidInputCalc(obj.val, obj.label)){
+                        return;
+                    }
+                    arr.push(obj);
+                    me.set("calcFormula", arr);
+                    me.setCalcText();
+                }
+            },
+            //load
+            load: function(param){
+            	var me = this;
+            	me.set("calcDescription", "※ 위의 키패드를 클릭하여 입력가능합니다. ");
+                me.set("isReady", true);
+
+                me.set("sheetInfo",param.sheetInfo);
+
+
+                if(UT.isNotEmpty(param.templ_sheet_col_id)){
+                    me.set("templSheetColId",param.templ_sheet_col_id);
+                    me.onFindCalcColumInfo();
+                }
+
+                //BidTemplate Sheet내에 Int인 컬럼을 찾아서 리스트에 올려둔다.
+                me.onFindIntTypeColumList(param);
+            },
+
+
+            onFindCalcColumInfo : function(){
+
+                var me = this;
+
+                me.$.findBidTemplateSheetColumnInfo.body = {
+                    sheetInfo : me.get("sheetInfo"),
+                    templ_sheet_col_id : me.get("templSheetColId")
+                }
+
+                UT.request(me.$.findBidTemplateSheetColumnInfo);
+
+            },
+
+            /**
+             * 계산식 요소 목록 setting
+             */
+            setCalcFormula : function(){
+                var me = this;
+                var recFactList = me.get("findListRecFactor");
+                var calc = me.get("templateFactCalc.calculate_val").toString();
+                var calcFormula = [];
+                var formulaObj = {};
+                
+                if(!calc){
+                    return;
+                }
+
+                var calcFacts = calc.split(/\^/);
+                for(var i=0; i < calcFacts.length; i++){
+                    var str = calcFacts[i].toString();
+                    if(str.indexOf("[") != -1){
+                        var strPattern1 = /\[/gi;
+                        var strPattern2 = /]/gi;
+                        
+                        str = str.replace(strPattern1, "");
+                        str = str.replace(strPattern2, "");
+
+                        for(var j=0; j<recFactList.length; j++){
+                            var recFact = recFactList[j]
+                            if(recFact.templ_sheet_col_id === str){
+                                formulaObj = {
+                                        key : recFact.templ_sheet_col_id,
+                                        code : recFact.col_cd,
+                                        name : recFact.col_nm,
+                                        label : "[" + recFact.col_nm + "]",
+                                        val : "[" + recFact.templ_sheet_col_id + "]",
+                                        itemType : 1
+                                };
+                                calcFormula.push(formulaObj);
+                            }
+                        }
+                    }else{
+                        if(str){
+                            formulaObj = {
+                                    key : str,
+                                    code : str,
+                                    name : str,
+                                    label : str,
+                                    val : str,
+                                    itemType : 0
+                            };
+                            calcFormula.push(formulaObj);
+                        }
+                    }
+                }
+                me.set("calcFormula", calcFormula);
+                me.setCalcText();
+            },
+            
+            /**
+             * 계산식 텍스트 설정
+             */
+            setCalcText : function(){
+                var me = this;
+                var calcFormula = me.get("calcFormula");
+                var calcText = '';
+                var calc = '';
+                
+                if(!me.get("isReady")){
+                    return;
+                }
+                
+                for(var i = 0; i < calcFormula.length; i++){
+                    calcText += calcFormula[i].label;
+                    calc += calcFormula[i].val;
+                }
+                
+                me.set("templateFactCalc.calculate_val", calcText);
+                me.set("templateFactCalc.calc", calc);
+            },
+            
+            /**
+             * 계산식 입력 길이 유효성 확인
+             */
+            isValidInputCalc: function(calcVal, calcText){
+                var me = this;
+                var vLen = me.templateFactCalc.calc.length;
+                var tLen = me.templateFactCalc.calculate_val.length;
+                
+                if(vLen + calcVal.length > 250 || tLen + calcText.length > 250){
+                    UT.alert("STD.SRM1040");  // 계산식 최대 입력 길이 제한을 초과 했습니다.
+                    return false;
+                }else{
+                    return true;
+                }
+            },
+            
+            /**
+             * 계산식 입력 - 키패드
+             */
+            onInputCalc : function(e) {
+                var me = this;
+                var id = e.currentTarget.id.toString();
+                var arr = me.get("calcFormula");
+                
+                if(id === "removeOne"){
+                    arr.pop();
+                    me.set("calcFormula", arr);
+                }else if(id === "removeAll"){
+                    me.set("calcFormula", []);
+                }else{
+                    var obj = {
+                            key : id,
+                            code : id,
+                            label : id,
+                            val : id,
+                            itemType : 0
+                    };
+                    if(!me.isValidInputCalc(obj.val, obj.label)){
+                        return;
+                    }
+                    arr.push(obj);
+                    me.set("calcFormula", arr);
+                }
+                me.setCalcText();
+            },
+            
+            /**
+             * 적용 버튼 클릭
+             */
+            onApplyCalc : function() {
+                var me = this;
+                var calcFormula = me.get("calcFormula"); // 계산식 요소 목록
+                var calcStr = ''; // 계산식
+                var keys = [];    // 계산식 실적항목 key
+                
+                if(!me.validate()){
+                    return UT.alert("STD.E0000");
+                }
+                
+                for(var i = 0; i<calcFormula.length; i++){
+                    var calcFact = calcFormula[i];
+                    calcStr += calcFact.val + '^';
+                    if(calcFact.val.indexOf("[") != -1){
+                        var isDupKey = false;
+                        for(j=0; j<keys.length; j++){
+                            if(keys[j].id === calcFact.key){
+                                isDupKey = true;
+                                break;
+                            }
+                        }
+                        
+                        if(!isDupKey){
+                            keys.push({ 
+                                id : calcFact.key, 
+                                code : calcFact.code,
+                                templ_sheet_col_id : calcFact.key,
+                                col_cd : calcFact.code,
+                                col_nm : calcFact.name
+                            });
+                        }
+                    }
+                }
+                
+                var calcData = {
+                        calculate_val : me.get("templateFactCalc.calculate_val"),
+                        calc : calcStr,
+                        calc_key : keys,
+                        col_nm : me.get("templateFactCalc.col_nm"),
+                    col_cd : me.get("templateFactCalc.col_cd")
+                };
+                me.fire("apply-data", calcData)
+            },
+            
+            /**
+             * 취소 버튼 클릭
+             */
+             onCancel: function() {
+                var me = this;
+                me.fire("close");
+            },
+            
+            /**
+             * 최초 팝업 로드시 자동조회
+             */
+            onFindIntTypeColumList : function(){
+                var me = this;
+
+                UT.request(me.$.findBidTemplateHeadersColumnsForCalc, function(){
+                	me.$.gridPanel.setDataProvider(me.$.findBidTemplateHeadersColumnsForCalc.result);
+                    me.setCalcFormula();
+                });
+            },
+
+
+            completeSheetColumnInfo : function (e,res){
+                var me = this;
+                var data =res.response;
+
+
+                me.set("templateFactCalc.col_cd",data.col_cd);
+                me.set("templateFactCalc.col_nm",data.col_nm);
+                me.set("templateFactCalc.calculate_val",data.calculate_val == null?  "" : data.calculate_val);
+
+                me.applyFormula();
+            },
+            itemDecimalFunction: function(data, item) {
+                var me = this;
+
+                switch (item.dataField) {
+                    case "point_len":
+                        return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+                    case "point_cal_typ":
+                        return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+                    default:
+                        return false;
+                }
+            },
+        });
+    </script>
+
+</dom-module>

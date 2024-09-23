@@ -1,0 +1,295 @@
+<dom-module id="es-multi-lang-mgt-list">
+	<!--
+        ******************************************************************************************
+        ** @Program-name 	: 다국어관리
+        ** @Description		:
+        ** @Author 			: jeKim
+        ** @Create Date 	: 2016.06.15
+        ** @History 		: 2016.06.15 jeKim 최초작성
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+         -->
+		<!-- 코드 데이터 조회 -->
+		<sc-code-group>
+			<sc-code code="C002" value="{{codes.localeCds}}" ></sc-code> <!-- 언어코드 -->
+		</sc-code-group>
+
+		<!-- 다국어관리 목록 조회 -->
+		<sc-ajax id="findListMultiLang"
+				 url="findListMultiLang.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+		<!-- 다국어관리 목록 저장 -->
+		<sc-ajax id="saveListMultiLang"
+				 url="saveListMultiLang.do"
+				 on-response="completeSaveListMultiLang">
+		</sc-ajax>
+
+		<!-- 다국어관리 목록 삭제 -->
+		<sc-ajax id="deleteListMultiLang"
+				 url="deleteListMultiLang.do"
+				 on-response="completeDeleteListMultiLang">
+		</sc-ajax>
+		
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<cc-sub-title-bar title-text="다국어 현황" ></cc-sub-title-bar>
+			<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="Language" ></sc-label>
+					<sc-combobox-field selected-index="0" display-field="label" value-field="data"
+									   items="{{codes.localeCds}}" value="{{searchParam.multlang_ccd}}" placeholder="선택"
+									   validation-group="search" required="true">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="Type" ></sc-label>
+					<sc-combobox-field display-field="label" value-field="data"
+									   items="{{multlangTypes}}" value="{{searchParam.multlang_type}}" placeholder="전체"
+									   validation-group="search">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="Key" ></sc-label>
+					<sc-text-field value="{{searchParam.multlang_key}}" on-enter="onEnterSearch" max-length="500"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="Translation" ></sc-label>
+					<sc-text-field value="{{searchParam.multlang_transl_cont}}" on-enter="onEnterSearch" max-length="500"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+			<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex" validation-group="save"
+					 on-item-click="onItemClick">
+				<cc-grid-toolbar>
+					<sc-button text="추가" on-click="onAddRow" auth-s></sc-button>
+					<sc-button text="삭제" on-click="onDeleteRow" auth-s></sc-button>
+					<sc-button text="저장" on-click="onSave" auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-combobox-column data-field="multlang_ccd" header-text="Locale" width="100" text-align="center" required="true"
+										items="{{codes.localeCds}}" display-field="label" value-field="data"
+										item-editable-function="onInsertEditable"></sc-combobox-column>
+					<sc-combobox-column data-field="multlang_type" header-text="Type" width="100" text-align="center" required="true"
+										items="{{multlangTypes}}" display-field="label" value-field="data"
+										item-editable-function="onInsertEditable"></sc-combobox-column>
+					<sc-data-column data-field="multlang_key" header-text="Key" width="300" text-align="left" required="true" max-length="500" style-name="link"
+									item-editable-function="onInsertEditable"></sc-data-column>
+					<sc-data-column data-field="multlang_transl_cont" header-text="메시지" width="500" text-align="left" editable="true" required="true" max-length="500"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+
+		</div>
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-multi-lang-mgt-list",
+            properties : {
+                // 코드 데이터
+                codes: {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                            localeCds: []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+                multlangTypes: {
+                    type: Array,
+                    value: function() {
+                        return [{
+                            	label:"레이블", data:"label"
+                           	},{
+                           		label:"버튼", data:"button"
+                            }];
+                    }
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+                // 데이터의 양이 많고, 조건 검색이 주된 사용 패턴이므로 자동조회 주석처리 2018.04.25
+                //me.onSearch();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 신규추가 후 editable 제어
+            onInsertEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item,
+                    provider = event.detail.provider;
+
+                if(item.dataField === "multlang_key"){
+                	// 신규 컬럼 제외
+                    if(provider.getItemState(item.rowIndex) != "created"){
+                    	me.fire('key-select', data);
+                    }
+                }
+            },
+			
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            onEnterSearch: function(){
+                var me = this;
+                me.onSearch();
+            },
+
+            // 다국어관리 현황 조회
+            onSearch : function() {
+                var me = this;
+
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.request(me.$.findListMultiLang);
+                me.fire('search');
+            },
+
+            // 다국어관리 현황 추가
+            onAddRow : function(){
+                var me = this,
+                    searchParam = this.get("searchParam"),
+                    provider = me.$.gridPanel.getDataProvider();
+
+                // 그리드 신규행 추가
+                var row = {
+                    locale: me.get("searchParam.locale")
+                };
+                provider.addItemAt(0, row);
+            },
+
+            // 다국어관리 현황 저장
+            onSave : function(){
+                var me = this;
+
+                if(!me.validate('save')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                var provider = me.$.gridPanel.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm( "STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveListMultiLang.body = {
+                        insertList: created,
+                        updateList: updated
+                    };
+                    UT.request(me.$.saveListMultiLang);
+                });
+            },
+
+            // 다국어관리 현황 저장 완료
+            completeSaveListMultiLang: function(){
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+	
+				localStorage.removeItem('i18n-en_US.lastUpdated');
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+
+            },
+
+            // 다국어관리 현황 삭제
+            onDeleteRow : function(){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    checked = provider.selectionCheckedIndexes(),
+                    message = "STD.N1300"; // "삭제 하시겠습니까?"
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListMultiLang.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteListMultiLang);
+                    }
+                });
+            },
+
+            // 다국어관리 현황 삭제 완료
+            completeDeleteListMultiLang: function(){
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+
+            }
+
+        });
+	</script>
+
+</dom-module>

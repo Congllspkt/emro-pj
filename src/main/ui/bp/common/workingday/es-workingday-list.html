@@ -1,0 +1,205 @@
+<dom-module id="es-workingday-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<sc-request-group init>
+			<!-- 전체 회사 목록 -->
+			<sc-ajax id="comboAllCompanyList"
+					 url="findListCompanyCodeForCombobox.do"
+					 last-response="{{codes.allCompanyList}}">
+			</sc-ajax>
+			<!-- 요일 목록 -->
+			<sc-ajax
+					id="findListCommonCodeAttributeCode"
+					url="findListCommonCodeAttributeCode.do"
+					body="{{codeParam}}"
+					last-response="{{codes.dowList}}">
+			</sc-ajax>
+		</sc-request-group>
+		
+		<sc-ajax
+			id="findListWorkingdayAtFirst"
+			url="findListWorkingdayAtFirst.do"
+			body="{{searchParam}}"
+			last-response="{{resultList}}">
+		</sc-ajax>
+		
+		<sc-ajax
+			id="resetListWorkingday"
+			url="resetListWorkingday.do"
+			body="{{searchParam}}"
+			on-response="completeResetListWorkingday">
+		</sc-ajax>
+		
+		<sc-ajax
+			id="saveListWorkingday"
+			url="saveListWorkingday.do"
+			on-response="completeSaveListWorkingday">
+		</sc-ajax>
+		
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		
+		<cc-page-title-bar></cc-page-title-bar>
+		
+		<cc-search-condition-panel on-search="onFindList" auth-r>
+			<cc-fieldset>
+				<sc-label text="회사 명"></sc-label>
+				<sc-combobox-field display-field="comp_nm" value-field="co_cd" selected-index="0" required="true"
+								   items="{{codes.allCompanyList}}" value="{{searchParam.co_cd}}" placeholder="선택"
+								   validation-group="search"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="연도"></sc-label>
+				<sc-combobox-field display-field="label" value-field="data" required="true" validation-group="search"
+								   items="{{codes.yearList}}" value="{{searchParam.wrkgday_yr}}" placeholder="선택"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="주말 제외"></sc-label>
+				<sc-checkbox-field input-value="{{searchParam.dow_yn}}" checked-value="Y" un-checked-value="N" placeholder="선택"></sc-checkbox-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel" class="flex" data-provider="{{resultList}}" editable="true" row-style-function="onRowStyle">
+			<cc-grid-toolbar>
+				<sc-button text="일자 초기화" on-click="onResetDate" auth-s></sc-button>
+				<sc-button text="저장" on-click="onSave" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-date-column data-field="wrkgday_dt" header-text="근무일 일자" width="200" text-align="center"></sc-date-column>
+				<sc-combobox-column data-field="dow" items="{{codes.dowList}}" value-field="cstr_cnd_val" display-field="label" header-text="요일" width="80" text-align="center"></sc-combobox-column>
+				<sc-group-column header-text="국가 휴일" width="300">
+					<sc-checkbox-column	data-field="ctry_hol_yn" header-text="사용 여부" width="90" chceked-value="Y" un-checked-value="N" editable="true"></sc-checkbox-column>
+					<sc-data-column	data-field="ctry_hol_rsn" header-text="사유"	width="240" editable="true" text-align="left"></sc-data-column>
+				</sc-group-column>
+				<sc-group-column header-text="회사 휴일" width="300">
+					<sc-checkbox-column	data-field="co_hol_yn" header-text="사용 여부" width="90" chceked-value="Y" un-checked-value="N" editable="true"></sc-checkbox-column>
+					<sc-data-column	data-field="co_hol_rsn" header-text="사유"	width="240" editable="true" text-align="left"></sc-data-column>
+				</sc-group-column>
+			</sc-grid-columns>
+		</sc-grid>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'es-workingday-list',
+			properties: {
+				codes: {
+					type: Object,
+					reset: false,
+					value: function() {
+						return {
+							allCompanyList: [],
+							yearList: [],
+							dowList : []
+						};
+					}
+				},
+				codeParam : {
+					type : Object,
+					value : function() {
+						return {
+							ccd : "C081",
+							cstr_cnd_cd : "DOW_CD"
+						};
+					}
+				},
+				searchParam: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+				resultList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				}
+			},
+			
+			initialized: function() {
+				var me = this;
+				var now = new Date();
+				var nowYear = now.getFullYear();
+				now.setFullYear(nowYear - 3);
+				var initYear = now.getFullYear();
+				
+				var yearList = new Array();
+				for(var i = 0; i < 5; i++) {
+					var obj = new Object();
+					obj.label = initYear + i;
+					obj.data = initYear + i;
+					
+					yearList.push(obj);
+				}
+				
+				me.set("codes.yearList", yearList);
+				me.set("searchParam.wrkgday_yr", nowYear);
+			},
+			
+			onFindList : function() {
+				var me = this;
+				UT.request(me.$.findListWorkingdayAtFirst);
+			},
+			
+			onResetDate : function() {
+				var me = this;
+				UT.confirm("STD.WRKG1001", function() { //일자를 초기화 하시겠습니까?
+					var provider = me.$.gridPanel.getDataProvider();
+					provider.removeAll();
+					UT.request(me.$.resetListWorkingday);
+				});
+			},
+			
+			completeResetListWorkingday : function(e, res){
+				var me = this;
+				var result = res.response;
+				
+				var grid = me.$.gridPanel;
+				grid.setDataProvider(result);
+			},
+			
+			onSave : function() {
+				var me = this;
+				var provider = me.$.gridPanel.getDataProvider();
+				var updated = provider.getUpdateItems();
+				
+				UT.confirm("STD.N1200", function() {
+					me.$.saveListWorkingday.body = {
+						updateList : updated
+					};
+					UT.request(me.$.saveListWorkingday);
+				});
+			},
+			
+			completeSaveListWorkingday : function(e, res) {
+				var me = this;
+				var result = res.response;
+				var status = result.resultStatus;
+				
+				if(status == 'S') {
+					UT.completeAlert("", function() {
+						me.onFindList();
+					});
+					return;
+				} else {
+					UT.alert("STD.E9999");
+					return;
+				}
+			},
+			
+			onRowStyle : function(data) {
+				var me = this;
+				if(data.ctry_hol_yn== "Y") {
+					return {
+						"fontColor" : "#fa021b"
+					};
+				}
+			}
+		});
+	</script>
+</dom-module>

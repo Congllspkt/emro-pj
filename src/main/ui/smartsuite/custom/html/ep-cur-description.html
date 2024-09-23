@@ -1,0 +1,51 @@
+<dom-module id="ep-cur-description">
+<!-- 
+/**
+ *
+ *	@description : 
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2018. 10. 4.
+ */
+-->
+	<style>
+		:host {
+            @apply(--vbox-layout);
+        }
+	</style>
+	
+	<template>
+        <cc-form-panel label-width="120">
+            <cc-fieldset>
+                [[translate('통화별 수수점자리가 제어되고 있습니다.')]]<br/>
+                <br/>
+                ex)[[translate('KRW이면 소수점 0자리 이하는 모두 절삭됩니다.')]]<br/>
+            </cc-fieldset>
+        </cc-form-panel>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'ep-cur-description',
+			properties : {
+				titleText: {
+					type: String,
+					value: I18N.translate('통화 설명')
+				}
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			initialized : function(){
+			}
+			/************************************************** 
+			 * 그리드 이벤트
+			 **************************************************/
+			/************************************************** 
+			 * 버튼 이벤트
+			 **************************************************/
+		});
+	</script>
+</dom-module>

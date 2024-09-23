@@ -1,0 +1,112 @@
+<dom-module id="es-vendor-user-role">
+
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+    </style>
+
+    <template>
+
+        <!-- 사용자 현황 조회 -->
+        <sc-ajax id="findList"
+                 url="findListRoleByUser.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <!-- 사용자 롤 저장 -->
+        <sc-ajax id="saveList"
+                 url="saveRoleByUser.do">
+        </sc-ajax>
+
+		<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="fit" use-selection="false" use-state="false"
+				 on-item-click="onItemClick">
+			<cc-grid-toolbar title-text="[[searchParam.usr_nm]]" i18n-disabled></cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-checkbox-column data-field="granted" header-text="역할 배정" width="140" text-align="center" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+				<sc-data-column data-field="role_cd" header-text="역할 코드" width="80" text-align="center"></sc-data-column>
+				<sc-data-column data-field="role_nm" header-text="역할 명" width="150" text-align="left"></sc-data-column>
+                <sc-data-column data-field="role_nm_en" header-text="역할 명 영문" width="150" text-align="left"></sc-data-column>
+			</sc-grid-columns>
+		</sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-vendor-user-role',
+
+            properties : {
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            usr_typ_ccd:'VD'
+                        };
+                    }
+                },
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            formulas : {
+                // 수정 가능 상태
+                isEditable: function() {
+                   return !UT.isEmpty(this.searchParam.usr_id);
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 사용자 현황에서 사용자 아이디 선택 시 롤 현황 조회
+            load: function(data) {
+                var me = this;
+                me.set('searchParam.usr_id', data.usr_id);
+                me.applyFormula();
+                UT.request(me.$.findList);
+            },
+
+            // 초기화
+            clear: function() {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function() {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "granted"){
+                    me.saveRoleByUser(data);
+                }
+            },
+
+            // 롤 적용 선택 시 곧바로 저장/삭제 처리
+            saveRoleByUser: function(data) {
+                var me = this;
+                // 사용자 목록에서 선택한 사용자 정보 추가
+                // 사용자롤 테이블에 추가하기 위해 필요
+                data.usr_id = me.searchParam.usr_id;
+                data.co_cd = me.searchParam.co_cd;
+
+                me.$.saveList.body = data;
+                UT.request(me.$.saveList);
+            }
+
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,153 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-auth-checker
+    ** Author          : dmwon
+    ** Create Date     : 2016.11.29
+    ** History         : 2016.11.29 dmwon 최초작성
+    ******************************************************************************************
+-->
+<!--
+    ******************************************************************************************
+    ** [Example 1] 역할체크 Elements 범위를 <sc-toolbar> 이하로 지정함
+    ** check-list에 auth-r 등록 시, 'auth-' 뒤를 값으로 판단하여 처리.
+    ** 예를 들어, 'auth-r'의 값은 'r'이며, 이는 SCRoleManager.getUserFuncs(menuId)의 리턴된 값과 비교하여 처리. 
+    **  <sc-toolbar>
+    **      <cc-auth-checker check-list="auth-r,auth-s">
+    **          <sc-button text="#{펼침}"         auth-r></sc-button>
+    **          <sc-button text="#{접기}"         auth-r></sc-button>
+    **          <sc-button text="#{현재노드추가}"    auth-s></sc-button>
+    **          <sc-button text="#{하위노드추가}"    auth-s></sc-button>
+    **          <sc-button text="#{삭제}"         auth-s></sc-button>
+    **          <sc-button text="#{저장}"         auth-s></sc-button>
+    **      </cc-auth-checker>
+    **  </sc-toolbar>
+    ** 
+    ** [Example 2] 역할체크 Elements 범위를 <template> 전체로 지정함
+    **  <template>
+    **  <cc-auth-checker check-list="auth-r,auth-s">
+    **  .....
+    **  <sc-toolbar>
+    **     <sc-button text="#{펼침}"         auth-r></sc-button>
+    **     <sc-button text="#{접기}"         auth-r></sc-button>
+    **     <sc-button text="#{현재노드추가}"    auth-s></sc-button>
+    **     <sc-button text="#{하위노드추가}"    auth-s></sc-button>
+    **  </sc-toolbar>
+    **  .....
+    **  </cc-auth-checker>
+    **  <template>
+    **   
+    ******************************************************************************************
+-->
+<script>
+	CCAuthChecker = Polymer({
+		is : 'cc-auth-checker',
+		properties : {
+			
+			/** 체크 대상 리스트 */
+			checkList : {
+				type : Object,
+			},
+			
+			/** checkList에 등록된 값을 trim하기 위한 정규식
+			 * [Example] 
+			 * 'auth-r'.replace(this.separatorReg, "") => r [DEF.READ:R]
+			 * 'auth-s'.replace(this.separatorReg, "") => s [DEF.SAVE:S]
+			 * 'auth-a'.replace(this.separatorReg, "") => a [DEF.APPROVAL:A]
+			 */
+			separatorReg : {
+				type : Object,
+				value : /auth-/gi
+			}
+		},
+		
+		attached: function(){
+			if(!this._attachedCalled) {
+	            this._attachedCalled = true;
+	            //한번만 호출되도록 로직작성
+	            
+	            this.applyAuthorization();
+	        }
+		},
+		
+		/** Button Authorization */
+		applyAuthorization: function(){
+			var me = this, allow = false,
+				moduleAuthList = me.getModuleAuthList(),
+				menuId = me.getMenuId(),
+				myAuthList = me.getAuthList(menuId);
+			
+			if(moduleAuthList){
+				// 모듈에서 체크할 역할 리스트
+				SCUtil.Array.each(moduleAuthList, function(moduleAuth){
+					me.executeAuthorization(myAuthList, moduleAuth);
+				});
+			}
+		},
+		
+		/** 엘리먼트 역할 체크를 통한, 삭제여부 판단 */
+		executeAuthorization: function(myAuthList, moduleAuth){
+			var me = this, allow = false,
+				moduleAuthValue = me.stripBySeparator(moduleAuth);
+
+			SCUtil.Array.each(myAuthList, function(myAuth){
+				if(moduleAuthValue.toUpperCase() === myAuth.toUpperCase()){
+						allow = true;
+						return;
+				}
+			});
+
+			!allow && me.handleElement(moduleAuth);
+		},
+		
+		/** Get Authorization List By Menu Id */
+		getAuthList: function(menuId){
+			return SCRoleManager.getUserFuncs(menuId);
+		},
+		
+		/** Get Menu Id */
+		getMenuId: function(){
+			return UT.getMenuId(this.domHost);
+		},
+		
+		/** Target Auth List */
+		getModuleAuthList: function(){
+			return this.checkList.split(/[\s,]+/);
+		},
+		
+		/** 엘리먼트 처리(remove/hide) */
+		handleElement: function(moduleAuth){
+            var me = this, parentNode,
+            	target = me.getTarget(),
+            	nodes = target.querySelectorAll('['+moduleAuth+']');
+            
+            if(nodes != null) {
+                for (var i = 0, len = nodes.length; i < len; i++) {
+                	me.removeElement(nodes[i]);
+                }
+            }
+		},
+		
+		getTarget: function(){
+			var me = this;
+			if(!me.hasChildNodes()){
+				return me.domHost;	
+			}else{
+				return me;
+			}
+			
+		},
+		
+		stripBySeparator: function(moduleAuth){
+			return moduleAuth.replace(this.separatorReg, "");
+		},
+		
+		/** 삭제 처리 */
+		removeElement: function(candidate){
+			if(candidate.destroy)
+				candidate.destroy();
+			else
+				candidate.remove();
+		}
+		
+	});
+</script>

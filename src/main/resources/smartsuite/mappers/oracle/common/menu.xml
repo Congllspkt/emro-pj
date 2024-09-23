@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="menu">
+	<sql id="Base_Column_List">
+		TEN_ID, MENU_CD, PAR_MENU_CD, MENU_URL, USR_TYP_CCD,  MENU_SORT, USE_YN,
+		RMK, STS, REGR_ID, REG_DTTM, MODR_ID, MOD_DTTM
+	</sql>
+
+	<select id="findListMenu" resultType="java.util.Map">
+	/*findListMenu */
+		SELECT
+			MM.PAR_MENU_CD,
+			MM.TEN_ID,
+			MM.MENU_CD,
+			MM.MENU_URL,
+			MM.USR_TYP_CCD,
+			MM.MENU_SORT,
+			MM.USE_YN,
+			MM.RMK,
+			MM.STS,
+			MM.MODR_ID,
+			MM.MOD_DTTM,
+			ML.MENU_NM,
+			#{g.locale}                      AS LANG_CCD,
+			ML.MENU_CD                       AS ML_MENU_CD,
+			ML2.MENU_NM                      AS LANG_CCD_MENU_NM,
+			#{p.lang_ccd}                     AS LANG_CCD2,
+			ML2.MENU_CD                      AS ML_MENU_CD2
+		FROM MENU MM
+		LEFT OUTER JOIN MENU_MULTLANG ML
+		ON (
+			MM.TEN_ID = ML.TEN_ID
+			AND MM.MENU_CD = ML.MENU_CD
+			AND ML.LANG_CCD =  #{g.locale}
+		)
+		LEFT OUTER JOIN MENU_MULTLANG ML2
+		ON (
+			MM.TEN_ID = ML2.TEN_ID
+			AND MM.MENU_CD = ML2.MENU_CD
+			AND ML2.LANG_CCD = #{p.lang_ccd}
+		)
+		WHERE MM.TEN_ID = #{g.tenant}
+		<if test="p.menu_cd != null and p.menu_cd != ''">
+		AND MM.MENU_CD = #{p.menu_cd}
+		</if>
+		AND MM.STS != 'D'
+		<if test="p.usr_typ_ccd != null and p.usr_typ_ccd != ''">
+		AND MM.USR_TYP_CCD = #{p.usr_typ_ccd}
+		</if>
+		ORDER BY MM.MENU_SORT
+	</select>
+
+	<delete id="deleteMenu">
+		DELETE FROM MENU
+		WHERE TEN_ID = #{g.tenant}
+		AND	MENU_CD = #{p.menu_cd}
+	</delete>
+
+	<insert id="insertMenuInfo">
+		INSERT INTO MENU
+			(
+			 TEN_ID,
+			MENU_CD,
+			PAR_MENU_CD,
+			MENU_URL,
+			USR_TYP_CCD,
+			MENU_SORT,
+			USE_YN,
+			RMK,
+			STS,
+			REGR_ID,
+			REG_DTTM,
+			MODR_ID,
+			MOD_DTTM
+			)
+		    VALUES
+			(
+			 #{g.tenant},
+			<bind name="p_menu_cd" value='g.trim(p.menu_cd)' />
+				#{p_menu_cd},
+				#{p.par_menu_cd},
+				#{p.menu_url},
+				#{p.usr_typ_ccd},
+				#{p.menu_sort,jdbcType=INTEGER},
+				#{p.use_yn},
+				#{p.rmk},
+				'C',
+				#{g.username},
+				#{g.now},
+				#{p.modr_id},
+				#{p.mod_dttm}
+				)
+	</insert>
+
+	<insert id="insertMenuName">
+		INSERT INTO MENU_MULTLANG
+			(
+			 	TEN_ID,
+				MENU_CD,
+				MENU_NM,
+				LANG_CCD,
+				RMK,
+				STS,
+				REGR_ID,
+				REG_DTTM,
+				MODR_ID,
+				MOD_DTTM
+			)
+		VALUES
+			(
+				#{g.tenant},
+				<bind name="p_menu_cd" value='g.trim(p.menu_cd)' />
+				#{p_menu_cd},
+				#{p.menu_nm},
+				#{p.lang_ccd},
+				#{p.rmk},
+				'C',
+				#{g.username},
+				#{g.now},
+				#{g.username},
+				#{g.now}
+			)
+	</insert>
+
+	<update id="updateMenuInfo">
+		UPDATE MENU
+		SET
+			PAR_MENU_CD = #{p.par_menu_cd},
+			MENU_URL = #{p.menu_url},
+			USR_TYP_CCD = #{p.usr_typ_ccd},
+			MENU_SORT = #{p.menu_sort,jdbcType=INTEGER},
+			USE_YN = #{p.use_yn},
+			RMK = #{p.rmk},
+			STS = 'U',
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		where TEN_ID = #{g.tenant}
+		and MENU_CD = #{p.menu_cd}
+	</update>
+
+	<update id="updateMenuName">
+		UPDATE MENU_MULTLANG
+		SET
+			MENU_NM = #{p.menu_nm},
+			STS = 'U',
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		WHERE
+			TEN_ID = #{g.tenant}
+			AND MENU_CD = #{p.menu_cd}
+			AND LANG_CCD = #{g.locale}
+	</update>
+
+	<update id="updateMenuNameLang">
+		UPDATE MENU_MULTLANG
+		 SET
+			MENU_NM = #{p.menu_nm},
+			STS = 'U',
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		 WHERE
+			TEN_ID = #{g.tenant}
+			AND MENU_CD = #{p.menu_cd}
+			AND LANG_CCD = #{p.lang_ccd}
+	</update>
+
+	<delete id="deleteMenuName">
+		DELETE FROM MENU_MULTLANG
+		WHERE TEN_ID = #{g.tenant}
+		AND MENU_CD = #{p.menu_cd}
+	</delete>
+
+	<select id="findMenuByCode" resultType="java.util.Map">
+		SELECT
+			MM.TEN_ID,
+			MM.MENU_CD
+		FROM MENU MM
+		WHERE
+			TEN_ID = #{g.tenant}
+			AND MENU_CD = #{p}
+	</select>
+
+	<delete id="deleteRoleMenuByMenu">
+		DELETE
+		FROM ROLE_MENU
+		WHERE
+		      TEN_ID = #{g.tenant}
+ 		  AND MENU_CD = #{p.menu_cd}
+	</delete>
+
+	<update id="updateMenuDeleteStatus">
+		UPDATE MENU
+		SET	STS = 'D'
+		where TEN_ID = #{g.tenant}
+		and MENU_CD = #{p.menu_cd}
+	</update>
+
+	<delete id="deleteManual">
+		DELETE FROM MNL
+		WHERE TEN_ID = #{g.tenant}
+		  AND MENU_CD = #{p.menu_cd}
+	</delete>
+
+</mapper>

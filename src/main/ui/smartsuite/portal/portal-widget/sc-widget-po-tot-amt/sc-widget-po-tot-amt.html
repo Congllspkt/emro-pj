@@ -1,0 +1,166 @@
+<dom-module id="sc-widget-po-tot-amt">
+<!-- 
+/**
+ *
+ *	@description : 
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @Since 2017. 12. 20.
+ * @변경이력 : [2017. 12. 20.] Yeon-u Kim 최초작성
+ */
+-->
+	<style>
+		:host{
+			@apply(--vbox-layout)
+		}
+		h4 {height:30px; line-height:30px; background:#1a6ead; color:#fff; padding:0 10px; font-size:15px;}
+		/* .wrap_process ul{width:100%; margin:20px; min-width:740px;} */
+		.link_content {min-width:100px;}
+		/* .link_content ul {margin:13px 18px;} */
+		.link_content li {float:left; margin-top:10px; background:#fff; white-space:nowrap; width:25%; padding-right:11px; box-sizing:border-box;}
+		.link_content li:first-child, .link_content li:last-child {width:25%;}
+		.link_content li a {display:inline-block; font-size:12px; color:#000; font-weight:bold; width:100%; height:110px; padding:6px 0; border:1px solid #ddd; box-sizing:border-box; opacity:1; text-align:center;}
+		.link_content li a:hover {border:1px solid #48aadd; color:#48aadd}
+		.link_content li a:before {color:#000; font : normal normal normal 35px/40px FontAwesome; display:block; text-align:center; margin:15px 0 10px;}
+		.link_content li a:hover:before{color:#ff7800;}
+		.link_content li b {display:block; margin:0 0 10px; font-size:24px;}
+		
+		
+		
+		.link_content li span {display:inline-block; font-size:12px; color:#000; font-weight:bold; width:100%; height:110px; padding:6px 0; border:1px solid #ddd; box-sizing:border-box; opacity:1; text-align:center;}
+	</style>
+	
+	<template>
+		<!-- ajax 선언 부 -->
+		<sc-ajax auto id="protocolGetSetting" url="../portal/findWidgetProperties.do" body$='{"wdgt_id":"[[widgetId]]"}'
+                 handle-as="json"	on-response="_onGetSetting" method="post"
+                 contentType="application/json"></sc-ajax>
+        <!-- 사용자 구매 운영조직 조회 -->
+		<sc-ajax id="findListOperationOrganizationByUser"
+			url="findListOperationOrganizationByUser.do"
+            body="PO"
+            content-type="text/plain",
+            last-response="{{codes.operOrgCd}}"
+            on-response="completeOperationOrganization">
+		</sc-ajax>
+		<sc-ajax id="findPoTotAmtList"
+            url="../portal/widget/findListPoTotalAmountTreeByDate.do"
+            body="{{searchParam}}"
+            on-response="completeFindPoTotAmtList">
+        </sc-ajax>
+       <div class="fit">
+       	<section class="link_content">
+       		<h4>[[translate('총 발주금액')]]<span style="float: right;">[[translate('단위')]]:[[translate('억')]]</span></h4>
+       		<cc-search-container on-search="onFindList">
+	       	<table>
+	       		<colgroup>
+	                   <col style="width:120px"></col>
+	                   <col></col>
+	               </colgroup>
+	       		<tr>
+	       			<th>
+	       				<sc-label text="운영조직"></sc-label>
+	       			</th>
+	       			<td>
+	       				<sc-multi-combobox-field id="operorgcombobox"
+	       					enable-check-all="true"
+	       					selected-all="true"
+		                   display-field="logic_org_nm"
+		                   value-field="oorg_cd"
+		                   items="[[codes.operOrgCd]]" 
+		                   value = "{{searchParam.oper_org_cds}}"
+		                   required="true"
+		                   placeholder="선택 없음">
+		    			</sc-multi-combobox-field>
+	       			</td>
+	       		</tr>
+	       	</table>
+	       	</cc-search-container>
+	             <ul id="pocont">
+	             </ul>
+			</section>
+       </div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'sc-widget-po-tot-amt',
+			properties : {
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+				codes: {
+					type: Object,
+					value: function(){
+						return {operOrgCd: []};
+					}
+				}
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			//위젯 정보를 가져오고 난뒤 호출되는 함수
+            _onGetSetting: function () {
+				var me = this;
+				
+				//setTimeout(function() {
+					UT.request(me.$.findListOperationOrganizationByUser);
+				//}.bind(me), 1000);
+			},
+			// refresh-widget 시 호출되는 함수
+			refresh: function() {
+				this.onFindList();
+			},
+			completeOperationOrganization: function(e,res){
+				var me = this;
+				me.onFindList();
+			},
+			onFindList: function(){
+				var me = this;
+				if(!me.$.operorgcombobox.validate()){
+					UT.alert("STD.E0000");
+					return;
+				}
+				UT.request(me.$.findPoTotAmtList);
+			},
+			completeFindPoTotAmtList: function(el, res) {
+				var me = this,
+					result = res.response;
+				
+				var po = Polymer.dom(me.$.pocont);
+				while(po.firstChild) po.removeChild(po.firstChild);
+				
+				if(UT.isNotEmpty(result)) {
+					for(var i=0; i<result.length; i++) {
+						var row = result[i];
+						
+						var li = document.createElement("li");
+						var month = row ? row.month : null, poAmt = row ? row.po_amt : null;
+						li.innerHTML = "<span><b>" + me.formatter(month) + "</b>" + me.amtFormatter(poAmt) + "</span>";
+						
+						Polymer.dom(me.$.pocont).appendChild(li);
+					}
+				}
+			},
+			amtFormatter: function(value){
+				var big = new BigNumber(value || 0);
+				var val = big.div(100000000);
+				return SCFormatter.format('amt',val);
+			},
+			formatter: function(val){
+				var me = this;
+				if(UT.isEmpty(val)){
+					return me.translate("금년");
+				}else{
+					return val + me.translate("월");
+				}
+			}
+		});
+	</script>
+</dom-module>

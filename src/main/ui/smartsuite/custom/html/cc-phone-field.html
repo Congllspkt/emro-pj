@@ -1,0 +1,65 @@
+<dom-module id="cc-phone-field">
+    <style>
+		:host {
+			display: inline-flex;
+		}
+	</style>
+    <template>
+    	<div style="display:flex;">
+			<sc-combobox-field class="w-60" items="[[nums]]" value="{{num_1}}" display-field="value"></sc-combobox-field> -
+	       	<sc-text-field class="w-50" value="{{num_2}}" maxlength="4" mask-re="/[0-9]/"></sc-text-field> -
+	       	<sc-text-field class="w-50" value="{{num_3}}" maxlength="4" mask-re="/[0-9]/"></sc-text-field>
+		</div>
+    </template>
+    <script>
+        Polymer({
+            is: 'cc-phone-field',
+            properties:{
+                value: {
+                	type: String,
+                	notify: true
+                },
+                nums: {
+                	type: Array,
+                	value : function() {
+                		return [
+							 {value: "010"}
+							,{value: "011"}
+							,{value: "016"}
+							,{value: "017"}
+							,{value: "018"}
+							,{value: "019"}
+           		        ];
+                	}
+                },
+                
+                num_1: String,
+                num_2: String,
+                num_3: String,
+            },
+            
+            observers: ['_getNum(value)', '_setNum(num_1,num_2,num_3)'],
+            
+            _setNum: function(num_1, num_2, num_3) {
+            	if(num_1 && num_2 && num_3) {
+	            	var me = this;
+	            	me.set("value", num_1 + '-' + num_2 + '-' + num_3);
+            	}
+            },
+            
+            _getNum: function(value) {
+            	var me = this;
+            	if(!value) {
+            		me.set("num_1", "");
+	            	me.set("num_2", "");
+	            	me.set("num_3", "");
+            	} else {
+            		var numArr = value.split('-');
+            		me.set("num_1", numArr[0]);
+	            	me.set("num_2", numArr[1]);
+	            	me.set("num_3", numArr[2]);
+            	}
+            }
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,113 @@
+<sc-link rel="import" href="es-column-search.html"></sc-link>
+<sc-link rel="import" href="es-sheet-master-info.html"></sc-link>
+
+<dom-module id="es-sheet-master-detail">
+	<!--
+        ******************************************************************************************
+        ** @Program-name    : BID SheetMaster Info 관리 - Column header 설정
+        ** @Description     :
+        ** @Author          : GaRam, Choi
+        ** @Create Date     : 2020.07.31
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<cc-page-title-bar title-text="{{titleText}}">
+			<sc-button text="목록" on-click="onShowList" auth-r></sc-button>
+		</cc-page-title-bar>
+		<div class="hbox flex" style="overflow-x:hidden;">
+			<es-column-search id="columnSearch"  class="flex-3" on-selected-items="onSelectItems"></es-column-search>
+			<div class="hspace-10"></div>
+			<es-sheet-master-info id="masterInfo" class="flex-7" on-show-list="onShowList" ></es-sheet-master-info>
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "es-sheet-master-detail",
+			behaviors : [
+				Polymer.Templatizer
+			],
+			properties : {
+				codes: {
+					type : Object,
+					reset : false,
+					value : function() {
+						return {
+							currencyCodeList: []
+						}
+					}
+				},
+
+
+				// 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				},
+
+				groupColumnSearch:{
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+
+				titleText : {
+					type: String,
+					value : ""
+				},
+
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+
+			},
+			load : function(data) {
+				var me = this;
+				me.set("titleText",data.sheet_nm);
+				me.set("searchParam",UT.copy(data));
+				me.$.columnSearch.load();
+				me.$.masterInfo.load(data);
+			},
+
+			onSelectItems:function(data){
+				var me = this;
+				me.$.masterInfo.onSelectColumns(data);
+			},
+			onShowList: function () {
+				var me = this;
+				me.fire("show-list");
+			},
+
+		});
+	</script>
+
+</dom-module>

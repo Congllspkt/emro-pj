@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="csr">
+
+    <select id="findListCSRInfo" resultType="map">
+        /* csr.findListCSRInfo : CSR 목록 조회*/
+        SELECT TEN_ID
+		,      CSR_UUID
+		,      CSR_NO
+		,      CSR_TYP_CCD
+		,      CSR_STS_CCD
+		,      CSR_TIT
+		,      REQR_ID
+		, CASE WHEN 'en_US' = #{g.locale} THEN (SELECT USR_NM_EN
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		ELSE  (SELECT USR_NM
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		END AS DISP_REQ_NM
+		, CASE WHEN 'en_US' = #{g.locale} THEN (SELECT USR_NM_EN
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		ELSE  (SELECT USR_NM
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		END AS DISP_CHR_NM
+		,      ( SELECT USR_NM
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.REQR_ID
+		            AND STS != 'D' ) AS REQ_NM
+		,      ( SELECT USR_NM
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.PIC_ID
+		            AND STS != 'D' ) AS CHR_NM
+		,      REQ_DTTM
+		,      CSR_PRCSG_DSD_DTTM
+		,      CSR_PRCSG_DTTM
+		FROM CSR MA
+       WHERE TEN_ID = #{g.tenant}
+         <if test="p.csr_no != null and p.csr_no != ''">
+			 <bind name="csr_no" value="'%' + p.csr_no + '%'" />
+			 AND  UPPER(CSR_NO) LIKE UPPER(#{csr_no})
+         </if>
+         <if test="p.csr_tit != null and p.csr_tit != ''">
+			 <bind name="csr_tit" value="'%' + p.csr_tit + '%'" />
+             AND  UPPER(CSR_TIT) LIKE UPPER(#{csr_tit})
+         </if>
+         <if test="p.csr_typ_ccd != null and p.csr_typ_ccd.size() > 0">
+             AND  CSR_TYP_CCD IN
+             <foreach collection="p.csr_typ_ccd" item="csrtyp" open="(" separator="," close=")">
+                 #{csrtyp}
+             </foreach>
+         </if>
+         <if test="p.csr_sts_ccd != null and p.csr_sts_ccd.size() > 0">
+             AND  CSR_STS_CCD IN
+             <foreach collection="p.csr_sts_ccd" item="csrprogsts" open="(" separator="," close=")">
+                 #{csrprogsts}
+             </foreach>
+         </if>
+         <if test='p.req_fdate != null'>
+             AND REQ_DTTM >= #{p.req_fdate}
+         </if>
+         <if test='p.req_tdate != null'>
+         	 <bind name="toDatePattern" value="g.getPlusDays(p.req_tdate,1)"/>
+             AND REQ_DTTM <![CDATA[<=]]> #{toDatePattern}
+         </if>
+         <if test="p.reqr_id != null and p.reqr_id != ''">
+             AND REQR_ID = #{p.reqr_id}
+         </if>
+         AND STS != 'D'
+       ORDER BY REQ_DTTM DESC
+    </select>
+    
+    <resultMap type="map" id="csrMap">
+        <result property="csr_cont" column="CSR_CONT"  jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    <select id="selectCSRInfo" resultMap="csrMap">
+    	/* csr.selectCSRInfo : CSR 정보 조회 */
+    	SELECT TEN_ID
+    	,      CSR_UUID
+    	,      CSR_NO
+    	,      CSR_TYP_CCD
+    	,      CSR_STS_CCD
+    	,      CSR_TIT
+    	,      CSR_PRIO
+    	,      CSR_CONT
+    	,      REQR_ID
+    	,      ( SELECT CASE WHEN 'en_US' = #{g.locale} THEN USR_NM_EN ELSE USR_NM END
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.REQR_ID) AS REQ_NM
+		,      PIC_ID
+		,      ( SELECT CASE WHEN 'en_US' = #{g.locale} THEN USR_NM_EN ELSE USR_NM END
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.PIC_ID) AS CHR_NM
+		,      CSR_PRCSG_DSD_DTTM
+		,      CSR_PRCSG_DTTM
+		,      REQ_DTTM
+		,      ATHG_UUID
+		FROM CSR MA
+		WHERE TEN_ID = #{g.tenant}
+		  AND CSR_UUID = #{p}
+    </select>
+    
+    <insert id="insertCSRInfo">
+        /* csr.insertCSRInfo : CSR 신규 등록 */
+        INSERT INTO CSR (
+			  TEN_ID
+			, CSR_UUID
+			, CSR_NO
+			, CSR_TYP_CCD
+			, CSR_PRIO
+			, CSR_TIT
+			, CSR_CONT
+			, REQR_ID
+			, REQ_DTTM
+			, CSR_PRCSG_DSD_DTTM
+			, ATHG_UUID
+			, STS
+			, REGR_ID
+			, REG_DTTM
+		) VALUES (
+			  #{g.tenant}
+			, #{p.csr_uuid}
+			, #{p.csr_no}
+			, #{p.csr_typ_ccd}
+			, #{p.csr_prio}
+			, #{p.csr_tit}
+			, #{p.csr_cont}
+			, #{g.username}
+			, #{g.now}
+			, #{p.csr_prcsg_dsd_dttm}
+			, #{p.athg_uuid}
+			, 'C'
+			, #{g.username}
+			, #{g.now}
+		)
+    </insert>
+    
+    <update id="updateCSRInfo">
+    	/* csr.updateCSRInfo : CSR 수정 */
+    	UPDATE CSR
+    	SET CSR_TYP_CCD = #{p.csr_typ_ccd}
+		,   CSR_TIT = #{p.csr_tit}
+		,   CSR_PRIO = #{p.csr_prio}
+		,   CSR_CONT = #{p.csr_cont}
+		,   REQR_ID = #{g.username}
+		,   REQ_DTTM = #{g.now}
+		,   CSR_PRCSG_DSD_DTTM = #{p.csr_prcsg_dsd_dttm}
+		,   ATHG_UUID = #{p.athg_uuid}
+        ,   STS = 'U'
+    	,   MODR_ID = #{g.username}
+    	,   MOD_DTTM = #{g.now}
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p.csr_uuid}
+    </update>
+    
+    <delete id="deleteCSRInfo">
+    	/* csr.deleteCSRInfo : CSR 삭제 */
+    	DELETE CSR
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p}
+    </delete>
+    
+    <update id="updateCSRStatus">
+    	/* csr.updateCSRStatus : CSR 진행상태 및 처리일시 업데이트 */
+    	UPDATE CSR
+    	SET CSR_STS_CCD = #{p.csr_sts_ccd}
+    	,   CSR_PRCSG_DTTM = #{g.now}
+    	,   STS = 'U'
+    	,   MODR_ID = #{g.username}
+    	,   MOD_DTTM = #{g.now}
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p.csr_uuid}
+    </update>
+    
+    <select id="getCSRProgressStatus" resultType="string">
+    	/* csr.getCSRProgressStatus : CSR 진행상태 조회 */
+    	SELECT CSR_STS_CCD
+    	FROM CSR
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p.csr_uuid}
+    </select>
+    
+    <select id="findListCSRReceipt" resultType="map">
+    	/* csr.findListCSRReceipt : CSR 접수내역 목록 조회 */
+    	SELECT TEN_ID
+		,      CSR_UUID
+		,      CSR_NO
+		,      CSR_TYP_CCD
+		,      CSR_STS_CCD
+		,      CSR_TIT
+		,      REQR_ID
+		, CASE WHEN 'en_US' = #{g.locale} THEN (SELECT USR_NM_EN
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		ELSE  (SELECT USR_NM
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		END AS DISP_REQ_NM
+		, CASE WHEN 'en_US' = #{g.locale} THEN (SELECT USR_NM_EN
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		ELSE  (SELECT USR_NM
+		FROM USR
+		WHERE TEN_ID = MA.TEN_ID
+		AND USR_ID = MA.REQR_ID
+		AND STS != 'D')
+		END AS DISP_CHR_NM
+		,      ( SELECT USR_NM
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.REQR_ID
+		            AND STS != 'D' ) AS REQ_NM
+		,      ( SELECT USR_NM
+		           FROM USR
+		          WHERE TEN_ID = MA.TEN_ID
+		            AND USR_ID = MA.PIC_ID
+		            AND STS != 'D' ) AS CHR_NM            
+		,      REQ_DTTM
+		,      CSR_PRCSG_DSD_DTTM
+		,      CSR_PRCSG_DTTM
+		FROM CSR MA
+       WHERE TEN_ID = #{g.tenant}
+		<if test="p.csr_no != null and p.csr_no != ''">
+			<bind name="csr_no" value="'%' + p.csr_no + '%'" />
+			AND  UPPER(CSR_NO) LIKE UPPER(#{csr_no})
+		</if>
+		<if test="p.csr_tit != null and p.csr_tit != ''">
+			<bind name="csr_tit" value="'%' + p.csr_tit + '%'" />
+			AND  UPPER(CSR_TIT) LIKE UPPER(#{csr_tit})
+		</if>
+         <if test="p.csr_typ_ccd != null and p.csr_typ_ccd.size() > 0">
+             AND  CSR_TYP_CCD IN
+             <foreach collection="p.csr_typ_ccd" item="csrtyp" open="(" separator="," close=")">
+                 #{csrtyp}
+             </foreach>
+         </if>
+         <if test="p.csr_sts_ccd != null and p.csr_sts_ccd.size() > 0">
+             AND  CSR_STS_CCD IN
+             <foreach collection="p.csr_sts_ccd" item="csrprogsts" open="(" separator="," close=")">
+                 #{csrprogsts}
+             </foreach>
+         </if>
+         <if test='p.req_fdate != null'>
+             AND REQ_DTTM >= #{p.req_fdate}
+         </if>
+         <if test='p.req_tdate != null'>
+         	 <bind name="toDatePattern" value="g.getPlusDays(p.req_tdate,1)"/>
+             AND REQ_DTTM <![CDATA[<=]]> #{toDatePattern}
+         </if>
+         <if test="p.reqr_id != null and p.reqr_id != ''">
+             AND REQR_ID = #{p.reqr_id}
+         </if>
+         <if test="p.pic_id != null and p.pic_id != ''">
+             AND PIC_ID = #{p.pic_id}
+         </if>
+         AND STS != 'D'
+         AND CSR_STS_CCD NOT IN ('10') /* 임시저장 건 제외 */
+       ORDER BY REQ_DTTM DESC
+    </select>
+    
+    <update id="updateCSRPersonInCharge">
+    	UPDATE CSR
+    	SET PIC_ID = #{p.pic_id}
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p.csr_uuid}
+    </update>
+
+	<resultMap id="csrResultMap" type="map">
+		<result property="csr_prcsg_cont" column="CSR_PRCSG_CONT" jdbcType="CLOB" javaType="string" />
+	</resultMap>
+    
+    
+    <select id="findListCSRProcessingInfo" resultMap="csrResultMap">
+    	/* csr.findListCSRProcessingInfo : CSR 처리내역 조회 */
+    	SELECT TEN_ID
+    	,      CSR_PRCSG_HISTREC_UUID
+    	,      CSR_UUID
+    	,      CSR_STS_CCD
+    	,      CSR_PRE_STS_CCD
+    	,      CSR_PRCSG_CONT
+    	,      ATHG_UUID
+    	,      REG_DTTM
+    	,      MODR_ID
+    	,      ( SELECT CASE WHEN 'en_US' = #{g.locale} THEN USR_NM_EN ELSE USR_NM END
+		           FROM USR
+		          WHERE TEN_ID = PH.TEN_ID
+		            AND USR_ID = PH.MODR_ID
+		            AND STS != 'D' ) AS MODR_NM
+		 FROM CSR_PRCSG_HISTREC PH
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_UUID = #{p}
+    	ORDER BY REG_DTTM DESC
+    </select>
+    
+    <insert id="insertProcessHistoryRecordInfo">
+    	/* csr.insertProcessHistoryRecordInfo : CSR 처리내역 저장 */
+    	INSERT INTO CSR_PRCSG_HISTREC (
+    		  TEN_ID
+			, CSR_PRCSG_HISTREC_UUID
+			, CSR_UUID
+			, CSR_STS_CCD
+			, CSR_PRE_STS_CCD
+			, CSR_PRCSG_CONT
+			, ATHG_UUID
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+    	) VALUES (
+	    	  #{g.tenant}
+			, #{p.csr_prcsg_histrec_uuid}
+			, #{p.csr_uuid}
+			, #{p.csr_sts_ccd}
+			, #{p.csr_pre_sts_ccd}
+			, #{p.csr_prcsg_cont}
+			, #{p.athg_uuid}
+			, #{p.sts}
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+    	)
+    	
+    </insert>
+    
+    <update id="updateProcessHistoryRecordInfo">
+    	/* csr.updateProcessHistoryRecordInfo : CSR 처리내역 내용 수정 */
+    	UPDATE CSR_PRCSG_HISTREC
+    	SET CSR_PRCSG_CONT = #{p.csr_prcsg_cont}
+    	,   STS = 'U'
+    	,   MODR_ID = #{g.username}
+    	WHERE TEN_ID = #{g.tenant}
+    	  AND CSR_PRCSG_HISTREC_UUID = #{p.csr_prcsg_histrec_uuid}
+    </update>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</mapper>

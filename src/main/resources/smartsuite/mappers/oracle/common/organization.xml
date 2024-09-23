@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+ORG_TYP: 조직유형
+LOGIC_ORG: 조직
+DEPT: 부서
+ -->
+
+<mapper namespace="organization">
+
+    <insert id="insertLogicOrganizationInfo">
+    /* organization.insertLogicOrganizationInfo: 조직 등록 */
+    INSERT
+      INTO LOGIC_ORG (
+           TEN_ID
+         , LOGIC_ORG_TYP_CCD
+         , LOGIC_ORG_CD
+         , ORG_CD
+         , PARNODE_LOGIC_ORG_CD
+         , LOGIC_ORG_NM
+         , LOGIC_ORG_NM_EN
+         , CORPNO
+         , BIZREGNO
+         , CTRY_CCD
+         , CITY_CCD
+         , ADDR
+         , ADDR_EN
+         , CEO_NM
+         , CEO_NM_EN
+         , TEL
+         , CUR_CCD
+         , LANG_CCD
+         , ZIPCD
+         , IND
+         , BIZTYP
+         , TMZ_CCD
+         , USE_YN
+         , STS
+         , RMK
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.logic_org_typ_ccd}
+         , #{p.logic_org_cd}
+         , #{p.org_cd}
+         , #{p.parnode_logic_org_cd}
+         , #{p.logic_org_nm}
+         , #{p.logic_org_nm_en}
+         , #{p.corpno}
+         , #{p.bizregno}
+         , #{p.ctry_ccd}
+         , #{p.city_ccd}
+         , #{p.addr}
+         , #{p.addr_en}
+         , #{p.ceo_nm}
+         , #{p.ceo_nm_en}
+         , #{p.tel}
+         , #{p.cur_ccd}
+         , #{p.lang_ccd}
+         , #{p.zipcd}
+         , #{p.ind}
+         , #{p.biztyp}
+         , #{p.tmz_ccd}
+         , #{p.use_yn}
+         , 'C'
+         , #{p.rmk}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <update id="updateLogicOrganizationInfo">
+        /* organization.updateLogicOrganizationInfo: 조직 수정 */
+        UPDATE LOGIC_ORG
+        SET STS = 'U'
+          , MOD_DTTM = #{g.now}
+          , MODR_ID = #{g.username}
+          , LOGIC_ORG_NM = #{p.logic_org_nm}
+          , LOGIC_ORG_NM_EN = #{p.logic_org_nm_en}
+          , CORPNO = #{p.corpno}
+          , BIZREGNO = #{p.bizregno}
+          , IND = #{p.ind}
+          , BIZTYP = #{p.biztyp}
+          , CTRY_CCD = #{p.ctry_ccd}
+          , CITY_CCD = #{p.city_ccd}
+          , ADDR = #{p.addr}
+          , ADDR_EN = #{p.addr_en}
+          , CEO_NM = #{p.ceo_nm}
+          , CEO_NM_EN = #{p.ceo_nm_en}
+          , TEL = #{p.tel}
+          , CUR_CCD = #{p.cur_ccd}
+          , LANG_CCD = #{p.lang_ccd}
+          , ZIPCD = #{p.zipcd}
+          , TMZ_CCD = #{p.tmz_ccd}
+          , USE_YN = #{p.use_yn}
+          , RMK = #{p.rmk}
+        WHERE TEN_ID = #{g.tenant}
+          AND LOGIC_ORG_CD = #{p.logic_org_cd}
+          AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </update>
+
+    <select id="findLogicOrganizationInfo" resultType="map">
+        SELECT TEN_ID,
+               LOGIC_ORG_TYP_CCD,
+               LOGIC_ORG_CD,
+               ORG_CD,
+               PARNODE_LOGIC_ORG_CD,
+               LOGIC_ORG_NM,
+               LOGIC_ORG_NM_EN,
+               CORPNO,
+               BIZREGNO,
+               CTRY_CCD,
+               CITY_CCD,
+               ADDR,
+               ADDR_EN,
+               CEO_NM,
+               CEO_NM_EN,
+               TEL,
+               CUR_CCD,
+               LANG_CCD,
+               ZIPCD,
+               IND,
+               BIZTYP,
+               TMZ_CCD,
+               USE_YN,
+               RMK,
+               STS,
+               REGR_ID,
+               REG_DTTM,
+               MODR_ID,
+               MOD_DTTM
+            FROM LOGIC_ORG
+            WHERE TEN_ID = #{g.tenant}
+            AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </select>
+
+    <delete id="deleteLogicOrganizationInfo">
+        /* organization.deleteLogicOrganizationInfo: 조직 삭제 */
+        DELETE
+        FROM LOGIC_ORG
+        WHERE TEN_ID = #{g.tenant}
+          AND LOGIC_ORG_TYP_CCD = #{p.logic_org_typ_ccd}
+          AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </delete>
+
+
+
+    <insert id="insertDepartmentByOrganization">
+    /* organization.insertDepartmentByOrganization: 부서 등록 */
+    INSERT 
+      INTO DEPT (
+           TEN_ID
+         , DEPT_CD
+         , DEPT_NM
+         , DEPT_NM_EN
+         , PAR_DEPT_CD
+         , USE_YN
+         , RMK
+         , STS
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dept_cd}
+         , #{p.dept_nm}
+         , #{p.dept_nm_en}
+         , #{p.par_dept_cd}
+         , #{p.use_yn}
+         , #{p.rmk}
+         , 'C'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+
+    <insert id="insertDepartmentOrganizationMapping">
+    /* organization.insertDepartmentOrganizationMapping: 조직 부서 매핑 등록 */
+    INSERT
+      INTO LOGIC_ORG_DEPT_MAPG (
+           TEN_ID
+         , LOGIC_ORG_TYP_CCD
+         , LOGIC_ORG_CD
+         , DEPT_CD
+         , RMK
+         , STS
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.logic_org_typ_ccd}
+         , #{p.logic_org_cd}
+         , #{p.dept_cd}
+         , #{p.rmk}
+         , 'C'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+
+
+    <update id="updateDepartmentByOrganization">
+    /* organization.updateDepartmentByOrganization: 부서 수정 */
+    UPDATE DEPT
+       SET STS = 'U'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , DEPT_NM = #{p.dept_nm}
+         , DEPT_NM_EN = #{p.dept_nm_en}
+         , PAR_DEPT_CD = #{p.par_dept_cd}
+         , USE_YN = #{p.use_yn}
+         , RMK = #{p.rmk}
+     WHERE TEN_ID = #{g.tenant}
+       AND DEPT_CD = #{p.dept_cd}
+    </update>
+
+    
+
+    <update id="deleteDepartment">
+    /* organization.deleteDepartment: 부서 삭제 */
+    UPDATE DEPT
+      SET STS = 'D'
+        , MODR_ID = #{g.username}
+        , MOD_DTTM = #{g.now}
+    WHERE TEN_ID = #{g.tenant}
+      AND DEPT_CD = #{p.dept_cd}
+    </update>
+
+    <delete id="deleteLogicOrganizationAndDeptInfoByOrganizationCode">
+    /* organization.deleteLogicOrganizationAndDeptInfoByOrganizationCode: 조직 부서 맵핑테이블 삭제  (조회 조건 조직 코드 )*/
+    DELETE
+      FROM LOGIC_ORG_DEPT_MAPG
+     WHERE TEN_ID = #{g.tenant}
+       AND LOGIC_ORG_TYP_CCD = #{p.logic_org_typ_ccd}
+       AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </delete>
+
+    <delete id="deleteLogicalOrganizationDepartmentMappingByDepartmentCode">
+    /* organization.deleteOrganizationAndDeptInfo: 조직 부서 맵핑테이블 삭제  (조회 조건 부서 코드 )*/
+    DELETE
+      FROM LOGIC_ORG_DEPT_MAPG
+     WHERE TEN_ID = #{g.tenant}
+       AND DEPT_CD = #{p.dept_cd}
+    </delete>
+
+	<select id="findListDepartmentByOrganization" resultType="map">
+    	/* organization.findListDepartmentByOrganization: 부서 목록 */
+    	SELECT  DEPT.TEN_ID
+              , DEPT.DEPT_CD
+                , CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+                ELSE DEPT.DEPT_NM
+                END AS DISP_DEPT_NM
+              , DEPT.DEPT_NM
+              , DEPT.DEPT_NM_EN
+              , DEPT.PAR_DEPT_CD
+              , DEPT.USE_YN
+              , DEPT.RMK
+              , DEPT.STS
+              , DEPT.REGR_ID
+              , DEPT.REG_DTTM
+              , DEPT.MODR_ID
+              , DEPT.MOD_DTTM
+              , 1 AS RECURSIVE_LEVEL
+              , DEPT.DEPT_CD AS TREE
+           FROM DEPT DEPT
+            INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+            ON DEPT.TEN_ID = ODM.TEN_ID
+            AND DEPT.DEPT_CD = ODM.DEPT_CD
+            INNER JOIN LOGIC_ORG LOGIC_ORG
+            ON DEPT.TEN_ID = LOGIC_ORG.TEN_ID
+            AND ODM.LOGIC_ORG_TYP_CCD = LOGIC_ORG.LOGIC_ORG_TYP_CCD
+            AND ODM.LOGIC_ORG_CD = LOGIC_ORG.LOGIC_ORG_CD
+          WHERE DEPT.TEN_ID = #{g.tenant}
+            <if test='p.logic_org_cd != null and p.logic_org_cd != ""'>
+                AND LOGIC_ORG.LOGIC_ORG_CD = #{p.logic_org_cd}
+            </if>
+	       <if test="p.dept_cd != null and p.dept_cd != ''">
+	       	<bind name="deptCdPattern" value="'%' + p.dept_cd + '%'"/>
+	       AND DEPT.DEPT_CD LIKE UPPER(#{deptCdPattern})
+	       </if>
+            <if test="p.dept_nm != null and p.dept_nm != ''">
+                <bind name="deptNmPattern" value="'%' + p.dept_nm + '%'" />
+                AND (UPPER(DEPT.DEPT_NM_EN) LIKE UPPER(#{deptNmPattern}) OR UPPER(DEPT.DEPT_NM) LIKE UPPER(#{deptNmPattern}))
+            </if>
+	       <if test="p.menu != 'admin'">
+            AND DEPT.USE_YN = 'Y'
+           </if>
+            AND DEPT.STS != 'D'
+            ORDER BY DEPT.DEPT_CD
+    </select>
+	<select id="findListParentsDepartmentCodeAffiliationDepartmentName" resultType="string">
+		WITH RECURSIVE (DEPT_CD,PAR_DEPT_CD, DEPT_NM)
+        AS
+        ( SELECT DEPT_CD, PAR_DEPT_CD,   CASE WHEN 'en_US' = #{g.locale} THEN DEPT_NM_EN
+                                               ELSE DEPT_NM
+            END AS DEPT_NM
+            FROM DEPT
+           WHERE TEN_ID     = #{g.tenant}
+             AND STS       != 'D'
+             AND DEPT_CD = #{p} /* START WITH 절에 해당함 */
+             
+       	  UNION ALL
+       	
+          SELECT S1.DEPT_CD, S1.PAR_DEPT_CD, CASE WHEN 'en_US' = #{g.locale} THEN S1.DEPT_NM_EN
+                                                  ELSE S1.DEPT_NM
+              END AS DEPT_NM
+            FROM DEPT S1
+               , RECURSIVE
+           WHERE S1.TEN_ID  = #{g.tenant}
+             AND S1.DEPT_CD = RECURSIVE.PAR_DEPT_CD  /* CONNECT BY 절에 해당함 */
+        )
+        SELECT DEPT_NM
+          FROM RECURSIVE
+	</select>
+
+    
+    <select id="getCountLogicOrganizationByOrganizationCode" resultType="int">
+    /* organization.getCountLogicOrganizationByOrganizationCode: 논리조직 카운트 by 조직코드 */
+    SELECT COUNT(*)
+      FROM LOGIC_ORG
+     WHERE TEN_ID = #{g.tenant}
+       AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </select>
+    
+    <select id="getCountOrganizationByOrganizationTypeCode" resultType="int">
+    /* organization.getCountOrganizationByOrganizationTypeCode: 조직 카운트 by 조직유형코드 */
+    SELECT COUNT(*)
+      FROM LOGIC_ORG
+     WHERE TEN_ID = #{g.tenant}
+       AND LOGIC_ORG_TYP_CCD = #{p.logic_org_typ_ccd}
+    </select>
+    
+    <select id="getCountDepartmentByDepartmentCode" resultType="int">
+    /* organization.getCountDepartmentByDepartmentCode: 부서 카운트 by 부서코드 */
+    SELECT COUNT(*)
+      FROM DEPT
+     WHERE TEN_ID = #{g.tenant}
+       AND DEPT_CD = #{p.dept_cd}
+    </select>
+
+    <select id="getDepartmentByCode" resultType="Map">
+        /* organization.getDepartmentByCode: 부서 정보 조회 */
+        SELECT TEN_ID
+             , DEPT_CD
+             , DEPT_NM
+             , DEPT_NM_EN
+             , PAR_DEPT_CD
+             , USE_YN
+             , RMK
+             , STS
+             , REGR_ID
+             , REG_DTTM
+             , MODR_ID
+             , MOD_DTTM
+        FROM DEPT
+        WHERE TEN_ID = #{g.tenant}
+          AND DEPT_CD = #{p.dept_cd}
+    </select>
+
+
+
+   <select id="getCountBusinessRegistrationNumber" resultType="int">
+    /* organization.getCountBusinessRegistrationNumber: 사업자번호 카운트 */
+    SELECT COUNT(*)
+      FROM LOGIC_ORG
+     WHERE TEN_ID = #{g.tenant}
+       AND BIZREGNO = #{p.bizregno}
+    </select>
+
+    <select id="getCountBusinessRegistrationNumberByLogicOrganizationCode" resultType="int">
+    /* organization.getCountBusinessRegistrationNumberByLogicOrganizationCode: 사업자번호 카운트 (조회 조건 조직코드) */
+    SELECT COUNT(*)
+      FROM LOGIC_ORG
+     WHERE TEN_ID = #{g.tenant}
+       AND BIZREGNO = #{p.bizregno}
+       AND LOGIC_ORG_CD != #{p.logic_org_cd}
+    </select>
+
+    <select id="findListLogicOrganizationInfo" resultType="map">
+        /* organization.findListLogicOrganizationInfo: 논리조직 조회 */
+        SELECT LOGIC_ORG.TEN_ID,
+               LOGIC_ORG.LOGIC_ORG_TYP_CCD,
+               DTLML.DTLCD_NM AS LOGIC_ORG_TYP_NM ,
+               LOGIC_ORG.LOGIC_ORG_CD,
+               LOGIC_ORG.LOGIC_ORG_CD,
+               LOGIC_ORG.PARNODE_LOGIC_ORG_CD,
+               LOGIC_ORG.LOGIC_ORG_NM,
+               LOGIC_ORG.LOGIC_ORG_NM_EN,
+               LOGIC_ORG.CORPNO,
+               LOGIC_ORG.BIZREGNO,
+               LOGIC_ORG.CTRY_CCD,
+               LOGIC_ORG.CITY_CCD,
+               LOGIC_ORG.ADDR,
+               LOGIC_ORG.ADDR_EN,
+               LOGIC_ORG.CEO_NM,
+               LOGIC_ORG.CEO_NM_EN,
+               LOGIC_ORG.TEL,
+               LOGIC_ORG.CUR_CCD,
+               LOGIC_ORG.LANG_CCD,
+               LOGIC_ORG.ZIPCD,
+               LOGIC_ORG.IND,
+               LOGIC_ORG.BIZTYP,
+               LOGIC_ORG.USE_YN,
+               LOGIC_ORG.RMK,
+               LOGIC_ORG.STS,
+               LOGIC_ORG.REGR_ID,
+               LOGIC_ORG.REG_DTTM,
+               LOGIC_ORG.MODR_ID,
+               LOGIC_ORG.MOD_DTTM,
+                (
+                SELECT COUNT(*)
+                FROM OORG
+                WHERE TEN_ID = LOGIC_ORG.TEN_ID
+                AND LOGIC_ORG_CD = LOGIC_ORG.LOGIC_ORG_CD
+                <if test='p.ounit_cd != null and p.ounit_cd != ""'>
+                    AND OUNIT_CD = #{p.ounit_cd}
+                </if>
+                AND STS != 'D'
+                ) AS USE_COUNT_OPER_ORG
+         FROM LOGIC_ORG LOGIC_ORG
+         INNER JOIN DTLCD_MULTLANG DTLML
+         ON DTLML.TEN_ID = LOGIC_ORG.TEN_ID
+          AND DTLML.CCD =  'C079'
+          AND DTLML.LANG_CCD = #{g.locale}
+          AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = DTLML.DTLCD
+         WHERE LOGIC_ORG.TEN_ID = #{g.tenant}
+            <if test='p.logic_org_cd != null and p.logic_org_cd != ""'>
+                AND LOGIC_ORG.LOGIC_ORG_CD IN ( WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                AS (
+                SELECT LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                WHERE TEN_ID = #{g.tenant}
+                AND STS !='D'
+                AND LOGIC_ORG_CD = #{p.logic_org_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                AND RECURSIVE_LOGIC_ORG.STS !='D'
+                AND RECURSIVE.LOGIC_ORG_CD = RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD
+                )
+                SELECT LOGIC_ORG_CD
+                FROM RECURSIVE )
+            </if>
+            <if test='p.logic_org_nm != null and p.logic_org_nm != ""'>
+                <bind name="logicOrgNmPattern" value="'%' + p.logic_org_nm + '%'" />
+                AND (UPPER(LOGIC_ORG.LOGIC_ORG_NM_EN) LIKE UPPER(#{logicOrgNmPattern}) OR UPPER(LOGIC_ORG.LOGIC_ORG_NM) LIKE UPPER(#{logicOrgNmPattern}))
+            </if>
+    </select>
+
+    <delete id="deleteOperatingOrganizationByDepartmentCode">
+        /* organization.deleteOperatingOrganizationByDepartmentCode: 운영조직 부서 삭제 */
+        DELETE FROM OORG_DEPT
+        WHERE TEN_ID = #{g.tenant}
+          AND DEPT_CD = #{p.dept_cd}
+    </delete>
+	
+	<select id="findListHierachiDept" resultType="map">
+		WITH ORG AS (
+			SELECT TEN_ID
+			     , DEPT_CD
+			  FROM LOGIC_ORG_DEPT_MAPG
+			 WHERE TEN_ID = #{g.tenant}
+			   AND LOGIC_ORG_CD = #{g.comp_cd}
+		), DEPT_DN(TEN_ID, DEPT_CD, DEPT_NM, DEPT_NM_EN, PAR_DEPT_CD) AS (
+			SELECT DEPT.TEN_ID
+			     , DEPT.DEPT_CD
+			     , DEPT.DEPT_NM
+			     , DEPT.DEPT_NM_EN
+			     , DEPT.PAR_DEPT_CD
+			  FROM ORG
+			 INNER JOIN DEPT
+			    ON DEPT.TEN_ID = ORG.TEN_ID
+			   AND DEPT.DEPT_CD = ORG.DEPT_CD
+			   AND DEPT.USE_YN = 'Y'
+			   <if test="g.isEmpty(p.dept_nm)">
+			       AND DEPT.PAR_DEPT_CD = 'ROOT'
+			   </if>
+			   <if test="!g.isEmpty(p.dept_nm)">
+			       <bind name="deptNamePattern" value="'%' + p.dept_nm + '%'"/>
+			       AND (UPPER(DEPT.DEPT_NM) LIKE UPPER(#{deptNamePattern}) OR
+			            UPPER(DEPT.DEPT_NM_EN) LIKE UPPER(#{deptNamePattern}))
+			   </if>
+			   
+			   
+			 UNION ALL
+			 
+			SELECT DEPT.TEN_ID
+			     , DEPT.DEPT_CD
+			     , DEPT.DEPT_NM
+			     , DEPT.DEPT_NM_EN
+			     , DEPT.PAR_DEPT_CD
+			  FROM DEPT_DN
+			 INNER JOIN DEPT
+			    ON DEPT_DN.TEN_ID = DEPT.TEN_ID
+			   AND DEPT_DN.DEPT_CD = DEPT.PAR_DEPT_CD
+		)
+		<if test="!g.isEmpty(p.dept_nm)">
+			<bind name="deptNamePattern" value="'%' + p.dept_nm + '%'"/>
+			, DEPT_UP(TEN_ID, DEPT_CD, DEPT_NM, DEPT_NM_EN, PAR_DEPT_CD) AS (
+				SELECT DEPT.TEN_ID
+				     , DEPT.DEPT_CD
+				     , DEPT.DEPT_NM
+				     , DEPT.DEPT_NM_EN
+				     , DEPT.PAR_DEPT_CD
+				  FROM ORG
+				 INNER JOIN DEPT
+				    ON DEPT.TEN_ID = ORG.TEN_ID
+				   AND DEPT.DEPT_CD = ORG.DEPT_CD
+				   AND DEPT.USE_YN = 'Y'
+				   AND (UPPER(DEPT.DEPT_NM) LIKE UPPER(#{deptNamePattern}) OR
+				        UPPER(DEPT.DEPT_NM_EN) LIKE UPPER(#{deptNamePattern}))
+				
+				 UNION ALL
+				
+				SELECT DEPT.TEN_ID
+				     , DEPT.DEPT_CD
+				     , DEPT.DEPT_NM
+				     , DEPT.DEPT_NM_EN
+				     , DEPT.PAR_DEPT_CD
+				  FROM DEPT_UP
+				 INNER JOIN DEPT
+				    ON DEPT_UP.TEN_ID = DEPT.TEN_ID
+				   AND DEPT_UP.PAR_DEPT_CD = DEPT.DEPT_CD
+			)
+		</if>
+		, DEPT_FULL AS (
+			SELECT *
+			  FROM DEPT_DN
+			<if test="!g.isEmpty(p.dept_nm)">
+				 UNION ALL
+				SELECT *
+				FROM DEPT_UP
+			</if>
+		)
+		SELECT DEPT_FULL.*
+		     , CASE WHEN 'en_US' = #{g.locale} THEN DEPT_FULL.DEPT_NM_EN
+		            ELSE DEPT_FULL.DEPT_NM
+		        END AS DISP_DEPT_NM
+		  FROM DEPT_FULL
+		 ORDER BY DEPT_CD
+	</select>
+	
+	<select id="findLogicOrganizationByCompanyCode" resultType="map">
+		SELECT *
+		  FROM LOGIC_ORG
+		 WHERE TEN_ID = #{g.tenant}
+		   AND LOGIC_ORG_TYP_CCD = 'COMPANY'
+		   AND LOGIC_ORG_CD = #{p}
+	</select>
+	
+</mapper>

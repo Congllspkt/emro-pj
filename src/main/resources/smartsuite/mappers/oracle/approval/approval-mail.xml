@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="approval-mail">
+	
+	<select id="findApprovalInfo" resultType="map">
+		/* approval-mail.findApprovalInfo */
+		SELECT APVL.TEN_ID
+		     , APVL.APVL_UUID
+		     , APVL.APVL_TYP_CCD
+		     , APVL.APVL_DOCNO
+		     , APVL.APVL_REVNO
+		     , APVL.APVL_TIT
+		     , APVL.APVL_RPTG_DTTM
+		     , APVL.APVL_STS_CCD
+		     , APVL.APVL_RES_CCD
+		     , APVL.FNL_APVL_DTTM
+		     , APVL.ATHG_UUID
+		     , APVL.STS
+		     , APVL.REGR_ID
+		     , APVL.REG_DTTM
+		     , APVL.MODR_ID
+		     , APVL.MOD_DTTM
+		     , USR.USR_NM
+		     , CASE WHEN 'en_US' = #{g.locale} THEN  USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS DISP_USR_NM
+		  FROM APVL APVL
+		  LEFT OUTER JOIN USR USR
+		    ON APVL.TEN_ID = USR.TEN_ID
+		   AND APVL.REGR_ID = USR.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL.APVL_UUID = #{p.apvl_uuid}
+</select>
+	
+	<select id="findApprovalReturnInfo" resultType="map">
+		SELECT APVLLN_APVR_PRGS_STS.APVL_DTTM
+		     , APVLLN_APVR_PRGS_STS.APVL_OPN
+		     , CASE WHEN #{g.locale} = 'en_US' THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS AGREE_RET_NAME
+		  FROM APVL
+		 INNER JOIN APVLLN_APVR_PRGS_STS
+		    ON APVLLN_APVR_PRGS_STS.TEN_ID = APVL.TEN_ID
+		   AND APVLLN_APVR_PRGS_STS.APVL_UUID = APVL.APVL_UUID
+		 INNER JOIN USR
+		    ON USR.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND USR.USR_ID = APVLLN_APVR_PRGS_STS.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL.APVL_UUID = #{p.apvl_uuid}
+		   AND APVLLN_APVR_PRGS_STS.APVLLN_APVL_RES_CCD = 'RET'
+	</select>
+	
+	<select id="findListApprovalRdgLine" resultType="smartsuite.app.common.mail.data.TemplateMailData$Receiver">
+		SELECT 'To' AS RECIPIENTTYPE
+		     , USR.EML AS ADDRESS
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS NAME
+		     , USR.USR_ID AS ID
+		  FROM APVL_RDG APVL_RDG
+		 INNER JOIN USR USR
+		    ON USR.TEN_ID = APVL_RDG.TEN_ID
+		   AND USR.USR_ID = APVL_RDG.USR_ID
+		 WHERE APVL_RDG.TEN_ID = #{g.tenant}
+		   AND APVL_RDG.APVL_UUID = #{p.apvl_uuid}
+		   AND APVL_RDG.RDG_TYP_CCD = #{p.rdg_typ_ccd}
+		   <if test="p.newRefUsrIds != null">
+		       AND APVL_RDG.USR_ID IN
+		       <foreach collection="p.newRefUsrIds" item="newRefUsrId" separator="," open="(" close=")">
+		           #{newRefUsrId}
+		       </foreach>
+		   </if>
+	</select>
+	
+	<select id="findApprovalDrafterInfo" resultType="smartsuite.app.common.mail.data.TemplateMailData$Receiver">
+		SELECT 'To' AS RECIPIENTTYPE
+		     , USR.EML AS ADDRESS
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS NAME
+		     , USR.USR_ID AS ID
+		  FROM APVL
+		 INNER JOIN APVLLN_APVR_PRGS_STS
+		    ON APVL.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND APVL.APVL_UUID = APVLLN_APVR_PRGS_STS.APVL_UUID
+		 INNER JOIN USR
+		    ON USR.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND USR.USR_ID = APVLLN_APVR_PRGS_STS.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL.APVL_UUID = #{p.apvl_uuid}
+		   AND APVLLN_APVR_PRGS_STS.APVR_TYP_CCD = 'DFT'
+	</select>
+	
+	<select id="findListApprovalNextApprover" resultType="smartsuite.app.common.mail.data.TemplateMailData$Receiver">
+		SELECT 'To' AS RECIPIENTTYPE
+		     , USR.EML AS ADDRESS
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS NAME
+		     , USR.USR_ID AS ID
+		  FROM APVL
+		 INNER JOIN APVLLN_APVR_PRGS_STS
+		    ON APVL.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND APVL.APVL_UUID = APVLLN_APVR_PRGS_STS.APVL_UUID
+		 INNER JOIN USR
+		    ON USR.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND USR.USR_ID = APVLLN_APVR_PRGS_STS.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL.APVL_UUID = #{p.apvl_uuid}
+		   AND APVLLN_APVR_PRGS_STS.APVLLN_SORT = #{p.next_apvlln_sort}
+		   <choose>
+		       <when test="p.apvr_typ_ccd == 'APVL'">
+		           AND APVLLN_APVR_PRGS_STS.APVR_TYP_CCD = 'APVL'
+		       </when>
+		       <otherwise>
+		           AND APVLLN_APVR_PRGS_STS.APVR_TYP_CCD IN ('AG', 'PARLL_AG')
+		       </otherwise>
+		   </choose>
+	</select>
+	
+	<select id="findListWtgApproverByApvllnSort" resultType="smartsuite.app.common.mail.data.TemplateMailData$Receiver">
+		SELECT 'To' AS RECIPIENTTYPE
+		     , USR.EML AS ADDRESS
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS NAME
+		     , USR.USR_ID AS ID
+		  FROM APVL
+		 INNER JOIN APVLLN_APVR_PRGS_STS
+		    ON APVL.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND APVL.APVL_UUID = APVLLN_APVR_PRGS_STS.APVL_UUID
+		 INNER JOIN USR
+		    ON USR.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND USR.USR_ID = APVLLN_APVR_PRGS_STS.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL.APVL_UUID = #{p.apvl_uuid}
+		   AND APVLLN_APVR_PRGS_STS.APVLLN_SORT = #{p.apvlln_sort}
+		   AND APVLLN_APVR_PRGS_STS.APVLLN_APVL_RES_CCD = 'WTG'
+	</select>
+	
+</mapper>

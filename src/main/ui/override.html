@@ -1,0 +1,337 @@
+<script src="../js/webRootPath.js"></script>
+<script>
+Polymer.Override('sc-ajax', function(clazz) {
+	var invalidSession = false,
+		expiredSession = false;
+
+	//sc-ajax
+	clazz.prototype.$toRequestOptionFilter = [function(options) {
+		// [SMARTNINE-3876] 2019.11.06 auth-disabled 제거
+		/*
+		if(!this.hasAttribute('auth-disabled')) {
+			if(typeof SCMdiManager !== "undefined"){
+				options.headers['menucode'] = SCMdiManager.getCurrentMenuId(this);
+			}
+		}
+		 */
+		if(typeof SCMdiManager !== "undefined"){
+            var menuCode = SCMdiManager.getCurrentMenuId(this);
+            if(window.isParameterEncypt === true){
+                if(UT.isNotEmpty(menuCode)){
+                    menuCode = CipherUtil.encrypt(menuCode, "AES");
+                    options.headers['content-chipher'] = "true";
+                }
+            }
+			options.headers['menucode'] = menuCode;
+		}
+	}];
+	clazz.prototype.$toRequestOptions = clazz.prototype.toRequestOptions;
+	clazz.prototype.toRequestOptions = function() {
+		var me = this,
+			options = me.$toRequestOptions.call(me),
+			filter = clazz.prototype.$toRequestOptionFilter;
+		if(window.isParameterEncypt === true){
+			var jsonStr = JSON.stringify(options.body);
+	    	//console.log(options.url + " :: " + jsonStr);
+	    	if(UT.isJson(options.body)){
+	        	options.body = CipherUtil.encrypt(jsonStr, "AES");
+	        	options.headers['content-chipher'] = "true";
+	        	//console.log(options.body);
+	    	}
+		}
+
+		for(var i=0,len=filter.length; i<len; i++) {
+			filter[i].call(this, options);
+		}
+		return options;
+	}
+
+	clazz.prototype.$generateRequest = clazz.prototype.generateRequest;
+	clazz.prototype.generateRequest = function() {
+		if(typeof SCMdiManager !== "undefined"){
+			var noSessionUpdate = this.url && this.url.indexOf("readyToGetSchedule.do") > -1;
+			if(!noSessionUpdate) {
+				SCMdiManager.doSessionTimer();
+			}
+		}
+		return this.$generateRequest();
+	}
+
+	// ajax exception handler
+	clazz.prototype.$ajaxExceptionHandler = clazz.prototype.ajaxExceptionHandler;
+	clazz.prototype.ajaxExceptionHandler = function(exception) {
+		var i18nDisabled = true;
+		var code = exception.code || exception.target.status,
+			message = exception.message,
+			xhr = exception.xhr;
+
+		if(expiredSession) {
+			return;
+		}
+		else if(code !== 902 && invalidSession) {
+			return;
+		}
+		switch(code) {
+			case 0:
+				SCAlert.show('[Error]', I18N.translate('STD.N7002'), function() {		//서버와 통신하는데 오류가 발생하였습니다.</br>관리자에게 문의하시기 바랍니다.
+
+				}, null, i18nDisabled);
+				break;
+			case 401 :
+				var errmessage = 'STD.N7000';		//사용 권한이 없습니다.
+				SCAlert.show('[Error] ' + code, I18N.translate(errmessage), function(){
+
+				}, null, i18nDisabled);
+				break;
+			case 403 :
+				var errmessage = 'STD.N7001';		//장시간 사용하지 않아 연결이 종료되었습니다.
+				SCAlert.show('[Error] ' + code, I18N.translate(errmessage), function(){
+					location.href = getWebRootPath();
+				}, null, i18nDisabled);
+				break;
+			case 404 :
+				SCAlert.show('[Error] ' + code, I18N.translate(message), function(){
+
+				}, null, i18nDisabled);
+				break;
+	        case 500 :
+                var messagebox = new SCMessageBox();
+                var result = xhr.response;
+                if(result) {
+                    if(typeof result === "string") {
+                        result = JSON.parse(result);
+                    }
+
+                    if(result.debug) {
+                        messagebox.style.width = '800px';
+                        messagebox.style.height = '600px';
+                        message = result.stackTrace;
+                    } else {
+                        message = I18N.translate(result.message);
+                    }
+                }
+                //에러 발생 시 사용자가 에러 내용을 입력하도록 할 것인지
+                if(result && result.err_uuid && window.useErrorUserMessage === true) {
+                    try {
+                    	window.openErrorUserMessage(result.err_uuid);
+                    } catch(e) {
+                        messagebox.show({
+                            title : '[Error] ' + code,
+                            message : message,
+                            modal : true,
+                            buttons : 'ok',
+                            handler : function(){},
+                            i18nDisabled: true
+                        });
+                    }
+                } else {
+                    messagebox.show({
+                        title : '[Error] ' + code,
+                        message : message,
+                        modal : true,
+                        buttons : 'ok',
+                        handler : function(){},
+                        i18nDisabled: true
+                    });
+                }
+                break;
+			case 901:
+				invalidSession = true;
+				SCAlert.show('[Error] ' + code, decodeURI(xhr.getResponseHeader('invalid-session')), function(){
+					location.href = getWebRootPath();
+				}, null, i18nDisabled);
+				break;
+			case 902:
+				expiredSession = true;
+				SCAlert.show('[Error] ' + code, decodeURI(xhr.getResponseHeader('expired-session')), function(){
+					location.href = getWebRootPath();
+				}, null, i18nDisabled);
+				break;
+			case 503:
+				var result = xhr.response;
+	            if(typeof result === "string"){
+	            	result = JSON.parse(xhr.response);
+	            }
+				var message = result.message,
+				    arguments = result.arguments;
+
+	            SCAlert.show('알림', I18N.translate(message, null, arguments), function() {
+	                this.fire('exception-response', result, {bubbles: false});
+	            }.bind(this) , null, i18nDisabled);
+	            break;
+			default:
+				break;
+		}
+	};
+
+	/**
+	 * csrf
+	 */
+	var csrf = (function() {
+		var meta = document.querySelector('meta[name=_csrf]'), _csrf;
+		if(meta) {
+			_csrf = {
+				csrf : meta.content,
+				csrfHeader : document.querySelector('meta[name=_csrf_header]').content,
+				csrfParameter : document.querySelector('meta[name=_csrf_parameter]').content
+			}
+		}
+		return _csrf;
+	}());
+	if(csrf) {
+ 		clazz.prototype.$toRequestOptionFilter.push(function(options) {
+ 			options.headers[csrf.csrfHeader] = csrf.csrf;
+ 		});
+	}
+
+});
+
+//공통코드 조회 url
+Polymer.Override('sc-code-manager', function(clazz) {
+	clazz.url = 'shared/findListCommonCode.do';
+});
+
+(function(){
+	/*
+	 * 엑셀 다운로드 CSRF 로직
+	 */
+	var csrf = document.querySelector('meta[name=_csrf]');
+
+	if(window.Export_Downloader && csrf){
+
+		//$download 함수가 있을 경우 csrf가 적용되었다고 판단한다.
+		if(Export_Downloader.prototype.$download){
+			return;
+		}
+
+		Export_Downloader.prototype.$download = Export_Downloader.prototype.download;
+
+		Export_Downloader.prototype.download = function(params){
+
+
+			var csrfHeader = document.querySelector('meta[name=_csrf_parameter]').content;
+			var value = csrf.content;
+
+			params[csrfHeader] = value;
+
+			Export_Downloader.prototype.$download.apply(this,[params]);
+		}
+	}
+}());
+
+/**
+ * sc-combobx-field, sc-multi-combobox-field input-clear 기본 활성화
+ */
+Polymer.SCTabbarBehaviorImpl.properties.tabSpacing = {
+    type : Number,
+    value : -1
+};
+
+/**
+ * sc-combobx-field, sc-multi-combobox-field input-clear 기본 활성화
+ */
+Polymer.SCComboBoxFieldBehaviorImpl.properties.inputClear = {
+	type : Object,
+	value : true
+};
+
+Polymer.$Util.isDate = function(value){
+    if(!value){
+        return false;
+    }
+    if(typeof TimeShift != "undefined" && value instanceof TimeShift.Date){
+        return true;
+    }else if(UT.isDate(value)){
+        return true;
+    }
+    return false;
+};
+
+Polymer.SCOverlayBehaviorImpl.isFocusableElement = function(event){
+    var el = event.target;
+    do{
+        try{
+            if(el.classList.contains('cke_reset_all')){
+                return true;
+            }
+            el = el.parentElement;
+        }catch(e){return false;}
+    }while(el && el.parentElement);
+};
+
+/**
+ * SMARTNINE-2271, sc-upload 정렬 기능 기본 활성화
+ */
+Polymer.Override('sc-upload', {
+	properties: {
+		sortDataField: {
+			type: String,
+			notify: true,
+			value: function() {
+				return "name";
+			}
+		},
+        _getHeaders: function(){
+            return this.mixin((function() {
+                var headers = {};
+                if (typeof SCMdiManager !== "undefined") {
+                    headers['menucode'] = SCMdiManager.getCurrentMenuId(this);
+                }
+                if(csrf) {
+                    headers[csrf.csrfHeader] = csrf.csrf;
+                }
+                return headers;
+            }.bind(this)()), this.headers);
+        }
+	},
+});
+/**
+ * csrf
+ */
+var csrf = (function() {
+	var meta = document.querySelector('meta[name=_csrf]'), _csrf;
+	if(meta) {
+		_csrf = {
+			csrf : meta.content,
+			csrfHeader : document.querySelector('meta[name=_csrf_header]').content,
+			csrfParameter : document.querySelector('meta[name=_csrf_parameter]').content
+		}
+	}
+	return _csrf;
+}());
+var stateHeader = SCStateRemoteProvider.prototype.properties.requestHeaders.value();
+SCStateRemoteProvider.prototype.properties.requestHeaders.value = function() {
+	stateHeader[csrf.csrfHeader] = csrf.csrf;//csrfHeader 명과 csrf 값을 SCStateRemoteProvider 의 requestHeaders 프로퍼티에 추가합니다.
+	return stateHeader;
+};
+//sc-period-date-field 의 from 필드의 달력 아이콘을 숨김처리 함
+Polymer.SCPeriodDateFieldBehaviorImpl.properties.hiddenFromTrigger.value = true;
+
+//sc-editor 1.2.4 이상에서 xss filter 예외처리 NFCH-5079
+Polymer.Override('sc-editor', {
+    properties: {
+        useXss: {
+            type: Object,
+            value: function(){return false;}
+        }
+    }
+});
+SCTabNavigation.prototype.contentMarginTop = function(){
+	var marginTop = getComputedStyle(this._contentElement).marginTop;
+	if(marginTop){
+		return parseFloat(marginTop);
+	}
+	return 0;
+};
+SCTabNavigation.prototype._computedContentElementSize = function() {
+	var containerSize = Polymer.SCContainerBehaviorImpl._computedContentElementSize.call(this);
+	containerSize.height -= (this.contentMarginTop() + this._tabbarElementHeight + (this._tabbarElementMargin.top + this._tabbarElementMargin.bottom));
+	return containerSize;
+};
+//임시 로직 화면렌더링 이슈로 다국어테이블 정상 변경시 바꿔야함!!!!!!!!!!!
+/*SCI18nStorage.prototype.$get = SCI18nStorage.prototype.get;
+SCI18nStorage.prototype.get = function(key, locale){
+    setTimeout(SCI18nStorage.prototype.$get.bind(this, key, locale), 1000);
+    return key;
+}*/
+</script>

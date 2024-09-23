@@ -1,0 +1,363 @@
+<dom-module id="es-exchange-rate-list">
+<!--
+	******************************************************************************************
+	** @Program-name    : 환율 관리
+	** @Description     : 
+	** @Author          : jeKim
+	** @Create Date     : 2017.06.05
+	** @History         : 2017.06.05 jeKim 최초작성
+	******************************************************************************************
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+<!--
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+-->
+		<!-- 코드 조회-->
+		<sc-request-group init>
+			<!-- 공통 코드 조회 -->
+			<sc-code-group>
+				<!-- 통화 -->
+				<sc-code id="findListCurrencyCode" code="C004" value="{{codes.currencyCodeList}}" ></sc-code>
+			</sc-code-group>
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findListExchangeRate"
+				url="findListExchangeRate.do"
+				body="{{searchParam}}"
+				last-response="{{resultList}}">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax
+				id="saveListExchangeRate"
+				url="saveListExchangeRate.do"
+				on-response="completeSaveListExchangeRate">
+		</sc-ajax>
+
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteListExchangeRate"
+				url="deleteListExchangeRate.do"
+				on-response="completeDeleteListExchangeRate">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<!-- 조회조건 -->
+			<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="기준 통화"></sc-label>
+					<sc-combobox-field placeholder="전체"
+									   items="{{codes.currencyCodeList}}" display-field="label" value-field="data"
+									   value="{{searchParam.bas_cur_ccd}}"
+									   validation-group="search">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="환산 통화"></sc-label>
+					<sc-combobox-field placeholder="전체"
+									   items="{{codes.currencyCodeList}}" display-field="label" value-field="data"
+									   value="{{searchParam.conv_cur_ccd}}"
+									   validation-group="search">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="기준 일자" ></sc-label>
+					<sc-date-field default-value="0d" value="{{searchParam.bas_dt}}" on-enter="onSearch" string-date="true"></sc-date-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+			<!-- 그리드 -->
+			<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex"
+					 validation-group="save">
+				<cc-grid-toolbar title-text="[[subTitleText]]">
+					<sc-button text="추가" on-click="onAdd" auth-s></sc-button>
+					<sc-button text="삭제" on-click="onDelete" auth-s></sc-button>
+					<sc-button text="저장" on-click="onSave" auth-s></sc-button>
+				</cc-grid-toolbar>
+				
+				<sc-grid-columns>
+					<sc-date-column	data-field="bas_dt" header-text="기준 일자" width="100"
+						required="true" editable="true" string-date="true" text-align="center"
+						item-editable-function="onChkEditable">
+					</sc-date-column>
+					<sc-combobox-column data-field="bas_cur_ccd" header-text="기준 통화" width="150" text-align="center"
+						editable="true" required="true" 
+						items="{{codes.currencyCodeList}}" display-field="label" value-field="data"
+						item-editable-function="onChkEditable">
+					</sc-combobox-column>
+					<sc-combobox-column data-field="conv_cur_ccd" header-text="환산 통화" width="150" text-align="center"
+						editable="true" required="true" 
+						items="{{codes.currencyCodeList}}" display-field="label" value-field="data"
+						item-editable-function="onChkEditable">
+					</sc-combobox-column>
+					<sc-data-column data-field="bas_rate" header-text="매매 기준 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="tmo_sell_rate" header-text="전신환 매도 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="tmo_buy_rate" header-text="전신환 매입 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="cash_sell_rate" header-text="현금 매도 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="cash_buy_rate" header-text="현금 매입 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="usd_convrate" header-text="대미 환산 율" width="150" text-align="right"
+						editable="true" max-length="10"
+						data-type="number" format-type="usdExchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column data-field="unit_cur_convrate" header-text="단위 통화 환산율" width="220" text-align="right"
+						editable="true" max-length="10" required="true" 
+						data-type="number" format-type="exchangeRate" validator-function="percentValidationFunction">
+					</sc-data-column>
+					<sc-data-column	data-field="exchrate_prvdr" header-text="환율 제공처" width="200" editable="true" max-length="200" text-align="left"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+			
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-exchange-rate-list",
+            properties : {
+                codes: {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                        	currencyCodeList: []
+                        }
+                    }
+                },
+
+                // 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                        	bas_cur_ccd: "KRW"
+                        };
+                    }
+                },
+
+                // 조회 결과 리스트
+                resultList: {
+                    type: Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+                subTitleText: {
+                	type: Object,
+                	value: function(){
+                		return this.translate('일본 엔화(JPY), 인도네시아 루피아화(IDR), 베트남 동화(VND)는 100단위에 대한 환율을 고시');
+                	}
+                	
+                }
+            },
+            
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+                
+                me.onSearch();
+            },
+
+            // 조회
+            onSearch : function() {
+                var me = this;
+
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000");
+                    return false;
+                }
+
+                // 조회
+                UT.request(me.$.findListExchangeRate);
+            },
+            
+            // 추가
+            onAdd : function(){
+                var me = this;
+                
+                var provider = me.$.gridPanel.getDataProvider();
+                
+                // 그리드 신규행 추가
+                provider.addItem({
+                	bas_cur_ccd: 'KRW' // 기준통화(KRW로 고정)
+                });
+            },
+
+            // 저장
+            onSave : function(){
+                var me = this;
+
+                // 저장 유효성 체크
+                if(!me.validation()) {
+                    return;
+                }
+
+                var provider = me.$.gridPanel.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveListExchangeRate.body = {
+                        insertList: created,
+                        updateList: updated
+                    };
+                
+                    UT.request(me.$.saveListExchangeRate);
+                });
+            },
+
+            // 저장 유효성 체크
+            validation: function() {
+                var me = this;
+
+                // 기본 validate
+                if(!me.validate('save')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                // 중복 체크
+                var provider = me.$.gridPanel.getDataProvider(),
+                    rows = provider.getItems();
+                var unique_check = {};
+                for (var i=0, len = rows.length; i<len; i++) {
+                	var key = rows[i].bas_dt + "_" + rows[i].conv_cur_ccd;
+                    if(typeof unique_check[key] == "undefined"){
+                        unique_check[key] = 0;
+                    } else {
+                        UT.alert(me.translate("STD.E1000",null, me.translate('통화명과기준일자')),null,true); // "'{0}'과 '{1}'에 동일한 값이 존재합니다"
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+
+            // 저장 완료
+            completeSaveListExchangeRate: function(){
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+
+            },
+            
+            // 삭제
+            onDelete: function(){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    checked = provider.selectionCheckedIndexes(),
+                    message = "STD.N1300"; // "삭제 하시겠습니까?"
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListExchangeRate.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteListExchangeRate);
+                    }
+                });
+
+
+            },
+			
+            // 삭제 완료
+            completeDeleteListExchangeRate: function(){
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+
+            },
+            
+            // 그리드 EDIT 제어
+            onChkEditable: function(data, item) {
+                var me = this;
+                var provider = me.$.gridPanel.getDataProvider();
+                
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+
+
+			percentValidationFunction:function (headerText, dataField, data){
+            	var me =this,
+				    value = data[dataField];
+
+           		if(UT.isNotEmpty(value)){
+           			var stringValue = value.toString();
+   					if(stringValue.indexOf(".") > -1){
+   						var t = stringValue.substring(0,stringValue.indexOf("."));
+   						if(t.length > 5){
+   							return "정수는 5자리까지 입력이 가능합니다.";
+   						}
+
+   						var a = stringValue.substring(stringValue.indexOf(".")+1,stringValue.length);
+   						if(a.length > 5){
+   							return "소수점은 5자리까지 입력이 가능합니다.";
+   						}
+   					}else if(stringValue.length > 5){
+   						return "정수는 5자리까지 입력이 가능합니다.";
+   					}
+           		}
+				return true;
+			}
+
+        });
+	</script>
+
+</dom-module>

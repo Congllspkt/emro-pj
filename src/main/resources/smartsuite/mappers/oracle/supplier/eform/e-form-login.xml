@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="e-form-login">
+    
+    <select id="findEformUserInfo" resultType="map">
+    /* e-form-login.findEformUserInfo : 간편서명 사용자 정보 확인 */
+     SELECT CTOR.TEL
+       FROM CNTR_SGNDUSR CTOR
+      INNER JOIN ECNTR CRMR
+        ON CRMR.TEN_ID = CTOR.TEN_ID
+       AND CRMR.ECNTR_UUID = CTOR.ECNTR_UUID
+     WHERE CTOR.TEN_ID = #{g.tenant}
+       AND CTOR.CNTR_SGNDUSR_UUID = #{p.contractor_no}
+       AND CRMR.STS != 'D'
+    </select>
+  
+</mapper>

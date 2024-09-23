@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+
+<project name="smartx9-ant" default="deploy" basedir="./">
+	<property name="build.compiler" value="modern"/>
+	<!-- Build Destination -->
+	<property name="dist"                   value="target"/>
+	
+	<!-- webContent -->
+	<property name="web.content"            value="src/main/webapp"/>
+	
+	<!-- java -->
+	<property name="java.source"            value="src/main/java"/>
+	<property name="java.dist"              value="${dist}/WEB-INF/classes"/>
+	<property name="java.libraries"         value="${web.content}/WEB-INF/lib/*.jar"/>
+	
+	<!-- ui -->
+	<property name="ui.source"              value="src/main/ui"/>
+	<property name="ui.dist"                value="${dist}/ui"/>
+	
+	<!-- spring -->
+	<property name="spring.source"          value="src/main/resources"/>
+	
+	<!-- profile -->
+	<property name="profile.id"                   value="dev"/>
+	
+	<!-- Deploy Destination -->
+	<property name="deploy.dist"            value="D:/DHEC/standard-edoc"/>
+	
+	<target name="deploy" depends="content.to.dist, build.java.to.dist">
+		<echo message="최종 목적지로 deploy 합니다."/>
+		<delete dir="${deploy.dist}"/>
+        <copy todir="${deploy.dist}" includeemptydirs="false" overwrite="true">
+            <fileset dir="${basedir}/${dist}">
+                <exclude name="**/.svn"/>
+                <exclude name="**/*.cache"/>
+            </fileset>
+        </copy>
+	</target>
+	
+	<target name="content.to.dist">
+		<delete dir="${basedir}/${dist}" />
+        <mkdir dir="${basedir}/${dist}" />
+        <echo message="web content를 복사합니다.(라이브러리, 이미지, jsp, html, css 등등)"/>
+        <copy todir="${basedir}/${dist}">
+            <fileset dir="${basedir}/${web.content}">
+                <exclude name="**/Thumbs.db"/>
+                <exclude name="**/.svn/**"/>
+            </fileset>
+        </copy>
+		
+		<echo message="JAVA 소스 내에 포함된 자원을 복사합니다."/>
+        <copy todir="${basedir}/${java.dist}">
+            <fileset dir="${basedir}/${java.source}">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+		<echo message="spring 관련 자원을 복사합니다."/>
+        <copy todir="${basedir}/${java.dist}">
+            <fileset dir="${basedir}/${spring.source}">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+		
+		<echo message="프로필 별 설정 소스를 복사합니다."/>
+		<copy todir="${basedir}/${java.dist}" overwrite="true">
+            <fileset dir="${basedir}/profile/${profile.id}">
+            </fileset>
+        </copy>
+		
+		<echo message="ui 관련 파일을 복사합니다."/>
+        <copy todir="${basedir}/${ui.dist}">
+            <fileset dir="${basedir}/${ui.source}"/>
+        </copy>
+		
+		<echo message="그리드 라이센스 파일을 복사합니다."/>
+		<copy todir="${basedir}/${dist}/bower_components">
+            <fileset dir="${basedir}/profile/${profile.id}/bower_components"/>
+        </copy>
+    </target>
+	
+	<path id="java.classpath"/>
+	
+	<path id="webinf.classpath">
+		<fileset dir="${web.content}/WEB-INF/lib">
+			<include name="*.jar"/>
+		</fileset>
+		<fileset dir="${web.content}/WEB-INF/external-lib">
+			<include name="crosscert-1.3.jar"/>
+		</fileset>
+	</path>
+
+    <target name="build.java.to.dist">
+      <echo message="JAVA파일을 컴파일 합니다."/>
+    	<javac classpathref="java.classpath" srcdir="${java.source}" destdir="${java.dist}" debug="on" deprecation="off" optimize="off" encoding="UTF-8" includeantruntime="true" source="1.6" target="1.6" nowarn="true">
+    		<classpath refid="webinf.classpath"/>
+            <include name="**/*.java"/>
+        </javac>
+    </target>
+</project>

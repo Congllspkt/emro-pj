@@ -1,0 +1,37 @@
+<sc-link rel="import" href="gpGate/es-gate-commodity-tree.html"></sc-link>
+<sc-link rel="import" href="gpGate/es-gate-search-result.html"></sc-link>
+
+
+<dom-module id="em-gate-search-result">
+    <template>
+        <es-gate-commodity-tree id="commodityTree"></es-gate-commodity-tree>
+        <es-gate-search-result id="__searchResults"></es-gate-search-result>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-gate-search-result',
+            properties : {
+            	keyword : {
+            		type : String
+            	}
+            },
+            ready : function()
+            {
+            	
+            },
+            attached : function()
+            {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    var obj = this.parentElement.parentElement.parameters;
+	            	if(obj)
+	           		{
+	            		
+	           		}
+                }
+            }
+        })
+    </script>
+</dom-module>

@@ -1,0 +1,965 @@
+<script src="../../../bower_components/smartsuite/excel/smartsuite-excel-import.min.js"></script>
+
+<script>
+	/*
+     * 엑셀 업로드 CSRF 로직
+     */
+
+	(function(){
+		var csrf = document.querySelector('meta[name=_csrf]');
+
+		if(window.XLSXImporter && csrf){
+			XLSXImporter.prototype.$doImport = XLSXImporter.prototype.doImport;
+
+			XLSXImporter.prototype.doImport = function(){
+
+				var options = arguments[1] != null ? arguments[1] : {};
+				var value = csrf.content;
+				var csrfHeader = document.querySelector('meta[name=_csrf_header]').content;
+
+				if(options.headers == null){
+					options.headers = {
+					};
+				}
+
+				options.headers[csrfHeader] = value;
+				arguments[1] = options;
+
+				XLSXImporter.prototype.$doImport.apply(this,arguments);
+			}
+		}
+		if(window.ImporterJSONProvider){
+
+			// autoTypeCasting이 true 일 때 cellValue를 특정 타입으로 변환할 parser 정의
+
+			ImporterJSONProvider.prototype.parseDate = function(value){
+
+				if(value == null || value === ''){
+					return null;
+				}
+
+				if(SCUtil.isNumber(value)){
+
+					value += '';
+					if(value.length < 8){
+						return null;
+					}
+				}
+
+				if(SCUtil.isString(value)){
+					var momentObj = moment(value);
+					if(momentObj.isValid()){
+						return momentObj.toDate();
+					}else{
+						return null;
+					}
+				}else{
+					return null;
+				}
+			};
+
+			ImporterJSONProvider.prototype.parseBoolean = function(value){
+				return !!value;
+			};
+
+			ImporterJSONProvider.prototype.parseNumber = function(value){
+				if(SCUtil.isString(value)){
+					value = value.replace(/,/g , "");
+				}
+
+
+				var number = Number(value);
+				return isNaN(number) ? null : number;
+			};
+		}
+
+
+	}());
+</script>
+
+<dom-module id="cc-excel-import">
+	<!--
+        ******************************************************************************************
+        ** @Program-name 	: 엑셀 업로드 컴포넌트
+        ** @Description		:
+        ** @Author 			: swAhn
+        ** @Create Date 	: 2016.07.15
+        ** @History 		: 2018.05.11 swAhn 촤종 수정
+        ******************************************************************************************
+    -->
+
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	<template>
+		<div class="fit vbox">
+			<input type="file" id="fileInput" on-change="_onFileSelected" accept=".xlsx" hidden="true" /><br>
+			<sc-label text="Header Row" i18n-disabled></sc-label>
+			<sc-number-field id="headerRow" value="{{headerRowIndex}}" min-value="{{minHeaderRowIndex}}"></sc-number-field>
+			<!-- 			<input type="number" id="headerRow" value=1 id="" on-change="_onHeaderRowIndexChanged" style="width: 100px;" /> -->
+			<div class="vspace-5"></div>
+			<sc-label id="fileName" text="&nbsp;" ></sc-label>
+			<sc-toolbar>
+				<sc-button text="파일 선택" on-click="_onFileBrowse"></sc-button>
+				<sc-spacer></sc-spacer>
+				<sc-button id="applyBtn" text="적용" on-click="_onApplyButtonClick" hidden="true"></sc-button>
+				<sc-button id="closeBtn" text="닫기" on-click="onClose"></sc-button>
+			</sc-toolbar>
+			<sc-container id="gridPanel" flexible="true" class="flex" style="overflow:hidden;" on-drop="onDrop" on-dragover="onDragOver" file-data-transfer-allowed></sc-container>
+			<sc-label text="시트 선택"></sc-label>
+			<div id = "btnContainer" style="min-height: 40px; border: 1px solid #C2C2C2; overflow: auto; white-space: nowrap; font-size:13px; font-weight: 600; color:#787878; padding: 3px 5px;">
+
+			</div>
+
+		</div>
+		<br>
+
+	</template>
+
+	<script>
+		Polymer({
+			is : 'cc-excel-import',
+			properties : {
+				grdMain : {
+					type : Object
+				},
+				excludeHiddenColumns : {
+					type : Boolean,
+					value : false
+				},
+				dataProvider : {
+					type : Object
+				},
+				gridResizeListening : {
+					type : Boolean,
+					value : false
+				},
+				importer : {
+					type : Object
+				},
+				mapping : {
+					type : Array,
+					value : null
+				},
+				targetFieldTypes : {
+					type : Object,
+					value : {}
+				},
+				currentSheetIndex : {
+					type : Number,
+					value : -1
+				},
+
+				headerColOffset : {
+					type : Number,
+					value : 0
+				},
+				headerRowIndex : {
+					type : Number,
+					value : 1,
+					observer : '_onHeaderRowIndexChanged'
+				},
+				minHeaderRowIndex : {
+					type : Number,
+					value : 1
+				},
+				callBackFnScope : {
+					type : Object,
+					value : null
+				},
+				callBackFn : {
+					type : Function,
+					value : null
+				},
+				targetGridVisibleHeaders : {
+					type : Array,
+					value : []
+				},
+				targetGridKeyHeaders : {
+					type : Array,
+					value : []
+				},
+
+				excludeEmptyRow : {
+					type : Boolean,
+					value : true
+				},
+				autoTypeCasting : {
+					type : Boolean,
+					value : false
+				},
+				autoColumnMapping : {
+					type : Boolean,
+					value : false
+				},
+				isIncludeOnlyMatching : {
+					type : Boolean,
+					value : false
+				}
+			},
+
+			onDrop: function(e) {
+				e.stopPropagation();
+				e.preventDefault();
+				this._resetAll();
+				this._validateAndUploadFiles(e.dataTransfer.files);
+			},
+
+			onDragOver: function(e){
+				e.stopPropagation();
+				e.preventDefault();
+			},
+
+			onClose: function() {
+				var me = this;
+				me.fire("close");
+			},
+			/**
+			 Public Function
+			 */
+			doImport : function(grid, callback, scope){
+				if(grid && grid.tagName && grid.tagName.toLowerCase && grid.tagName.toLowerCase() === 'sc-grid'){
+					grid = grid._gridView;
+				}
+
+				this.targetGridVisibleHeaders = this._getVisibleColumnInfo(grid);
+				this.targetGridKeyHeaders = this._getKeyColumnInfo(grid);
+				if(this.autoTypeCasting === true){
+					this.targetFieldTypes = this._getFieldsTypeMap(grid, this.targetGridKeyHeaders);
+				}
+
+
+				this.callBackFn = callback;
+				this.callBackFnScope = scope;
+
+				if(this.isAttached === true){
+
+					// 매핑을 초기화 한다(컬럼 순서대로 매핑처리)
+					this.initializeMapping();
+
+					// 대상 그리드 컬럼을 기준으로 그리드 컬럼을 초기화 한다.
+					this.grdMain.setColumns(this.targetGridVisibleHeaders);
+				}
+
+			},
+
+			_getFieldsTypeMap : function(grid, keyColumns){
+				var dataSource = grid.getDataProvider(),
+						fieldTypes = {};
+
+				for(var i = 0; i< keyColumns.length; i++){
+					var fieldType = null;
+					if(!keyColumns[i].fieldName){
+						continue;
+					}
+					switch(dataSource.fields()[dataSource.getFieldIndex(keyColumns[i].fieldName)].dataType()){
+						case "datetime":
+							fieldType = "Date";
+							break;
+						case "number":
+							fieldType = "Number";
+							break;
+						case "boolean":
+							fieldType = "Boolean";
+							break;
+						case "text":
+							fieldType = "String";
+							break;
+					}
+
+					if(fieldType){
+						fieldTypes[keyColumns[i].fieldName] = fieldType;
+					}
+				}
+
+				return fieldTypes;
+			},
+
+			_getVisibleColumnInfo : function(grid){
+				var me = this;
+				var visibleColumns = [], keyHeaderIndex = this.headerColOffset, keyHeaderName = 0,
+						columns = grid.columns();
+
+				var getColumnInfo = function(origColInfo, copiedColInfo){
+					/* 컬럼 옵션
+						name : 컬럼의 식별자(컬럼을 식별하는 Id 용도)
+						width : 컬럼 너비
+						type : 컬럼의 데이터 타입
+						movable : 컬럼을 드래그로 이동 불가능(false)
+						editable : 해당 컬럼 데이터들 수정 불가능(false)
+						fieldName : 데이터 키
+						header.text : 헤더 Text
+					*/
+					copiedColInfo.header = {
+						text : origColInfo.header().text()
+					};
+					copiedColInfo.width = origColInfo.width();
+					copiedColInfo.movable = false;
+					copiedColInfo.sortable = false;
+					copiedColInfo.useStateful = false;
+					copiedColInfo.visible = !me.__isExcludeColumn(origColInfo);
+
+					//todo
+					if(origColInfo.columns && origColInfo.columns().length > 0){
+						copiedColInfo.type = 'group',
+								copiedColInfo.columns = [];
+						copiedColInfo.layout = origColInfo.layout();
+
+						for(var i = 0; i < origColInfo.columns().length; i++){
+							var childColumn = {};
+							arguments.callee(origColInfo.columns()[i], childColumn);
+							if(childColumn.visible){
+								copiedColInfo.columns.push(childColumn);
+							}
+						}
+					}
+					else{
+						var index = (keyHeaderIndex++)+"";
+						copiedColInfo.type = "data";
+						copiedColInfo.name = (keyHeaderName++)+"";
+						copiedColInfo.fieldName = index;
+						copiedColInfo.editable = false;
+					}
+
+				};
+
+				for(var i = 0; i < columns.length; i++){
+					if(this.__isExcludeColumn(columns[i])){
+						continue;
+					}
+					var visibleColumn = {};
+					getColumnInfo(columns[i], visibleColumn);
+					visibleColumns.push(visibleColumn);
+				}
+
+				return visibleColumns;
+			},
+
+			_getKeyColumnInfo : function(grid){
+				var keyColumns = [],
+						columns = this._getOrigKeyColumnInfo(grid);
+
+				for(var i = 0; i < columns.length; i++){
+					var keyColumn = {
+						text : columns[i].header().text(),
+						width : columns[i].width(),
+						fieldName : columns[i]._fieldName
+					};
+
+					keyColumns.push(keyColumn);
+				}
+
+				return keyColumns;
+			},
+
+			__isExcludeColumn : function(column){
+				if(column.visible() === false && this.excludeHiddenColumns){
+					return true;
+				}
+
+				return false;
+			},
+
+			_getOrigKeyColumnInfo : function(grid){
+				var origKeyColumns = [],
+						columns = grid.columns();
+
+				var addKeyColumns = function(col){
+					if(col.columns && col.columns().length > 0){
+						for(var i = 0; i < col.columns().length; i++){
+							arguments.callee(col.columns()[i]);
+						}
+					}
+					else{
+						if(col._visible){
+							origKeyColumns.push(col);
+						}
+					}
+				};
+
+				for(var i = 0; i < columns.length; i++){
+					if(this.__isExcludeColumn(columns[i])){
+						continue;
+					}
+					addKeyColumns(columns[i]);
+				}
+
+				return origKeyColumns;
+			},
+
+
+			/**
+			 DOM Listeners
+			 */
+
+			/*사용자가 HeaderRow의 인덱스 정보를 변경하였을때 호출*/
+			_onHeaderRowIndexChanged : function(){
+
+				var value = this.headerRowIndex;
+				if(value > 0){
+					if(this.currentSheetIndex > -1){
+						var rowLength = this.importer.getSheetRows(this.currentSheetIndex).length;
+						value = rowLength < value ? rowLength : value;
+					}
+				}else{
+					value = 1;
+				}
+
+				if(Number(value) !== Number(this.headerRowIndex)){
+					this.headerRowIndex = value;
+				}
+
+				this.setCurrentSheet(this.currentSheetIndex);
+			},
+
+			_clearBtnContainer : function(){
+				var container = this.$.btnContainer;
+
+				while(container.children.length > 0){
+					var btn = container.children[0];
+					btn.onclick = null;
+					container.removeChild(btn);
+					btn.destroy ? btn.destroy() : null;
+				}
+			},
+
+			_validateAndUploadFiles : function(files){
+				var me = this,
+						translate = Polymer.Base.translate ? Polymer.Base.translate : function(){ return arguments[0]; };
+				if(files.length === 1){
+					var importer = new XLSXImporter();
+
+					me.$.fileName.text = files[0].name;
+					importer.onBeforeImport= function(){
+
+						if(arguments[0] && arguments[0].name && arguments[0].name.replace(/^.*\./, '') !== 'xlsx'){
+							// 메세지 변경 필요시 변경
+							SCAlert.info(translate('알림'),translate('xlsx 파일 형식만 업로드가 가능 합니다.'));
+							return false;
+						}
+
+						SCLoadMask.show();
+					};
+					importer.doImport(files[0], {
+						excludeEmptyRow : me.excludeEmptyRow
+					});
+					me.importer = importer;
+					importer.onImportComplete = function(){
+						var sheetLength = importer.getSheetDatas().length,
+								container = me.$.btnContainer;
+
+
+						me._clearBtnContainer();
+
+						if(sheetLength === 0){
+							SCAlert.show(translate("오류"), translate("STD.N6800"), null, 'error');		//엑셀파일을 읽을 수 없습니다.
+							SCLoadMask.hide();
+							return;
+						}
+
+						var selected = -1;
+						for(var i = 0; i < sheetLength; i++){
+							var btn = me._getToggleButton(importer.getSheetName(i));
+
+							btn.value = i+"";
+							btn.onclick = function(e){
+								var btn = e.target;
+
+								var container = btn.parentElement,
+										btns = container.querySelectorAll('sc-button');
+								for(var i = 0; i < btns.length; i++){
+									btns[i].active = false;
+								}
+								btn.active = true;
+								me.setCurrentSheet(Number(btn.value));
+							};
+
+							if(importer.getSheetDatas()[i].selected){
+								selected = i;
+							}
+							container.appendChild(btn);
+						}
+						selected = selected < 0 ? 0 : selected;
+
+						container.children[selected].active = true;
+
+						me.setCurrentSheet(selected);
+						me.$.applyBtn.hidden = false;
+						SCLoadMask.hide();
+					};
+
+					importer.onImportError = function(e, type){
+						if(type){
+							switch(type){
+								case "parse" :
+									SCAlert.show(translate("오류"), translate("STD.N7006"), null, 'error');		//데이터 파싱 중 오류가 발생 하였습니다.
+									break;
+								case "upload" :
+									SCAlert.show(translate("오류"), translate("STD.N7007")+(e && e.target && e.target.status ? e.target.status : translate("unknown"))+")", null, 'error');		//업로드 중 오류가 발생하였습니다. (응답코드 :
+									break;
+							}
+						}else{
+							SCAlert.show(translate("오류"), translate("STD.N7005"), null, 'error');		//알 수 없는 오류가 발생하였습니다
+						}
+						SCLoadMask.hide();
+					}
+				}
+				else{
+					this.dataProvider.clearRows();
+					this._clearBtnContainer();
+					this.$.fileInput.value = '';
+					me.$.fileName.text = "\u00A0";
+					me.$.applyBtn.hidden = true;
+				}
+			},
+
+			/*사용자가 File을 선택하였을때 호출*/
+			_onFileSelected : function(filesParam){
+				this._validateAndUploadFiles(this.$.fileInput.files);
+			},
+
+			/* 적용 버튼 클릭 시 호출*/
+			_onApplyButtonClick : function(){
+
+				var mappingkey = {
+
+
+				};
+				for(var i = 0; i < this.mapping.length; i++){
+
+					mappingkey[this.targetGridKeyHeaders[i].fieldName] = this.mapping[i];
+				}
+
+				var datas = this.autoTypeCasting === true ?
+						this.importer.getSheetRowsWithOptions(this.currentSheetIndex, this.headerRowIndex, null, {
+							mapping : mappingkey,
+							typeMapping : this.targetFieldTypes
+						})
+						:
+						this.importer.getSheetRows(this.currentSheetIndex, mappingkey, this.headerRowIndex);
+				if(this.callBackFn){
+					this.callBackFnScope ? this.callBackFn.apply(this.callBackFnScope, [datas]) : this.callBackFn.apply(this, [datas]);
+				}
+
+				this.fire("close");
+			},
+
+			_resetAll : function(){
+				this.dataProvider.clearRows();
+				this.$.fileInput.value = '';
+				this.$.applyBtn.hidden = true;
+				this.$.fileName.text = "\u00A0";
+				this._clearBtnContainer();
+			},
+
+			_onFileBrowse : function(){
+				this._resetAll();
+				this.$.fileInput.click();
+			},
+
+
+			/*시트전환시 필요한 ToggleButton 생성*/
+			_getToggleButton : function(text){
+				var btn = document.createElement('sc-button');
+				btn.text = text;
+				btn.toggles = true;
+				return btn;
+			},
+
+			/* 개행문자 제거 */
+			_processEditorValue : function(value){
+				if(Object.prototype.toString.call(value) === '[object String]'){
+					return value.replace(RegExp("\n","g"), " ");
+				}else{
+					return value;
+				}
+			},
+
+			/*시트 전환 시 에디터의 선택지를 초기화 하기위해 호출*/
+			_setEditor : function(headerRow){
+				var me = this,
+						columns = this._getOrigKeyColumnInfo(this.grdMain),
+						hdRow = headerRow;
+
+
+				/*editable_cellStyle : 에디팅 가능한 셀 스타일 속성*/
+				this.grdMain.registerCellStyle("editable_cellStyle", {
+					editable: true
+				}, true);
+
+				/*grid.setCellStyles([에디팅 가능한 Row 인덱스들], [editing가능한 Column 인덱스들], 에디팅 가능 CellStyle) */
+				this.grdMain.setCellStyles([0], null, "editable_cellStyle");
+
+				/*
+				dropDown 에디터 : selectBox 형식의 에디터
+				values : 선택지로 들어갈 값들
+				alwaysShowEditButton : 에디팅 가능한 셀에 버튼을 보여준다.
+				textReadOnly : 키입력으로 에디팅이 불가능 하다.
+				displayLabels : 선택지에 Label을 Value 대신 보여주지 않는다.(false)
+				*/
+				var editorConfig = {
+					type : 'list',
+					values : [],
+					alwaysShowEditButton : true,
+					textReadOnly : true,
+					//displayLabels : false
+				};
+
+				var hi = -1;
+				while(headerRow.hasOwnProperty(++hi)){
+					editorConfig.values.push(this._processEditorValue(headerRow[hi]) + '(col : '+hi+' )');
+				}
+
+				var editorValues = editorConfig.values;
+
+				for(var i = 0; i< columns.length; i++){
+					columns[i].setEditor(editorConfig);
+					//columns[i].setProperty("editorButtonVisibility", DataLudi.ButtonVisibility.ALWAYS);
+				}
+
+				this.grdMain.onEditCellUpdated = function(grid, row, fieldIndex, newValue, oldValue){
+
+					var editedCol = grid.focusedIndex().column,
+							editedColIndex = Number(editedCol.name()),
+							columns = me._getOrigKeyColumnInfo(grid);
+
+
+					/*rollback Changes*/
+					me.grdMain.cancel();
+
+					var findIdx = -1;
+					for(var i =0; i < editorValues.length; i++){
+						if(editorValues[i] === newValue){
+							findIdx = i;
+							break;
+						}
+					}
+
+					if(findIdx < 0){
+						return;
+					}
+
+					// change currentMapping
+					me.changeMapping(editedColIndex, findIdx);
+
+
+
+					// change FieldName(dataIndex)
+					me._changeColumnFieldName(editedCol, findIdx);
+
+
+				};
+
+			},
+
+			/*시트 전환 시 호출*/
+			setCurrentSheet: function(sheetIndex){
+				var me = this;
+				//editing cancel
+				if(sheetIndex < 0){
+					return;
+				}
+
+				this.initializeMapping();
+				this.grdMain.cancel();
+				this.grdMain.setColumns(this.targetGridVisibleHeaders);
+				this.currentSheetIndex = sheetIndex;
+				var headerRow = me.importer.getSheetRows(sheetIndex, null, this.headerRowIndex-1, this.headerRowIndex)[0];
+				var columns = this._getOrigKeyColumnInfo(this.grdMain);
+				var headerKeys = [];
+				var duplicateChecker = {};
+
+				for(var i=0; i < columns.length; i++){
+					headerKeys.push(columns[i].fieldName());
+					duplicateChecker[columns[i].fieldName()] = true;
+				}
+
+				for(var key in headerRow){
+					if(duplicateChecker[key] !== true){
+						duplicateChecker[key] = true;
+						headerKeys.push(key);
+					}
+				}
+
+
+				this.dataProvider.setFields(this._getDataFields(headerKeys));
+				me.dataProvider.setRows(me.importer.getSheetRows(sheetIndex, null, this.headerRowIndex-1));
+				if(headerRow){
+					me._setEditor(headerRow);
+				}
+
+				if(this.autoColumnMapping === true){
+					this._connectMappingByHeaderText(headerRow);
+				}
+			},
+
+			_connectMappingByHeaderText : function(headerRow){
+				var grid = this.grdMain, columns = this.targetGridKeyHeaders;
+
+				for(var i = 0; i < columns.length; i++){
+					var column = columns[i],
+							headerText = column.text;
+					if(column.fieldName == null){
+						continue;
+					}
+
+					var isMatching = false;
+					for(var key in headerRow){
+						if(this.isEqualsHeaderText(headerText, headerRow[key])){
+							this.changeMapping(i+"", key);
+							this._changeColumnFieldName(grid.columnByName(i+""), key);
+							isMatching = true;
+							break;
+						}
+					}
+					if (this.isIncludeOnlyMatching === true) {
+						// 매칭되지 않은 컬럼의 데이터는 삭제한다.
+						if (!isMatching) {
+							this.changeMapping(i+"", -1);
+							this._changeColumnFieldName(grid.columnByName(i+""), -1);
+						}
+					}
+
+				}
+			},
+
+			/*
+				grid의 headerText와 엑셀의 헤더위치 로우의 셀 데이터를 비교해 일치하는지 확인한다
+				비교조건을 custom하게 좀더 느슨하게 설정할수 있다.
+				예)
+				excelCellText의 양쪽 공백을 제거하고 비교 한다던지
+				importer.isEqualsHeaderText = function(gridHeaderText, excelCellText){
+					var trimExcelCellText = excelCellText.trim();
+					if(gridHeaderText === trimExcelCellText){
+						return true;
+					}else{
+						return false;
+					}
+				};
+
+				일부문자만 포함돼 있으면 일치하는 헤더로 판단 한다던지
+				importer.isEqualsHeaderText = function(gridHeaderText, excelCellText){
+					if(gridHeaderText.indexOf(trimExcelCellText) >= 0){
+						return true;
+					}else{
+						return false;
+					}
+				}
+			*/
+			isEqualsHeaderText : function(gridHeaderText, excelCellText){
+				if(gridHeaderText === excelCellText){
+					return true;
+				}else{
+					return false;
+				}
+			},
+
+
+			attached : function(){
+				if(!this._attachedCalled) {
+					this._attachedCalled = true;
+
+					this.initializeGrid(this.$.gridPanel);
+					this.fire("initialized", null,{bubbles : false});
+				}
+			},
+
+			/**
+			 Grid Initialize Functions
+			 */
+			_addResizeEvent: function(gridView, container){
+				var me = this;
+				if (!me.gridResizeListening && container) {
+					me.gridResizeListening = true;
+					var resizeListener = function(){
+						gridView.resetSize();
+					};
+					container.addEventListener("content-resize", resizeListener);
+					me._removeResizeEvent = function(){
+						me.gridResizeListening = false;
+						container.removeEventListener("content-resize", resizeListener);
+						resizeListener = null;
+						gridView = null;
+						container = null;
+						me = null;
+					};
+				}
+			},
+
+			_removeResizeEvent: function(){
+				// defined _addResizeEvent Fn
+			},
+
+			_getDataField : function(key){
+				return {
+					fieldName: key
+				};
+			},
+
+			/*targetHeaders길이만큼 field를 생성*/
+			_getDataFields : function(keys){
+				var targetHeaders = this.targetGridKeyHeaders,
+						mapping = this.mapping;
+				var fields = [];
+
+				if(keys){
+					var dupCheck = {};
+					for(var i = 0 ; i < keys.length; i++){
+						var key = keys[i]+"";
+						if(dupCheck[key]){
+							continue;
+						}else{
+							dupCheck[key] = true;
+						}
+						var field = this._getDataField(key);
+						fields.push(field);
+					}
+				}else{
+					for(var i = 0 ; i < mapping.length; i++){
+						var field = this._getDataField(mapping[i]+"");
+						fields.push(field);
+					}
+				}
+				return fields;
+			},
+
+			// 그리드 초기화
+			initializeGrid : function(containerEl){
+				this.dataProvider = this.dataProvider ? this.dataProvider : new DataLudi.createGridDataSet();
+				this.grdMain = this.grdMain ? this.grdMain : new DataLudi.createGridView(this.$.gridPanel._contentElement); //this.$.gridPanel.contentId 대신 _contentElement 로 변경함
+				this.dataProvider.clearRows();
+
+				this.grdMain.getDataProvider && this.grdMain.getDataProvider() ? null : this.grdMain.setDataSource(this.dataProvider);
+
+				//resizeEvent 초기화
+				this._addResizeEvent(this.grdMain, this.$.gridPanel)
+
+
+				// 매핑을 초기화 한다(컬럼 순서대로 매핑처리)
+				this.initializeMapping();
+
+				// 대상 그리드 컬럼을 기준으로 그리드 컬럼을 초기화 한다.
+				this.grdMain.setColumns(this.targetGridVisibleHeaders);
+
+				/*
+                    grid UI 초기화(불필요 UI 요소 숨김처리)
+                    checkBar : 왼쪽에 위치한 체크박스 컬럼
+                    stateBar : 왼쪽에 위치한 Row 상태 컬럼
+                    footer : grid 하단에 위치한 Summary(계산 용도)
+                    panel : grid 상단에 위치한 description(그루핑 설명)
+                */
+				this.grdMain.setOptions({
+					checkBar : {
+						visible : false
+					},
+					stateBar: {
+						visible: false
+					},
+					footer: {
+						visible: false
+					},
+					panel: {
+						visible: false
+					},
+					display: {
+						fixedRowCount: 1,
+						emptyDataMessage: I18N.translate('xlsx 파일을 여기에 드롭다운 시 업로드 됩니다.')
+					}
+				});
+
+				this.grdMain.setBody({
+					fixedRowBarHeight: 10,
+					fixedRowBarStyles: {
+						background: "#ccc",
+						borderTop: "#777",
+						borderBottom: "#777"
+					}
+				});
+
+				/* 첫번째 Row 락처리(Fixed)
+                    grid UI 초기화(불필요 UI 요소 숨김처리)
+                    rowCount : 락처리할 행 수(1행 부터)
+                    rowBarHeight : 일반 Row와 Fixed Row의 구분선 높이
+                */
+				/*
+                this.grdMain.setFixedOptions({
+                    rowCount: 1,
+                    rowBarHeight: 3
+                });
+
+                */
+
+				this.grdMain.loadStyles(blueSkySkin);
+
+				/*
+					표준화기준의 그리드 테마 적용
+				*/
+
+			},
+
+
+
+			// 매핑(각 컬럼별 Key)은 0 ~ 컬럼 길이 로 초기값이 세팅된다.
+			initializeMapping : function(){
+				var me = this,
+						targetHeaders = this.targetGridKeyHeaders,
+						mapping = [];
+				for(var i = 0; i < targetHeaders.length; i++){
+					mapping.push( i+ this.headerColOffset);
+				}
+				me.mapping = mapping;
+			},
+
+			/*_changeColumnFieldName(컬럼인덱스, 세팅할 필드명(dataIndex)) */
+			_changeColumnFieldName : function(column, mappingIndex){
+				column.setProperty("fieldName", mappingIndex+'');
+			},
+
+			/*changeMapping(컬럼인덱스, 컬럼에 세팅할 매핑인덱스) */
+			changeMapping : function(columnIndex, mappingIndex){
+				this.mapping[columnIndex] = mappingIndex;
+			},
+
+			clear : function(){
+				this.dataProvider ? this.dataProvider.clearRows() : null;
+				this.$.applyBtn.hidden = true;
+				this.$.fileName.text = "\u00A0";
+				this._clearBtnContainer();
+
+				if(this.importer){
+					this.importer.destroy ? this.importer.destroy() : null;
+					this.importer = null;
+				}
+
+				this.mapping = null;
+				this.currentSheetIndex = -1;
+				this.headerColOffset = 0;
+				this.headerRowIndex = 1;
+				this.callBackFnScope = null;
+				this.callBackFn = null;
+				this.targetGridKeyHeaders = [];
+				this.targetGridVisibleHeaders = [];
+				this.autoTypeCasting = false;
+				this.autoColumnMapping = false;
+			},
+
+			reset : function(){
+				this.clear();
+				this.$.fileInput.value = '';
+			},
+			
+			/*삭제 시 초기 화*/
+			_destroy : function(){
+				this.clear();
+
+				this._removeResizeEvent();
+				this.dataProvider = null;
+				this.grdMain = null;
+				this.$.fileInput.value = '';
+			}
+
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,187 @@
+<dom-module id="ep-aprvline">
+<!-- 
+/**
+ *
+ *	@description : 결재선목록 조회
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @Since 2017. 2. 2.
+ * @변경이력 : [2017. 2. 2.] Yeon-u Kim 최초작성
+ */
+-->
+	<style>
+		:host {
+            @apply(--vbox-layout);
+        }
+	</style>
+	
+	<template>
+		<!-- ajax 선언 부 -->
+		<!-- 결재선 master 조회 -->
+		<sc-ajax id="findApprovalLineMasterList"
+            url="approval/mng/findApprovalLineMasterList.do"
+				 last-response="{{aprvLineList}}">
+        </sc-ajax>
+       <!-- 결재선 상세 조회 -->
+       <sc-ajax id="findApprovalLineMasterDetailList"
+       		body="{{aprvLineMaster}}"
+            url="approval/mng/findApprovalLineMasterDetailList.do"
+            last-response="{{aprvDetailList}}">
+        </sc-ajax>
+        
+        <!--  코드 조회 service group-->
+        <sc-code-group>
+        	<!-- 결재선결재자 종류코드 -->
+        	<sc-code code="G005" value="{{codes.G005}}"></sc-code>
+        </sc-code-group>
+		
+		<div class="hbox flex">
+			<!-- 그리드 -->
+			<sc-grid id="gridPanel" class="flex"	use-state="false"	on-item-click="onDataCellClicked" data-provider="{{aprvLineList}}"
+													on-selection-checked="onItemChecked" selection-mode="radio">
+				<!--  그리드 toolbar -->
+				<cc-grid-toolbar title-text="결재선 목록">
+					<sc-button text="선택" on-click="onSelectedList" ></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column	data-field="usr_apvlln_tit"	header-text="결재선 명"	width="200"	text-align="left"	required="true"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field	data-field="usr_apvlln_uuid"	></sc-grid-field>
+					<sc-grid-field	data-field="usr_id"	></sc-grid-field>
+					<sc-grid-field	data-field="apvlln_typ_ccd"	></sc-grid-field>
+					<sc-grid-field	data-field="usr_apvlln_tit"	></sc-grid-field>
+					<sc-grid-field	data-field="apvlln_sort"	></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+			<div class="hspace-10"></div>
+			<sc-grid id="detailGridPanel" class="flex"	use-state="false" use-selection="false" data-provider="{{aprvDetailList}}">
+				<!--  그리드 toolbar -->
+				<cc-grid-toolbar title-text="결재자 목록">
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column	data-field="aprvemp_dept_nm"	header-text="부서 명"	width="100"	></sc-data-column>
+					<sc-data-column	data-field="apvr_id"	header-text="사용자 아이디"	width="150"	></sc-data-column>
+					<sc-data-column	data-field="aprvemp_usr_nm"	header-text="사용자 명"	width="120"	></sc-data-column>
+					<sc-data-column	data-field="aprvemp_pos_nm"	header-text="직위"	width="120"	></sc-data-column>
+					<sc-combobox-column	data-field="apvr_typ_ccd"	header-text="구분"	width="80"
+										display-field="label"		value-field="data"	items="{{codes.G005}}"></sc-combobox-column>
+					<sc-data-column	data-field="apvr_sort"	header-text="순서"	width="60"	text-align="center"	required="true"
+									data-type="number"				format-type="integer"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field	data-field="usr_apvlln_uuid"	></sc-grid-field>
+					<sc-grid-field	data-field="aprvemp_dept_nm"	></sc-grid-field>
+					<sc-grid-field	data-field="apvr_id"	></sc-grid-field>
+					<sc-grid-field	data-field="aprvemp_usr_nm"	></sc-grid-field>
+					<sc-grid-field	data-field="apvr_typ_ccd"	></sc-grid-field>
+					<sc-grid-field	data-field="aprvemp_pos_cd"	></sc-grid-field>
+					<sc-grid-field	data-field="aprvemp_pos_nm"	></sc-grid-field>
+					<sc-grid-field	data-field="apvr_sort"	data-type="number"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'ep-aprvline',
+			properties : {
+				codes: {
+					type: Object,
+					value: function(){
+						return {
+							G005 : []
+						};
+					},
+					reset: false
+				},
+				aprvDetailList:{
+				    type: Array,
+					value: function(){
+				        return [];
+					}
+				},
+                aprvLineList:{
+                    type: Array,
+                    value: function(){
+                        return [];
+                    }
+                }
+			},
+			//최초 호출
+			initialized : function(){
+				var me = this;
+
+              	//기안 구분 삭제
+				var filtered = me.codes.G005.filter(function(item){
+                    if(item.data != "S" ){
+                        return item;
+                    }
+                });
+				me.set("codes.G005",filtered);
+			},
+			
+			load: function(options){
+				var me = this;
+				me.onFindList();
+			},
+			//그리드 데이타 셀 클릭 이벤트
+			onDataCellClicked: function(event){
+            	var me = this, detail = event.detail,
+	            	data = detail.data,
+	            	item = detail.item,
+	            	fieldName = item.dataField,
+	            	itemIndex = item.rowIndex,
+	            	grid = me.$.gridPanel;
+            	
+            	//그리드 selection 체크처리를 하고 상세 바로 조회
+            	grid.selectionCheck(itemIndex,true,true);
+			},
+			//그리드 아이템 체크시 호출
+			onItemChecked: function(event){
+            	var me = this, detail = event.detail,
+            		data = detail.data;
+            	
+            	me.findDetailList(data);
+			},
+			//결재선 목록 조회
+			onFindList: function(){
+				var me = this,provider = me.$.detailGridPanel.getDataProvider();
+				if(UT.isNotEmpty(provider)){
+					provider.removeAll();
+				}
+				UT.request(me.$.findApprovalLineMasterList);
+			},
+			//결재선 내용 조회
+			findDetailList: function(param){
+				var me = this;
+				me.set("aprvLineMaster",{usr_apvlln_uuid : param.usr_apvlln_uuid});
+				UT.request(me.$.findApprovalLineMasterDetailList);
+			},
+			// 선택 목록 반환
+            onSelectedList: function() {
+                var me = this;
+                var provider = me.$.gridPanel.getDataProvider();
+            	var selected = provider.selectionCheckedItems();
+            	
+				if(selected.length > 0) {
+					var allRows = me.$.detailGridPanel.getDataProvider().getItems();
+                	selected[0].detailList = allRows;
+                    
+                    me.fire('selected-items', selected);
+                    me.onClose();
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				}
+            },
+          	//닫기
+            onClose : function(e){
+            	this.reset();
+            	this.fire('close');
+            }
+		});
+	</script>
+</dom-module>

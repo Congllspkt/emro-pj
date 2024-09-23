@@ -1,0 +1,113 @@
+<!--
+ * @Desc notice widget
+ * @Author patrick.sung
+ * @Created 2016-05-03
+ -->
+<sc-link rel="stylesheet" type="text/css" href="../../lib/portal-widget/css/style_portlet.css"/>
+
+<dom-module id="es-sp-board-popup-list">
+    <template>
+        <style>
+            :host {
+                @apply(--vbox-layout);
+            }
+        </style>
+        <sc-ajax id="getList"
+                 url="findNoticeBoardList.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindNoticeBoardList">
+        </sc-ajax>
+
+        <!-- 게시판-->
+        <div class="wrap_contents">
+            <div class="main_board">
+                <ul id="noticont">
+                </ul>
+            </div>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "es-sp-board-popup-list",
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: {}
+                },
+            },
+            load: function(data){
+                var me = this;
+                me.searchParam = {
+                    bbd_uuid : data.bbd_uuid,
+                    _page    : {manualQuery: false, page: 1, size: 30, start: 1, end: 30}
+                };
+                me.findNoticeBoardList();
+            },
+            findNoticeBoardList: function() {
+            	var me = this;
+                UT.request(me.$.getList);
+            },
+            completeFindNoticeBoardList: function(el, res) {
+            	var me = this,
+            		result = res.response;
+
+            	var noti = Polymer.dom(me.$.noticont);
+            	while(noti.firstChild) {
+            		var a = noti.firstChild.querySelector("a");
+            		if(a) me.unlisten(a, "tap", "onMoveBoardDetail");
+            		noti.removeChild(noti.firstChild);
+            	}
+
+            	if(UT.isNotEmpty(result)) {
+            		var rows = result.content;
+            		for(var i=0; i<rows.length; i++) {
+                		var row = rows[i];
+
+                		var a = document.createElement("a");
+                		a.data = row;
+                		a.innerHTML = me.onLabel(row.pst_tit, row) + "<span>" + me.dateConvert(row.reg_dttm) + "</span>";
+                		me.listen(a, "tap", "onMoveBoardDetail");
+
+                		var li = document.createElement("li");
+                		li.appendChild(a);
+
+                		Polymer.dom(me.$.noticont).appendChild(li);
+                	}
+            	}
+            },
+
+            //게시글 리스트의 라벨 표시함수
+            onLabel : function(value, row) {
+                var me = this;
+            	if(row.ann_yn === "Y") {
+            	    var val = "<b>" + me.translate("공지") + "</b>";
+            	    val += value;
+            	    return val;
+				}
+				return value;
+			},
+			//게시글 작성일자 표시 컨버터 함수
+            dateConvert: function(value){
+            	return UT.formatDate(value,"yyyy/MM/dd HH:mm");
+            },
+            _getMenuInfo : function(menuCd) {
+                var mdiMain = document.querySelector("sc-mdi");
+                var menuInfo = SCMenuManager.getMenuNode(menuCd);
+                return menuInfo;
+            },
+            //게시글 선택시 이동하는 함수
+            onMoveBoardDetail: function(e){
+            	var me = this;
+            	var data = e.target.data,
+            		bbd_uuid = data.bbd_uuid,
+            		pst_no  = data.pst_no;
+
+            	var menuInfo = me._getMenuInfo('CMT10000'),
+            		menuName = menuInfo.menu_nm,
+            		menuUrl = menuInfo.menu_url;
+
+            	MDIUT.createWindow('CMT10000', menuName, menuUrl + '&widget=1&pst_no='+pst_no);
+            }
+        });
+    </script>
+</dom-module>

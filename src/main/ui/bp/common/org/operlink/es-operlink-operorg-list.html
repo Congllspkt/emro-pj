@@ -1,0 +1,286 @@
+<dom-module id="es-operlink-operorg-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    
+        <!-- 목록 조회 -->
+        <sc-ajax id="findListSource" url="../operorg/findListOperationOrganizationForLinking.do" body="{{findListSource.param}}" on-response="completeFindListSource"></sc-ajax>
+        <!-- 목록 조회 -->
+        <sc-ajax id="findListTarget" url="../operorg/findListOperationOrganizationForLinking.do" body="{{findListTarget.param}}" on-response="completeFindListTarget"></sc-ajax>
+        <!-- 목록 저장 -->
+        <sc-ajax id="saveList" url="../operorg/saveListOperationOrganizationLink.do" on-response="completeSaveList"></sc-ajax>
+
+        <sc-request-group id="codes" init>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+            <sc-code-group>
+            	<sc-code code="C013" value="{{codes.linkType}}" ></sc-code> <!-- 연결유형 -->
+            	<sc-code code="C009" value="{{codes.useYn}}" ></sc-code> <!-- 사용여부 -->
+            </sc-code-group>
+        </sc-request-group>
+        
+        <!-- 역할 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <cc-search-condition-panel on-search="onFindListSource" search-condition-cls="label-row" auth-r>
+            <cc-fieldset>
+                <sc-label text="회사 명"></sc-label>
+                <sc-combobox-field value="{{findList.param.logic_org_cd}}" items="{{codes.company}}" display-field="comp_nm" value-field="co_cd"
+                                   selected-index="0" required="true" placeholder="선택">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="연결 유형"></sc-label>
+                <sc-combobox-field value="{{findList.param.conn_typ_ccd}}" items="{{codes.linkType}}" display-field="label" value-field="data"
+                                   selected-index="0" required="true" placeholder="선택">
+                </sc-combobox-field>
+            </cc-fieldset>
+        </cc-search-condition-panel>
+
+        <div class="hbox flex">
+            <sc-grid id="gridPanelSource" is-tree="true" class="flex" use-selection="false" use-state="false"
+                     on-item-click="onDataCellClicked">
+                <cc-grid-toolbar title-text="운영조직 (데이터 사용)">
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="oorg_nm" header-text="운영조직 명" width="200" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="oorg_nm_en" header-text="운영조직 명 영문" width="200" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="oorg_cd" header-text="운영조직 코드" width="140" item-style-function="onStyleOperationOrganizationCode"></sc-data-column>
+                    <sc-data-column data-field="logic_org_typ_nm" header-text="논리 조직 유형" width="190" ></sc-data-column>
+                    <sc-data-column data-field="logic_org_cd" header-text="논리 조직 코드" width="170" ></sc-data-column>
+                    <sc-combobox-column data-field="use_yn" header-text="사용 여부" width="100" items="{{codes.useYn}}"
+                                        display-field="label" value-field="data" ></sc-combobox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="parnode_oorg_cd" ></sc-grid-field>
+                    <sc-grid-field data-field="ounit_cd" ></sc-grid-field>
+                    <sc-grid-field data-field="logic_org_typ_ccd" ></sc-grid-field>
+                    <sc-grid-field data-field="logic_org_nm" ></sc-grid-field>
+                    <sc-grid-field data-field="conn_yn" ></sc-grid-field>
+                    <sc-grid-field data-field="chdnode_yn" ></sc-grid-field>
+                    <sc-grid-field data-field="tree" ></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+
+            <div class="hspace-10"></div>
+
+            <sc-grid id="gridPanelTarget" is-tree="true" class="flex" use-selection="false" editable="true">
+                <cc-grid-toolbar title-text="운영조직 (데이터 부여)">
+                    <sc-button text="저장" on-click="onSaveList" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column	data-field="oorg_nm"	header-text="운영조직 명"	width="200"	text-align="left"></sc-data-column>
+                    <sc-data-column	data-field="oorg_nm_en"	header-text="운영조직 명 영문"	width="200"	text-align="left"></sc-data-column>
+                    <sc-checkbox-column	data-field="conn_yn"	header-text="연결 여부"	width="120" checked-value="Y" un-checked-value="N"
+                                         display-checkbox="false" item-editable-function="onEditableLinkYn"></sc-checkbox-column>
+                    <sc-data-column	data-field="oorg_cd"	header-text="운영조직 코드"	width="140"	></sc-data-column>
+                    <sc-data-column	data-field="logic_org_typ_nm"	header-text="논리 조직 유형"	width="190"	></sc-data-column>
+                    <sc-data-column	data-field="logic_org_cd"	header-text="논리 조직 코드"	width="170"	></sc-data-column>
+                    <sc-combobox-column data-field="use_yn" header-text="사용 여부" width="60" items="{{codes.useYn}}"
+                                        display-field="label" value-field="data" ></sc-combobox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field	data-field="oorg_cd"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="parnode_oorg_cd"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="ounit_cd"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="logic_org_nm"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="org_typ_nm"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="logic_org_typ_ccd"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="use_yn"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="conn_yn"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="chdnode_yn"	data-type="text"></sc-grid-field>
+                    <sc-grid-field	data-field="tree"	data-type="text"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+        
+    </template>
+    
+    <script>
+        Polymer({
+            is: "es-operlink-operorg-list",
+            properties: {
+                findList: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            param: {}
+                        }
+                    }
+                },
+                findListSource: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            info: {},
+                            param: {}
+                        }
+                    }
+                },
+                findListTarget: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            info: {},
+                            param: {}
+                        }
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            company: [],
+                            linkType: [],
+                            useYn: []
+                        };
+                    },
+                    reset: false
+                }
+            },
+            
+            // 화면 생성 완료
+            initialized: function() {
+                var me = this;
+                
+                me.onFindListSource();
+            },
+            
+            onDataCellClicked: function(e){
+                var me = this,
+                    item = e.detail.item,
+                    data = e.detail.data,
+                    provider = this.$.gridPanelSource.getDataProvider();
+                if(item.dataField === "oorg_cd"){
+                    var child = provider.getChildIndexes(item.nodeIndex);
+                    if(!child || child.length === 0){
+                        me.setParamFindListTarget(data);
+                        me.onFindListTarget();
+                    }
+                    else{
+                        me.$.gridPanelTarget.getDataProvider().removeAll();
+                    }
+                }
+            },
+            
+            // 검색(조회) - Source
+            onFindListSource: function() {
+                var me = this;
+                if(!me.validate("searchParam")){
+                   UT.alert("STD.E0000");
+                   return;
+                }
+                me.set("findListSource.param.logic_org_cd", me.get("findList.param.logic_org_cd"));
+                me.set("findListSource.param.ounit_cd", me.get("findList.param.conn_typ_ccd").substring(0, 2));
+                UT.request(me.$.findListSource);
+            },
+
+            // 검색(조회) 완료 - Source
+            completeFindListSource: function(e, res) {
+                var me = this,
+                    result = res.response;
+
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "oorg_cd", "parnode_oorg_cd", "children", "ROOT", null, true);
+                this.$.gridPanelSource.setHierachyDataProvider(hierachiDatas, "children");
+
+                me.set("findListSource.info", me.get("findListSource.param")); // 검색조건 저장
+                me.$.gridPanelSource.expandAll();
+                me.$.gridPanelTarget.getDataProvider().removeAll();
+
+                me.fire("findlist-operlink",me.get("findList.param"));
+            },
+            
+            // 파라미터 셋팅 - Target
+            setParamFindListTarget: function(param) {
+                var me = this;
+                me.set("findListTarget.param.logic_org_cd", me.get("findList.param.logic_org_cd"));
+                me.set("findListTarget.param.ounit_cd", me.get("findList.param.conn_typ_ccd").substring(2, 4));
+                me.set("findListTarget.param.conn_typ_ccd", me.get("findList.param.conn_typ_ccd"));
+                me.set("findListTarget.param.connsrc_oorg_cd", param.oorg_cd);
+                me.set("findListTarget.param.src_org_cd", param.logic_org_cd);
+            },
+
+            // 검색(조회) - Target
+            onFindListTarget: function() {
+                var me = this;
+                UT.request(me.$.findListTarget);
+            },
+
+            // 검색(조회) 완료
+            completeFindListTarget: function(e, res) {
+                var me = this,
+                    result = res.response;
+
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "oorg_cd", "parnode_oorg_cd", "children", "ROOT", null, true);
+                this.$.gridPanelTarget.setHierachyDataProvider(hierachiDatas, "children");
+
+                me.set("findListTarget.info", me.get("findListTarget.param")); // 검색조건 저장
+                me.$.gridPanelTarget.expandAll();
+            },
+
+            onStyleOperationOrganizationCode: function(data, item){
+                if(data.chdnode_yn === "Y")
+                    return {
+                        fontWeight: "bold",
+                        fontColor: "#0e006f"
+                    };
+            },
+
+            onEditableLinkYn: function(data, item){
+                return (data.chdnode_yn === "Y");
+            },
+
+            // 저장
+            onSaveList: function() {
+                var me = this;
+                var updated = me.$.gridPanelTarget.getDataProvider().getUpdateItems();
+                if(updated.length > 0){
+                    UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                        var creates = [];
+                        var deletes = [];
+                        for (var i = 0, len = updated.length; i < len; i++) {
+                            if (updated[i].conn_yn === "Y") {
+                                creates.push({
+                                    conn_typ_ccd: me.get("findListTarget.info.conn_typ_ccd"),
+                                    connsrc_oorg_cd: me.get("findListTarget.info.connsrc_oorg_cd"),
+                                    src_org_cd: me.get("findListTarget.info.src_org_cd"),
+                                    connsubj_oorg_cd: updated[i].oorg_cd,
+                                    connsubj_org_cd:  updated[i].logic_org_cd,
+                                    conn_yn: "Y"
+                                });
+                            } else {
+                                deletes.push({
+                                    conn_typ_ccd: me.get("findListTarget.info.conn_typ_ccd"),
+                                    connsrc_oorg_cd: me.get("findListTarget.info.connsrc_oorg_cd"),
+                                    connsubj_oorg_cd: updated[i].oorg_cd
+                                });
+                            }
+                        }
+                        me.$.saveList.body = {
+                            insertLinks: creates,
+                            deleteLinks: deletes
+                        };
+                        UT.request(me.$.saveList);
+                    });
+                }
+                else{
+                    UT.alert("STD.N1700");
+                }
+            },
+            
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this;
+                me.onFindListTarget();
+                me.fire("saved-operlink",me.get("findList.param"));
+            }
+        });
+    </script>
+
+</dom-module>

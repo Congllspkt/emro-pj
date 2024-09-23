@@ -1,0 +1,799 @@
+<dom-module id="sc-mdi-sidemenu">
+
+	<template>
+		<!-- 즐겨찾기 메뉴 추가/해제 전환 -->
+		<sc-ajax id="toggleAppendOrDeleteMyFavoriteMenu"
+				 url="../toggleAppendOrDeleteMyFavoriteMenu.do"
+				 on-response="_completeSaveMyFavorite">
+		</sc-ajax>
+		
+		<!-- 즐겨찾기 폴더 삭제 -->
+		<sc-ajax id="deleteListMyFavoriteFolderByUserId"
+				 url="../deleteListMyFavoriteFolderByUserId.do"
+				 on-response="_completeSaveMyFavorite">
+		</sc-ajax>
+		
+		<!-- 즐겨찾기 폴더 저장 -->
+		<sc-ajax id="saveMyFavoriteFolder"
+				 url="../saveMyFavoriteFolder.do"
+				 body={{favoriteData}}
+				 on-response="_completeSaveMyFavorite">
+		</sc-ajax>
+		
+		<!-- 즐겨찾기 순서 변경 -->
+		<sc-ajax id="updateMyFavoriteSortOrd"
+				 url="../updateMyFavoriteSortOrd.do"
+				 body={{favoriteData}}
+				 on-response="_completeSaveMyFavorite">
+		</sc-ajax>
+		
+		<div id="sideWrapContainer" class="hbox">
+			<div id="sideWrap" class="sideWrap">
+				<div id="leftTabArea" class="leftTabArea" hidden="true">
+					<div id="sideMenuTit" class="sideMenuTit"><span></span></div>
+					<div id="leftCloseBtn" class="leftCloseBtn"><span></span></div>
+					<div id="leftFavoritBtn" class="leftFavoritBtn"><span></span></div>
+				</div>
+				<div id="menuListDiv" class="menuList"></div>
+			</div>
+			<div id="sideBar" class="leftSplitter" hidden="true">
+				<aside>
+					<ul>
+						<li class="sideIcon"><a title="Menu" id="sideBarCloseBtn"></a></li>
+						<!-- <li class="sideIcon"><a title="Setting"></a></li> -->
+						<li class="sideIcon"><a id="leftMyFavorite" title="Favorite" data-args="favor"></a>
+							<div id="favContent" class="wrap_sb_content fav_content">
+		                        <h2>
+		                        	<b>즐겨찾기 메뉴</b>
+		                        	<i class="fav-folder-add-btn" on-click="_onShowDialogFavoriteFolder"></i>
+		                        </h2>
+		                        <div id="favTree"></div>
+		                    </div> 
+						</li>
+						<li class="sideIcon"><a id="leftSysLink" title="System Link" data-args="link"></a>
+							<div class="wrap_sb_content link_content">
+		                        <h2><b>System Link</b></h2>
+		                        <ul>
+			                        <li><a>Related System</a></li>
+			                        <li><a>Related System</a></li>
+			                        <li><a>Related System</a></li>
+			                        <li><a>Related System</a></li>
+		                        </ul>
+		                    </div> 
+						</li>
+						<li class="sideIcon"><a id="myMemo" title="Memo"></a></li>
+						<!-- <li class="sideIcon"><a id="myApp" title="My App"></a></li> -->
+						<li class="sideIcon"><a id="calendar" title="Calendar"></a></li>
+					</ul>
+				</aside>
+			</div>
+		</div>
+		
+		<sc-dialog id="dialogFavoriteFolder" title-text="즐겨찾기 폴더 추가" title-align="left" style="width:400px;height:120px" modal="true">
+			<sc-toolbar>
+				<sc-spacer></sc-spacer>
+				<sc-button text="저장" on-click="_onAddFavoriteFolder"></sc-button>
+			</sc-toolbar>
+			<table class="tb-form">
+				<colgroup>
+					<col style="width:100px">
+					<col>
+				</colgroup>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="폴더명"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-text-field id="favFolderName" value="{{favoriteData.fold_nm}}" max-length="60" required="true" validator-type="nospace"></sc-text-field>
+	        		</td>
+	        	</tr>
+	        </table>
+		</sc-dialog>
+	</template>
+	<script>
+		Polymer({
+			
+	    	is: 'sc-mdi-sidemenu',
+	    	
+	    	properties: {
+	    		
+	    		menuName : {
+	    			type : String
+	    		},
+	    		
+				treeMenuList: {
+					type: Array,
+			        observer: '_treeMenuListChanged',
+					notify: true
+				}, 
+				
+				menuNodeMap: {
+					type: Object
+				}, 
+				
+				/** Left메뉴 닫기여부 */
+				menuClose : {
+					type : Object,
+					value : true,
+					observer : '_menuCloseChanged'
+				},
+				
+				selectedItem : {
+					type : Object,
+					observer : '_selectedItemChanged'
+				},
+				
+				rootMenuId: {
+					type: String,
+					value: ""
+				},
+				
+				_beginParentMenuId: {
+					type: String
+				},
+				
+				oldSideMenuWidth : {
+					type : String
+				},
+				
+				favoritList: {
+					type: Array,
+					observer: '_favoritListChanged',
+					notify: true
+				},
+				
+				favoriteData: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+				
+				_boundOnCaptureClick: {
+                    type: Function,
+                    value: function() {
+                        return this._onCaptureClick.bind(this);
+                    }
+                },
+                
+                selectedElementList :{
+                	type: Array,
+                	value: function(){
+                		return [];
+                	}
+                },
+                
+                /** [2022.04.04 원동명 MDI Left 작업] */
+                fixedLeftMargin: {
+                	type: Number,
+                	value: 30
+                },
+                
+                mdiManager: {
+                	type: Object
+                }
+			},
+
+			_onCaptureClick: function(event) {
+                var target = event.target;
+                
+                if(target.id !== "sideBarCloseBtn" && target.classList.contains('sc-mdi-sidemenu')){
+                    return;
+                }
+             	// 라이브러리(jsTree) 사용으로 인해 wrap_sb_content 클래스 내의 대상인지 확인
+                if(!!UT.closest(target,".wrap_sb_content") || !!UT.closest(target, "sc-dialog") || !!UT.closest(target, "sc-messagebox")){
+	    			return;
+	    		}
+                this._toggleListeners(false);
+                this._closeWrapSbContent();
+            },
+			
+			get sideWrapHeight() {
+				if(!this._sideWrapRect) {
+					this._sideWrapRect = this.$.sideWrap.getBoundingClientRect();
+				}
+				return this._sideWrapRect.height;
+			},
+
+            get sideBarHeight() {
+                if(!this._sideBarRect) {
+                    this._sideBarRect = this.$.sideBar.getBoundingClientRect();
+                }
+                return this._sideBarRect.height;
+            },
+
+            get sideBarWidth() {
+                if(!this._sideBarRect) {
+                    this._sideBarRect = this.$.sideBar.getBoundingClientRect();
+                }
+                return this._sideBarRect.width;
+            },
+	
+			listeners: {
+				"sideBar.click" : "_onSideBarClick",
+				"menuListDiv.click": "itemClickHandler",
+				'leftCloseBtn.click': '_onSplitterClick',
+	         	'sideBarCloseBtn.click': '_onSplitterClick',
+                'myMemo.click' : '_onShowMyMemo',
+                // 'myApp.click' : '_onShowListBoxMyapp',
+                'calendar.click' : '_onShowCalendar'
+
+			},
+			
+			sideMenuResize : function(containerHeight, sidemenuWidth) {
+				this.$.menuListDiv.style.height = (containerHeight) + 'px';
+                this.$.sideBar.style.height = containerHeight + 'px';
+				this.$.sideWrap.style.width = sidemenuWidth + 'px';
+			},
+			
+			_onSplitterClick: function(event){
+	    		this.menuClose = !this.menuClose;
+				this.fire('splitter-click', null, {bubbles : false});
+	    	},
+			
+	    	
+	    	_toggleListener: function(enable, node, event, boundListener, capture) {
+				if (enable) {
+			    	if (event === 'tap') {
+			        	Polymer.Gestures.add(document, 'tap', null);
+			        }
+			        node.addEventListener(event, boundListener, capture);
+				} else {
+			        if (event === 'tap') {
+			          Polymer.Gestures.remove(document, 'tap', null);
+			        }
+			        node.removeEventListener(event, boundListener, capture);
+				}
+			},
+			
+			_toggleListeners: function(opened) {
+		    	this._toggleListener(opened, document, 'tap', this._boundOnCaptureClick, true);
+			},
+			
+	    	_onSideBarClick: function(e){
+	    		var me = this;
+	    		var data = e.target.dataset.args;
+	    		var classList = e.target.parentElement.classList;
+	    		
+	    		
+	    		if(classList.contains(data)){
+	    			return;
+	    		}
+	    		
+	    		/*
+	    		UT.isNotEmpty로 체크하면 element의 타입이 object인데 key가 존재하지 않아 empty로 판단함
+	    		if(UT.isNotEmpty(UT.closest(e.target,".wrap_sb_content"))){
+	    		*/
+	    		var target = e.target;
+	    		if(!!UT.closest(target,".wrap_sb_content") || !!UT.closest(target, "sc-dialog") || !!UT.closest(target, "sc-messagebox")){
+	    			return;
+	    		}
+	    		
+	    		this._toggleListeners(false);
+				this._toggleListeners(true);
+				
+				var selectedContents = e.target.parentElement.parentElement.getElementsByClassName('select');
+				
+				for(var i=0; i<selectedContents.length; i++){
+					var contentClassList = selectedContents[i].classList;
+					if(contentClassList.contains('favor')){
+						contentClassList.remove('favor');
+						contentClassList.remove('select');
+					}else if(contentClassList.contains('link')){
+						contentClassList.remove('link');
+						contentClassList.remove('select');
+					}
+				}
+				
+	    		e.target.parentElement.classList.add('select');
+	    		e.target.parentElement.classList.add(data);
+	    		
+	    		//li a태그에 mouseover이벤트를 건다
+	    		var lis = me._liSelector();
+	   			for(var i = 0, len = lis.length ; i<len; i++){
+	   				var atag = lis[i].querySelector('button');
+	   				this.listen(atag, 'mouseover', 'leftOverHandler');
+	   			}
+	    	},
+	    	
+	    	_liSelector: function(){
+	    		var me = this;
+	    		var ul = me.$.sideBar.querySelector('ul');
+	    		return [].filter.call(ul.querySelectorAll("li.sideIcon"), function(element) {
+	    		    return element.parentNode == ul;
+	    		});
+	    	},
+	    	
+	    	leftOverHandler: function(e){
+	    		var me = this;
+	    		var data = e.target.dataset.args;
+	    		var classList = e.target.parentElement.classList;
+	    		var li = me.$.sideBar.querySelectorAll('li');
+	    		
+	    		
+	    		this._toggleListeners(false);
+				this._toggleListeners(true);
+				
+	    		for(var i = 0, len = li.length; i < len; i++){
+	    			li[i].classList.remove("select");
+	    			li[i].classList.remove('link');
+	    			li[i].classList.remove('favor');
+	    		}
+	    		if(data){
+	    			e.target.parentElement.classList.add('select');
+		    		e.target.parentElement.classList.add(data);
+	    		}
+	    	},
+	    	
+	    	_closeWrapSbContent: function(e){
+	    		var me = this;
+	    		var li = me.$.sideBar.querySelectorAll('li');
+	    		
+	    		for(var i = 0, len = li.length; i < len; i++){
+	    			li[i].classList.remove("select");
+	    			li[i].classList.remove('link');
+	    			li[i].classList.remove('favor');
+	    		}
+	    		
+	    		var dataArgsATag = me.$.sideBar.querySelectorAll('li>a[data-args]');
+	   			for(var i = 0, len = dataArgsATag.length ; i<len; i++){
+	   				this.unlisten(dataArgsATag[i], 'mouseover', 'leftOverHandler');
+	   			}
+	    	},
+	    	
+	    	/******************************
+	    	 *	즐겨찾기
+	    	 ******************************/
+	    	// favorite 메뉴 추가/해제 전환 (mdi에서 호출)
+	    	toggleFavoriteMenu: function(menuCd) {
+	    		var me = this;
+	    		me.$.toggleAppendOrDeleteMyFavoriteMenu.body = {"menu_cd": menuCd};
+            	UT.request(me.$.toggleAppendOrDeleteMyFavoriteMenu);
+	    	},
+	    	
+	    	// favoritList 변경 시
+	    	_favoritListChanged: function(newValue, oldValue) {
+	    		var me = this;
+    			newValue = newValue || [];
+	    		var list = newValue.map(function(item) {
+					var cItem = {
+						"id"    : item.fav_id,
+						"text"  : item.fav_nm,
+						"parent": item.up_fav_id || '#',
+						"type"  : item.fav_cls
+					}
+					cItem.data = item;
+					//cItem.text += '&nbsp;<i class="fa fa-trash"></i>';
+					if(cItem.type === "FOLDER") {
+						cItem.text += '<i class="fav-edit-btn"></i>';
+					}
+					cItem.text += '<i class="fav-del-btn"></i>';
+					cItem.state = {selected: false}
+					return cItem;
+				});
+	    		
+	    		if(!oldValue) {
+	                me._generateFavoriteTree(list);
+	    		} else {
+	    			$(me.$.favTree).jstree(true).settings.core.data = list;
+	    			$(me.$.favTree).jstree(true).refresh();
+	    		}
+	    	},
+	    	
+	    	_generateFavoriteTree: function(list) {
+	    		var me = this;
+	    		
+    			$(me.$.favTree).jstree({
+    				core: {
+    					data: list,
+    					check_callback: true,
+    					expand_selected_onload: true,
+    					themes: {
+    						dots: true,
+    						responsive: false
+    					}
+    				},
+    				types: {
+    					"#" : {
+    						max_depth : 2,
+    						valid_children : ["FOLDER", "MENU"]
+    					},
+    					"FOLDER": {
+    						icon: 'fa fa-folder-o fa-lg',
+    						valid_children : ["MENU"]
+    					},
+    					"MENU": {
+    						icon: 'fa fa-file-o',
+    						valid_children: []
+    					},
+    					default: {
+    						icon: 'fa fa-leaf'
+    					},
+    				},
+    				//checkbox: {cascade: "", three_state: false},
+    				dnd: {
+    					drag_check: function(data) {
+    						return {
+    							after: true,
+    							before: true,
+    							inside: (data.type === "MENU")
+    						};
+    					}
+    				},
+    				plugins: [
+    					"dnd",// drag and drop
+    					//"state",
+    					"types",
+    					//"checkbox",
+    					"changed"
+    				]
+    			}).bind('loaded.jstree', function(e) {
+					// loaded 시 전체 펼치기
+					$(this).jstree('open_all');
+					
+				}).bind("refresh.jstree", function (e, data) {
+					// refresh 시 전체 펼치기
+					$(this).jstree("open_all");
+					    
+				}).bind("move_node.jstree", function(e, dp) {
+					// 노드 이동 시 - 순서 업데이트
+					var node = dp.node;
+					var favData = {
+						fav_cls      : node.type,
+						src_sort_ord : dp.old_position +1,
+						targ_sort_ord: dp.position +1,
+						src_fold_id  : (dp.old_parent == '#') ? null : dp.old_parent,
+						targ_fold_id : (dp.parent == '#') ? null : dp.parent
+					};
+					if(node.type === "FOLDER") {
+						favData.fav_flr_uuid = node.id;
+					} else {
+						favData.menu_cd = node.id;
+					}
+					me.set("favoriteData", favData);
+					
+					me._onUpdateFavoriteOrder();
+					
+				}).on("click", ".jstree-anchor", function(e) {
+					var target = e.target,
+						node = $(me.$.favTree).jstree(true).get_node($(this));
+				
+					// 삭제 클릭 시
+					if(target.classList.contains("fav-del-btn")) {
+						// 폴더인 경우
+						if(node.type === "FOLDER") {
+							// 하위에 메뉴가 존재하는 경우
+							if(node.children.length > 0) {
+								// 해당 폴더에 포함된 메뉴들도 함께 삭제됩니다.<br/>계속 진행하시겠습니까?
+								UT.confirm("STD.MDI1015", function() {
+									me._onDeleteFavoriteFolder(node.id);
+								});
+							} else {
+								me._onDeleteFavoriteFolder(node.id);
+							}
+						} else {
+							me._onDeleteFavoriteMenu(node.id);
+						}
+					// 수정 클릭 시
+					} else if(target.classList.contains("fav-edit-btn")) {
+						
+						// 텍스트 수정
+						$(me.$.favTree).jstree('edit', node, node.text.split('<i class="fav-edit-btn"></i><i class="fav-del-btn"></i>')[0],
+							// callback
+							function(node, status) {
+								if(status) {
+									me.set("favoriteData", {"fav_flr_uuid": node.id, "fold_nm": node.text});
+									me._onSaveFavoriteFolder();
+								}
+							}
+						);
+						
+					// 메뉴 명 클릭 시
+					} else if(node.type === "MENU") {
+						me._onSelectFavoritMenu(node.id);
+					}
+				});
+	    	},
+	    	
+	    	//즐겨찾기 화면이동
+	    	_onSelectFavoritMenu: function(menuCd){
+	    		var me = this;
+	    		//top menu select
+				var mdiMain = document.querySelector("sc-mdi");
+				var menuInfo = SCMenuManager.getMenuNode(menuCd);
+	    		me.selectMenu(menuInfo);
+	    		me._toggleListeners(false);
+	    		me._closeWrapSbContent();
+	    	},
+	    	
+	    	// 즐겨찾기 메뉴 삭제
+	    	_onDeleteFavoriteMenu: function(menuCd) {
+	    		this.mdiManager.toogleFavorite(menuCd);
+	    	},
+	    	
+	    	// 즐겨찾기 폴더 삭제
+	    	_onDeleteFavoriteFolder: function(foldId) {
+	    		var me = this;
+	    		me.$.deleteListMyFavoriteFolderByUserId.body = {"fav_cls": "FOLDER", "fav_flr_uuid": foldId};
+	    		UT.request(me.$.deleteListMyFavoriteFolderByUserId);
+	    	},
+	    	
+	    	// 즐겨찾기 폴더 추가 다이얼로그 호출
+	    	_onShowDialogFavoriteFolder: function() {
+	    		var me = this;
+	    		me.set("favoriteData", {});
+	    		me.$.dialogFavoriteFolder.show();
+	    		me.$.favFolderName.focus();
+	    	},
+	    	
+	    	// 즐겨찾기 폴더 추가
+	    	_onAddFavoriteFolder: function() {
+	    		var me = this;
+	    		if(!me.$.favFolderName.validate()) {
+	    			UT.alert("STD.E0000");
+                    return;
+	    		}
+	    		me.$.dialogFavoriteFolder.close();
+	    		me._onSaveFavoriteFolder();
+	    	},
+	    	
+	    	// 즐겨찾기 폴더 저장
+	    	_onSaveFavoriteFolder: function() {
+	    		var me = this;
+	    		UT.request(me.$.saveMyFavoriteFolder);
+	    	},
+	    	
+	    	// 즐겨찾기 순서변경
+	    	_onUpdateFavoriteOrder: function() {
+	    		var me = this;
+	    		UT.request(me.$.updateMyFavoriteSortOrd);
+	    	},
+	    	
+	    	_completeSaveMyFavorite: function(e,res) {
+	    		var me = this,
+	    			mdi = document.querySelector("sc-mdi");
+	    		mdi.reloadFavoriteList(res.response || []);
+	    	},
+	    	
+            /******************************
+             * 메모
+             ******************************/
+            _onShowMyMemo: function() {
+				var me = this,
+					handler = function() {
+						var memoPopup = UT.popup("smartsuite-memo-list", me, 930, 520, {
+							"close": function () {
+								memoPopup.classList.remove('smartsuite-memo-popup-super');
+							}
+						},
+						{
+							title: "SMART MEMO",
+							resizable: true,
+							collapsible: true,
+							modal: false
+						});
+
+						memoPopup.classList.add('smartsuite-memo-popup-super');
+						memoPopup.addEventListener('interact-resize-end', me._updateColumnCount);
+						
+						memoPopup.show();
+						memoPopup.getWindowContent().load();
+				};
+				
+				if(!SCLinkManager.isLoaded('sc-grid')) {
+					SCLinkManager.load('sc-grid').then(handler);
+				}
+				else {
+					handler();
+				}
+			},
+			
+			// 메모 팝업 사이즈 변경 로직
+			_updateColumnCount : function() {
+                var me = this,
+                    width,
+                    memoColumns,
+                    checkedSize = ['680', '930', '1150', '1350'];
+
+                width = me.getBoundingClientRect().width;
+                memoColumns = me.querySelector('#memoColumns');
+
+                if(width <= checkedSize[0]){
+                    memoColumns.style.columnCount = 2;
+                }
+                else if(width > checkedSize[0] && width <= checkedSize[1]) {
+                    memoColumns.style.columnCount = 3;
+                }
+                else if(width > checkedSize[1] && width <= checkedSize[2]) {
+                    memoColumns.style.columnCount = 4;
+                }
+                else if(width > checkedSize[2] && width < checkedSize[3]) {
+                    memoColumns.style.columnCount = 5;
+                }
+                else {
+                    memoColumns.style.columnCount = 6;
+                }
+            },
+
+            /******************************
+             * 앱스토어
+             ******************************/
+            _onShowListBoxMyapp: function(){
+                var me = this;
+              	var popup = UT.popup("smartsuite-myapp", me, 850, 600, {
+                   'on-close' : function() {
+                       popup.close();
+                   }
+                }, {
+                    titleText: me.translate("SMART MYAPP"),
+                    maximizable: false,
+                    resizable:true,
+                    draggable:true,
+                    closable:true
+                });
+                popup.show();
+            },
+            
+            /******************************
+             * 캘린더
+             ******************************/
+
+            _onShowCalendar: function(){
+            	var me = this,
+            		calenderMenu = this.getMenuNode("ADM50100");
+            	
+            	if(calenderMenu){
+            		me.selectMenu(calenderMenu);
+            	}else{
+            		this.mdiManager.createWindow('CAL50100', 'Calendar', 'bower_components/smartsuite/calendar/smartsuite-calendar-mgt.html');
+            	}
+			},
+	    	
+	    	_menuCloseChanged : function(sideWrapClose, oldValue) {
+			    if(sideWrapClose){
+			    	this.$.sideBar.style.display = '';
+			    	this.oldSideMenuWidth = this.$.sideWrap.style.width;
+			    	this.$.sideWrap.style.width = 0 + 'px';
+			    	this.style.width = window.getComputedStyle(this.$.sideBar).width;
+			    	this.$.sideWrap.style.display = 'none';
+			    }else{
+			    	this.$.sideBar.style.display = 'none';
+			    	this.$.sideWrap.style.width = this.oldSideMenuWidth;
+			    	this.style.width = this.oldSideMenuWidth;
+			    	this.$.sideWrap.style.display = '';
+			    }
+	    	},
+
+	        _selectedItemChanged : function(newitem, olditem) {
+	        	
+	        	
+	        	if(olditem){
+	        		// 새로운 페이지가 열렸을 경우 기존에 추가된 elementSelected selector 모두 제거
+	        		for(var i=0; i<this.selectedElementList.length; i++){
+	        			this.selectedElementList[i].removeAttribute('elementSelected');
+	        		}
+        			this.set("selectedElementList", []);
+	        		this.toggleClass('selected', false, Polymer.dom(this.root).querySelector('#'+olditem.menu_id));
+	        	}        	
+	        	if(newitem){
+	        		var newItemElement = Polymer.dom(this.root).querySelector('#'+newitem.menu_id);
+	        		this.toggleClass('selected', true, Polymer.dom(this.root).querySelector('#'+newitem.menu_id));	
+	        		
+	        		// new element(새로 열린 페이지)의 경우  elementSelected Attribute를 부모노드까지 추가해준다       		
+	        		while(newItemElement && newItemElement.id !== "sideMenu"){
+	        			if(newItemElement.className.indexOf('lnb-closed') > -1){
+	        				this.toggleClass('lnb-closed', false, newItemElement );
+	        			}
+	        			if(newItemElement.id !== newitem.menu_id && newItemElement.tagName !== "UL"){
+	        				var button = newItemElement.querySelector('button');
+	        				if(button){
+	        					button.setAttribute('elementSelected', '');
+				        		this.selectedElementList.push(button);	
+				        		
+				        		/** [2022.04.14] 최초 선택된 메뉴 이동 시, IMG 알맞게 수정 */
+				        		var imgUrl = Polymer.ResolveUrl.resolveUrl("img/arw_leftup.png", this._template.ownerDocument.baseURI);
+				        		newItemElement.querySelector("img").setAttribute("src", imgUrl);
+	        				}
+	        			}
+	        			newItemElement = newItemElement.parentElement;
+	        		}
+	        	}
+	        },
+	        
+	        getMenuNode: function(menuId){
+                return SCMenuManager.getMenuNode(menuId);
+			},
+			
+			itemClickHandler: function(event) { 
+				var parentElement = event.target.parentElement;			
+				
+				while(parentElement) {
+					if(parentElement.getAttribute('issubmenu') == 'Y') {
+						var toggle = parentElement.querySelector('ul').classList.contains('lnb-closed');
+						var imgUrl = "";
+						this.toggleClass('lnb-closed', !toggle, parentElement.querySelector('ul'));
+						if(toggle){
+						    if(Array.prototype.slice.call(parentElement.parentElement.classList).indexOf("lnb2depth") > -1) {
+                                imgUrl = Polymer.ResolveUrl.resolveUrl("img/bul_aw_s_up.png", this._template.ownerDocument.baseURI);
+							} else {
+                                imgUrl = Polymer.ResolveUrl.resolveUrl("img/arw_leftup.png", this._template.ownerDocument.baseURI);
+							}
+							// toggle item을 클릭할때마다 elementSelected selector를 추가
+                            parentElement.querySelector('button').setAttribute('elementSelected', '');
+                            this.selectedElementList.push(parentElement.querySelector('button'));
+						}else{
+                            if(Array.prototype.slice.call(parentElement.parentElement.classList).indexOf("lnb2depth") > -1) {
+                                imgUrl = Polymer.ResolveUrl.resolveUrl("img/bul_aw_s_down.png", this._template.ownerDocument.baseURI);
+                            } else {
+                                imgUrl = Polymer.ResolveUrl.resolveUrl("img/arw_leftdown.png", this._template.ownerDocument.baseURI);
+                            }
+                            parentElement.querySelector('button').removeAttribute('elementSelected');
+						}
+						parentElement.querySelector("img").setAttribute("src", imgUrl);
+						break;
+						
+					}
+					if(parentElement.getAttribute('ismenuitem') == 'Y') {
+						this.selectMenu(this.getMenuNode(parentElement.getAttribute('id')));
+						break;
+					}
+					parentElement = parentElement.parentElement;
+				}	
+			},
+			
+			generateTreeMenuList: function(childNodes, imgUrl, menuNodeMap) {
+				var me = this;
+
+				var subImgUrl = "img/bul_aw_s_down.png";
+                subImgUrl = Polymer.ResolveUrl.resolveUrl(subImgUrl, this._template.ownerDocument.baseURI);
+
+				return childNodes.map(function(node){
+					if(menuNodeMap){
+						menuNodeMap[node.menu_id] = node;
+					}
+					var exists = (Object.prototype.toString.call(node['sub_menu_list']) === '[object Array]' && node['sub_menu_list'].length > 0);
+					var subMenu = (exists) ? 
+							'<ul '+((node.level == 1) || (node.level == 2) ? 
+									'class="lnb'+(node.level+2)+'depth lnb-closed"' : 
+									'class="lnb'+(node.level+2)+'depth lnb-closed"')+'>'+ me.generateTreeMenuList(node.sub_menu_list, imgUrl, menuNodeMap).join('') + '</ul>' : '';
+			        return '<li '+""+'id="'+node.menu_id+'" ismenuitem="Y" ' + (subMenu ? ' isSubmenu="Y" ':'') + '><button style="text-align:left;"><span title="'+node.menu_nm+'">' + node.menu_nm + '</span>'+(subMenu ? '<img src="'+ (node.level == 1 ? imgUrl : subImgUrl) +'" alt="downArrow" />':'')+'</button>' + (subMenu) + '</li>' ;
+				});
+			},
+			
+			selectMenu: function(menuItem) {
+				this.fire('menu-click', menuItem);
+			},
+			
+			_treeMenuListChanged : function(newValue, oldValue){
+				if(newValue.length === 0){
+					Polymer.dom(Polymer.dom(this.root).querySelector("#menuListDiv")).innerHTML = '<ul id="sideMenu" class="lnbMenu"></ul>';
+					return;
+				}
+				
+				var imgUrl = "img/arw_leftdown.png",
+					menuListHtml = ''; 
+				
+				imgUrl = Polymer.ResolveUrl.resolveUrl(imgUrl, this._template.ownerDocument.baseURI);
+				this._beginParentMenuId = newValue[0].parent_menu_id;
+				if(newValue.length > 0) {
+					this.menuNodeMap = {};
+					menuListHtml = this.generateTreeMenuList(this.treeMenuList, imgUrl, this.menuNodeMap);
+				}
+				Polymer.dom(Polymer.dom(this.root).querySelector("#menuListDiv")).innerHTML = '<ul id="sideMenu" class="lnbMenu">'+menuListHtml.join('')+ '</ul>';
+			},
+			
+			_destroy: function(){
+				this.menuName = null;
+				this.treeMenuList = null;
+				this.menuNodeMap = null;
+				this.menuClose = null;
+				this.selectedItem = null;
+				this.rootMenuId = null;
+				this._beginParentMenuId = null;
+				this.oldSideMenuWidth = null;
+				this.favoritList = null;
+				this._boundOnCaptureClick = null;
+			}
+	  	});
+	</script>
+</dom-module>

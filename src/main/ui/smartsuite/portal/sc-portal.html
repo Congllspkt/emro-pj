@@ -1,0 +1,51 @@
+<dom-module id="sc-portal"> 
+	<template>
+		<sc-ajax auto url="findPortalCommonConfig.do" on-response="onResponsePortalConfig"></sc-ajax>
+		
+		<sc-pages id="pages" class="fit" selected-index="0">
+			<template>
+				<vue-grid-layout id="vueGrid" page-id="vueGrid"></vue-grid-layout>
+			</template>
+        </sc-pages>
+	</template> 
+	
+	<script>
+		Polymer({
+			is: 'sc-portal',
+
+			nonReusable: true,
+
+			/** 기존 시스템의 데이터에서도 사용할 수 있도록 수정 */
+			onResponsePortalConfig: function(response) {
+				var value = response.detail.response;
+				if(!value) return;
+				this.portalConfig = value.value;
+				this.setCommonConfig(this.portalConfig);
+			},
+			
+			/** 공통설정을 현재 설정된 layout에 설정한다. */
+			setCommonConfig: function(config) {
+				var commonConfig = undefined;
+				if(this.portalConfig.indexOf('{') !== -1) {
+					var tmpCommonConfig = JSON.parse(this.portalConfig);
+					
+					// 1.0.3 ~ 1.0.5 버전
+					if(Object.keys(tmpCommonConfig).indexOf(SCSessionManager.currentUser.usr_typ_ccd) !== -1) {
+						commonConfig = tmpCommonConfig[SCSessionManager.currentUser.usr_typ_ccd];
+					}
+					
+					// 1.0.5 ~ 버전
+					else {
+						commonConfig = tmpCommonConfig;
+					}
+	            } else {
+	            	commonConfig = {layout_type: this.portalConfig, use_userlayout: 'Y'}; 	
+	            }
+   	         		
+   	         	var targetLayout = this.$.vueGrid;
+   	         	this.$.pages.selectItem(targetLayout);
+   	         	this.$.pages.selectedItem.commonConfig = commonConfig;
+   	         }
+		});
+	</script>
+</dom-module>

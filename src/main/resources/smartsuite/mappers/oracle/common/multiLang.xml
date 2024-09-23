@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="multiLang">
+
+	<!-- 다국어관리 목록을 조회한다. -->
+	<select id="findListMultiLang" resultType="map">
+	/* multiLang.findListMultiLang */
+           SELECT TEN_ID
+                 ,MULTLANG_CCD
+                 ,MULTLANG_KEY
+                 ,MULTLANG_TRANSL_CONT
+                 ,MULTLANG_TYPE
+                 ,MULTLANG_MOD_DTTM
+             FROM MULTLANG
+            WHERE TEN_ID = #{g.tenant}
+		<if test='p.multlang_ccd != null and p.multlang_ccd != ""'>
+              AND MULTLANG_CCD = #{p.multlang_ccd}
+		</if>
+		<if test='p.multlang_type != null and p.multlang_type != ""'>
+              AND MULTLANG_TYPE = #{p.multlang_type}
+		</if>
+		<if test='p.multlang_key != null and p.multlang_key != ""'>
+			<bind name="messageKeyPattern" value="'%' + p.multlang_key + '%'" />
+              AND UPPER(MULTLANG_KEY) LIKE UPPER(#{messageKeyPattern})
+		</if>
+		<if test='p.multlang_transl_cont != null and p.multlang_transl_cont != ""'>
+			<bind name="messagePattern" value="'%' + p.multlang_transl_cont + '%'" />
+			AND UPPER(MULTLANG_TRANSL_CONT) LIKE UPPER(#{messagePattern})
+		</if>
+		 ORDER BY MULTLANG_KEY
+	</select>
+	
+	<!-- 다국어관리 INSERT -->
+	<insert id="insertMultiLang">
+	/* multiLang.insertMultiLang */
+	       INSERT INTO MULTLANG
+	       (
+             TEN_ID
+            ,MULTLANG_CCD
+            ,MULTLANG_KEY
+            ,MULTLANG_TRANSL_CONT
+            ,MULTLANG_TRANSL_CONT_ABBR
+            ,MULTLANG_ABBR_USE_YN
+            ,MULTLANG_TYPE
+            ,MULTLANG_MOD_DTTM
+	       )
+	       VALUES
+	       (
+             #{g.tenant}
+            ,#{p.multlang_ccd}
+            ,#{p.multlang_key}
+            ,#{p.multlang_transl_cont}
+            ,#{p.multlang_transl_cont_abbr}
+            ,#{p.multlang_abbr_use_yn}
+            ,#{p.multlang_type}
+            ,#{g.now}
+	       )
+	</insert>
+	
+	<!-- 다국어관리 UPDATE -->
+	<update id="updateMultiLang">
+	/* multiLang.updateMultiLang */
+	       UPDATE MULTLANG
+	          SET MULTLANG_TRANSL_CONT     = #{p.multlang_transl_cont}
+	             ,MULTLANG_TRANSL_CONT_ABBR = #{p.multlang_transl_cont_abbr}
+            	 ,MULTLANG_ABBR_USE_YN = #{p.multlang_abbr_use_yn}
+            	 ,MULTLANG_MOD_DTTM = #{g.now}
+	        WHERE TEN_ID      		= #{g.tenant}
+	          AND MULTLANG_CCD      = #{p.multlang_ccd}
+	          AND MULTLANG_KEY 		= #{p.multlang_key}
+	          AND MULTLANG_TYPE 	= #{p.multlang_type}
+	</update>
+	
+	<!-- 다국어관리 DELETE -->
+	<delete id="deleteMultiLang">
+	/* multiLang.deleteMultiLang */
+	       DELETE 
+	         FROM MULTLANG
+	        WHERE TEN_ID      		= #{g.tenant}
+	          AND MULTLANG_CCD      = #{p.multlang_ccd}
+	          AND MULTLANG_KEY 		= #{p.multlang_key}
+	          AND MULTLANG_TYPE 	= #{p.multlang_type}
+	</delete>
+	
+	<!-- 다국어관리 message 목록을 조회한다. -->
+	<select id="findMessageList" resultType="map">
+	/* multiLang.findMessageList */
+	SELECT CDDT.TEN_ID
+                 ,CDDT.DTLCD AS MULTLANG_CCD
+                 ,#{p.multlang_key} AS MULTLANG_KEY
+                 ,LN.MULTLANG_TRANSL_CONT
+                 ,LN.MULTLANG_TRANSL_CONT_ABBR
+                 ,LN.MULTLANG_ABBR_USE_YN
+                 ,LN.MULTLANG_TYPE
+                 ,LN.REG_DTTM
+                 ,LN.MOD_DTTM
+             FROM DTLCD CDDT
+  LEFT OUTER JOIN MULTLANG LN ON
+                  LN.TEN_ID = CDDT.TEN_ID
+              AND LN.MULTLANG_KEY 	= #{p.multlang_key}
+              AND LN.MULTLANG_TYPE 	= #{p.multlang_type}
+              AND LN.MULTLANG_CCD  	= CDDT.DTLCD
+            WHERE CDDT.TEN_ID = #{g.tenant}
+              AND CDDT.CCD = 'C002'
+              AND CDDT.STS != 'D'
+		 ORDER BY CDDT.DTLCD_SORT, CDDT.DTLCD
+	</select>
+	
+	<!-- 다국어관리 데이터 존재 여부 확인. -->
+	<select id="getMessageCount" resultType="int">
+	/* multiLang.getMessageCount */
+	SELECT COUNT(*)
+             FROM MULTLANG
+            WHERE TEN_ID 		= #{g.tenant}
+              AND MULTLANG_CCD 	= #{p.multlang_ccd}
+              AND MULTLANG_KEY 	= #{p.multlang_key}
+              AND MULTLANG_TYPE = #{p.multlang_type}
+	</select>
+	
+</mapper>

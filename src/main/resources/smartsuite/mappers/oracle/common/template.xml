@@ -1,0 +1,646 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- ELEM_COMM_TMPL: 템플릿 -->
+<mapper namespace="template">
+
+	<resultMap type="map" id="resultMap-findInfoTmp">
+        <result property="basc_ctmpl_cont" column="BASC_CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findListTemplate" resultMap="resultMap-findInfoTmp">
+		/* template.findListTemplate: 템플릿 목록 조회 */
+		SELECT TMPL.TEN_ID
+			 , TMPL.TMPL_TYP_CCD
+			 , TMPL.BASC_CTMPL_CD
+			 , TMPL.STS
+			 , TMPL.REGR_ID
+			 , TMPL.REG_DTTM
+			 , TMPL.MODR_ID
+			 , TMPL.MOD_DTTM
+			 , MULT.BASC_CTMPL_CONT
+			 , MULT.BASC_CTMPL_CONT_PARM_NM
+			 , CASE WHEN MULT.BASC_CTMPL_NM IS NULL THEN BASE_MULT.BASC_CTMPL_NM
+			        ELSE MULT.BASC_CTMPL_NM
+			    END AS BASC_CTMPL_NM
+		FROM ELEM_COMM_TMPL TMPL
+		INNER JOIN DTLCD
+		   ON DTLCD.TEN_ID = TMPL.TEN_ID
+		  AND DTLCD.DTLCD = TMPL.TMPL_TYP_CCD
+		LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG BASE_MULT
+		  ON TMPL.TEN_ID = BASE_MULT.TEN_ID
+		 AND TMPL.TMPL_TYP_CCD = BASE_MULT.TMPL_TYP_CCD
+		 AND TMPL.BASC_CTMPL_CD = BASE_MULT.BASC_CTMPL_CD
+		 AND BASE_MULT.LANG_CCD = 'ko_KR'
+		LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG MULT
+			ON TMPL.TEN_ID = MULT.TEN_ID
+		    AND TMPL.TMPL_TYP_CCD = MULT.TMPL_TYP_CCD
+		    AND TMPL.BASC_CTMPL_CD = MULT.BASC_CTMPL_CD
+			AND MULT.LANG_CCD = #{g.locale}
+		WHERE TMPL.TEN_ID = #{g.tenant}
+			AND TMPL.STS != 'D'
+			AND DTLCD.CCD = 'C014'
+		<if test='p.tmpl_typ_ccd != null and p.tmpl_typ_ccd != ""'>
+			AND TMPL.TMPL_TYP_CCD = #{p.tmpl_typ_ccd}
+		</if>
+		<if test="p.basc_ctmpl_cd != null and p.basc_ctmpl_cd != ''">
+			<bind name="idPattern" value="'%' + p.basc_ctmpl_cd + '%'" />
+			AND (UPPER(TMPL.BASC_CTMPL_CD) LIKE UPPER(#{idPattern}))
+		</if>
+		<if test="p.basc_ctmpl_nm != null and p.basc_ctmpl_nm != ''">
+			<bind name="namePattern" value="'%' + p.basc_ctmpl_nm + '%'" />
+			AND (UPPER(MULT.BASC_CTMPL_NM) LIKE UPPER(#{namePattern}))
+		</if>
+		ORDER BY DTLCD.DTLCD_SORT, TMPL.BASC_CTMPL_CD, MULT.BASC_CTMPL_NM
+	</select>
+
+	<resultMap type="map" id="resultMap-findInfoTmpById">
+        <result property="basc_ctmpl_cont" column="BASC_CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+        <result property="display_basc_ctmpl_cont" column="DISPLAY_BASC_CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findTemplateInfoByTemplateClassAndTemplateBaseId" resultMap="resultMap-findInfoTmpById">
+		/* template.findTemplateInfoByTemplateClassAndTemplateBaseId: 템플릿 내용 상세 조회 */
+		SELECT TMPL.TEN_ID
+			 , TMPL.TMPL_TYP_CCD
+			 , TMPL.BASC_CTMPL_CD
+			 , TMPL.STS
+			 , TMPL.REGR_ID
+			 , TMPL.REG_DTTM
+			 , TMPL.MODR_ID
+			 , TMPL.MOD_DTTM
+			 , MULT.BASC_CTMPL_CONT
+			 ,(SELECT BASC_CTMPL_CONT
+			   FROM ELEM_COMM_TMPL_MULTLANG
+			   WHERE TEN_ID = TMPL.TEN_ID
+				 AND TMPL_TYP_CCD = TMPL.TMPL_TYP_CCD
+				 AND BASC_CTMPL_CD =  TMPL.BASC_CTMPL_CD
+				 AND LANG_CCD = 'ko_KR') AS DISPLAY_BASC_CTMPL_CONT
+			 , MULT.BASC_CTMPL_CONT_PARM_NM
+			 , MULT.BASC_CTMPL_NM
+		FROM ELEM_COMM_TMPL TMPL
+				 LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG MULT
+								 ON TMPL.TEN_ID = MULT.TEN_ID
+									 AND TMPL.TMPL_TYP_CCD = MULT.TMPL_TYP_CCD
+									 AND TMPL.BASC_CTMPL_CD = MULT.BASC_CTMPL_CD
+									 AND MULT.LANG_CCD = #{p.lang_ccd}
+		WHERE TMPL.TEN_ID = #{g.tenant}
+		  AND TMPL.STS != 'D'
+		  AND TMPL.BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+		  AND TMPL.TMPL_TYP_CCD= #{p.tmpl_typ_ccd}
+	</select>
+	<select id="findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId" resultMap="resultMap-findInfoTmpById">
+		/* template.findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId: 템플릿 내용 다국어 상세 조회 */
+		SELECT  MULT.BASC_CTMPL_CONT
+			 , MULT.BASC_CTMPL_CONT_PARM_NM
+			 , TMPL.BASC_CTMPL_CD
+			 , MULT.BASC_CTMPL_NM
+		     , MULT.LANG_CCD
+		FROM ELEM_COMM_TMPL TMPL
+				 INNER JOIN ELEM_COMM_TMPL_MULTLANG MULT
+								 ON TMPL.TEN_ID = MULT.TEN_ID
+									 AND TMPL.TMPL_TYP_CCD = MULT.TMPL_TYP_CCD
+									 AND TMPL.BASC_CTMPL_CD = MULT.BASC_CTMPL_CD
+									 AND MULT.LANG_CCD = #{p.lang_ccd}
+		WHERE TMPL.TEN_ID = #{g.tenant}
+		  AND TMPL.STS != 'D'
+		  AND TMPL.BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+		  AND TMPL.TMPL_TYP_CCD= #{p.tmpl_typ_ccd}
+	</select>
+
+	<insert id="insertTemplateBaseInfo">
+		/* template.insertTemplateBaseInfo: 템플릿신규등록 */
+		INSERT INTO ELEM_COMM_TMPL(
+			TEN_ID
+			, TMPL_TYP_CCD
+			, BASC_CTMPL_CD
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES(
+			#{g.tenant}
+			,#{p.tmpl_typ_ccd}
+			,#{p.basc_ctmpl_cd}
+			,'C'
+			,#{g.username}
+			,#{g.now}
+			,#{g.username}
+			,#{g.now}
+		)
+	</insert>
+
+	<insert id="insertTemplateBaseInfoMultiLang">
+		/* template.insertTemplateBaseInfoMultiLang: 템플릿 신규 다국어 등록 */
+		INSERT INTO ELEM_COMM_TMPL_MULTLANG(
+			TEN_ID
+			, TMPL_TYP_CCD
+			, LANG_CCD
+			, BASC_CTMPL_CD
+			, BASC_CTMPL_NM
+			, BASC_CTMPL_CONT
+			, BASC_CTMPL_CONT_PARM_NM
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES(
+			#{g.tenant}
+			,#{p.tmpl_typ_ccd}
+			,#{p.lang_ccd}
+			,#{p.basc_ctmpl_cd}
+			,#{p.basc_ctmpl_nm}
+			,#{p.basc_ctmpl_cont}
+			,#{p.basc_ctmpl_cont_parm_nm}
+			,'C'
+			,#{g.username}
+			,#{g.now}
+			,#{g.username}
+			,#{g.now}
+		)
+	</insert>
+	<update id="updateTemplateBaseInfo">
+		/* template.updateTemplateBaseInfo: 템플릿수정 */
+		UPDATE ELEM_COMM_TMPL
+		 SET STS='U'
+		 	, MOD_DTTM = #{g.now}
+		 	, MODR_ID = #{g.username}
+		 	<if test='p.tmpl_typ_ccd != null'>
+         		, TMPL_TYP_CCD = #{p.tmpl_typ_ccd}
+         	</if>
+		 	<if test='p.basc_ctmpl_cd != null'>
+         		, BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+         	</if>
+		 WHERE TEN_ID = #{g.tenant}
+		 	AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+	</update>
+	<update id="updateTemplateBaseInfoMultiLang">
+		/* template.updateTemplateBaseInfoMultiLang: 템플릿수정 */
+		UPDATE ELEM_COMM_TMPL_MULTLANG
+		 SET STS='U'
+		 	, MOD_DTTM = #{g.now}
+		 	, MODR_ID = #{g.username}
+		 	<if test='p.tmpl_typ_ccd != null'>
+         		, TMPL_TYP_CCD = #{p.tmpl_typ_ccd}
+         	</if>
+		 	<if test='p.basc_ctmpl_cd != null'>
+         		, BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+         	</if>
+         	<if test='p.basc_ctmpl_nm != null'>
+         		, BASC_CTMPL_NM = #{p.basc_ctmpl_nm}
+         	</if>
+         	<if test='p.basc_ctmpl_cont != null'>
+         		, BASC_CTMPL_CONT = #{p.basc_ctmpl_cont}
+         	</if>
+         	<if test='p.basc_ctmpl_cont_parm_nm != null'>
+         		, BASC_CTMPL_CONT_PARM_NM = #{p.basc_ctmpl_cont_parm_nm}
+         	</if>
+		 WHERE TEN_ID = #{g.tenant}
+		 	AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+			AND LANG_CCD = #{p.lang_ccd}
+	</update>
+
+	<select id="getCountTemplateBaseInfo" resultType="int">
+		SELECT COUNT(*)
+    	  FROM ELEM_COMM_TMPL
+    	 WHERE TEN_ID = #{g.tenant}
+     		  AND  BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+    </select>
+	<select id="getCountTemplateBaseMultiLangInfo" resultType="int">
+		SELECT COUNT(*)
+    	  FROM ELEM_COMM_TMPL_MULTLANG
+    	 WHERE TEN_ID = #{g.tenant}
+     		  AND  BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+			  AND LANG_CCD = #{p.lang_ccd}
+    </select>
+
+	<delete id="deleteListTemplateBaseMultiLangInfo">
+		/* template.deleteListTemplateBaseMultiLangInfo: 공용템플릿 다국어 삭제 */
+		DELETE FROM ELEM_COMM_TMPL_MULTLANG
+		WHERE TEN_ID = #{g.tenant}
+		  AND TMPL_TYP_CCD= #{p.tmpl_typ_ccd}
+		  AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+	</delete>
+
+
+
+	<delete id="deleteTemplateBaseInfo">
+		/* template.deleteTemplateBaseInfo: 템플릿삭제 */
+		DELETE FROM ELEM_COMM_TMPL
+			WHERE TEN_ID = #{g.tenant}
+				AND TMPL_TYP_CCD= #{p.tmpl_typ_ccd}
+				AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+	</delete>
+
+	<resultMap type="map" id="resultMap-findInfoById">
+        <result property="ctmpl_cont" column="CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    
+	<select id="findTemplateContentByApprovalTypeCode" resultMap="resultMap-findInfoById">
+		/* template.findTemplateContentByApprovalTypeCode : 템플릿 사용하는 모듈 기준 템플릿 상세 조회*/
+		SELECT A.TEN_ID
+			, A.CTMPL_UUID
+			, A.TMPL_TYP_CCD
+			, A.BASC_CTMPL_CD
+			, CTMPL_MULTLANG.CTMPL_NM
+			, CTMPL_MULTLANG.CTMPL_CONT
+			, CTMPL_MULTLANG.CTMPL_PARM_INFO
+			, B.APVL_TYP_CCD
+			, B.USE_YN
+		FROM CTMPL A
+		    LEFT JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+		    ON A.TEN_ID = CTMPL_MULTLANG.TEN_ID and A.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+		    AND CTMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+			INNER JOIN APVL_TYP_TMPL B
+				ON 	 A.TEN_ID = B.TEN_ID
+				AND  A.CTMPL_UUID = B.CTMPL_UUID
+				AND  B.APVL_TYP_CCD = #{p.task_uuid}
+	   WHERE  
+			A.STS != 'D'
+	</select>	
+	
+	<select id="findTemplateContentByMailSetKey" resultMap="resultMap-findInfoById">
+		/* template.findTemplateContentByMailSetKey : 템플릿 사용하는 모듈 기준 템플릿 상세 조회*/
+		SELECT CP.TEN_ID
+			, CP.CTMPL_UUID
+			, CP.TMPL_TYP_CCD
+			, CP.BASC_CTMPL_CD
+			, CTMPL_MULTLANG.CTMPL_NM
+			, CTMPL_MULTLANG.CTMPL_CONT
+			, CTMPL_MULTLANG.CTMPL_PARM_INFO
+			, CP.STS
+			, CP.REGR_ID
+			, CP.REG_DTTM
+			, CP.MODR_ID
+			, CP.MOD_DTTM
+			, ETS.EML_TMPL_CD
+			, ETS.USE_YN
+			, ETS.EML_SND_TYP_CCD
+		FROM CTMPL CP
+			LEFT JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+				ON CP.TEN_ID = CTMPL_MULTLANG.TEN_ID
+				AND CP.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+		        AND CTMPL_MULTLANG.LANG_CCD =#{g.locale}
+			INNER JOIN EML_TMPL_SETUP ETS
+				ON 	CP.TEN_ID = ETS.TEN_ID
+				AND CP.CTMPL_UUID = ETS.CTMPL_UUID
+				AND ETS.EML_TMPL_CD = #{p}
+		
+		  WHERE  CP.TEN_ID = #{g.tenant}
+			AND CP.STS != 'D'
+	</select>	
+	
+	<resultMap type="map" id="resultMap-findTemplateBaseInfoByTemplateBaseId">
+        <result property="basc_ctmpl_cont" column="BASC_CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findTemplateBaseInfoByTemplateBaseId" resultMap="resultMap-findTemplateBaseInfoByTemplateBaseId">
+		/* template.findTemplateInfoByTemplateClassAndTemplateBaseId: 템플릿 내용 상세 조회 */
+		SELECT ELEM_COMM_TMPL.TEN_ID
+			, ELEM_COMM_TMPL.TMPL_TYP_CCD
+			, ELEM_COMM_TMPL.BASC_CTMPL_CD
+			, (CASE WHEN ELEM_COMM_TMPL_MULTLANG.LANG_CCD IS NULL THEN #{p.lang_ccd}
+					ELSE ELEM_COMM_TMPL_MULTLANG.LANG_CCD
+			END) AS LANG_CCD
+			, ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_NM
+			, ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_CONT
+			, ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_CONT_PARM_NM
+			, ELEM_COMM_TMPL.STS
+			, ELEM_COMM_TMPL.REGR_ID
+			, ELEM_COMM_TMPL.REG_DTTM
+			, ELEM_COMM_TMPL.MODR_ID
+			, ELEM_COMM_TMPL.MOD_DTTM
+		FROM ELEM_COMM_TMPL ELEM_COMM_TMPL
+		LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG
+		ON ELEM_COMM_TMPL.TEN_ID = ELEM_COMM_TMPL_MULTLANG.TEN_ID
+		       AND ELEM_COMM_TMPL.TMPL_TYP_CCD = ELEM_COMM_TMPL_MULTLANG.TMPL_TYP_CCD
+		       AND ELEM_COMM_TMPL.BASC_CTMPL_CD = ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_CD
+			   AND ELEM_COMM_TMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+		WHERE ELEM_COMM_TMPL.TEN_ID = #{g.tenant}
+			AND UPPER(ELEM_COMM_TMPL.BASC_CTMPL_CD) = UPPER(#{p.basc_ctmpl_cd})
+	</select>
+
+
+	<delete id="deleteListTemplateContentByTemplateBaseId">
+		/* template.deleteListTemplateContentByTemplateBaseId */
+		DELETE FROM CTMPL
+		WHERE TEN_ID = #{g.tenant}
+		  AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+	</delete>
+
+
+	<!-- 결재 템플릿 목록(APVL_TYP_TMPL) 조회 -->
+	<select id="findListApprovalTemplate" resultType="map">
+		/* template.xml findListApprovalTemplate */
+		SELECT DTLCD.TEN_ID                      /*시스템 아이디*/
+		     , DTLCD.DTLCD      AS APVL_TYP_CCD   /*상세 코드*/
+		     , CASE WHEN DTLCDMT.DTLCD_NM IS NULL THEN DTLBASE.DTLCD_NM
+		            ELSE DTLCDMT.DTLCD_NM
+		        END AS CTMPL_NM    /*결재 코드 명*/
+		     , CASE WHEN APVL_TYP_TMPL.USE_YN IS NOT NULL THEN APVL_TYP_TMPL.USE_YN
+		            ELSE 'N'
+		        END AS USE_YN
+		  FROM DTLCD DTLCD
+		 INNER JOIN DTLCD_MULTLANG DTLBASE
+		    ON DTLBASE.TEN_ID = DTLCD.TEN_ID
+		   AND DTLBASE.CCD    = DTLCD.CCD
+		   AND DTLBASE.DTLCD  = DTLCD.DTLCD
+		   AND DTLBASE.LANG_CCD = 'ko_KR'
+		  LEFT OUTER JOIN DTLCD_MULTLANG DTLCDMT
+		    ON DTLCD.TEN_ID     = DTLCDMT.TEN_ID
+		   AND DTLCD.CCD     = DTLCDMT.CCD
+		   AND DTLCD.DTLCD     = DTLCDMT.DTLCD
+		   AND DTLBASE.TEN_ID = DTLCDMT.TEN_ID
+		   AND DTLBASE.CCD = DTLCDMT.CCD
+		   AND DTLBASE.DTLCD = DTLCDMT.DTLCD
+		   AND DTLCDMT.LANG_CCD = #{p.lang_ccd}
+		  LEFT OUTER JOIN APVL_TYP_TMPL APVL_TYP_TMPL
+		    ON DTLCD.TEN_ID     = APVL_TYP_TMPL.TEN_ID
+		   AND DTLCD.DTLCD     = APVL_TYP_TMPL.APVL_TYP_CCD
+		  LEFT OUTER JOIN CTMPL_MULTLANG MULT
+		    ON MULT.TEN_ID = APVL_TYP_TMPL.TEN_ID
+		   AND MULT.CTMPL_UUID = APVL_TYP_TMPL.CTMPL_UUID
+		   AND MULT.LANG_CCD = #{p.lang_ccd}
+		 WHERE DTLCD.TEN_ID = #{g.tenant}
+		   AND DTLCD.CCD    = #{p.ccd}
+		   AND DTLCD.STS   != 'D'
+		   AND DTLCD.USE_YN = 'Y'
+		   <if test="p.apvl_typ_ccd != null and p.apvl_typ_ccd != ''">
+		       <bind name="cdPattern" value="'%' + p.apvl_typ_ccd + '%'" />
+		       AND (UPPER(DTLCD.DTLCD) LIKE UPPER(#{cdPattern}))
+		   </if>
+		   <if test="p.ctmpl_nm != null and p.ctmpl_nm != ''">
+		       <bind name="namePattern" value="'%' + p.ctmpl_nm + '%'" />
+		       AND (CASE WHEN DTLCDMT.DTLCD_NM IS NULL THEN UPPER(DTLBASE.DTLCD_NM)
+			             ELSE UPPER(DTLCDMT.DTLCD_NM)
+			         END LIKE UPPER(#{namePattern}))
+		   </if>
+		 ORDER BY DTLCD.DTLCD
+	</select>
+
+	<!-- 결재 템플릿 상세 조회(단일 조회) -->
+	<resultMap type="map" id="resultMap-findApprovalTemplateByApprovalTypeCode">
+		<result property="ctmpl_cont" column="CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+	</resultMap>
+	<select id="findApprovalTemplateByApprovalTypeCode" resultMap="resultMap-findApprovalTemplateByApprovalTypeCode">
+		/* template.xml findApprovalTemplateByApprovalTypeCode */
+		SELECT CP.TEN_ID
+		     , CP.CTMPL_UUID
+		     , CP.TMPL_TYP_CCD
+		     , CP.BASC_CTMPL_CD
+		     , CASE WHEN MULT.LANG_CCD IS NULL THEN BASE.LANG_CCD
+		            ELSE MULT.LANG_CCD
+		        END AS LANG_CCD
+		     , CASE WHEN MULT.CTMPL_NM IS NULL AND BASE.CTMPL_NM IS NULL THEN
+		                 CASE WHEN DTLCDMT.DTLCD_NM IS NULL THEN DTLBASE.DTLCD_NM
+		                      ELSE DTLCDMT.DTLCD_NM
+		                  END
+		            WHEN MULT.CTMPL_NM IS NULL THEN BASE.CTMPL_NM
+		            ELSE MULT.CTMPL_NM
+		        END AS CTMPL_NM    /*결재 코드 명*/
+		     , CASE WHEN MULT.CTMPL_CONT IS NULL THEN BASE.CTMPL_CONT
+		            ELSE MULT.CTMPL_CONT
+		        END AS CTMPL_CONT
+		     , CASE WHEN MULT.CTMPL_PARM_INFO IS NULL THEN BASE.CTMPL_PARM_INFO
+		            ELSE MULT.CTMPL_PARM_INFO
+		        END AS CTMPL_PARM_INFO
+		     , APRVTT.APVL_TYP_CCD
+		     , APRVTT.USE_YN
+		  FROM DTLCD DTLCD
+		 INNER JOIN DTLCD_MULTLANG DTLBASE
+		    ON DTLBASE.TEN_ID = DTLCD.TEN_ID
+		   AND DTLBASE.CCD    = DTLCD.CCD
+		   AND DTLBASE.DTLCD  = DTLCD.DTLCD
+		   AND DTLBASE.LANG_CCD = 'ko_KR'
+		  LEFT OUTER JOIN DTLCD_MULTLANG DTLCDMT
+		    ON DTLCD.TEN_ID	  = DTLCDMT.TEN_ID
+		   AND DTLCD.CCD      = DTLCDMT.CCD
+		   AND DTLCD.DTLCD    = DTLCDMT.DTLCD
+		   AND DTLBASE.TEN_ID = DTLCDMT.TEN_ID
+		   AND DTLBASE.CCD    = DTLCDMT.CCD
+		   AND DTLBASE.DTLCD  = DTLCDMT.DTLCD
+		   AND DTLCDMT.LANG_CCD = #{p.lang_ccd}
+		  LEFT OUTER JOIN APVL_TYP_TMPL APRVTT
+		    ON APRVTT.TEN_ID = DTLCD.TEN_ID
+		   AND APRVTT.APVL_TYP_CCD = DTLCD.DTLCD
+		  LEFT OUTER JOIN CTMPL CP
+		    ON CP.TEN_ID = APRVTT.TEN_ID
+		   AND CP.CTMPL_UUID = APRVTT.CTMPL_UUID
+		  LEFT OUTER JOIN  CTMPL_MULTLANG MULT
+		    ON CP.TEN_ID = MULT.TEN_ID
+		   AND CP.CTMPL_UUID = MULT.CTMPL_UUID
+		   AND MULT.LANG_CCD = #{p.lang_ccd}
+		  LEFT OUTER JOIN CTMPL_MULTLANG BASE
+		    ON CP.TEN_ID = BASE.TEN_ID
+		   AND CP.CTMPL_UUID = BASE.CTMPL_UUID
+		   AND BASE.LANG_CCD = 'ko_KR'
+		 WHERE DTLCD.TEN_ID = #{g.tenant}
+		   AND DTLCD.CCD = 'G003'
+		   AND DTLCD.DTLCD = #{p.apvl_typ_ccd}
+		   AND CP.STS != 'D'
+	</select>
+
+	<insert id="insertApprovalSetForTemplate">
+		/*   template.xml : insertApprovalSetForTemplate   */
+
+		INSERT INTO APVL_TYP_TMPL
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+			TEN_ID
+			, APVL_TYP_CCD
+			<if test='p.ctmpl_uuid != null and p.ctmpl_uuid !=""'>
+				, CTMPL_UUID
+			</if>
+			, USE_YN
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		</trim>
+		<trim prefix="values (" suffix=")" prefixOverrides=",">
+			#{g.tenant}
+			, #{p.apvl_typ_ccd}
+			<if test='p.ctmpl_uuid != null and p.ctmpl_uuid !=""'>
+				, #{p.ctmpl_uuid}
+			</if>
+			, #{p.use_yn}
+			, 'C'
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+		</trim>
+	</insert>
+
+	<update id="updateApprovalSetForTemplate">
+		UPDATE APVL_TYP_TMPL
+		SET
+		TEN_ID = #{g.tenant}
+		<if test="p.use_yn != null">
+			,USE_YN = #{p.use_yn}
+		</if>
+		,STS = 'U'
+		,MODR_ID = #{g.username}
+		,MOD_DTTM = #{g.now}
+		WHERE APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		AND TEN_ID = #{g.tenant}
+	</update>
+
+	<select id="getCountApprovalSetForTemplateByApprovalTypeCode" resultType="int">
+		/* template.xml getCountApprovalSetForTemplateByApprovalTypeCode */
+		SELECT
+			COUNT(*)
+		FROM APVL_TYP_TMPL
+		WHERE APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		  AND TEN_ID = #{g.tenant}
+	</select>
+
+	<select id="getCountApprovalSetForMultiLangTemplateByApprovalTypeCode" resultType="int">
+		/* template.xml getCountApprovalSetForMultiLangTemplateByApprovalTypeCode */
+		SELECT
+			COUNT(*)
+		FROM CTMPL CP
+		INNER JOIN  CTMPL_MULTLANG MULT
+			ON CP.TEN_ID = MULT.TEN_ID
+			AND CP.CTMPL_UUID = MULT.CTMPL_UUID
+			AND MULT.LANG_CCD = #{p.lang_ccd}
+		INNER JOIN APVL_TYP_TMPL APRVTT
+			ON 	 CP.TEN_ID = APRVTT.TEN_ID
+			AND  CP.CTMPL_UUID = APRVTT.CTMPL_UUID
+			AND  APRVTT.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		WHERE CP.TEN_ID = #{g.tenant}
+	</select>
+
+	<select id="findListApprovalTemplateComboboxItemByApprovalTemplateClass" resultType="map">
+		/*콤보박스 select*/
+		SELECT ELEM_COMM_TMPL.BASC_CTMPL_CD
+			 ,(CASE WHEN MULT.BASC_CTMPL_NM IS NULL
+						THEN (SELECT BASC_CTMPL_NM
+							  FROM ELEM_COMM_TMPL_MULTLANG
+							  WHERE TEN_ID = ELEM_COMM_TMPL.TEN_ID
+								AND TMPL_TYP_CCD = ELEM_COMM_TMPL.TMPL_TYP_CCD
+								AND BASC_CTMPL_CD =  ELEM_COMM_TMPL.BASC_CTMPL_CD
+								AND LANG_CCD = 'ko_KR')
+					ELSE MULT.BASC_CTMPL_NM
+			END) AS BASC_CTMPL_NM
+		FROM ELEM_COMM_TMPL ELEM_COMM_TMPL
+		LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG MULT
+		ON ELEM_COMM_TMPL.TEN_ID = MULT.TEN_ID
+		    AND ELEM_COMM_TMPL.TMPL_TYP_CCD = MULT.TMPL_TYP_CCD
+		    AND ELEM_COMM_TMPL.BASC_CTMPL_CD = MULT.BASC_CTMPL_CD
+			AND MULT.LANG_CCD = #{p.lang_ccd}
+		WHERE ELEM_COMM_TMPL.TEN_ID = #{g.tenant}
+		  AND ELEM_COMM_TMPL.TMPL_TYP_CCD = 'APVL'
+	</select>
+
+	<!-- 저장 -->
+	<insert id="insertApprovalTemplateContent">
+		/*   template.xml : insertContent  템플릿 본문 신규저장   */
+		INSERT INTO CTMPL(
+		TEN_ID
+		, CTMPL_UUID
+		<if test="p.basc_ctmpl_cd != null and p.basc_ctmpl_cd != ''" >
+			, TMPL_TYP_CCD
+			, BASC_CTMPL_CD
+		</if>
+		, STS
+		, REGR_ID
+		, REG_DTTM
+		, MODR_ID
+		, MOD_DTTM
+		)
+		VALUES(
+		#{g.tenant}
+		,#{p.ctmpl_uuid}
+		<if test="p.basc_ctmpl_cd != null and p.basc_ctmpl_cd != ''" >
+			,(SELECT TMPL_TYP_CCD FROM ELEM_COMM_TMPL WHERE ELEM_COMM_TMPL.BASC_CTMPL_CD = #{p.basc_ctmpl_cd} AND ELEM_COMM_TMPL.TEN_ID = #{g.tenant})
+			,#{p.basc_ctmpl_cd}
+		</if>
+		,'C'
+		,#{g.username}
+		,#{g.now}
+		,#{g.username}
+		,#{g.now}
+		)
+	</insert>
+	<insert id="insertApprovalTemplateContentMultiLang">
+		/*   template.xml : insertContent  템플릿 본문 다국어 신규저장   */
+		INSERT INTO CTMPL_MULTLANG(
+		TEN_ID
+		, CTMPL_UUID
+		, CTMPL_NM
+		, CTMPL_CONT
+		<if test="p.ctmpl_parm_info != null and p.ctmpl_parm_info != ''">
+			, CTMPL_PARM_INFO
+		</if>
+		, LANG_CCD
+		, STS
+		, REGR_ID
+		, REG_DTTM
+		, MODR_ID
+		, MOD_DTTM
+		)
+		VALUES(
+		#{g.tenant}
+		,#{p.ctmpl_uuid}
+		,#{p.ctmpl_nm}
+		,#{p.ctmpl_cont}
+		<if test="p.ctmpl_parm_info != null and p.ctmpl_parm_info != ''">
+			,#{p.ctmpl_parm_info}
+		</if>
+		, #{p.lang_ccd}
+		,'C'
+		,#{g.username}
+		,#{g.now}
+		,#{g.username}
+		,#{g.now}
+		)
+
+	</insert>
+
+
+	<update id="updateApprovalTemplateContent">
+		/*approvalTmp.updateContent 템플릿 본문 수정*/
+		UPDATE CTMPL
+		SET STS='U'
+		, MODR_ID = #{g.username}
+		, MOD_DTTM = #{g.now}
+ 		<if test='p.basc_ctmpl_cd != null' >
+			, BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+		</if>
+		WHERE TEN_ID = #{g.tenant}
+		AND CTMPL_UUID = #{p.ctmpl_uuid}
+	</update>
+	<update id="updateApprovalTemplateContentMultiLang">
+		/*approvalTmp.updateContent 템플릿 본문 수정*/
+		UPDATE CTMPL_MULTLANG
+		SET STS='U'
+		, MODR_ID = #{g.username}
+		, MOD_DTTM = #{g.now}
+		<if test='p.ctmpl_nm != null' >
+			, CTMPL_NM = #{p.ctmpl_nm}
+		</if>
+		<if test='p.ctmpl_parm_info != null' >
+			, CTMPL_PARM_INFO = #{p.ctmpl_parm_info}
+		</if>
+		<if test='p.ctmpl_cont != null' >
+			, CTMPL_CONT = #{p.ctmpl_cont}
+		</if>
+		WHERE TEN_ID = #{g.tenant}
+		AND CTMPL_UUID = #{p.ctmpl_uuid}
+		AND LANG_CCD = #{p.lang_ccd}
+	</update>
+
+
+	<delete id="deleteMailTemplateInfo">
+		/* mail-manager.deleteMailTemplateInfo */
+		DELETE FROM EML_TMPL_SETUP
+		WHERE CTMPL_UUID IN (SELECT CTMPL_UUID FROM CTMPL
+						 WHERE TEN_ID = #{g.tenant}
+						   AND BASC_CTMPL_CD = #{p.basc_ctmpl_cd})
+	</delete>
+
+
+</mapper>
+

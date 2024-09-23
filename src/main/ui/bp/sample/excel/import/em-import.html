@@ -1,0 +1,23 @@
+<sc-link rel="import" href="es-import-list.html"></sc-link>
+
+
+<dom-module id="em-import">
+
+	<style>
+        :host {
+        	@apply(--fit-layout); 
+        }
+    </style>
+    
+	<template>
+		<es-import-list id="list" on-show-detail="onShowDetail" class="vbox"></es-import-list>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-import'
+		});
+	</script>
+
+
+</dom-module>

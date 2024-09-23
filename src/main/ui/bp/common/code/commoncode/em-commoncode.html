@@ -1,0 +1,40 @@
+<sc-link rel="import" href="es-commoncode-list.html"></sc-link>
+<sc-link rel="import" href="es-commoncode-detail.html"></sc-link>
+
+<dom-module id="em-commoncode">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<es-commoncode-list id="codeList" class="flex-4" on-find-code-detail="onFindCodeDetail" on-reset-code-detail="onResetCodeDetail"></es-commoncode-list>
+			<sc-splitter split-type="vertical"></sc-splitter>
+			<es-commoncode-detail id="codeDetail" class="flex-6"></es-commoncode-detail>
+		</div>
+	</template>
+
+	<script>
+        Polymer({
+            is : 'em-commoncode',
+
+			// 그룹코드 현황 : 그룹코드 선택
+            onFindCodeDetail: function(e, data) {
+                var me = this;
+                me.$.codeDetail.load(data);
+			},
+
+			// 그룹코드 현황 조회 시 상세 내용 초기화
+            onResetCodeDetail: function() {
+                var me = this;
+                me.$.codeDetail.clear();
+			}
+
+        });
+	</script>
+
+
+</dom-module>

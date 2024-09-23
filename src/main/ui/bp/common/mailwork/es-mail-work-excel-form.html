@@ -1,0 +1,652 @@
+<sc-link rel="import" href="../tmp/ep-tmp-preview.html"></sc-link>
+<sc-link rel="import" href="ep-mail-send-test.html"></sc-link>
+<sc-link rel="import" href="ep-excel-field-setup.html"></sc-link>
+
+<dom-module id="es-mail-work-excel-form">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<!-- 공통코드 조회 -->
+			<sc-code-group>
+				<sc-code code="C009" value="{{codes.use_yn}}" ></sc-code> <!-- 사용여부 -->
+				<sc-code code="C036" value="{{codes.C036}}" ></sc-code>
+				<sc-code code="C059" value="{{codes.mail_work_cls}}"></sc-code><!-- M003 : 이메일 업무 구분 코드 -->
+			</sc-code-group>
+			<!-- 콤보박스 템플릿 목록 -->
+			<sc-ajax url="getMailWorkList.do"
+					 last-response="{{codes.workMailTemplate}}">
+			</sc-ajax>
+
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax id="findListExcelInfoList"
+				 url="findListExcelInfoList.do"
+				 on-response="completeFindInfoExcel">
+		</sc-ajax>
+
+		<!-- Excel별 Sheet 내역 가져오기. -->
+		<sc-ajax id="findListSheetInfoListCombo"
+				 url="findListSheetInfoListCombo.do">
+		</sc-ajax>
+
+
+		<!-- Sheet 별 Row 리스트 조회 -->
+		<sc-ajax id="findExcelRowListBySheetId"
+				 url="findExcelRowListBySheetId.do"
+				 on-response="completeFindExcelRowList">
+		</sc-ajax>
+
+		<!-- Row 별 Field 리스트 조회 -->
+		<sc-ajax id="findExcelCellListByRowId"
+				 url="findExcelCellListByRowId.do"
+				 on-response="completeFindExcelCellList">
+		</sc-ajax>
+
+		<!-- 템플릿 조회 -->
+		<sc-ajax id="findTemplateBaseInfoByTemplateBaseId"
+				 url="findTemplateBaseInfoByTemplateBaseId.do"
+				 on-response="completeFindInfoTmp">
+		</sc-ajax>
+
+		<!-- 엑셀 정보 삭제 -->
+		<sc-ajax id="deleteExcelInfo"
+				 url="deleteExcelInfo.do"
+				 on-response="completeDeleteExcelInfo">
+		</sc-ajax>
+		<!-- 엑셀 사용 여부 수정 -->
+		<sc-ajax id="updateUseYnSaveExcel"
+				 url="updateUseYnSaveExcel.do"
+				 on-response="completeUpdateUseYnSaveExcel">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax id="saveExcelInfo"
+				 url="saveExcelInfo.do"
+				 body="{{excelInfo}}"
+				 on-response="completeSaveExcelInfo">
+		</sc-ajax>
+
+		<sc-ajax id="updateExcelInfoConfirmYn"
+				 url="updateExcelInfoConfirmYn.do"
+				 body="{{excelInfo}}"
+				 on-response="completeCnfmUpdateExcelInfo">
+		</sc-ajax>
+
+		<!-- Sheet Header를 저장한다. -->
+		<sc-ajax id="saveListExcelSheetHeader"
+				 url="saveListExcelSheetHeader.do"
+				 on-response="completeSaveListExcelSheetHeader">
+		</sc-ajax>
+
+        <sc-ajax id="downLoadMailWorkExcel"
+                 url="downLoadMailWorkExcel.do"
+                 on-response="onDownLoadExcel">
+        </sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+
+
+		<sc-grid id="excelListGridPanel" data-provider="{{resultList}}" editable="true" class="h-150" use-state="false"
+				 on-item-click="onExcelInfoOnclick">
+			<cc-grid-toolbar title-text="이메일 업무" >
+				<sc-button text="신규" on-click="onAddExcelData" auth-s></sc-button>
+				<sc-button text="삭제" on-click="onDeleteExcelAllData" auth-s></sc-button>
+				<sc-button text="사용 여부 저장" on-click="onUseYnSaveExcel" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="eml_task_nm" header-text="이메일 업무 명" width="200" editable="false"  style-name="link" text-align="left"></sc-data-column>
+				<!--<sc-data-column data-field="row_num" header-text="템플릿" width="50" text-align="left" editable="false"></sc-data-column>-->
+				<sc-combobox-column	data-field="eml_task_typ_ccd"			header-text="이메일 업무 유형"			width="190"
+									   display-field="label"		value-field="data"			items="{{codes.mail_work_cls}}"></sc-combobox-column>
+				<sc-data-column data-field="eml_task_typ_ccd" header-text="이메일 업무 코드" width="140" text-align="left" editable="false" visible="false"></sc-data-column>
+				<sc-radio-column data-field="use_yn" header-text="사용 여부" width="90" checked-value="Y" un-checked-value="N" text-align="center" editable="true" ></sc-radio-column>
+				<sc-checkbox-column data-field="cnfd_yn" header-text="확정 여부" width="90" checked-value="Y" un-checked-value="N" text-align="center" editable="false" ></sc-checkbox-column>
+				<sc-date-column data-field="mod_dttm" header-text="최종 수정 일자" width="150" text-align="center" display-format="yyyy/MM/dd HH:mm:ss"></sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field	data-field="eml_tmpl_cd"></sc-grid-field>
+				<sc-grid-field	data-field="eml_task_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="athg_uuid"></sc-grid-field>
+
+			</sc-grid-fields>
+		</sc-grid>
+
+		<cc-sub-title-bar>
+			<sc-button text="저장" on-click="onSaveExcelInfo" hidden="[[formula('isCnfmYn')]]" auth-s></sc-button>
+			<sc-button text="확정" on-click="onCnfmExcelInfo" hidden="[[formula('isCnfmYn')]]" auth-s></sc-button>
+			<sc-button text="샘플 템플릿 테스트"    hidden="[[formula('isNotTemplate')]]" on-click="onSetupExcelField" auth-s></sc-button>
+			<sc-button text="템플릿 다운로드"                  hidden="[[formula('isNotTemplate')]]" on-click="onDownTemplate" auth-r></sc-button>
+		</cc-sub-title-bar>
+		<cc-form-panel validation-group="save" label-width="120">
+			<cc-fieldset>
+				<sc-label text="이메일 업무 명"></sc-label>
+				<sc-text-field value="{{excelInfo.eml_task_nm}}" max-length="200" required="{{formula('isEditable')}}" editable="{{!formula('isEditable')}}"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="이메일 업무 유형"></sc-label>
+				<sc-combobox-field
+						items="{{codes.mail_work_cls}}" display-field="label" value-field="data" input-clear="false"
+						value="{{excelInfo.eml_task_typ_ccd}}"  readonly="true">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="첨부파일"></sc-label>
+				<cc-excel-upload-field id="fileUpload" value="{{excelInfo.athg_uuid}}"  editable="[[!formula('isCnfmYn')]]" required="[[formula('isEditable')]]"></cc-excel-upload-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="이메일 템플릿"></sc-label>
+				<sc-combobox-field
+						display-field="eml_tmpl_nm" value-field="eml_tmpl_cd"
+						items="{{codes.workMailTemplate}}" value="{{excelInfo.eml_tmpl_cd}}" placeholder="선택" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset hidden="{{formula('isNew')}}">
+				<sc-label text="Work Sheet"></sc-label>
+				<sc-combobox-field
+						display-field="excel_sht_nm" value-field="excel_sht_uuid" selected-index="0" on-change="onChangeSheetFindRow" readonly="[[!formula('isEditable')]]"
+						items="{{codes.sheetList}}" value="{{excelInfo.excel_sht_uuid}}" placeholder="선택" >
+				</sc-combobox-field>
+			</cc-fieldset>
+		</cc-form-panel>
+
+		<sc-grid id="excelRowGridPanel" editable="true" class="h-200" use-selection="false" style="margin-bottom: 5px;"
+				 on-item-click="onRowItemClick">
+			<cc-grid-toolbar title-text="Excel Row">
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="excel_sht_nm" header-text="시트 이름" width="200" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="excel_row_no" header-text="행 번호" width="200" editable="false" text-align="left" style-name="link"></sc-data-column>
+				<sc-data-column data-field="usr_auth_uuid" header-text="사용자 인증 아이디" width="200" editable="false" text-align="left" ></sc-data-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field	data-field="excel_row_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="eml_task_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="excel_sht_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="usr_auth_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="regr_id"></sc-grid-field>
+				<sc-grid-field	data-field="reg_dttm"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+
+
+		<sc-grid id="excelDetailGridPanel" data-provider="{{resultList}}" editable="false" class="flex"  use-selection="false"
+				 on-item-click="onItemClick">
+			<sc-grid-columns>
+				<sc-data-column data-field="cel_idx_no" header-text="셀 인덱스 번호" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="str_cel_val" header-text="String 셀 값" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="dbl_cel_val" header-text="Double 셀 값" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="bool_cel_val" header-text="Boolean 셀 값" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="err_cel_val" header-text="Error 셀 값" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="fmla_cel_val" header-text="Formula 셀 값" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-checkbox-column data-field="ltr_thk_yn" header-text="글씨 굵기 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-data-column data-field="ltr_hgt" header-text="글씨 크기" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="font_name" header-text="폰트" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-checkbox-column data-field="ltr_ital_yn" header-text="기울임 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-checkbox-column data-field="ltr_strkth_yn" header-text="취소선 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-data-column data-field="offset_use_yn" header-text="typeOffset" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="undln_scop" header-text="밑줄 범위" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="str_set" header-text="CHARSET" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="ltr_clr" header-text="글씨 색 (RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="dat_fmt" header-text="DATA FORMAT" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="alignment_code" header-text="정렬" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-checkbox-column data-field="hide_yn" header-text="숨김 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-checkbox-column data-field="lckd_yn" header-text="잠금 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-checkbox-column data-field="lnbrk_yn" header-text="줄바꿈 여부" width="150" text-align="center" editable="false" checked-value="1" un-checked-value="0" ></sc-checkbox-column>
+				<sc-data-column data-field="border_top_code" header-text="테두리 상단 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="cel_brd_top_clr" header-text="상단 테두리 컬러(RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="border_bottom_code" header-text="테두리 하단 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="cel_brd_bttm_clr" header-text="하단 테두리 컬러(RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="border_left_code" header-text="테두리 왼쪽 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="cel_brd_lft_clr" header-text="왼쪽 테두리 컬러(RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="border_right_code" header-text="테두리 오른쪽 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="cel_brd_rgt_clr" header-text="오른쪽 테두리 컬러(RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="bgd_fill_clr" header-text="배경 칠 컬러 (RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="fgd_fill_clr" header-text="셀 배경 컬러 (RGB)" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="tov_yn" header-text="회전" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="vertical_alignment_code" header-text="수직 정렬 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="excel_cel_typ" header-text="Cell type" width="150" text-align="left" editable="false" ></sc-data-column>
+				<sc-data-column data-field="fill_patt_typ_cd" header-text="채우기 패턴 코드" width="150" text-align="left" editable="false" ></sc-data-column>
+
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field	data-field="excel_cel_uuid"></sc-grid-field>
+				<sc-grid-field	data-field="excel_row_uuid"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-mail-work-excel-form',
+
+            properties:{
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            use_yn:[],
+                            C036:[],
+                            sheetRev:[],
+                            workMailTemplate:[],
+                            mail_work_cls:[],
+							sheetList:[]
+                        };
+                    }
+                },
+                // 이메일 업무 엑셀 정보
+                excelInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+							eml_task_typ_ccd : ""
+						};
+                    }
+                },
+                sheetInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                tmpChangeReady: {
+                    type: Boolean,
+                    value: false
+                },
+                sheetList: {
+                    type: Array,
+					value: function () {
+						return [];
+					}
+                }
+            },
+
+            formulas : {
+                // 신규 상태
+                isNew: function() {
+                    return this.excelInfo.isNew === true;
+                },
+                isCnfmYn: function() {
+                    return this.excelInfo.cnfd_yn === "Y";
+                },
+
+				isNotTemplate : function() {
+					return UT.isEmpty(this.excelInfo.athg_uuid);
+				},
+
+                // 수정 가능 상태 (신규 & 수정) 이메일 업무 미 선택 시에 false됨.
+                isEditable : function() {
+                    return (this.formula('isNew') || !UT.isEmpty(this.excelInfo.eml_task_uuid));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            load: function(data){
+                var me = this;
+                //excelinfo 초기화 후 setup
+                me.set("excelInfo",{});
+				me.$.excelDetailGridPanel.setDataProvider([]);
+				me.$.excelRowGridPanel.setDataProvider([]);
+
+                me.set("excelInfo.eml_task_typ_ccd",data.work_cd);
+                me.set("excelInfo.isNew",false);
+                me.onFindExcelConfig();
+            },
+
+
+            completeFindInfoExcel : function(e, res) {
+                var me = this;
+                var lastResponse = res.response;
+                me.$.excelListGridPanel.setDataProvider(lastResponse);
+                me.applyFormula();
+            },
+            completeFindExcelRowList : function(e, res) {
+                var me = this;
+                var lastResponse = res.response;
+                me.$.excelRowGridPanel.setDataProvider(lastResponse);
+                me.applyFormula();
+            },
+			completeFindExcelCellList : function(e, res) {
+                var me = this;
+                var lastResponse = res.response;
+
+                me.$.excelDetailGridPanel.setDataProvider(lastResponse.cellList);
+
+
+                me.applyFormula();
+            },
+
+			onFindExcelConfig: function() {
+                var me = this;
+
+                if(me.excelInfo.eml_task_typ_ccd != null){
+					me.$.findListExcelInfoList.body = {
+						eml_task_typ_ccd : me.excelInfo.eml_task_typ_ccd
+					};
+					UT.request(me.$.findListExcelInfoList);
+				}
+
+
+			},
+			onChangeSheetFindRow: function() {
+                var me = this;
+                me.$.findExcelRowListBySheetId.body = {
+					excel_sht_uuid : me.excelInfo.excel_sht_uuid
+                };
+                UT.request(me.$.findExcelRowListBySheetId);
+			},
+
+            // 저장
+            onSaveExcelInfo: function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('업무유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+					me.$.fileUpload.upload().then(function(){
+						UT.request(me.$.saveExcelInfo);
+					});
+                })
+            },
+			onCnfmExcelInfo: function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('업무유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.ADM1080", function() { // 확정 처리 하시겠습니까?
+						UT.request(me.$.updateExcelInfoConfirmYn);
+                })
+            },
+
+			onDownTemplate: function(){
+                var me = this;
+				if(me.formula('isNotTemplate')){
+					UT.alert(me.translate("STD.E1012",null,me.translate('이메일업무')),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+				}else{
+                    me.$.downLoadMailWorkExcel.body = {
+                    		eml_task_uuid : me.get("excelInfo.eml_task_uuid")
+                        };
+                    UT.request(me.$.downLoadMailWorkExcel);
+				}
+
+//				UT.fileDownloadByAttId(me.$.fileUpload._currentFile.id);
+/* 				if(UT.isNotEmpty(me.get("excelInfo.athg_uuid")))
+					UT.fileDownloadByAttId(me.get("excelInfo.athg_uuid")); */
+				//location.href="/bp/downLoadMailWorkExcel.do?eml_task_uuid="+me.get("excelInfo.eml_task_uuid");
+            },
+            
+            onDownLoadExcel: function(e, res){
+                var me = this,
+                    result = res.response;
+                //UT.fileDownloadByAttId(me.$.fileUpload._currentFile.id);
+                var fileName = me.$.fileUpload._currentFile.name;
+                var zip = new JSZip(result,{"base64": true});
+                var blobData = zip.generate({type: "blob", compression: "DEFLATE"});
+                //window.navigator.msSaveOrOpenBlob(blobData, fileName);
+
+                if (Polymer.isIE || navigator.appVersion.toString().indexOf('.NET') > 0) {
+                    window.navigator.msSaveOrOpenBlob(blobData, fileName);
+                }else{
+                    var a = document.createElement("a");
+                    document.body.appendChild(a);
+                    var url = URL.createObjectURL(blobData);
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            },
+
+            // 저장 완료
+			completeSaveExcelInfo: function(e, res){
+                var me = this,
+                    result = res.response;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.set("excelInfo",{});
+					me.set("excelInfo.eml_task_typ_ccd",result.resultData.eml_task_typ_ccd);
+					me.set("excelInfo.isNew",false);
+					me.onFindExcelConfig();
+				});
+            },
+			// Excel 정보 삭제 완료
+			completeDeleteExcelInfo: function(e, res){
+                var me = this,
+                    result = res.response;
+
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.set("excelInfo",{});
+                    me.set("excelInfo.eml_task_typ_ccd",result.resultData.eml_task_typ_ccd);
+                    me.set("excelInfo.isNew",false);
+                    me.onFindExcelConfig();
+                });
+            },
+			completeUpdateUseYnSaveExcel: function(e, res){
+                var me = this,
+                    result = res.response;
+
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.set("excelInfo",{});
+                    me.set("excelInfo.eml_task_typ_ccd",result.resultData.eml_task_typ_ccd);
+                    me.set("excelInfo.isNew",false);
+                    me.fire("update-excel-info");
+                    me.onFindExcelConfig();
+                });
+            },
+			completeCnfmUpdateExcelInfo: function(e, res){
+                var me = this,
+                    result = res.response;
+                UT.alert("STD.ADM1079", function(){ // 확정 처리하였습니다.
+                    me.set("excelInfo",{});
+                    me.set("excelInfo.eml_task_typ_ccd",result.resultData.eml_task_typ_ccd);
+                    me.set("excelInfo.isNew",false);
+                    me.fire("update-excel-info");
+					me.onFindExcelConfig();
+                });
+            },
+            completeSaveListExcelSheetHeader: function(){
+                var me = this;
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onFindExcelConfig();
+                });
+            },
+
+            onAddExcelData : function(){
+                var me = this;
+
+                if(UT.isEmpty(me.excelInfo.eml_task_typ_ccd)){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('이메일 업무 유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+				me.set("excelInfo.athg_uuid", "");
+				me.set("excelInfo.eml_tmpl_cd", "");
+				me.set("excelInfo.eml_task_nm", "");
+				me.set("excelInfo.excel_sht_uuid", "");
+				me.set("excelInfo.cnfd_yn", "");
+
+				me.$.excelDetailGridPanel.setDataProvider([]);
+				me.$.excelRowGridPanel.setDataProvider([]);
+
+                me.set("excelInfo.isNew",true);
+
+
+
+				me.applyFormula();
+			},
+			onDeleteExcelAllData : function(){
+				var me = this,
+						provider = me.$.excelListGridPanel.getDataProvider();
+
+                if(UT.isEmpty(me.excelInfo.eml_task_typ_ccd)){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('이메일 업무 유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+
+				var checked = provider.selectionCheckedIndexes();
+				var selected = provider.selectionCheckedItems();
+				var items = [];
+
+				for(var i = 0, len = selected.length; i<len ;i++){
+					var item = selected[i];
+					if(item.cnfd_yn === "Y"){
+						items.push(item);
+					}
+				}
+
+				if(items.length > 0){
+					UT.alert("STD.ADM1082");		//확정처리 된 이메일업무가 존재합니다. 확정 처리 된 견적의 경우 삭제가 불가능합니다.
+				}else{
+					if (checked && checked.length > 0) {
+						UT.confirm("STD.ADM1081", function() {		//이메일 업무를 삭제하시겠습니까?
+							var deleted = provider.removeItems(true, true);
+							if(deleted.length > 0){
+								me.$.deleteExcelInfo.body = {
+									excelInfo: deleted
+								};
+								UT.request(me.$.deleteExcelInfo);
+							}
+						});
+					}
+					else{
+						UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+					}
+				}
+			},
+			onUseYnSaveExcel : function(){
+				var me = this,
+						provider = me.$.excelListGridPanel.getDataProvider();
+
+                if(UT.isEmpty(me.excelInfo.eml_task_typ_ccd)){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('이메일 업무 유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+
+				var excelWorkUsingNode = provider.filterIndexes(function(data) {
+					return ((data.use_yn === "Y"));
+				});
+
+
+				if(excelWorkUsingNode.length > 1){
+					UT.alert("STD.ADM1083");		//사용 여부는 1개만 선택이 가능하며, 확정 처리 된 이메일 업무만 선택이 가능합니다.
+					return;
+				}else if(excelWorkUsingNode.length === 1 &&  provider.getItemAt(excelWorkUsingNode[0]).cnfd_yn === "N"){
+					UT.alert("STD.MW0015");
+					return;
+				}else{
+					var getUseYnItems = [];
+					var update = provider.getUpdateItems();
+					for(var i= 0; i<excelWorkUsingNode.length; i++){
+						var getItem = provider.getItemAt(excelWorkUsingNode[i]);
+						getUseYnItems.push(getItem);
+					}
+
+
+					UT.confirm("STD.ADM1084", function() {		//이메일 업무의 사용여부를 저장 하시겠습니까?
+
+						me.$.updateUseYnSaveExcel.body = {
+							excelInfo: getUseYnItems,
+							updateExcel : update
+						};
+						UT.request(me.$.updateUseYnSaveExcel);
+
+					});
+
+				}
+			},
+
+            onRowItemClick : function(event){
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "excel_row_no"){
+                    // excel cell detail search
+					me.$.findExcelCellListByRowId.body = {
+						excel_row_uuid : data.excel_row_uuid
+					}
+
+					UT.request(me.$.findExcelCellListByRowId);
+
+                }
+			},
+			onExcelInfoOnclick : function(event){
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "eml_task_nm"){
+
+                	me.set("excelInfo",{});
+
+					me.$.findListSheetInfoListCombo.body = {
+						eml_task_uuid : data.eml_task_uuid
+					}
+
+					UT.request(me.$.findListSheetInfoListCombo, function(el,res,x) {
+						me.set("codes.sheetList",res.response);
+						me.set("excelInfo.eml_task_nm",data.eml_task_nm);
+						me.set("excelInfo.eml_task_uuid",data.eml_task_uuid);
+						me.set("excelInfo.eml_task_typ_ccd",data.eml_task_typ_ccd);
+						me.set("excelInfo.eml_tmpl_cd",data.eml_tmpl_cd);
+						me.set("excelInfo.athg_uuid",data.athg_uuid);
+						me.set("excelInfo.cnfd_yn",data.cnfd_yn);
+						me.set("excelInfo.isNew",false);
+						me.set("excelInfo.isEditable",false);
+						me.applyFormula();
+					});
+
+				}
+			},
+
+			onSetupExcelField: function() {
+				var me = this;
+
+				if(me.formula('isNotTemplate')){
+					UT.alert(me.translate("STD.E1012",null,me.translate('이메일업무')),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+				}
+
+				var defaultParam = {
+					excelInfo 		: me.excelInfo
+				};
+
+				var tmpPopup = UT.popup('ep-excel-field-setup', me, 800, 600, {}, {titleText : "미리보기"});
+				tmpPopup.show();
+				tmpPopup.getWindowContent().load({defaultParam:defaultParam});
+			},
+
+
+
+        });
+	</script>
+
+</dom-module>

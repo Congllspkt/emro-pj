@@ -1,0 +1,401 @@
+<dom-module id="sc-mdi-header">
+	<template>
+
+		<div id="headWrap" class="header-wrap flex--sb">
+			<!-- Go to Menu in Header -->
+	       	<div class="header_nav flex--left">
+	       		<div class="nav">
+					<button id="sideMenuButton" title="Menu" class="nav_menu" on-click="onSideMenuClick">menu</button>
+				</div>
+				<div class="logo">
+	                <!--<img src="../../assets/img/logo.svg" alt="system logo">-->
+					<img src="../../assets/img/logo.svg" style="padding-top: 5px;" width="120" alt="system logo">
+					<!--<img src="../../assets/img/logo_sds.svg" alt="system logo">-->
+	            </div>
+	            <!-- 메뉴검색 -->
+	            <sc-mdi-searchbar id="searchBar" mdi-manager="[[mdiManager]]"></sc-mdi-searchbar>
+	       	</div>
+			<div class="header_function flex--left">
+				<div class="user">
+	                <span class="sc-text">[[currentUserInfo(currentUser, currentLocale)]]</span>
+	            </div>
+	            <div class="time">
+	                <span id="sessionTimer" class="sc-text--number session-timer" on-click="onSessionTimerClick"></span>
+	            </div>
+	            <div class="mdi_lan">
+					<a>[[selectLocaleName(avaiableLocales, currentLocale)]]</a>
+					<div class="lan_list">
+						<ul>
+							<template id="localeList" is="dom-repeat" items="{{avaiableLocales}}" as="locale" filter="onLocaleFilter">
+								<li><a on-click="onChangeLocaleClick">[[translate(locale.displayName)]]</a></li>
+							</template>
+						</ul>
+					</div>
+				</div>
+	            <div class="function_button flex--left">
+	                <button title="[[translate('로그인 정보')]]" class="personal_icon sc-text--hidden" on-click="onUserInfoClick">personal</button>
+	            </div>
+
+
+            <!--// Favorite Popup -->
+	            <!-- 개인정보 팝업 -->
+	            <div id="userInfo" class="user-option flex-wrap" hidden>
+	                <div class="user-info">
+	                    <div class="profile">[[currentUserProfile(currentUser)]]</div>
+	                    <div class="name">[[currentUserNm(currentUser, currentLocale)]] <span class="sc-text--sub">[[currentUserDept(currentUser, currentLocale)]]</span></div>
+	                </div>
+	                <div class="option_link"> 
+	                    <button title="[[translate('사용자 정보 변경')]]" on-click="onClickUserInfoSetting">[[translate('사용자 정보 변경')]]</button>
+	                   <!-- <button title="환경설정">환경설정</button>-->
+	                </div>
+	                <div class="logout">
+	                    <button title="[[translate('로그아웃')]]" on-click="onLogoutClick">[[translate('로그아웃')]]</button>
+	                </div>
+	            </div>
+			</div>
+		</div>
+
+	</template>
+	<script>
+
+	SCPreloader.onInitialize(function() {
+		
+		Polymer({
+
+            is: 'sc-mdi-header',
+
+            behaviors: [
+                Polymer.SCResizableBehavior
+            ],
+            
+            get mdiHeaderWrapHeight() {
+                if(!this.validCacheSizeRect(this._mdiHeaderWrapRect)) {
+                    this._mdiHeaderWrapRect = this.$.headWrap.getBoundingClientRect();
+                }
+                return this._mdiHeaderWrapRect.height;
+            },
+            
+            get logoutEl(){
+            	return this.querySelector(".logout > button");
+            },
+            
+            get logoutFormEl(){
+            	return document.querySelector("#logoutForm");
+            },
+
+            properties: {
+            	
+             	// 타임 아웃 설정
+                sessionTimeout :{
+                    type: Number,
+                    value : (("number" === typeof window.SESSIONTIMEOUT && window.SESSIONTIMEOUT > 0) ? window.SESSIONTIMEOUT  : (1000 * 60 * 30)) //30분
+                },
+                
+            	currentUser: {
+            		type: Object,
+            		value: function(){
+            			return this.mdiManager.onReady(function(){
+            				this.currentUser = this.mdiManager.currentUser;
+            			}.bind(this));
+            		}
+        		},
+
+        		currentLocale: {
+        			type: Object,
+            		value: function(){
+            			return this.mdiManager.onReady(function(){
+            				this.currentLocale = this.mdiManager.currentLocale;	
+            			}.bind(this));
+            		}
+        		},
+
+        		avaiableLocales: {
+        			type: Object,
+            		value: function(){
+            			return this.mdiManager.onReady(function(){
+            				this.avaiableLocales = this.mdiManager.avaiableLocales; 
+            			}.bind(this));
+            			 	
+            		}
+                },
+                
+                sessionTimeFormat: {
+                	type: String,
+                	value: "HH:mm:ss" 
+                },
+                
+                mdiManager: {
+                	type: Object
+                },
+
+            },
+
+            ready: function(){
+            	SCPreloader.onApplicationComplete(function() {
+            		this.$.searchBar.menuList = SCMenuManager.menuData;
+            		this.doSessionTimer();
+            	}.bind(this));
+            },
+            
+            /** [Event Handler] Menu Click */
+            onSideMenuClick: function(event){
+            	this.fire("side-menu-click", event);
+            },
+            
+            /** [Event Handler] Session Timer */
+            onSessionTimerClick: function(event){
+            	$.ajax('sessionTimeUpdate.do', $.extend(false, SCPreloader.ajaxSettings(), {
+                	data : JSON.stringify({})
+                })).then(this.doSessionTimer.bind(this));
+            },
+            
+            /** [Event Handler] 로케일 변경 */
+            onChangeLocaleClick: function(e){
+            	var me = this,
+            	locale = e.model.locale.locale;
+
+            	if(locale != SCLocaleManager.getLocale()) {
+                    UT.confirm("STD.MDI1004", function() { // "언어를 변경하시겠습니까? 페이지가 새로고침 됩니다."
+                        var localeAjax = new SCAjax();
+                        localeAjax.url = 'i18n/saveI18nLocale.do';
+                        localeAjax.params = {locale : locale};
+                        localeAjax.addEventListener('response', function(event) {
+                        	localeAjax.removeEventListener('response', arguments.callee);
+                            var usrAjax = new SCAjax();
+                            usrAjax.url = 'afterChangeLocale.do';
+                            usrAjax.addEventListener('response', function(event) {
+                            	usrAjax.removeEventListener('response', arguments.callee);
+	                            me.reload();
+                            });
+                            usrAjax.request();
+                        });
+                        localeAjax.request();
+                    });
+                }
+            },
+            
+            /** [Filter] 언어 필터 */
+            onLocaleFilter: function(item){
+            	return (item.locale != SCLocaleManager.getLocale());
+            },
+            
+            /** [Event Handler] Calendar */
+            onCalendarClick: function(event){
+            	MDIUT.showMdiCalendar();
+            },
+            
+            /** [Event Handler] 메모 */
+            onMemoClick: function(event){
+            	UT.popupMemo();
+            },
+			
+            
+            /** [Event Handler] 알람 버튼 클릭 */
+            onAlarmNoticeClick: function(event){
+            	this.fire("alarm-notice-click", event);
+            },
+            
+            /** [Event Handler] 사용자정보 버튼 클릭 */
+            onUserInfoClick: function(event){
+            	this.visibleUserInfo();
+            	if(!this.fromBodyClick){
+            		this.fromBodyClick = true;
+            		document.body.addEventListener("click", function(e){
+            			if(e.target.classList.contains("personal_icon")){
+            				return;
+            			}
+                		if(!this.$.userInfo.hidden && UT.isNotParentElement(e.target, this.$.userInfo)){
+                			this.userInfoOutsideClick();
+                		}
+                	}.bind(this));
+            	}
+            },
+            
+            /** [Event Handler] 로그아웃 버튼 클릭 */
+            onLogoutClick: function(event){
+            	this.visibleUserInfo();
+            	this.onLogout();
+            },
+            
+            /** [Event Handler] 사용자 정보 변경 클릭 */
+            onClickUserInfoSetting: function(){
+            	this.popupChangeUserInfo();
+            },
+            
+            /** [Event Handler] 알람 버튼 클릭 */
+            onAlarmNoticeClick: function(event){
+            	this.$.alarmNotice.onClickAlertList(event);
+            },
+            
+            /** [Popup] 사용자정보 팝업 */ 
+            popupChangeUserInfo: function() {
+            	SCMdiPopupManager.changeUserInfoPopup();
+            },
+            
+            /** 로그아웃 */
+            onLogout : function() {
+                UT.confirm("STD.MDI1001", function() { // "로그아웃 하시겠습니까?"
+                    this.logout();
+                }.bind(this), function () {
+                    this.logoutEl.focus();
+                    setTimeout(function(){
+                    	this.visibleUserInfo();
+                    }.bind(this), 10);
+                }.bind(this));
+            },
+
+            logout : function() {
+            	if(this._invalidSession) {
+            		location.href = getWebRootPath();
+            	}else{
+	                this.logoutFormEl.submit();
+            	}
+            },
+            
+            /** 사용자 정보 팝업 Outside 클릭 */
+            userInfoOutsideClick: function(){
+            	this.visibleUserInfo();
+            },
+            
+            /** 사용자 정보 팝업 Hidden 처리 */
+            visibleUserInfo: function(){
+            	this.$.userInfo.hidden = !this.$.userInfo.hidden;
+            },
+            
+            currentUserInfo: function(user, locale) {
+				var result = "";
+               var key = '';
+                if(locale !== 'ko_KR'){
+                    key = '_en';
+				}
+				if(user.usr_typ_ccd === 'BUYER'){
+					if(UT.isNotEmpty(user['comp_nm'+key])){
+						result += user['comp_nm'+key] + " | ";
+					}else if(UT.isNotEmpty(user['comp_nm'])){
+						result += user['comp_nm'] + " | ";
+					}
+					if(UT.isNotEmpty(user['dept_nm'+key])){
+						result += user['dept_nm'+key] + " | ";
+					}else if(UT.isNotEmpty(user['dept_nm'])){
+						result += user['dept_nm'] + " | ";
+					}
+				}
+				if(UT.isNotEmpty(user['usr_nm'+key])){
+						result += user['usr_nm'+key];
+				}else if(UT.isNotEmpty(user['usr_nm'])){
+					result += user['usr_nm'];
+				}
+                return result;
+			},
+			
+			selectLocaleName : function(locales, locale) {
+            	var me = this, selectLocale = {};
+        		for(var i = 0,len = locales.length ; i<len ; i++){
+        			if(locales[i]["locale"] === locale){
+        				selectLocale = locales[i];
+        				break;
+        			}
+        		}
+        		return this.translate(selectLocale.displayName);
+            },
+
+			currentUserProfile: function(user){
+				var inputString = user["usr_id"];
+				return inputString.match(/.{1,3}/g)[0];
+			},
+         	// 현재 laguage 에 해당 하는 유저명
+            currentUserNm : function(user, locale) {
+                var key = 'usr_nm';
+                if(locale !== 'ko_KR'){
+                    key = 'usr_en_nm';
+				}
+                return user[key];
+			},
+
+			// 현재 laguage 에 해당 하는 유저명
+            currentUserDept : function(user, locale) {
+				var result = "";
+				var key = '';
+                if(locale !== 'ko_KR'){
+                    key = '_en';
+				}
+				if(UT.isNotEmpty(user['dept_nm'+key])){
+					result = user['dept_nm'+key] ;
+				}else if(UT.isNotEmpty(user['dept_nm'])){
+					result = user['dept_nm'];
+				}
+                return result;
+			},
+			
+			doSessionTimer : function() {
+                var me = this;
+                if(this.sessionTimeoutInterval) {
+                    clearInterval(this.sessionTimeoutInterval);
+                }
+                this._timeout = this.sessionTimeout;
+                this.updateSessionTimer();
+				var initDt = new Date();
+				var isHidden = true;
+				
+                this.sessionTimeoutInterval = setInterval(function() {
+                	this._timeout -= 1000;
+					
+					if(!UT.isEmpty(document.visibilityState) && document.visibilityState === 'visible') {
+						if(isHidden) {
+							var nowDt = new Date();
+							var calTime =  Math.floor((nowDt.getTime() - initDt.getTime()) / 1000);
+							var diffTime = calTime - ((this.sessionTimeout - this._timeout) / 1000);
+							if(diffTime > 0) {
+								this._timeout -= diffTime * 1000;
+							}
+							isHidden = false;
+						}
+					} else {
+						isHidden = true;
+					}
+					
+                	if(this._timeout <= 0) {
+                		this.logoutSession();
+                	}
+                    this.updateSessionTimer();
+                }.bind(this), 1000);
+            },
+			
+			logoutSession : function() {
+				clearInterval(this.sessionTimeoutInterval);
+				UT.alert([this.translate("STD.MDI1002",null, (this.sessionTimeout / 1000 / 60) ) ], function() { // "{0} 분동안 사용하지 않아 로그아웃 됩니다."
+					this._invalidSession = true;
+					this.logout();
+				}.bind(this), true);
+			},
+
+            updateSessionTimer : function() {
+            	this.$.sessionTimer.textContent = moment.utc(this._timeout).format(this.sessionTimeFormat);
+            },
+            
+            /** 특정 엘리먼트가 생성되기전의 사이즈(width:0, height:0)가 Cache에 담기면 계산 오류 발생 */
+            validCacheSizeRect: function(clientRect){
+                if(!clientRect || (!this.validCacheSize(clientRect.width) &&
+                        		   !this.validCacheSize(clientRect.height))){
+                    return false;
+                }else{
+                	return true;
+                }
+            },
+            validCacheSize: function(size){
+                if(!size){
+                    return false;
+                }else{
+                	return true;
+                }
+            },
+          
+            _destroy: function(){
+                clearInterval(this.sessionTimeoutInterval);
+            }
+            
+        });
+		
+	});        
+	</script>
+</dom-module>

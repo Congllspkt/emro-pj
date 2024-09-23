@@ -1,0 +1,1718 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+DAPVL_TBL_DAPVL_APVLLN: 전결결재선
+DAPVL_APVLLN_APVR: 전결결재선 상세
+DAPVL_APVLLN_INPVAR: 전결결재선 조건
+ -->
+
+<mapper namespace="arbitrary-manage">
+
+    <insert id="insertArbitraryHeader">
+    /* arbitrary-manage.insertArbitraryHeader: 전결규정 헤더 등록 */
+    INSERT 
+      INTO APVL_TYP_DAPVL (
+           TEN_ID
+         , DAPVL_UUID
+         , APVL_TYP_CCD
+         , EFCT_ST_DT
+         , EFCT_EXP_DT
+         , DAPVL_CRN_STS_CCD
+         , STS
+         <if test='p.dapvl_crn_sts_ccd != null and p.dapvl_crn_sts_ccd.equals("CNFD")'>
+         , CNFD_DTTM
+         </if>
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_uuid}
+         , #{p.apvl_typ_ccd}
+         , #{p.efct_st_dt}
+         , #{p.efct_exp_dt}
+         , #{p.dapvl_crn_sts_ccd}
+         , 'C'
+         <if test='p.dapvl_crn_sts_ccd != null and p.dapvl_crn_sts_ccd.equals("CNFD")'>
+         , #{g.now} -- 확정
+         </if>
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <insert id="insertArbitraryDetailTable">
+    /* arbitrary-manage.insertArbitraryDetailTable: 전결규정 상세테이블 등록 */
+    INSERT 
+      INTO DAPVL_TBL (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , SORT
+         , DAPVL_TBL_NM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_uuid}
+         , #{p.dapvl_tbl_id}
+         , #{p.sort}
+         , #{p.dapvl_tbl_nm}
+    )
+    </insert>
+
+    <insert id="insertCopyArbitraryDetailTable">
+    /* arbitrary-manage.insertCopyArbitraryDetailTable: 전결규정 상세테이블 복사 */
+    INSERT 
+      INTO DAPVL_TBL (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , SORT
+         , DAPVL_TBL_NM
+    )
+    SELECT TEN_ID
+         , #{p.new_abdsn_hd_id}
+         , DAPVL_TBL_ID
+         , SORT
+         , DAPVL_TBL_NM
+      FROM DAPVL_TBL
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.src_abdsn_hd_id}
+    </insert>
+
+    <insert id="insertArbitraryDetailFactor">
+    /* arbitrary-manage.insertArbitraryDetailFactor: 전결규정 상세항목 등록 */
+    INSERT 
+      INTO DAPVL_TBL_DAPVL_CND_INPVAR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_CND_INPVAR_UUID
+         , SORT
+         , MAND_YN
+    )
+    SELECT TEN_ID
+         , #{p.dapvl_uuid}
+         , DAPVL_TBL_ID
+         , DAPVL_CND_INPVAR_UUID
+         , SORT
+         , MAND_YN
+      FROM APVL_TYP_DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </insert>
+
+    <insert id="insertCopyArbitraryDetailFactor">
+    /* arbitrary-manage.insertCopyArbitraryDetailFactor: 전결규정 상세항목 복사 */
+    INSERT 
+      INTO DAPVL_TBL_DAPVL_CND_INPVAR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_CND_INPVAR_UUID
+         , SORT
+         , MAND_YN
+    )
+    SELECT TEN_ID
+         , #{p.new_abdsn_hd_id}
+         , DAPVL_TBL_ID
+         , DAPVL_CND_INPVAR_UUID
+         , SORT
+         , MAND_YN
+      FROM DAPVL_TBL_DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.src_abdsn_hd_id}
+    </insert>
+
+    <insert id="insertArbitraryAprvLine">
+    /* arbitrary-manage.insertArbitraryAprvLine: 전결규정 전결결재선 등록 */
+    INSERT 
+      INTO DAPVL_TBL_DAPVL_APVLLN (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_APVLLN_NM
+         , DFLT_APVLLN_YN
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_uuid}
+         , #{p.dapvl_tbl_id}
+         , #{p.dapvl_apvlln_id}
+         , #{p.dapvl_apvlln_nm}
+         , #{p.dflt_apvlln_yn}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <insert id="insertCopyArbitraryAprvLine">
+    /* arbitrary-manage.insertCopyArbitraryAprvLine: 전결규정 전결결재선 복사 */
+    INSERT 
+      INTO DAPVL_TBL_DAPVL_APVLLN (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_APVLLN_NM
+         , DFLT_APVLLN_YN
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    )
+    SELECT TEN_ID
+         , #{p.new_abdsn_hd_id}
+         , DAPVL_TBL_ID
+         , #{p.new_dapvl_apvlln_id}
+         , DAPVL_APVLLN_NM
+         , DFLT_APVLLN_YN
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+      FROM DAPVL_TBL_DAPVL_APVLLN
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.src_abdsn_hd_id}
+       AND DAPVL_APVLLN_ID = #{p.src_dapvl_apvlln_id}
+    </insert>
+
+    <insert id="insertArbitraryAprvLineDetail">
+    /* arbitrary-manage.insertArbitraryAprvLineDetail: 전결규정 전결결재선상세 등록 */
+    INSERT 
+      INTO DAPVL_APVLLN_APVR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_APVR_UUID
+         , APVR_TYP_CCD
+         , APVR_JOBTIT_CCD
+         , APVR_SRCH_SCOP_CCD
+         , SORT
+         , APVLLN_MOD_POSS_YN
+         , DAPVL_CND_AMT_RV_YN
+         , DAPVL_CND_AMT
+         , APVR_DEPT_CD
+         , APVR_ID
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_uuid}
+         , #{p.dapvl_tbl_id}
+         , #{p.dapvl_apvlln_id}
+         , #{p.dapvl_apvr_uuid}
+         , #{p.apvr_typ_ccd}
+         , #{p.apvr_jobtit_ccd}
+         , #{p.apvr_srch_scop_ccd}
+         , #{p.sort}
+         , #{p.apvlln_mod_poss_yn}
+         , #{p.dapvl_cnd_amt_rv_yn}
+         , #{p.dapvl_cnd_amt}
+         , #{p.apvr_dept_cd}
+         , #{p.apvr_id}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <insert id="insertCopyArbitraryAprvLineDetail">
+    /* arbitrary-manage.insertCopyArbitraryAprvLineDetail: 전결규정 전결결재선상세 복사 */
+    INSERT 
+      INTO DAPVL_APVLLN_APVR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_APVR_UUID
+         , APVR_TYP_CCD
+         , APVR_JOBTIT_CCD
+         , APVR_SRCH_SCOP_CCD
+         , SORT
+         , APVLLN_MOD_POSS_YN
+         , DAPVL_CND_AMT_RV_YN
+         , DAPVL_CND_AMT
+         , APVR_DEPT_CD
+         , APVR_ID
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    )
+    SELECT TEN_ID
+         , #{p.new_abdsn_hd_id}
+         , DAPVL_TBL_ID
+         , #{p.new_dapvl_apvlln_id}
+         , DAPVL_APVR_UUID
+         , APVR_TYP_CCD
+         , APVR_JOBTIT_CCD
+         , APVR_SRCH_SCOP_CCD
+         , SORT
+         , APVLLN_MOD_POSS_YN
+         , DAPVL_CND_AMT_RV_YN
+         , DAPVL_CND_AMT
+         , APVR_DEPT_CD
+         , APVR_ID
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+      FROM DAPVL_APVLLN_APVR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.src_abdsn_hd_id}
+       AND DAPVL_APVLLN_ID = #{p.src_dapvl_apvlln_id}
+    </insert>
+
+    <insert id="insertArbitraryAprvLineCondition">
+    /* arbitrary-manage.insertArbitraryAprvLineCondition: 전결규정 전결결재선조건 등록 */
+    INSERT 
+      INTO DAPVL_APVLLN_INPVAR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_LNO_UUID
+         , DAPVL_CND_INPVAR_UUID
+         , PARM_KEY_VAL
+         , PARM_NM_VAL
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_uuid}
+         , #{p.dapvl_tbl_id}
+         , #{p.dapvl_apvlln_id}
+         , #{p.dapvl_lno_uuid}
+         , #{p.dapvl_cnd_inpvar_uuid}
+         , #{p.parm_key_val}
+         , #{p.parm_nm_val}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <insert id="insertCopyArbitraryAprvLineCondition">
+    /* arbitrary-manage.insertCopyArbitraryAprvLineCondition: 전결규정 전결결재선조건 복사 */
+    INSERT 
+      INTO DAPVL_APVLLN_INPVAR (
+           TEN_ID
+         , DAPVL_UUID
+         , DAPVL_TBL_ID
+         , DAPVL_APVLLN_ID
+         , DAPVL_LNO_UUID
+         , DAPVL_CND_INPVAR_UUID
+         , PARM_KEY_VAL
+         , PARM_NM_VAL
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    )
+    SELECT TEN_ID
+         , #{p.new_abdsn_hd_id}
+         , DAPVL_TBL_ID
+         , #{p.new_dapvl_apvlln_id}
+         , DAPVL_LNO_UUID
+         , DAPVL_CND_INPVAR_UUID
+         , PARM_KEY_VAL
+         , PARM_NM_VAL
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+      FROM DAPVL_APVLLN_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.src_abdsn_hd_id}
+       AND DAPVL_APVLLN_ID = #{p.src_dapvl_apvlln_id}
+    </insert>
+
+    <!--<update id="updateArbitraryAprvType">
+    /* arbitrary-manage.updateArbitraryAprvType: 전결규정 결재유형 정보 수정 */
+    MERGE INTO CCD_CSTR_CND_VAL A
+    USING (
+          SELECT #{g.tenant}           AS TEN_ID
+               , #{p.aprv_typ_grp_cd}  AS CCD
+               , #{p.apvl_typ_ccd}         AS DTLCD
+               , #{p.cstr_cnd_cd} AS CSTR_CND_CD
+               , CASE #{p.dapvl_use_yn} WHEN 'Y' THEN 'Y' ELSE NULL END AS CSTR_CND_VAL
+               , #{g.username}         AS REGR_ID
+               , #{g.now}              AS REG_DTTM
+            FROM DUM_TBL
+          ) B
+       ON (
+          A.TEN_ID = B.TEN_ID
+          AND A.CCD = B.CCD
+          AND A.DTLCD = B.DTLCD
+          AND A.CSTR_CND_CD = B.CSTR_CND_CD
+          )
+     WHEN MATCHED THEN
+          UPDATE 
+             SET MODR_ID = B.REGR_ID
+               , MOD_DTTM = B.REG_DTTM
+               , CSTR_CND_VAL = B.CSTR_CND_VAL
+               
+     WHEN NOT MATCHED THEN
+          INSERT 
+          ( 
+                TEN_ID
+              , CCD
+              , DTLCD
+              , CSTR_CND_CD
+              , CSTR_CND_VAL
+              , REGR_ID
+              , REG_DTTM
+              , MODR_ID
+              , MOD_DTTM
+          )  
+          VALUES 
+          ( 
+                B.TEN_ID
+              , B.CCD
+              , B.DTLCD
+              , B.CSTR_CND_CD
+              , B.CSTR_CND_VAL
+              , B.REGR_ID
+              , B.REG_DTTM
+              , B.REGR_ID
+              , B.REG_DTTM
+          )
+    </update>
+    -->
+    <select id="getArbitraryAprvType" resultType="map">
+		/* arbitrary-manage.getArbitraryAprvType: */
+		SELECT      TEN_ID
+		          , CCD
+		          , DTLCD
+		          , CSTR_CND_CD
+		          , CSTR_CND_VAL
+		          , REGR_ID
+		          , REG_DTTM
+		          , MODR_ID
+		          , MOD_DTTM
+		          FROM CCD_CSTR_CND_VAL
+		          WHERE TEN_ID = #{g.tenant}
+		          AND CCD = #{p.aprv_typ_grp_cd}
+		          AND DTLCD = #{p.apvl_typ_ccd}
+		          AND CSTR_CND_CD = #{p.dapvl_use_yn_attr_cd}
+	</select>
+
+    <update id="updateArbitraryAprvType">
+        /* arbitrary-manage.updateArbitraryAprvType */
+        UPDATE CCD_CSTR_CND_VAL
+        SET  MODR_ID = #{g.username}
+        , MOD_DTTM =#{g.now}
+        <choose>
+            <when test='p.dapvl_use_yn != null and p.dapvl_use_yn.equals("Y")'>
+                ,CSTR_CND_VAL = 'Y'
+            </when>
+            <otherwise>
+                ,CSTR_CND_VAL = 'N'
+            </otherwise>
+        </choose>
+        WHERE TEN_ID = #{g.tenant}
+        AND CCD = #{p.aprv_typ_grp_cd}
+        AND DTLCD = #{p.apvl_typ_ccd}
+    </update>
+
+
+    <insert id="insertArbitraryAprvType">
+        /* arbitrary-manage.insertArbitraryAprvType */
+        INSERT INTO CCD_CSTR_CND_VAL
+        (
+        TEN_ID
+        , CCD
+        , DTLCD
+        , CSTR_CND_CD
+        , CSTR_CND_VAL
+        , REGR_ID
+        , REG_DTTM
+        , MODR_ID
+        , MOD_DTTM
+        )
+        VALUES
+        (
+        #{g.tenant}
+        , #{p.aprv_typ_grp_cd}
+        , #{p.apvl_typ_ccd}
+        , #{p.cstr_cnd_cd}
+        <choose>
+            <when test='p.dapvl_use_yn != null and p.dapvl_use_yn.equals("Y")'>
+                ,'Y'
+            </when>
+            <otherwise>
+                ,'N'
+            </otherwise>
+        </choose>
+        , #{g.username}
+        , #{g.now}
+        , #{g.username}
+        , #{g.now}
+        )
+    </insert>
+    <update id="updateArbitraryHeader">
+    /* arbitrary-manage.updateArbitraryHeader: 전결규정 헤더 수정 */
+    UPDATE APVL_TYP_DAPVL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , STS = 'U'
+         , APVL_TYP_CCD = #{p.apvl_typ_ccd}
+         , EFCT_ST_DT = #{p.efct_st_dt}
+         , EFCT_EXP_DT = #{p.efct_exp_dt}
+         , DAPVL_CRN_STS_CCD = #{p.dapvl_crn_sts_ccd}
+         <choose>
+         <when test='p.dapvl_crn_sts_ccd != null and p.dapvl_crn_sts_ccd.equals("CNFD")'>
+         , CNFD_DTTM = #{g.now} -- 확정
+         </when>
+         <otherwise>
+         , CNFD_DTTM = NULL
+         </otherwise>
+         </choose>
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+    </update>
+    
+    <update id="updateArbitraryHeaderApplyEd">
+    /* arbitrary-manage.updateArbitraryHeaderApplyEd: 전결규정 헤더 수정 - 적용종료일 */
+    UPDATE APVL_TYP_DAPVL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , STS = 'U'
+         , EFCT_EXP_DT = #{p.efct_exp_dt}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+    </update>
+    
+    <update id="updateArbitraryDetailTable">
+    /* arbitrary-manage.updateArbitraryDetailTable: 전결규정 상세테이블 수정 */
+    UPDATE DAPVL_TBL
+       SET SORT = #{p.sort}
+         , DAPVL_TBL_NM = #{p.dapvl_tbl_nm}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </update>
+    
+    <update id="updateArbitraryAprvLine">
+    /* arbitrary-manage.updateArbitraryAprvLine: 전결규정 전결결재선 수정 */
+    UPDATE DAPVL_TBL_DAPVL_APVLLN
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , DAPVL_APVLLN_NM = #{p.dapvl_apvlln_nm}
+         , DFLT_APVLLN_YN = #{p.dflt_apvlln_yn}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+    </update>
+    
+    <update id="updateArbitraryAprvLineBasAprvlnOff">
+    /* arbitrary-manage.updateArbitraryAprvLineBasAprvlnOff: 전결규정 전결결재선 수정 - 기본결재선 여부 선택 해재 */
+    UPDATE DAPVL_TBL_DAPVL_APVLLN
+       SET DFLT_APVLLN_YN = 'N'
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_APVLLN_ID != #{p.dapvl_apvlln_id}
+    </update>
+    
+    <update id="updateArbitraryAprvLineDetail">
+    /* arbitrary-manage.updateArbitraryAprvLineDetail: 전결규정 전결결재선상세 수정 */
+    UPDATE DAPVL_APVLLN_APVR
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , APVR_TYP_CCD = #{p.apvr_typ_ccd}
+         , APVR_JOBTIT_CCD = #{p.apvr_jobtit_ccd}
+         , APVR_SRCH_SCOP_CCD = #{p.apvr_srch_scop_ccd}
+         , SORT = #{p.sort}
+         , APVLLN_MOD_POSS_YN = #{p.apvlln_mod_poss_yn}
+         , DAPVL_CND_AMT_RV_YN = #{p.dapvl_cnd_amt_rv_yn}
+         , DAPVL_CND_AMT = #{p.dapvl_cnd_amt}
+         , APVR_DEPT_CD = #{p.apvr_dept_cd}
+         , APVR_ID = #{p.apvr_id}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+       AND DAPVL_APVR_UUID = #{p.dapvl_apvr_uuid}
+    </update>
+    
+    <update id="deleteArbitraryHeader">
+    /* arbitrary-manage.deleteArbitraryHeader: 전결규정 헤더 삭제 */
+    UPDATE APVL_TYP_DAPVL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , STS = 'D'
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+    </update>
+
+    <delete id="deleteArbitraryDetailTable">
+    /* arbitrary-manage.deleteArbitraryDetailTable: 전결규정 상세테이블 삭제 */
+    DELETE 
+      FROM DAPVL_TBL
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <delete id="deleteArbitraryDetailFactorByTableId">
+    /* arbitrary-manage.deleteArbitraryDetailFactorByTableId: 전결규정 상세테이블 항목 삭제 - by dapvl_tbl_id */
+    DELETE 
+      FROM DAPVL_TBL_DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLine">
+    /* arbitrary-manage.deleteArbitraryAprvLine: 전결규정 전결결재선 삭제 - 개별 */
+    DELETE 
+      FROM DAPVL_TBL_DAPVL_APVLLN
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineByTableId">
+    /* arbitrary-manage.deleteArbitraryAprvLineByTableId: 전결규정 전결결재선 삭제 - by dapvl_tbl_id */
+    DELETE 
+      FROM DAPVL_TBL_DAPVL_APVLLN
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineDetail">
+    /* arbitrary-manage.deleteArbitraryAprvLineDetail: 전결규정 전결결재선 상세 삭제 - 개별 */
+    DELETE 
+      FROM DAPVL_APVLLN_APVR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+       AND DAPVL_APVR_UUID = #{p.dapvl_apvr_uuid}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineDetailByLineId">
+    /* arbitrary-manage.deleteArbitraryAprvLineDetailByLineId: 전결규정 전결결재선 상세 삭제 - by dapvl_apvlln_id */
+    DELETE 
+      FROM DAPVL_APVLLN_APVR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineDetailByTableId">
+    /* arbitrary-manage.deleteArbitraryAprvLineDetailByTableId: 전결규정 전결결재선 상세 삭제 - by dapvl_tbl_id */
+    DELETE 
+      FROM DAPVL_APVLLN_APVR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineCondition">
+    /* arbitrary-manage.deleteArbitraryAprvLineCondition: 전결규정 전결결재선 조건 삭제 - 개별 */
+    DELETE 
+      FROM DAPVL_APVLLN_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+       AND DAPVL_LNO_UUID = #{p.dapvl_lno_uuid}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineConditionByLineId">
+    /* arbitrary-manage.deleteArbitraryAprvLineConditionByLineId: 전결규정 전결결재선 조건 삭제 - by dapvl_apvlln_id */
+    DELETE 
+      FROM DAPVL_APVLLN_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+    </delete>
+
+    <delete id="deleteArbitraryAprvLineConditionByTableId">
+    /* arbitrary-manage.deleteArbitraryAprvLineConditionByTableId: 전결규정 전결결재선 조건 삭제 - by dapvl_tbl_id */
+    DELETE 
+      FROM DAPVL_APVLLN_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_UUID = #{p.dapvl_uuid}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+
+
+
+
+    <select id="selectListArbitraryAprvType" resultType="map">
+    /* arbitrary-manage.selectListArbitraryAprvType: 전결규정 결재유형 목록 */
+    WITH 
+    HEADER AS (
+        SELECT APVL_TYP_CCD
+             , MIN(EFCT_ST_DT) AS EFCT_ST_DT
+          FROM APVL_TYP_DAPVL
+         WHERE TEN_ID = #{g.tenant}
+           AND STS != 'D'
+           AND DAPVL_CRN_STS_CCD = 'CNFD'
+           AND EFCT_EXP_DT >= #{g.now}
+         GROUP
+            BY APVL_TYP_CCD
+    )
+    SELECT DT.TEN_ID
+         , DT.CCD AS APRV_TYP_GRP_CD
+         , DT.DTLCD AS APVL_TYP_CCD
+         , DL.DTLCD_NM AS CTMPL_NM
+         , DT.DTLCD_SORT
+         , (SELECT COUNT(*)
+              FROM APVL_TYP_DAPVL HD
+             WHERE HD.TEN_ID = DT.TEN_ID
+               AND HD.APVL_TYP_CCD = DT.DTLCD
+               AND HD.STS != 'D'
+           ) AS HEADER_COUNT
+         , HD.EFCT_ST_DT
+         , DTAT.CSTR_CND_VAL AS DAPVL_USE_YN
+         , 'DAPVL_USE_YN' AS DAPVL_USE_YN_ATTR_CD
+      FROM DTLCD DT
+     INNER JOIN DTLCD_MULTLANG DL
+        ON DT.TEN_ID = DL.TEN_ID
+       AND DT.CCD = DL.CCD
+       AND DT.DTLCD = DL.DTLCD
+       AND DL.LANG_CCD = #{g.locale}
+       <if test='p.ctmpl_nm != null and p.ctmpl_nm != ""'>
+           <bind name="DTLCD_NM" value="'%' + p.ctmpl_nm + '%'" />
+       AND UPPER(DL.DTLCD_NM) LIKE UPPER(#{DTLCD_NM})
+       </if>
+      LEFT OUTER JOIN CCD_CSTR_CND_VAL DTAT
+        ON DL.TEN_ID = DTAT.TEN_ID
+       AND DL.CCD = DTAT.CCD
+       AND DL.DTLCD = DTAT.DTLCD
+       AND DTAT.CSTR_CND_CD = 'DAPVL_USE_YN'
+      LEFT OUTER JOIN HEADER HD
+        ON DT.DTLCD = HD.APVL_TYP_CCD
+     WHERE DT.TEN_ID = #{g.tenant}
+       AND DT.USE_YN = 'Y'
+       AND DT.STS != 'D'
+       AND DT.CCD = 'G003' -- 결재유형
+       <if test='p.dapvl_use_yn != null and p.dapvl_use_yn != ""'>
+       AND DTAT.CSTR_CND_VAL = #{p.dapvl_use_yn}
+       </if>
+     ORDER 
+        BY DT.DTLCD_SORT ASC
+    </select>
+
+    <select id="selectArbitraryHeaderAvailApplySd" resultType="map">
+        <bind name="NOW" value="g.getDateWithNoTime(g.now)" />
+    /* arbitrary-manage.selectArbitraryHeaderAvailApplySd: 전결규정 헤더 가능 적용 시작 일자 */
+    SELECT (
+           SELECT MAX(ABHD.EFCT_ST_DT)
+             FROM APVL_TYP_DAPVL ABHD
+            WHERE ABHD.TEN_ID = #{g.tenant}
+              AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+              AND ABHD.STS != 'D'
+              AND ABHD.DAPVL_CRN_STS_CCD = 'CNFD' /* 확정 */
+           ) AS LAST_APPLY_SD
+         , #{NOW} AS TODAY_APPLY_SD
+      FROM DUM_TBL
+    </select>
+    
+    <select id="selectArbitraryHeader" resultType="map">
+    /* arbitrary-manage.selectArbitraryHeader: 전결규정 헤더 정보 */
+    SELECT ABHD.TEN_ID
+         , ABHD.DAPVL_UUID
+         , ABHD.APVL_TYP_CCD
+         , ABHD.EFCT_ST_DT
+         , ABHD.EFCT_EXP_DT
+         , ABHD.DAPVL_CRN_STS_CCD
+         , ABHD.STS
+         , ABHD.CNFD_DTTM
+         , ABHD.REGR_ID
+         , ABHD.REG_DTTM
+         , ABHD.MODR_ID
+         , ABHD.MOD_DTTM
+         , CASE WHEN ABHD.DAPVL_CRN_STS_CCD = 'CNFD' AND #{g.now} >= ABHD.EFCT_ST_DT THEN 'Y'
+           ELSE 'N' END AS STARTED_YN
+         , CASE WHEN ABHD.DAPVL_CRN_STS_CCD = 'CNFD' AND #{g.now} > ABHD.EFCT_EXP_DT THEN 'Y'
+           ELSE 'N' END AS ENDED_YN
+      FROM APVL_TYP_DAPVL ABHD
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.DAPVL_UUID = #{p.dapvl_uuid}
+    </select>
+
+    <select id="selectListArbitraryHeader" resultType="map">
+    /* arbitrary-manage.selectListArbitraryHeader: 전결규정 헤더 목록 */
+    SELECT ABHD.TEN_ID
+         , ABHD.DAPVL_UUID
+         , ABHD.APVL_TYP_CCD
+         , ABHD.EFCT_ST_DT
+         , ABHD.EFCT_EXP_DT
+         , ABHD.DAPVL_CRN_STS_CCD
+         , ABHD.STS
+         , ABHD.CNFD_DTTM
+         , ABHD.REGR_ID
+         , ABHD.REG_DTTM
+         , ABHD.MODR_ID
+         , ABHD.MOD_DTTM
+         , ABAL.DAPVL_APVLLN_NM
+         , CASE WHEN ABHD.DAPVL_CRN_STS_CCD = 'CNFD' AND #{g.now} >= ABHD.EFCT_ST_DT THEN 'Y'
+           ELSE 'N' END AS STARTED_YN
+         , CASE WHEN ABHD.DAPVL_CRN_STS_CCD = 'CNFD' AND #{g.now} > ABHD.EFCT_EXP_DT THEN 'Y'
+           ELSE 'N' END AS ENDED_YN
+         , USR.USR_NM AS MODR_NM
+      FROM APVL_TYP_DAPVL ABHD
+      LEFT OUTER JOIN DAPVL_TBL_DAPVL_APVLLN ABAL
+        ON ABHD.TEN_ID = ABAL.TEN_ID
+       AND ABHD.DAPVL_UUID = ABAL.DAPVL_UUID
+       AND ABAL.DFLT_APVLLN_YN = 'Y'
+      LEFT OUTER JOIN USR USR
+        ON ABHD.TEN_ID = USR.TEN_ID
+       AND ABHD.MODR_ID = USR.USR_ID
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND ABHD.STS != 'D'
+     ORDER 
+        BY ABHD.EFCT_ST_DT DESC
+    </select>
+    
+    <select id="selectListArbitraryDetailTable" resultType="map">
+    /* arbitrary-manage.selectListArbitraryDetailTable: 전결규정 상세테이블 목록 */
+    SELECT ABDT.TEN_ID
+         , ABDT.DAPVL_UUID
+         , ABDT.DAPVL_TBL_ID
+         , ABDT.DAPVL_TBL_NM
+         , ABDT.SORT
+         , ABTB.DAPVL_TBL_EXPLN
+         , (SELECT COUNT(*)
+              FROM DAPVL_TBL_DAPVL_CND_INPVAR DF
+             WHERE DF.TEN_ID = ABDT.TEN_ID
+               AND DF.DAPVL_UUID = ABDT.DAPVL_UUID
+               AND DF.DAPVL_TBL_ID = ABDT.DAPVL_TBL_ID
+           ) AS FACT_COUNT
+         , (SELECT COUNT(*)
+              FROM DAPVL_TBL_DAPVL_APVLLN AL
+             WHERE AL.TEN_ID = ABDT.TEN_ID
+               AND AL.DAPVL_UUID = ABDT.DAPVL_UUID
+               AND AL.DAPVL_TBL_ID = ABDT.DAPVL_TBL_ID
+           ) AS LINE_COUNT
+      FROM DAPVL_TBL ABDT
+     INNER JOIN APVL_TYP_DAPVL_TBL ABTB
+        ON ABDT.TEN_ID = ABTB.TEN_ID
+       AND ABDT.DAPVL_TBL_ID = ABTB.DAPVL_TBL_ID
+     WHERE ABDT.TEN_ID = #{g.tenant}
+       AND ABDT.DAPVL_UUID = #{p.dapvl_uuid}
+     ORDER 
+        BY ABDT.SORT ASC
+    </select>
+
+    <select id="selectListArbitraryDetailFactor" resultType="map">
+    /* arbitrary-table.selectListTableFactor: 전결규정 상세테이블 항목 목록 */
+    SELECT ABDF.TEN_ID
+         , ABDF.DAPVL_UUID
+         , ABDF.DAPVL_TBL_ID
+         , ABDF.DAPVL_CND_INPVAR_UUID
+         , ABDF.SORT
+         , ABDF.MAND_YN
+         , ABFT.DAPVL_CND_INPVAR_NM
+         , ABFT.PARM_KEY
+         , ABFT.PARM_NM
+         , ABFT.SCR_TYP_CCD
+         , ABFT.DAPVL_CND_INPVAR_CCD
+         , ABFT.DAPVL_CND_INPVAR_FROM_ID
+         , ABFT.DAPVL_CND_INPVAR_FROM_NM
+         , ABFT.DAPVL_CND_INPVAR_VAL
+         , ABFT.DAPVL_CND_INPVAR_EXPLN
+         , DTAT.CSTR_CND_VAL AS SQL_ID
+         , ABFT.PARNODE_PARM_KEY
+      FROM DAPVL_TBL_DAPVL_CND_INPVAR ABDF
+     INNER JOIN DAPVL_CND_INPVAR ABFT
+        ON ABDF.TEN_ID = ABFT.TEN_ID
+       AND ABDF.DAPVL_CND_INPVAR_UUID = ABFT.DAPVL_CND_INPVAR_UUID
+      LEFT JOIN CCD_CSTR_CND_VAL DTAT
+        ON ABFT.TEN_ID = DTAT.TEN_ID
+       AND ABFT.DAPVL_CND_INPVAR_CCD = DTAT.DTLCD
+       AND DTAT.CCD = 'G009'
+       AND DTAT.CSTR_CND_CD = 'SQL_ID'
+     WHERE ABDF.TEN_ID = #{g.tenant}
+       AND ABDF.DAPVL_UUID = #{p.dapvl_uuid}
+       AND ABDF.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+     ORDER
+        BY ABDF.SORT ASC
+    </select>
+
+    <select id="selectArbitraryHeaderByApplyEd" resultType="map">
+    /* arbitrary-manage.selectArbitraryHeaderByApplyEd: 전결규정 헤더 - 적용종료일 기준 */
+    SELECT ABHD.TEN_ID
+         , ABHD.DAPVL_UUID
+         , ABHD.APVL_TYP_CCD
+         , ABHD.EFCT_ST_DT
+         , ABHD.EFCT_EXP_DT
+         , ABHD.DAPVL_CRN_STS_CCD
+         , ABHD.STS
+         , ABHD.CNFD_DTTM
+      FROM APVL_TYP_DAPVL ABHD
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND ABHD.DAPVL_CRN_STS_CCD = 'CNFD'
+       AND ABHD.STS != 'D'
+       AND ABHD.EFCT_EXP_DT = #{p.efct_exp_dt}
+    </select>
+    
+    <select id="selectArbitraryAprvLine" resultType="map">
+    /* arbitrary-manage.selectArbitraryAprvLine: 전결규정 전결결재선 정보 */
+    SELECT ABAL.TEN_ID
+         , ABAL.DAPVL_UUID
+         , ABAL.DAPVL_TBL_ID
+         , ABAL.DAPVL_APVLLN_ID
+         , ABAL.DAPVL_APVLLN_NM
+         , ABAL.DFLT_APVLLN_YN
+         , ABAL.REGR_ID
+         , ABAL.REG_DTTM
+         , ABAL.MODR_ID
+         , ABAL.MOD_DTTM
+      FROM DAPVL_TBL_DAPVL_APVLLN ABAL
+     WHERE ABAL.TEN_ID = #{g.tenant}
+       AND ABAL.DAPVL_UUID = #{p.dapvl_uuid}
+       AND ABAL.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND ABAL.DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+    </select>
+
+    <select id="selectListArbitraryAprvLineByHeaderId" resultType="map">
+    /* arbitrary-manage.selectListArbitraryAprvLineByHeaderId: 전결규정 전결결재선 목록 */
+    SELECT ABAL.TEN_ID
+         , ABAL.DAPVL_UUID
+         , ABAL.DAPVL_TBL_ID
+         , ABAL.DAPVL_APVLLN_ID
+         , ABAL.DAPVL_APVLLN_NM
+         , ABAL.DFLT_APVLLN_YN
+      FROM DAPVL_TBL_DAPVL_APVLLN ABAL
+     WHERE ABAL.TEN_ID = #{g.tenant}
+       AND ABAL.DAPVL_UUID = #{p.dapvl_uuid}
+     ORDER
+        BY ABAL.DAPVL_TBL_ID ASC
+         , ABAL.DAPVL_APVLLN_ID ASC
+    </select>
+    
+    <resultMap id="selectListArbitraryAprvLineWithDetailResultMap" type="java.util.HashMap">
+        <id property="dapvl_uuid" column="DAPVL_UUID"/>
+        <id property="dapvl_tbl_id" column="DAPVL_TBL_ID"/>
+        <id property="dapvl_apvlln_id" column="DAPVL_APVLLN_ID"/>
+        <result property="dapvl_apvlln_nm" column="DAPVL_APVLLN_NM"/>
+        <result property="dflt_apvlln_yn" column="DFLT_APVLLN_YN"/>
+        <result property="cond_count" column="COND_COUNT"/>
+        <collection property="aprv_line_details" javaType="java.util.ArrayList" resultMap="selectListArbitraryAprvLineDetailResultMap"/>
+    </resultMap>
+    <resultMap id="selectListArbitraryAprvLineDetailResultMap" type="java.util.HashMap">
+        <result property="dapvl_apvr_uuid" column="DAPVL_APVR_UUID"/>
+        <result property="apvr_typ_ccd" column="APVR_TYP_CCD"/>
+        <result property="apvr_jobtit_ccd" column="APVR_JOBTIT_CCD"/>
+        <result property="apvr_id" column="APVR_ID"/>
+        <result property="aprver_usr_nm" column="APRVER_USR_NM"/>
+        <result property="apvr_dept_cd" column="APVR_DEPT_CD"/>
+        <result property="aprver_dept_nm" column="APRVER_DEPT_NM"/>
+        <result property="apvr_srch_scop_ccd" column="APVR_SRCH_SCOP_CCD"/>
+        <result property="sort" column="SORT"/>
+        <result property="apvlln_mod_poss_yn" column="APVLLN_MOD_POSS_YN"/>
+        <result property="dapvl_cnd_amt_rv_yn" column="DAPVL_CND_AMT_RV_YN"/>
+        <result property="dapvl_cnd_amt" column="DAPVL_CND_AMT"/>
+    </resultMap>
+    <select id="selectListArbitraryAprvLineWithDetail" resultMap="selectListArbitraryAprvLineWithDetailResultMap">
+    /* arbitrary-manage.selectListArbitraryAprvLineWithDetail: 전결규정 전결결재선 목록 */
+    SELECT ABAL.TEN_ID
+         , ABAL.DAPVL_UUID
+         , ABAL.DAPVL_TBL_ID
+         , ABAL.DAPVL_APVLLN_ID
+         , ABAL.DAPVL_APVLLN_NM
+         , ABAL.DFLT_APVLLN_YN
+         , ABAL.COND_COUNT
+         , ABLN.DAPVL_APVR_UUID
+         , ABLN.APVR_TYP_CCD
+         , ABLN.APVR_JOBTIT_CCD
+         , ABLN.APVR_SRCH_SCOP_CCD
+         , ABLN.SORT
+         , ABLN.APVLLN_MOD_POSS_YN
+         , ABLN.DAPVL_CND_AMT_RV_YN
+         , ABLN.DAPVL_CND_AMT
+         , ABLN.APVR_ID
+         , ABLN.APVR_DEPT_CD
+         , USR.USR_NM AS APRVER_USR_NM
+         , DEPT.DEPT_NM AS APRVER_DEPT_NM
+      FROM (
+            SELECT AL.TEN_ID
+                 , AL.DAPVL_UUID
+                 , AL.DAPVL_TBL_ID
+                 , AL.DAPVL_APVLLN_ID
+                 , AL.DAPVL_APVLLN_NM
+                 , AL.DFLT_APVLLN_YN
+                 , (SELECT COUNT(DISTINCT LC.DAPVL_LNO_UUID)
+                      FROM DAPVL_APVLLN_INPVAR LC
+                     WHERE LC.TEN_ID = AL.TEN_ID
+                       AND LC.DAPVL_UUID = AL.DAPVL_UUID
+                       AND LC.DAPVL_TBL_ID = AL.DAPVL_TBL_ID
+                       AND LC.DAPVL_APVLLN_ID = AL.DAPVL_APVLLN_ID
+                   ) AS COND_COUNT
+              FROM DAPVL_TBL_DAPVL_APVLLN AL
+             WHERE AL.TEN_ID = #{g.tenant}
+               AND AL.DAPVL_UUID = #{p.dapvl_uuid}
+               AND AL.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+           ) ABAL
+      LEFT OUTER JOIN DAPVL_APVLLN_APVR ABLN
+        ON ABAL.TEN_ID = ABLN.TEN_ID
+       AND ABAL.DAPVL_UUID = ABLN.DAPVL_UUID
+       AND ABAL.DAPVL_TBL_ID = ABLN.DAPVL_TBL_ID
+       AND ABAL.DAPVL_APVLLN_ID = ABLN.DAPVL_APVLLN_ID
+      LEFT OUTER JOIN USR USR
+       ON ABLN.TEN_ID = USR.TEN_ID
+       AND ABLN.APVR_ID = USR.USR_ID
+      LEFT OUTER JOIN DEPT DEPT
+            ON ABLN.TEN_ID = DEPT.TEN_ID
+           AND ABLN.APVR_DEPT_CD = DEPT.DEPT_CD
+           AND DEPT.USE_YN ='Y'
+     ORDER
+        BY ABAL.DAPVL_TBL_ID ASC
+         , ABAL.DAPVL_APVLLN_ID ASC
+         , ABLN.SORT ASC
+    </select>
+
+    <select id="selectListArbitraryAprvLineDetail" resultType="map">
+    /* arbitrary-manage.selectListArbitraryAprvLineDetail: 전결규정 전결결재선상세 목록 */
+    SELECT ABLN.TEN_ID
+         , ABLN.DAPVL_UUID
+         , ABLN.DAPVL_TBL_ID
+         , ABLN.DAPVL_APVLLN_ID
+         , ABLN.DAPVL_APVR_UUID
+         , ABLN.APVR_TYP_CCD
+         , ABLN.APVR_JOBTIT_CCD
+         , ABLN.APVR_SRCH_SCOP_CCD
+         , ABLN.SORT
+         , ABLN.APVLLN_MOD_POSS_YN
+         , ABLN.DAPVL_CND_AMT_RV_YN
+         , ABLN.DAPVL_CND_AMT
+         , ABLN.APVR_DEPT_CD
+         , OGDP.DEPT_NM AS APRVER_DEPT_NM
+         , ABLN.APVR_ID
+         , USR.USR_NM AS APRVER_USER_NM
+      FROM DAPVL_APVLLN_APVR ABLN
+      LEFT OUTER JOIN USR USR
+      ON (ABLN.TEN_ID = USR.TEN_ID
+      AND ABLN.APVR_ID = USR.USR_ID
+      AND USR.STS != 'D')
+      LEFT OUTER JOIN DEPT OGDP
+      ON (ABLN.TEN_ID = OGDP.TEN_ID
+      AND ABLN.APVR_DEPT_CD = OGDP.DEPT_CD
+      AND OGDP.USE_YN = 'Y')
+     WHERE ABLN.TEN_ID = #{g.tenant}
+       AND ABLN.DAPVL_UUID = #{p.dapvl_uuid}
+       AND ABLN.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND ABLN.DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+     ORDER
+        BY ABLN.SORT ASC
+    </select>
+    
+    <resultMap id="selectListArbitraryAprvLineConditionMap" type="java.util.HashMap">
+        <id property="dapvl_uuid" column="DAPVL_UUID"/>
+        <id property="dapvl_tbl_id" column="DAPVL_TBL_ID"/>
+        <id property="dapvl_apvlln_id" column="DAPVL_APVLLN_ID"/>
+        <id property="dapvl_lno_uuid" column="DAPVL_LNO_UUID"/>
+        <collection property="children" javaType="java.util.ArrayList" resultMap="selectListArbitraryAprvLineConditionChildrenMap"/>
+    </resultMap>
+    <resultMap id="selectListArbitraryAprvLineConditionChildrenMap" type="java.util.HashMap">
+        <id property="dapvl_cnd_inpvar_uuid" column="DAPVL_CND_INPVAR_UUID"/>
+        <result property="parm_key_val" column="PARM_KEY_VAL"/>
+        <result property="parm_nm_val" column="PARM_NM_VAL"/>
+    </resultMap>
+    <select id="selectListArbitraryAprvLineCondition" resultMap="selectListArbitraryAprvLineConditionMap">
+    /* arbitrary-manage.selectListArbitraryAprvLineCondition: 전결규정 전결결재선조건 목록 */
+    SELECT ABLC.TEN_ID
+         , ABLC.DAPVL_UUID
+         , ABLC.DAPVL_TBL_ID
+         , ABLC.DAPVL_APVLLN_ID
+         , ABLC.DAPVL_LNO_UUID
+         , ABLC.DAPVL_CND_INPVAR_UUID
+         , ABLC.PARM_KEY_VAL
+         , ABLC.PARM_NM_VAL
+      FROM DAPVL_APVLLN_INPVAR ABLC
+     WHERE ABLC.TEN_ID = #{g.tenant}
+       AND ABLC.DAPVL_UUID = #{p.dapvl_uuid}
+       AND ABLC.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND ABLC.DAPVL_APVLLN_ID = #{p.dapvl_apvlln_id}
+     ORDER
+        BY ABLC.PARM_KEY_VAL ASC
+    </select>
+    
+    <resultMap id="selectListCountArbitraryAprvLineCondition-resultMap" type="java.util.HashMap">
+        <result property="cnt" column="CNT" javaType="integer"/>
+    </resultMap>
+    
+    <select id="selectListCountArbitraryAprvLineCondition" resultMap="selectListCountArbitraryAprvLineCondition-resultMap">
+    /* arbitrary-manage.selectListCountArbitraryAprvLineCondition: 전결규정 전결결재선조건 카운트 - 조건 추가시 중복 검사 */
+    SELECT COUNT(*) AS CNT
+         , ABLC.DAPVL_LNO_UUID
+      FROM DAPVL_APVLLN_INPVAR ABLC
+     WHERE ABLC.TEN_ID = #{g.tenant}
+       AND ABLC.DAPVL_UUID = #{p.dapvl_uuid}
+       AND ABLC.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       <foreach collection="p.factors" item="factor" separator="OR" open="AND (" close=")">
+           <choose>
+           <when test='factor.parm_key_val != null and factor.parm_key_val != ""'>
+           ( ABLC.DAPVL_CND_INPVAR_UUID = #{factor.dapvl_cnd_inpvar_uuid} AND ABLC.PARM_KEY_VAL = #{factor.parm_key_val} )
+           </when>
+           <otherwise>
+           ( ABLC.DAPVL_CND_INPVAR_UUID = #{factor.dapvl_cnd_inpvar_uuid} AND ABLC.PARM_KEY_VAL IS NULL )
+           </otherwise>
+           </choose>
+       </foreach>
+     GROUP
+        BY ABLC.DAPVL_LNO_UUID
+    </select>
+
+    <select id="selectArbitrayYnByAprvType" resultType="map">
+    /* arbitrary-manage.selectArbitrayYnByAprvType: 결재유형의 전결적용여부 */
+    SELECT DTAT.CSTR_CND_VAL AS ARBITRARY_YN
+      FROM DTLCD DT
+     INNER JOIN CCD_CSTR_CND_VAL DTAT
+        ON DT.TEN_ID = DTAT.TEN_ID
+       AND DT.CCD = DTAT.CCD
+       AND DT.DTLCD = DTAT.DTLCD
+       AND DTAT.CSTR_CND_CD = 'DAPVL_USE_YN'
+       AND DTAT.CSTR_CND_VAL = 'Y'
+     WHERE DT.TEN_ID = #{g.tenant}
+       AND DT.DTLCD = #{p.apvl_typ_ccd}
+       AND DT.USE_YN = 'Y'
+       AND DT.STS != 'D'
+       AND DT.CCD = 'G003' -- 결재유형
+    </select>
+    
+    <select id="selectListApplyDefaultLineByAprvType" resultType="map">
+    /* arbitrary-manage.selectListApplyDefaultLineByAprvType: 결재유형의 기본전결결재선 목록 */
+    WITH
+    <include refid="arbitrary-manage.APRV_USER"/>
+    SELECT ABDT.TEN_ID
+         , ABDT.DAPVL_UUID
+         , ABDT.DAPVL_TBL_ID
+         , ABDT.SORT AS TB_ORD_NO
+         , ABAL.DAPVL_APVLLN_ID
+         , ABAL.DFLT_APVLLN_YN
+         , ABLN.DAPVL_APVR_UUID
+         , ABLN.APVR_TYP_CCD
+         , ABLN.APVR_JOBTIT_CCD
+         , ABLN.APVR_SRCH_SCOP_CCD
+         , ABLN.SORT AS LINE_ORD_NO
+         , ABLN.APVLLN_MOD_POSS_YN
+         , ABLN.DAPVL_CND_AMT_RV_YN
+         , ABLN.DAPVL_CND_AMT
+         , CUSR.USR_ID AS C_USR_ID
+         , CUSR.USR_NM AS C_USR_NM
+         , CUSR.DEPT_CD AS C_DEPT_CD
+         , CUSR.DEPT_NM AS C_DEPT_NM
+         , CUSR.POSI_CCD AS C_POS_CD
+         
+         , DUSR.USR_ID AS D_USR_ID
+         , DUSR.USR_NM AS D_USR_NM
+         , DUSR.DEPT_CD AS D_DEPT_CD
+         , DUSR.DEPT_NM AS D_DEPT_NM
+         , DUSR.POSI_CCD AS D_POS_CD
+         
+         , COMUSR.USR_ID AS OD_USR_ID
+         , COMUSR.USR_NM AS OD_USR_NM
+         , COMUSR.DEPT_CD AS OD_DEPT_CD
+         , COMUSR.DEPT_NM AS OD_DEPT_NM
+         , COMUSR.POSI_CCD AS OD_POS_CD
+         
+         , USR.USR_ID AS A_USR_ID
+         , USR.USR_NM AS A_USR_NM
+         , USR.DEPT_CD AS A_DEPT_CD
+         , USR.DEPT_NM AS A_DEPT_NM
+         , USR.POSI_CCD AS A_POS_CD
+         
+         , ICUSR.USR_ID AS IC_USR_ID
+         , ICUSR.USR_NM AS IC_USR_NM
+         , ICUSR.DEPT_CD AS IC_DEPT_CD
+         , ICUSR.DEPT_NM AS IC_DEPT_NM
+         , ICUSR.POSI_CCD AS IC_POS_CD
+         
+         , CDEPT.USR_ID AS CD_USR_ID
+         , CDEPT.USR_NM AS CD_USR_NM
+         , CDEPT.DEPT_CD AS CD_DEPT_CD
+         , CDEPT.DEPT_NM AS CD_DEPT_NM
+         , CDEPT.POSI_CCD AS CD_POS_CD
+         
+      FROM APVL_TYP_DAPVL ABHD
+     INNER JOIN DAPVL_TBL ABDT
+        ON ABHD.TEN_ID = ABDT.TEN_ID
+       AND ABHD.DAPVL_UUID = ABDT.DAPVL_UUID
+     INNER JOIN DAPVL_TBL_DAPVL_APVLLN ABAL
+        ON ABDT.TEN_ID = ABAL.TEN_ID
+       AND ABDT.DAPVL_UUID = ABAL.DAPVL_UUID
+       AND ABDT.DAPVL_TBL_ID = ABAL.DAPVL_TBL_ID
+       AND ABAL.DFLT_APVLLN_YN = 'Y'
+     INNER JOIN DAPVL_APVLLN_APVR ABLN
+        ON ABAL.TEN_ID = ABLN.TEN_ID
+       AND ABAL.DAPVL_UUID = ABLN.DAPVL_UUID
+       AND ABAL.DAPVL_TBL_ID = ABLN.DAPVL_TBL_ID
+       AND ABAL.DAPVL_APVLLN_ID = ABLN.DAPVL_APVLLN_ID
+     LEFT OUTER JOIN COMP_USER CUSR
+        ON ABLN.TEN_ID = CUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = CUSR.APVR_JOBTIT_CCD
+       AND CUSR.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD IN ('COWD','DFTR_DEPT','DEPT_DES')
+       
+      LEFT OUTER JOIN DEPT_USER DUSR
+        ON ABLN.TEN_ID = DUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = DUSR.APVR_JOBTIT_CCD
+       AND DUSR.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD IN ('COWD','DFTR_DEPT')
+       
+      LEFT OUTER JOIN COMP_USER COMUSR
+        ON ABLN.TEN_ID = COMUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = COMUSR.APVR_JOBTIT_CCD
+       AND COMUSR.RANK = '1'
+       AND COMUSR.DEPT_CD = ABLN.APVR_DEPT_CD
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'DEPT_DES'
+       
+      LEFT OUTER JOIN APPRVER_USER USR
+        ON ABLN.TEN_ID = USR.TEN_ID
+       AND ABLN.APVR_ID = USR.USR_ID
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'APVR_DES'
+       
+      LEFT OUTER JOIN APPRVER_USER ICUSR
+        ON ABLN.TEN_ID = ICUSR.TEN_ID
+       AND ICUSR.USR_ID = #{p.aprv_incharge_usr_id}
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'PIC'
+
+      LEFT OUTER JOIN DEPT_USER CDEPT
+        ON ABLN.TEN_ID = CDEPT.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = CDEPT.APVR_JOBTIT_CCD
+       AND CDEPT.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'INCHR_DEPT'
+
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND ABHD.DAPVL_CRN_STS_CCD = 'CNFD'
+       AND ABHD.STS != 'D'
+       AND #{g.now} BETWEEN ABHD.EFCT_ST_DT AND ABHD.EFCT_EXP_DT
+     ORDER
+        BY ABDT.SORT ASC
+         , ABLN.SORT ASC
+    </select>
+
+
+    <resultMap id="selectListApplyFactorByAprvTypeMap" type="java.util.HashMap">
+        <id property="dapvl_uuid" column="DAPVL_UUID"/>
+        <id property="dapvl_tbl_id" column="DAPVL_TBL_ID"/>
+        <collection property="factors" javaType="java.util.ArrayList" resultMap="selectListApplyFactorByAprvTypeMapChildren"/>
+    </resultMap>
+    <resultMap id="selectListApplyFactorByAprvTypeMapChildren" type="java.util.HashMap">
+        <id property="dapvl_cnd_inpvar_uuid" column="DAPVL_CND_INPVAR_UUID"/>
+        <result property="parm_key" column="PARM_KEY"/>
+    </resultMap>
+    <select id="selectListApplyFactorByAprvType" resultMap="selectListApplyFactorByAprvTypeMap">
+    /* arbitrary-manage.selectListApplyFactorByAprvType: 결재유형의 전결항목 목록 */
+    SELECT ABDF.TEN_ID
+         , ABDF.DAPVL_UUID
+         , ABDF.DAPVL_TBL_ID
+         , ABDF.DAPVL_CND_INPVAR_UUID
+         , ABFT.PARM_KEY
+      FROM APVL_TYP_DAPVL ABHD
+     INNER JOIN DAPVL_TBL ABDT
+        ON ABHD.TEN_ID = ABDT.TEN_ID
+       AND ABHD.DAPVL_UUID = ABDT.DAPVL_UUID
+     INNER JOIN DAPVL_TBL_DAPVL_CND_INPVAR ABDF
+        ON ABDT.TEN_ID = ABDF.TEN_ID
+       AND ABDT.DAPVL_UUID = ABDF.DAPVL_UUID
+       AND ABDT.DAPVL_TBL_ID = ABDF.DAPVL_TBL_ID
+     INNER JOIN DAPVL_CND_INPVAR ABFT
+        ON ABDF.TEN_ID = ABFT.TEN_ID
+       AND ABDF.DAPVL_CND_INPVAR_UUID = ABFT.DAPVL_CND_INPVAR_UUID
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND ABHD.DAPVL_CRN_STS_CCD = 'CNFD'
+       AND ABHD.STS != 'D'
+       AND #{g.now} BETWEEN ABHD.EFCT_ST_DT AND ABHD.EFCT_EXP_DT
+    </select>
+
+    <select id="selectListApplyMatchLineByCondition" resultType="map">
+    /* arbitrary-manage.selectListApplyMatchLineByCondition: 일치하는 결재조건의 전결결재선 */
+    WITH
+    <include refid="arbitrary-manage.APRV_USER"/>
+    ,
+    ABLC1 AS (
+        SELECT DAPVL_UUID
+             , DAPVL_TBL_ID
+             , DAPVL_APVLLN_ID
+             , DAPVL_LNO_UUID
+             , COUNT(*) AS CNT
+          FROM DAPVL_APVLLN_INPVAR
+         WHERE TEN_ID = #{g.tenant}
+           <foreach collection="p.factors" item="factor" separator="OR" open="AND (" close=")">
+               <choose>
+               <when test='factor.parm_key_val != null and factor.parm_key_val != ""'>
+               (DAPVL_UUID = #{factor.dapvl_uuid} AND DAPVL_TBL_ID = #{factor.dapvl_tbl_id} AND DAPVL_CND_INPVAR_UUID = #{factor.dapvl_cnd_inpvar_uuid} AND PARM_KEY_VAL = #{factor.parm_key_val} )
+               </when>
+               <otherwise>
+               (DAPVL_UUID = #{factor.dapvl_uuid} AND DAPVL_TBL_ID = #{factor.dapvl_tbl_id} AND DAPVL_CND_INPVAR_UUID = #{factor.dapvl_cnd_inpvar_uuid} AND PARM_KEY_VAL IS NULL )
+               </otherwise>
+               </choose>
+           </foreach>
+         GROUP
+            BY DAPVL_UUID
+             , DAPVL_TBL_ID
+             , DAPVL_APVLLN_ID
+             , DAPVL_LNO_UUID
+    ),
+    ABLC AS (
+        SELECT DAPVL_UUID
+             , DAPVL_TBL_ID
+             , DAPVL_APVLLN_ID
+          FROM ABLC1
+           <foreach collection="p.tables" item="table" separator="OR" open="WHERE (" close=")">
+               (DAPVL_UUID = #{table.dapvl_uuid} AND DAPVL_TBL_ID = #{table.dapvl_tbl_id} AND CNT = #{table.factor_size} )
+           </foreach>
+    )
+    SELECT ABDT.TEN_ID
+         , ABDT.DAPVL_UUID
+         , ABDT.DAPVL_TBL_ID
+         , ABDT.SORT AS TB_ORD_NO
+         , ABAL.DAPVL_APVLLN_ID
+         , ABAL.DFLT_APVLLN_YN
+         , ABLN.DAPVL_APVR_UUID
+         , ABLN.APVR_TYP_CCD
+         , ABLN.APVR_JOBTIT_CCD
+         , ABLN.APVR_SRCH_SCOP_CCD
+         , ABLN.SORT AS LINE_ORD_NO
+         , ABLN.APVLLN_MOD_POSS_YN
+         , ABLN.DAPVL_CND_AMT_RV_YN
+         , ABLN.DAPVL_CND_AMT
+         , CUSR.USR_ID AS C_USR_ID
+         , CUSR.USR_NM AS C_USR_NM
+         , CUSR.DEPT_CD AS C_DEPT_CD
+         , CUSR.DEPT_NM AS C_DEPT_NM
+         , CUSR.POSI_CCD AS C_POS_CD
+
+         , DUSR.USR_ID AS D_USR_ID
+         , DUSR.USR_NM AS D_USR_NM
+         , DUSR.DEPT_CD AS D_DEPT_CD
+         , DUSR.DEPT_NM AS D_DEPT_NM
+         , DUSR.POSI_CCD AS D_POS_CD
+
+         , COMUSR.USR_ID AS OD_USR_ID
+         , COMUSR.USR_NM AS OD_USR_NM
+         , COMUSR.DEPT_CD AS OD_DEPT_CD
+         , COMUSR.DEPT_NM AS OD_DEPT_NM
+         , COMUSR.POSI_CCD AS OD_POS_CD
+
+         , USR.USR_ID AS A_USR_ID
+         , USR.USR_NM AS A_USR_NM
+         , USR.DEPT_CD AS A_DEPT_CD
+         , USR.DEPT_NM AS A_DEPT_NM
+         , USR.POSI_CCD AS A_POS_CD
+
+         , ICUSR.USR_ID AS IC_USR_ID
+         , ICUSR.USR_NM AS IC_USR_NM
+         , ICUSR.DEPT_CD AS IC_DEPT_CD
+         , ICUSR.DEPT_NM AS IC_DEPT_NM
+         , ICUSR.POSI_CCD AS IC_POS_CD
+
+         , CDEPT.USR_ID AS CD_USR_ID
+         , CDEPT.USR_NM AS CD_USR_NM
+         , CDEPT.DEPT_CD AS CD_DEPT_CD
+         , CDEPT.DEPT_NM AS CD_DEPT_NM
+         , CDEPT.POSI_CCD AS CD_POS_CD
+
+      FROM APVL_TYP_DAPVL ABHD
+     INNER JOIN DAPVL_TBL ABDT
+        ON ABHD.TEN_ID = ABDT.TEN_ID
+       AND ABHD.DAPVL_UUID = ABDT.DAPVL_UUID
+     INNER JOIN DAPVL_TBL_DAPVL_APVLLN ABAL
+        ON ABDT.TEN_ID = ABAL.TEN_ID
+       AND ABDT.DAPVL_UUID = ABAL.DAPVL_UUID
+       AND ABDT.DAPVL_TBL_ID = ABAL.DAPVL_TBL_ID
+     INNER JOIN DAPVL_APVLLN_APVR ABLN
+        ON ABAL.TEN_ID = ABLN.TEN_ID
+       AND ABAL.DAPVL_UUID = ABLN.DAPVL_UUID
+       AND ABAL.DAPVL_TBL_ID = ABLN.DAPVL_TBL_ID
+       AND ABAL.DAPVL_APVLLN_ID = ABLN.DAPVL_APVLLN_ID
+     INNER JOIN ABLC ABLC
+        ON ABLN.DAPVL_UUID = ABLC.DAPVL_UUID
+       AND ABLN.DAPVL_TBL_ID = ABLC.DAPVL_TBL_ID
+       AND ABLN.DAPVL_APVLLN_ID = ABLC.DAPVL_APVLLN_ID
+
+
+     <!-- LEFT OUTER JOIN COMP_USER CUSR
+        ON ABLN.TEN_ID = CUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = CUSR.APVR_JOBTIT_CCD
+       AND CUSR.RANK = '1'
+      LEFT OUTER JOIN DEPT_USER DUSR
+        ON ABLN.TEN_ID = DUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = DUSR.APVR_JOBTIT_CCD
+       AND DUSR.RANK = '1' -->
+
+       LEFT OUTER JOIN COMP_USER CUSR
+        ON ABLN.TEN_ID = CUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = CUSR.APVR_JOBTIT_CCD
+       AND CUSR.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD IN ('COWD','DFTR_DEPT','DEPT_DES')
+
+      LEFT OUTER JOIN DEPT_USER DUSR
+        ON ABLN.TEN_ID = DUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = DUSR.APVR_JOBTIT_CCD
+       AND DUSR.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD IN ('COWD','DFTR_DEPT')
+
+      LEFT OUTER JOIN COMP_USER COMUSR
+        ON ABLN.TEN_ID = COMUSR.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = COMUSR.APVR_JOBTIT_CCD
+       AND COMUSR.RANK = '1'
+       AND COMUSR.DEPT_CD = ABLN.APVR_DEPT_CD
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'DEPT_DES'
+
+      LEFT OUTER JOIN APPRVER_USER USR
+        ON ABLN.TEN_ID = USR.TEN_ID
+       AND ABLN.APVR_ID = USR.USR_ID
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'APVR_DES'
+
+      LEFT OUTER JOIN APPRVER_USER ICUSR
+        ON ABLN.TEN_ID = ICUSR.TEN_ID
+       AND ICUSR.USR_ID = #{p.aprv_incharge_usr_id}
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'PIC'
+      
+      LEFT OUTER JOIN DEPT_USER CDEPT
+        ON ABLN.TEN_ID = CDEPT.TEN_ID
+       AND ABLN.APVR_JOBTIT_CCD = CDEPT.APVR_JOBTIT_CCD
+       AND CDEPT.RANK = '1'
+       AND ABLN.APVR_SRCH_SCOP_CCD = 'INCHR_DEPT'
+       
+     WHERE ABHD.TEN_ID = #{g.tenant}
+       AND ABHD.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND ABHD.DAPVL_CRN_STS_CCD = 'CNFD'
+       AND ABHD.STS != 'D'
+       AND #{g.now} BETWEEN ABHD.EFCT_ST_DT AND ABHD.EFCT_EXP_DT
+     ORDER 
+        BY ABDT.SORT ASC
+         , ABAL.DFLT_APVLLN_YN DESC
+         , ABLN.SORT ASC
+    </select>
+    
+    <sql id="APRV_USER">
+    USER_UP_DEPT ( -- 부서트리
+         TEN_ID
+       , LOGIC_ORG_CD
+       , PAR_DEPT_CD
+       , DEPT_CD
+       , DEPT_NM
+    ) AS (
+         SELECT OGDP.TEN_ID
+              , OGDP.LOGIC_ORG_CD
+              , OGDP.PAR_DEPT_CD
+              , OGDP.DEPT_CD
+              , OGDP.DEPT_NM
+           FROM DEPT OGDP
+          WHERE OGDP.TEN_ID = #{g.tenant}
+            AND OGDP.DEPT_CD = #{g.dept_cd}
+            AND OGDP.USE_YN = 'Y'
+    
+          UNION ALL
+         SELECT OGDP.TEN_ID
+              , OGDP.LOGIC_ORG_CD
+              , OGDP.PAR_DEPT_CD
+              , OGDP.DEPT_CD
+              , OGDP.DEPT_NM
+           FROM DEPT OGDP
+          INNER JOIN USER_UP_DEPT R
+             ON OGDP.DEPT_CD = R.PAR_DEPT_CD
+          WHERE OGDP.TEN_ID = #{g.tenant}
+            AND OGDP.USE_YN = 'Y'
+    ),
+    USER_POS AS (
+        SELECT DT.TEN_ID
+             , DT.DTLCD AS JOBTIT_CCD
+          FROM DTLCD DT
+         WHERE DT.TEN_ID = #{g.tenant}
+           AND DT.USE_YN = 'Y'
+           AND DT.STS != 'D'
+           AND DT.CCD = 'JOBTIT_CCD' -- 결재자 직책
+    ),
+    COMP_USER AS ( -- 회사
+        SELECT USR.TEN_ID
+             , USR.USR_ID
+             , USR.USR_NM
+             , USR.JOBTIT_CCD AS APVR_JOBTIT_CCD
+             , USR.DEPT_CD
+             , USR.POSI_CCD
+             , RANK() OVER(PARTITION BY USR.JOBTIT_CCD ORDER BY USR.USR_ID) AS RANK
+             , DEPT.DEPT_NM
+          FROM USR USRINFO
+         INNER JOIN USER_POS POS
+            ON USR.TEN_ID = POS.TEN_ID
+           AND USR.JOBTIT_CCD = POS.JOBTIT_CCD
+           
+         LEFT OUTER JOIN DEPT DEPT
+            ON USR.TEN_ID = DEPT.TEN_ID
+           AND USR.DEPT_CD = DEPT.DEPT_CD
+           AND DEPT.USE_YN ='Y'
+           
+         WHERE USR.TEN_ID = #{g.tenant}
+    ),
+    DEPT_USER AS ( -- 부서
+        SELECT USR.TEN_ID
+             , USR.USR_ID
+             , USR.USR_NM
+             , USR.JOBTIT_CCD AS APVR_JOBTIT_CCD
+             , USR.DEPT_CD
+             , USR.POSI_CCD
+             , RANK() OVER(PARTITION BY USR.JOBTIT_CCD ORDER BY USR.USR_ID) AS RANK
+             , DEPT.DEPT_NM
+          FROM USR USRINFO
+         INNER JOIN USER_POS POS
+            ON USR.TEN_ID = POS.TEN_ID
+           AND USR.JOBTIT_CCD = POS.JOBTIT_CCD
+         INNER JOIN USER_UP_DEPT DEPT
+            ON USR.TEN_ID = DEPT.TEN_ID
+           AND USR.DEPT_CD = DEPT.DEPT_CD
+         WHERE USR.TEN_ID = #{g.tenant}
+    ),
+    APPRVER_USER AS (
+    	SELECT USR.TEN_ID
+             , USR.USR_ID
+             , USR.USR_NM
+             , USR.JOBTIT_CCD AS APVR_JOBTIT_CCD
+             , USR.DEPT_CD
+             , USR.POSI_CCD
+             , DEPT.DEPT_NM
+             
+          FROM USR USRINFO
+         LEFT OUTER JOIN USER_POS POS
+            ON USR.TEN_ID = POS.TEN_ID
+           AND USR.JOBTIT_CCD = POS.JOBTIT_CCD
+           
+         LEFT OUTER JOIN DEPT DEPT
+            ON USR.TEN_ID = DEPT.TEN_ID
+           AND USR.DEPT_CD = DEPT.DEPT_CD
+           AND DEPT.USE_YN ='Y'
+           
+         WHERE USR.TEN_ID = #{g.tenant}
+    )
+    </sql>    
+
+
+    <select id="selectListArbitrayTable" resultType="map">
+    /* arbitrary-manage.selectListArbitrayTable: 결재유형의 전결테이블 우선순위로 조회 */
+	SELECT DT.*
+	  FROM APVL_TYP_DAPVL HD
+	 INNER JOIN DAPVL_TBL DT
+	    ON HD.TEN_ID = DT.TEN_ID
+	   AND HD.DAPVL_UUID = DT.DAPVL_UUID
+	 WHERE HD.TEN_ID    = #{g.tenant}
+	   AND HD.APVL_TYP_CCD  = #{p.apvl_typ_ccd}
+	   AND HD.DAPVL_CRN_STS_CCD = 'CNFD'
+	   AND #{g.now} BETWEEN HD.EFCT_ST_DT AND HD.EFCT_EXP_DT
+	 ORDER BY SORT ASC
+    </select>
+    
+    <select id="selectListArbitrayTableFactor" resultType="map">
+    /* arbitrary-manage.selectListArbitrayTableFactor: 전결테이블의 항목을  우선순위로 조회 */
+	SELECT FT.DAPVL_CND_INPVAR_NM
+	      ,FT.PARM_KEY
+	      ,DF.*
+	  FROM DAPVL_TBL_DAPVL_CND_INPVAR DF
+	 INNER JOIN DAPVL_CND_INPVAR FT
+	    ON DF.TEN_ID = FT.TEN_ID
+	   AND DF.DAPVL_CND_INPVAR_UUID = FT.DAPVL_CND_INPVAR_UUID
+	 WHERE DF.TEN_ID      = #{g.tenant}
+	   AND DF.DAPVL_UUID = #{p.dapvl_uuid}
+	   AND DF.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+	 ORDER BY DF.SORT ASC
+    </select>
+    
+    <select id="selectListArbitrayApprovalLines" resultType="map">
+    /* arbitrary-manage.selectListArbitrayApprovalLines: 일치하는 결재조건의 전결결재선 찾기*/
+	WITH AB_TAB_DATA AS (
+	SELECT LC.TEN_ID
+	      ,LC.DAPVL_UUID
+	      ,LC.DAPVL_TBL_ID
+	      ,LC.DAPVL_APVLLN_ID
+	      ,LC.DAPVL_LNO_UUID
+          <foreach collection="p.factors" item="factor" separator="||" open=",(" close=") AS ROW_VAL">
+          	  MAX(CASE LC.DAPVL_CND_INPVAR_UUID WHEN #{factor.dapvl_cnd_inpvar_uuid} THEN LC.PARM_KEY_VAL ELSE '' END)
+          </foreach>
+	  FROM DAPVL_APVLLN_INPVAR LC
+	 WHERE LC.TEN_ID      = #{g.tenant}
+	   AND LC.DAPVL_UUID = #{p.dapvl_uuid}
+	   AND LC.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+	 GROUP BY LC.TEN_ID
+	         ,LC.DAPVL_UUID
+	         ,LC.DAPVL_TBL_ID
+	         ,LC.DAPVL_APVLLN_ID
+	         ,LC.DAPVL_LNO_UUID
+	)
+	SELECT ABLN.TEN_ID
+	      ,ABLN.DAPVL_UUID
+	      ,ABLN.DAPVL_TBL_ID
+	      ,ABLN.DAPVL_APVLLN_ID
+	      ,ABLN.DAPVL_APVR_UUID
+	      ,ABLN.APVR_TYP_CCD
+	      ,ABLN.APVR_JOBTIT_CCD
+	      ,ABLN.SORT
+	      ,ABLN.APVLLN_MOD_POSS_YN
+	      ,ABLN.DAPVL_CND_AMT_RV_YN
+	      ,ABLN.DAPVL_CND_AMT
+	      ,ABLN.APVR_SRCH_SCOP_CCD
+	      ,ABLN.APVR_DEPT_CD
+	      ,ABLN.APVR_ID
+	      ,D.DEPT_NM
+	  FROM AB_TAB_DATA AB
+	 INNER JOIN DAPVL_APVLLN_APVR ABLN
+	    ON AB.TEN_ID = ABLN.TEN_ID
+	   AND AB.DAPVL_UUID = ABLN.DAPVL_UUID
+	   AND AB.DAPVL_TBL_ID = ABLN.DAPVL_TBL_ID
+	   AND AB.DAPVL_APVLLN_ID = ABLN.DAPVL_APVLLN_ID
+	   AND (ABLN.DAPVL_CND_AMT_RV_YN = 'N' OR ABLN.DAPVL_CND_AMT <![CDATA[<=]]> #{p.appAmt}  )
+	  LEFT JOIN DEPT D
+	    ON ABLN.TEN_ID   = D.TEN_ID
+	   AND ABLN.APVR_DEPT_CD  = D.DEPT_CD
+	 WHERE ROW_VAL = #{p.rowValue}
+	 ORDER BY ABLN.SORT ASC
+    </select>
+    
+    <select id="selectListArbitrayApproverByDept" resultType="map">
+    /* arbitrary-manage.selectListArbitrayApproverByDept: 상신자부서/타부서/부서지정으로 결재자 찾기*/
+	WITH USER_UP_DEPT(
+	    TEN_ID,
+	    LOGIC_ORG_CD,
+	    PAR_DEPT_CD,
+	    DEPT_CD,
+	    DEPT_NM) AS
+	 (SELECT DP.TEN_ID
+	        ,MG.LOGIC_ORG_CD
+	        ,DP.PAR_DEPT_CD
+	        ,DP.DEPT_CD
+	        ,DP.DEPT_NM
+	    FROM DEPT DP
+                 INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+                            ON DP.TEN_ID = ODM.TEN_ID
+                                AND DP.DEPT_CD = ODM.DEPT_CD
+                 INNER JOIN LOGIC_ORG MG
+                            ON DP.TEN_ID = MG.TEN_ID
+                                AND ODM.LOGIC_ORG_TYP_CCD = MG.LOGIC_ORG_TYP_CCD
+                                AND ODM.LOGIC_ORG_CD = MG.LOGIC_ORG_CD
+	   WHERE DP.TEN_ID  = #{g.tenant}
+	     AND DP.DEPT_CD = #{p.dept_cd}
+	     AND DP.USE_YN = 'Y'
+	  UNION ALL
+	  SELECT OGDP.TEN_ID
+	        ,MG.LOGIC_ORG_CD
+	        ,OGDP.PAR_DEPT_CD
+	        ,OGDP.DEPT_CD
+	        ,OGDP.DEPT_NM
+	    FROM DEPT OGDP
+                 INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+                            ON OGDP.TEN_ID = ODM.TEN_ID
+                                AND OGDP.DEPT_CD = ODM.DEPT_CD
+                 INNER JOIN LOGIC_ORG MG
+                            ON OGDP.TEN_ID = MG.TEN_ID
+                                AND ODM.LOGIC_ORG_TYP_CCD = MG.LOGIC_ORG_TYP_CCD
+                                AND ODM.LOGIC_ORG_CD = MG.LOGIC_ORG_CD
+	   INNER JOIN USER_UP_DEPT R
+	      ON OGDP.DEPT_CD = R.PAR_DEPT_CD
+	   WHERE OGDP.TEN_ID = #{g.tenant}
+	     AND OGDP.USE_YN = 'Y')
+	SELECT U.CO_CD
+	      ,U.DEPT_CD
+	      ,D.DEPT_NM
+	      ,U.EML
+	      ,U.MOB
+	      ,U.TEL
+	      ,U.POSI_CCD
+	      ,U.USR_ID
+	      ,U.USR_NM
+	      ,U.USE_YN
+	  FROM USER_UP_DEPT D
+	 INNER JOIN USR U
+	    ON U.TEN_ID   = D.TEN_ID
+	   AND U.DEPT_CD  = D.DEPT_CD
+	   AND U.STS     <![CDATA[<>]]> 'D'
+	   AND U.USR_TYP_CCD  = 'BUYER'
+	   AND U.USE_YN   = 'Y'
+	   AND U.JOBTIT_CCD = #{p.jobtit_ccd}
+    </select>
+    
+    <select id="selectListArbitrayApproverByUser" resultType="map">
+    /* arbitrary-manage.selectListArbitrayApproverByUser: 회사전체/담당자/결재자지정 유형 결재자 찾기*/
+	SELECT U.CO_CD
+	      ,U.DEPT_CD
+	      ,D.DEPT_NM
+	      ,U.EML
+	      ,U.MOB
+	      ,U.TEL
+	      ,U.POSI_CCD
+	      ,U.USR_ID
+	      ,U.USR_NM
+	      ,U.USE_YN
+	  FROM USR U
+	  LEFT JOIN DEPT D
+	    ON U.TEN_ID   = D.TEN_ID
+	   AND U.DEPT_CD  = D.DEPT_CD
+	 WHERE U.TEN_ID   = #{g.tenant}
+	   AND U.USR_TYP_CCD  = 'BUYER'
+	   AND U.USE_YN = 'Y'
+	   AND U.STS     <![CDATA[<>]]> 'D'
+    <if test='p.usr_id != null and p.usr_id != ""'>
+       AND U.USR_ID   = #{p.usr_id}
+    </if>
+    <if test='p.jobtit_ccd != null and p.jobtit_ccd != ""'>
+       AND U.JOBTIT_CCD = #{p.jobtit_ccd}
+    </if>
+    </select>
+    
+    
+    <select id="selectListDefaultArbitrayApprovalLines" resultType="map">
+    /* arbitrary-manage.selectListDefaultArbitrayApprovalLines: 전결테이블의 기본결재선을 우선순위로 조회 */
+		SELECT ABLN.TEN_ID
+		      ,ABLN.DAPVL_UUID
+		      ,ABLN.DAPVL_TBL_ID
+		      ,ABLN.DAPVL_APVLLN_ID
+		      ,ABLN.DAPVL_APVR_UUID
+		      ,ABLN.APVR_TYP_CCD
+		      ,ABLN.APVR_JOBTIT_CCD
+		      ,ABLN.SORT
+		      ,ABLN.APVLLN_MOD_POSS_YN
+		      ,ABLN.DAPVL_CND_AMT_RV_YN
+		      ,ABLN.DAPVL_CND_AMT
+		      ,ABLN.APVR_SRCH_SCOP_CCD
+		      ,ABLN.APVR_DEPT_CD
+		      ,ABLN.APVR_ID
+		      ,D.DEPT_NM
+		  FROM DAPVL_APVLLN_APVR ABLN
+		INNER JOIN DAPVL_TBL_DAPVL_APVLLN ABAL
+		    ON ABLN.TEN_ID = ABAL.TEN_ID
+		   AND ABLN.DAPVL_UUID = ABAL.DAPVL_UUID
+		   AND ABLN.DAPVL_TBL_ID = ABAL.DAPVL_TBL_ID
+		   AND ABLN.DAPVL_APVLLN_ID = ABAL.DAPVL_APVLLN_ID
+		   AND ABAL.DFLT_APVLLN_YN = 'Y'
+		  LEFT JOIN DEPT D
+		    ON ABLN.TEN_ID      = D.TEN_ID
+		   AND ABLN.APVR_DEPT_CD = D.DEPT_CD
+		WHERE ABLN.TEN_ID      = #{g.tenant}
+		   AND ABLN.DAPVL_UUID = #{p.dapvl_uuid}
+		ORDER BY ABLN.SORT ASC
+    </select>
+    
+</mapper>

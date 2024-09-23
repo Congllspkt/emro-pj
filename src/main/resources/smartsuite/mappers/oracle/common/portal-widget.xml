@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="portal-widget">
+
+	<select id="findListPoTotalAmountTreeByYear" resultType="map">
+		SELECT SUBSTR(POHD.PO_CRN_DT, 1, 4)    AS YEAR
+       , SUM(POHD.PO_AMT)              AS PO_AMT
+	    FROM PO POHD
+	        WHERE POHD.TEN_ID        =  #{g.tenant}
+	        <if test="p.oper_org_cds != null and p.oper_org_cds.size() != 0">
+	        AND POHD.OORG_CD IN
+           <foreach collection="p.oper_org_cds" item="oorg_cd" open="(" close=")" separator=",">
+           #{oorg_cd}
+           </foreach>
+           </if>
+	       AND POHD.EFCT_PO_YN    = 'Y'
+	       AND POHD.PO_STS_CCD   = 'APVD'
+	       <bind name="getFormatNowYear" value="g.getFormatNow(g.now,'yyyy')"/>
+	       AND SUBSTR(POHD.PO_CRN_DT, 1, 4)   = #{getFormatNowYear}
+	     GROUP BY SUBSTR(POHD.PO_CRN_DT, 1, 4)
+	</select>
+	
+	<select id="findListPoTotalAmountTreeByDate" resultType="map">
+		SELECT SUBSTR(POHD.PO_CRN_DT, 1, 4)    AS YEAR
+       , SUBSTR(POHD.PO_CRN_DT, 5, 2)    AS MONTH
+       , SUM(POHD.PO_AMT)              AS PO_AMT
+	    FROM PO POHD
+	        WHERE POHD.TEN_ID        =  #{g.tenant}
+	        <if test="p.oper_org_cds != null and p.oper_org_cds.size() != 0">
+	        AND POHD.OORG_CD IN
+           <foreach collection="p.oper_org_cds" item="oorg_cd" open="(" close=")" separator=",">
+           #{oorg_cd}
+           </foreach>
+           </if>
+	       AND POHD.EFCT_PO_YN    = 'Y'
+	       AND POHD.PO_STS_CCD   = 'APVD'
+	       <bind name="getFormatTreeDate" value="g.getFormatNow(p.tree_date,'yyyyMM')"/>
+	       <bind name="getFormatNow" value="g.getFormatNow(g.now,'yyyyMM')"/>
+	       AND POHD.PO_CRN_DT   <![CDATA[>=]]> #{getFormatTreeDate}
+	       AND POHD.PO_CRN_DT   <![CDATA[<=]]> #{getFormatNow}
+	     GROUP BY SUBSTR(POHD.PO_CRN_DT, 1, 4), SUBSTR(POHD.PO_CRN_DT, 5, 2)
+	     ORDER BY SUBSTR(POHD.PO_CRN_DT, 1, 4) DESC, SUBSTR(POHD.PO_CRN_DT, 5, 2)
+	</select>
+	
+	<select id="findListExchange" resultType="map">
+	/* portal-widget.findListExchange: 환율API 리스트 조회 */
+		SELECT EXCH.TEN_ID                                                                           /* 시스템 아이디 */
+		     , EXCH.CUR_UNIT                                                                         /* 통화코드 */
+		     , CD.CUR_UNIT_NM                                                                        /* 통화코드 명 */
+		     , EXCH.TTB                                                                              /* 전신환(송금)받으실때 */
+		     , EXCH.TTS                                                                              /* 전신환(송금)보내실때 */
+		     , EXCH.DEAL_BAS_R                                                                       /* 매매 기준율 */
+		     , PREV_EXCH.DEAL_BAS_R                                                                  /* 전일 매매 기준율 */
+		     , CASE WHEN PREV_EXCH.DEAL_BAS_R IS NOT NULL
+		                 THEN EXCH.DEAL_BAS_R - PREV_EXCH.DEAL_BAS_R
+		            ELSE NULL
+		       END                                                          AS DIFF_DEAL_BAS_R       /* 전일대비 */
+		     , CASE WHEN PREV_EXCH.DEAL_BAS_R IS NOT NULL
+		                 THEN ROUND((EXCH.DEAL_BAS_R - PREV_EXCH.DEAL_BAS_R) / PREV_EXCH.DEAL_BAS_R * 100, 2)
+		            ELSE NULL
+		       END                                                          AS DIFF_RATE_DEAL_BAS_R  /* 등락율 */
+		     , EXCH.BKPR                                                                             /* 장부가격 */
+		     , EXCH.YY_EFEE_R                                                                        /* 년환가료율 */
+		     , EXCH.TEN_DD_EFEE_R                                                                    /* 10일환가료율 */
+		     , EXCH.KFTC_DEAL_BAS_R                                                                  /* 서울외국환중계 매매기준율 */
+		     , EXCH.KFTC_BKPR                                                                        /* 서울외국환중계 장부가격 */
+		     , EXCH.STS                                                                              /* 상태 */
+		     , EXCH.REGR_ID                                                                           /* 등록자 아이디 */
+		     , EXCH.REG_DTTM                                                                           /* 등록일시 */
+		     , EXCH.MODR_ID                                                                           /* 수정자아이디 */
+		     , EXCH.MOD_DTTM                                                                           /* 수정일시 */
+		  FROM EXCHRATE_IF EXCH
+		  LEFT OUTER JOIN EXCHRATE_IF PREV_EXCH
+		    ON PREV_EXCH.TEN_ID     = EXCH.TEN_ID
+		  <bind name="compareDate" value="g.getFormatNow(g.increaseDate(g.now, 'd', -1),'yyyyMMdd')"/>
+		   AND PREV_EXCH.SEARCHDATE = #{compareDate}
+		   AND PREV_EXCH.CUR_UNIT   = EXCH.CUR_UNIT
+		 INNER JOIN ( SELECT CDDT.TEN_ID
+		                   , CDDT.DTLCD     AS CUR_UNIT
+		                   , CDDL.DTLCD_NM  AS CUR_UNIT_NM
+		                FROM CCD CDGP
+		               INNER JOIN DTLCD CDDT
+		                  ON CDDT.TEN_ID = CDGP.TEN_ID
+		                 AND CDDT.CCD = CDGP.CCD
+		               INNER JOIN DTLCD_MULTLANG CDDL
+		                  ON CDDL.TEN_ID  = CDDT.TEN_ID
+		                 AND CDDL.CCD  = CDDT.CCD
+		                 AND CDDL.DTLCD  = CDDT.DTLCD
+		                 AND CDDL.LANG_CCD = #{g.locale}
+		               INNER JOIN CCD_CSTR_CND_VAL CCCV
+		                  ON CCCV.TEN_ID          = CDDT.TEN_ID
+		                 AND CCCV.CCD          = CDDT.CCD
+		                 AND CCCV.DTLCD          = CDDT.DTLCD
+		                 AND CCCV.CSTR_CND_CD         = 'PORTAL'
+		                 AND CCCV.CSTR_CND_VAL = 'Y'
+		               WHERE CDGP.TEN_ID = #{g.tenant}
+		                 AND CDGP.CCD = 'C004'
+		            ) CD
+		    ON EXCH.TEN_ID   = CD.TEN_ID
+		   AND EXCH.CUR_UNIT = CD.CUR_UNIT
+		 WHERE EXCH.TEN_ID = #{g.tenant}
+		   <bind name="getFormatNow" value="g.getFormatNow(g.now,'yyyyMMdd')"/>
+		   AND EXCH.SEARCHDATE = #{getFormatNow}
+	</select>
+	
+<!-- 게시판 조회 -->
+	<resultMap type="map" id="resultMap-findListBoard">
+        <result property="pst_cont" column="PST_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    <select id="findNoticeBoardList" resultMap="resultMap-findListBoard">
+	/* portal-widget.findNoticeBoardList */
+	
+           SELECT BBD.TEN_ID			/*시스템 아이디 */
+                 ,BBD.PST_NO			/*게시물_번호 */
+                 ,BBD.BBD_UUID		/*게시판_아이디 */
+                 ,BBD.PST_GRP_NO		/*게시물_그룹_번호 */
+                 ,BBD.PST_GRP_SEQNO		/*게시물_그룹_일련번호 */
+                 ,BBD.PST_LVL        /*게시물_레벨 */
+                 ,BBD.PST_CAT_ID         /*카테고리_아이디 */
+                 ,CONCAT(( BBD.PST_TIT
+                  ) , ( CASE WHEN BS.CMNT_USE_YN = 'Y' THEN CONCAT(CONCAT(' (' , ( CASE WHEN BBD.CMNT_CNT IS NULL THEN '0' ELSE CAST(BBD.CMNT_CNT AS VARCHAR(10)) END )) , ')')
+                              ELSE '' END )) AS PST_TIT /*게시물_제목 */
+                 ,BBD.PST_CONT       /*게시물_내용 */
+                 ,BBD.AUTO_PSTG_ST_DT         /*게시물_시작일 */
+                 ,BBD.AUTO_PSTG_EXP_DT         /*게시물_종료일 */
+                 ,BBD.REGR_ID          /*등록자_아이디 */
+                 ,BBD.CRTR_NM          /*등록자_명 */
+                 ,BBD.CRTR_EML       /*등록자_이메일 */
+                 ,BBD.MODR_ID          /*수정자_아이디 */
+                 ,BBD.MODR_NM          /*수정자_명 */
+                 ,BBD.MODR_EML       /*수정자_이메일 */
+                 ,( CASE WHEN BBD.VCNT IS NULL THEN 0
+                         ELSE BBD.VCNT END
+                  ) AS VCNT     /*조회_수 */
+                 ,BBD.ATHF_CNT     /*첨부파일_수 */
+                 ,BBD.CMNT_CNT       /*댓글_수 */
+                 ,CASE WHEN BBD.ANN_YN IS NULL THEN 'N' ELSE BBD.ANN_YN END AS ANN_YN /*공지사항_여부 */
+                 ,BBD.MAIN_ANN_YN    /*메인_공지사항_여부 */
+                 ,BBD.ATHG_UUID      /*첨부파일_번호 */
+                 ,BBD.SECTXT_YN        /*비밀글 여부*/
+                 ,CASE WHEN BBD.PST_GRP_SEQNO > 0
+                            THEN ( SELECT ORIGIN_BDMA.REGR_ID
+                                     FROM BBD ORIGIN_BDMA
+                                    WHERE ORIGIN_BDMA.TEN_ID      = BBD.TEN_ID
+                                      AND ORIGIN_BDMA.PST_GRP_NO = BBD.PST_GRP_NO
+                                      AND ORIGIN_BDMA.PST_GRP_SEQNO = 0
+                                 )
+                       ELSE BBD.REGR_ID
+                  END  AS ORG_REGR_ID /*원글 작성자(비밀글인 경우 원글 작성자와 관리자만 볼 수 있다.)*/
+                 ,BBD.DEL_YN          /*삭제_여부 */
+                 ,BBD.REG_DTTM          /*등록_일시 */
+                 ,BBD.MOD_DTTM          /*수정_일시 */
+             FROM BBD BBD
+       INNER JOIN BBD_SETUP BS
+               ON BBD.TEN_ID = BS.TEN_ID
+            WHERE BBD.BBD_UUID = BS.BBD_UUID
+              AND BBD.TEN_ID   = #{g.tenant}
+              AND BBD.BBD_UUID = #{p.bbd_uuid}
+              AND BBD.DEL_YN   = 'N'
+		<if test='p.pst_tit != null and p.pst_tit != ""'>
+			<bind name="postTitPattern" value="'%' + p.pst_tit + '%'"/>
+              AND BBD.PST_TIT LIKE #{postTitPattern}
+		</if>
+		<if test='p.pst_cont != null and p.pst_cont != ""'>
+			<bind name="postContPattern" value="'%' + p.pst_cont + '%'"/>
+              AND BBD.PST_CONT LIKE #{postContPattern}
+		</if>
+		<if test='p.reg_nm != null and p.reg_nm != ""'>
+			<bind name="regNmPattern" value="'%' + p.reg_nm + '%'"/>
+              AND BBD.CRTR_NM LIKE #{regNmPattern}
+		</if>
+		<if test='p.pst_tit_cont != null and p.pst_tit_cont != ""'>
+			<bind name="postTitContPattern" value="'%' + p.pst_tit_cont + '%'"/>
+              AND ( BBD.PST_TIT LIKE #{postTitContPattern}
+                 OR BBD.PST_CONT LIKE #{postTitContPattern}
+                  )
+		</if>		
+         ORDER BY ANN_YN DESC
+       			, CAST(BBD.PST_GRP_NO AS INT) DESC
+               	, CAST(BBD.PST_GRP_SEQNO AS INT)
+                 	
+	</select>
+	
+	<select id="findTodoGroup" resultType="map">
+	/* portal-widget.findTodoGroup : 할일 그룹 정보 조회 */
+	SELECT TODO_GRP_CD
+	     , TODO_GRP_NM
+	     , COMM_MENU_YN
+	  FROM TODO_TASK_TYP
+	 WHERE TEN_ID  = #{g.tenant}
+	   AND USR_TYP_CCD = #{g.usr_typ_ccd}
+	   <bind name="todoGrpCd" value="p.todo_grp_cd.toUpperCase()"/>
+	   AND TODO_GRP_CD  = #{todoGrpCd}
+	</select>
+	
+	<select id="findListMyTodo" resultType="map">
+	/* portal-widget.findListMyTodo : 할일 항목 조회 */
+	SELECT GP.TODO_GRP_CD
+	     , GP.TODO_GRP_NM
+	     , GP.COMM_MENU_YN
+	     , CASE WHEN #{g.locale} = 'ko_KR'
+	                 THEN TI.TODOITEM_NM
+	            ELSE CASE WHEN TI.TODOITEM_NM_EN IS NULL
+	                           THEN TI.TODOITEM_NM
+	                      ELSE TI.TODOITEM_NM_EN
+	                 END 
+	       END  AS TODOITEM_NM
+	     , TI.MENU_CD
+	     , TI.MENU_URL_PARM
+	     , TI.SQL_ID
+	  FROM TODO_TASK_TYP GP
+	 INNER JOIN TODOITEM TI
+	    ON TI.TEN_ID  = GP.TEN_ID
+	   AND TI.USR_TYP_CCD = GP.USR_TYP_CCD
+	   AND TI.TODO_GRP_CD  = GP.TODO_GRP_CD
+	 WHERE GP.TEN_ID  = #{g.tenant}
+	   AND GP.USR_TYP_CCD = #{g.usr_typ_ccd}
+	   <bind name="todoGrpCd" value="p.todo_grp_cd.toUpperCase()"/>
+	   AND GP.TODO_GRP_CD  = #{todoGrpCd}
+	   AND TI.USE_YN  = 'Y'
+	   AND (
+	           GP.COMM_MENU_YN = 'Y'  /* 공통인 경우 */
+	        OR (
+	               GP.COMM_MENU_YN = 'N'  /* 공통이 아닌경우 해당 사용자 */
+	           AND EXISTS ( SELECT US.USR_ID
+	                          FROM TODOITEM_USR US
+	                         WHERE US.TEN_ID  = TI.TEN_ID
+	                           AND US.TODOITEM_UUID = TI.TODOITEM_UUID
+	                           AND US.USR_ID  = #{g.username}
+	                      )
+	           )
+	       )
+	 ORDER BY TI.TODOITEM_SORT
+	</select>
+	
+	<select id="countApproval" resultType="java.lang.Integer">
+	/* portal-widget.countApproval */
+	SELECT COUNT(APRV.APVL_UUID)
+      FROM APVL APRV
+     INNER JOIN APVLLN_APVR_PRGS_STS APLNAPS
+        ON APLNAPS.TEN_ID  = APRV.TEN_ID
+       AND APLNAPS.APVL_UUID = APRV.APVL_UUID
+       AND APLNAPS.USR_ID  = #{g.username}
+       AND (
+               APLNAPS.LAST_APVR_YN         = 'Y'     /* 전결이거나 */
+            OR APLNAPS.CURR_APVR_YN = 'Y'     /* 현재 결재순서의 결재자 */
+           )
+       AND APLNAPS.STS    != 'D'
+     WHERE APRV.TEN_ID     = #{g.tenant}
+       AND APRV.APVL_TYP_CCD = #{p.apvl_typ_ccd}  /* 결재유형 */
+       AND APRV.APVL_STS_CCD = 'PRGSG'	            /* 진행중 */
+       AND APRV.STS       != 'D'
+	</select>
+	
+	<select id="countPr" resultType="java.lang.Integer">
+	/* portal-widget.countPr */
+	  <!-- PR 요청일자 조회시작일 : 한달 전 (Date) -->
+	  <bind name="prFromDate" value='g.increaseDate(g.getDateWithNoTime(g.now), "M", -1)'/>
+	  <!-- PR 요청일자 조회종료일 : 오늘 (Date) -->
+      <bind name="prToDate" value="g.now"/>
+    SELECT COUNT(PRHD.PR_UUID)  AS CNT
+      FROM PR PRHD
+     WHERE PRHD.TEN_ID  = #{g.tenant}
+       AND PRHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                  FROM OORG_USR OOPM
+                                     , OORG OOMG
+                                 WHERE OOPM.TEN_ID       = #{g.tenant}
+                                   AND OOPM.USR_ID       = #{g.username}
+                                   AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                   AND OOMG.OUNIT_CD = 'PO'
+                                   AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                   AND OOMG.STS         != 'D'
+                               )
+       AND PRHD.PR_STS_CCD  = #{p.pr_sts_ccd}
+       AND PRHD.PR_REQ_DT  >= #{prFromDate}
+       AND PRHD.PR_REQ_DT  <![CDATA[<]]> #{prToDate}
+       AND PRHD.STS         != 'D'
+	</select>
+	
+	<select id="countRfx" resultType="java.lang.Integer">
+	/* portal-widget.countRfx */
+	  <!-- RFx의뢰일자 조회시작일 : 한달 전 (Date) -->
+	  <bind name="rfxFromDate" value='g.increaseDate(g.getDateWithNoTime(g.now), "M", -1)'/>
+	  <!-- RFx의뢰일자 조회종료일 : 오늘 (Date) -->
+      <bind name="rfxToDate" value="g.now"/>
+	SELECT COUNT(RQHD.RFX_UUID)  AS CNT
+      FROM RFX RQHD
+     WHERE RQHD.TEN_ID  = #{g.tenant}
+       AND RQHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                  FROM OORG_USR OOPM
+                                     , OORG OOMG
+                                 WHERE OOPM.TEN_ID       = #{g.tenant}
+                                   AND OOPM.USR_ID       = #{g.username}
+                                   AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                   AND OOMG.OUNIT_CD = 'PO'
+                                   AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                   AND OOMG.STS         != 'D'
+                               )
+     <if test="p.rfx_sts_ccd != null and p.rfx_sts_ccd != ''">
+       <choose>
+         <when test='g.contains(p.rfx_sts_ccd, ",")'>
+       AND RQHD.RFX_STS_CCD IN
+           <foreach collection='g.split(p.rfx_sts_ccd, ",")' item="rfx_sts_ccd" open="(" close=")" separator=",">
+             #{rfx_sts_ccd}
+           </foreach>
+         </when>
+         <otherwise>
+         AND RQHD.RFX_STS_CCD = #{p.rfx_sts_ccd}
+         </otherwise>
+       </choose>
+     </if>
+       AND RQHD.RFX_TYP_CCD     != 'RA' /* 역경매 제외 */
+       AND RQHD.RFX_CRN_DT    >= #{rfxFromDate}
+       AND RQHD.RFX_CRN_DT    <![CDATA[<]]> #{rfxToDate}
+       AND RQHD.STS         != 'D'
+	</select>
+	
+	<select id="countPo" resultType="java.lang.Integer">
+	/* portal-widget.countPo */
+	  <!-- PO생성일자 조회시작일 : 한달 전 (String) -->
+      <bind name="poFromDate" value='g.getFormatNow(g.increaseDate(g.now, "M", -1), "yyyyMMdd")'/>
+      <!-- PO생성일자 조회시작일 : 오늘 (String) -->
+      <bind name="poToDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+    SELECT COUNT(POHD.PO_UUID)     AS CNT
+      FROM PO POHD
+     WHERE POHD.TEN_ID       = #{g.tenant}
+       AND POHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                  FROM OORG_USR OOPM
+                                     , OORG OOMG
+                                 WHERE OOPM.TEN_ID       = #{g.tenant}
+                                   AND OOPM.USR_ID       = #{g.username}
+                                   AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                   AND OOMG.OUNIT_CD = 'PO'
+                                   AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                   AND OOMG.STS         != 'D'
+                               )
+     <if test="p.po_sts_ccd != null and p.po_sts_ccd != ''">
+       <choose>
+         <when test='g.contains(p.po_sts_ccd, ",")'>
+       AND POHD.PO_STS_CCD IN
+           <foreach collection='g.split(p.po_sts_ccd, ",")' item="po_sts_ccd" open="(" close=")" separator=",">
+             #{po_sts_ccd}
+           </foreach>
+         </when>
+         <otherwise>
+         AND POHD.PO_STS_CCD = #{p.po_sts_ccd}
+         </otherwise>
+       </choose>
+     </if>
+         AND POHD.PO_CRN_DT >= #{poFromDate}
+         AND POHD.PO_CRN_DT <![CDATA[<=]]> #{poToDate}
+         AND POHD.STS         != 'D'
+	</select>
+	
+	<select id="countPriceContract" resultType="java.lang.Integer">
+	/* portal-widget.countPriceContract */
+	  <!-- 단가계약생성일자 조회시작일 : 한달 전 (String) -->
+      <bind name="cntrFromDate" value='g.getFormatNow(g.increaseDate(g.now, "M", -1), "yyyyMMdd")'/>
+      <!-- 단가계약생성일자 조회시작일 : 오늘 (String) -->
+      <bind name="cntrToDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+    SELECT COUNT(INHD.UPRCCNTR_UUID)  AS CNT
+      FROM UPRCCNTR INHD
+     WHERE INHD.TEN_ID       = #{g.tenant}
+       AND INHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                    FROM OORG_USR OOPM
+                                       , OORG OOMG
+                                   WHERE OOPM.TEN_ID       = #{g.tenant}
+                                     AND OOPM.USR_ID       = #{g.username}
+                                     AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                     AND OOMG.OUNIT_CD = 'PO'
+                                     AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                     AND OOMG.STS         != 'D'
+                                 )
+     <if test="p.uprccntr_sts_ccd != null and p.uprccntr_sts_ccd != ''">
+       <choose>
+         <when test='g.contains(p.uprccntr_sts_ccd, ",")'>
+       AND INHD.UPRCCNTR_STS_CCD IN
+           <foreach collection='g.split(p.uprccntr_sts_ccd, ",")' item="uprccntr_sts_ccd" open="(" close=")" separator=",">
+             #{uprccntr_sts_ccd}
+           </foreach>
+         </when>
+         <otherwise>
+       AND INHD.UPRCCNTR_STS_CCD = #{p.uprccntr_sts_ccd}
+         </otherwise>
+       </choose>
+     </if>
+       AND INHD.UPRCCNTR_DT >= #{cntrFromDate}
+       AND INHD.UPRCCNTR_DT <![CDATA[<=]]> #{cntrToDate}
+       AND INHD.STS       != 'D'
+	</select>
+	
+	<select id="countAr" resultType="java.lang.Integer">
+	/* portal-widget.countAr */
+	  <!-- 검수요청일자 조회시작일 : 한달 전 (String) -->
+      <bind name="arFromDate" value='g.getFormatNow(g.increaseDate(g.now, "M", -1), "yyyyMMdd")'/>
+      <!-- 검수요청일자 조회시작일 : 오늘 (String) -->
+      <bind name="arToDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+	SELECT COUNT(ARHD.ASN_UUID)  AS CNT
+	  FROM ASN ARHD
+	 WHERE ARHD.TEN_ID       = #{g.tenant}
+	   AND ARHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                  FROM OORG_USR OOPM
+                                     , OORG OOMG
+                                 WHERE OOPM.TEN_ID       = #{g.tenant}
+                                   AND OOPM.USR_ID       = #{g.username}
+                                   AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                   AND OOMG.OUNIT_CD = 'PO'
+                                   AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                   AND OOMG.STS         != 'D'
+                               )
+       AND ARHD.PURC_TYP_CCD     = 'QTY' /* MT:물품 */
+       AND ARHD.GR_PIC_ID    = #{g.username}  /* 검수담당자 */
+     <if test="p.asn_sts_ccd != null and p.asn_sts_ccd != ''">
+       AND ARHD.ASN_STS_CCD  = #{p.asn_sts_ccd}
+     </if>
+       AND ARHD.ASN_DT     >= #{arFromDate}
+       AND ARHD.ASN_DT     <![CDATA[<=]]> #{arToDate}
+       AND ARHD.STS         != 'D'
+	</select>
+	
+	<select id="countGr" resultType="java.lang.Integer">
+	/* portal-widget.countGr */
+	  <!-- 검수등록일자 조회시작일 : 한달 전 (String) -->
+      <bind name="grFromDate" value='g.getFormatNow(g.increaseDate(g.now, "M", -1), "yyyyMMdd")'/>
+      <!-- 검수등록일자 조회시작일 : 오늘 (String) -->
+      <bind name="grToDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+	SELECT COUNT(GRHD.GR_UUID)  AS CNT
+	  FROM GR GRHD
+	 WHERE GRHD.TEN_ID       = #{g.tenant}
+	   AND GRHD.OORG_CD IN (SELECT OOPM.OORG_CD
+                                  FROM OORG_USR OOPM
+                                     , OORG OOMG
+                                 WHERE OOPM.TEN_ID       = #{g.tenant}
+                                   AND OOPM.USR_ID       = #{g.username}
+                                   AND OOMG.TEN_ID       = OOPM.TEN_ID
+                                   AND OOMG.OUNIT_CD = 'PO'
+                                   AND OOMG.OORG_CD  = OOPM.OORG_CD
+                                   AND OOMG.STS         != 'D'
+                               )
+       AND GRHD.PURC_TYP_CCD     = 'QTY' /* MT:물품 */
+       AND GRHD.GR_PIC_ID    = #{g.username}  /* 검수담당자 */
+     <if test="p.gr_sts_ccd != null and p.gr_sts_ccd != ''">
+       AND GRHD.GR_STS_CCD  = #{p.gr_sts_ccd}
+     </if>
+       AND GRHD.GR_DT     >= #{grFromDate}
+       AND GRHD.GR_DT     <![CDATA[<=]]> #{grToDate}
+       AND GRHD.STS         != 'D'
+	</select>
+	
+	<select id="countSpRfx" resultType="java.lang.Integer">
+	/* portal-widget.countSpRfx */
+	  <!-- RFx의뢰일자 조회시작일 : 세달 전 (Date) -->
+	  <bind name="rfxFromDate" value='g.increaseDate(g.getDateWithNoTime(g.now), "M", -3)'/>
+	  <!-- RFx의뢰일자 조회종료일 : 오늘 (Date) -->
+      <bind name="rfxToDate" value="g.now"/>
+	SELECT COUNT(RQHD.RFX_UUID)
+	  FROM RFX RQHD
+	  LEFT JOIN RFX_VD RQVD
+	    ON RQVD.TEN_ID = RQHD.TEN_ID
+	   AND RQVD.RFX_UUID = RQHD.RFX_UUID
+	   AND RQVD.VD_CD  = #{g.vd_cd}
+	   AND RQVD.MULTRND_SUBJ_XCEPT_YN = 'N'
+	   AND RQVD.STS   != 'D'
+	  LEFT OUTER JOIN RFX_BID QTHD
+	    ON QTHD.TEN_ID   = RQHD.TEN_ID
+	   AND QTHD.RFX_NO   = RQHD.RFX_NO
+	   AND QTHD.RFX_RND  = RQHD.RFX_RND
+	   AND QTHD.VD_CD    = #{g.vd_cd}
+	   AND QTHD.RFX_BID_EFCT_YN = 'Y'
+	 WHERE RQHD.TEN_ID   = #{g.tenant}
+	   AND RQHD.RFX_TYP_CCD != 'RA' /* 역경매 제외 */
+	   AND RQHD.RFX_CRN_DT    >= #{rfxFromDate}
+	   AND RQHD.RFX_CRN_DT    <![CDATA[<]]> #{rfxToDate}
+	   AND RQHD.STS     != 'D'
+	   AND (
+	           (
+	               RQHD.COMP_TYP_CCD != 'P' /*공개가 아닌경우(지명,수의)*/
+	           AND RQVD.VD_CD        = #{g.vd_cd}
+	           )
+	        OR (
+	               RQHD.COMP_TYP_CCD = 'P' /*공개*/
+	           AND (
+	                   (
+	                       RQHD.SLCTN_TYP_CCD = 'TOT' AND RQHD.RFX_RND != 1 /*종합평가 재견적 건인경우*/
+	                   AND EXISTS ( SELECT 1
+	                                  FROM RFX_BID QTHD
+	                                 WHERE QTHD.TEN_ID   = RQHD.TEN_ID
+	                                   AND QTHD.RFX_NO   = RQHD.RFX_NO
+	                                   AND QTHD.RFX_RND  = RQHD.RFX_RND-1
+	                                   AND QTHD.VD_CD    = #{g.vd_cd}
+	                                   AND QTHD.RFX_BID_STS_CCD = 'S'
+	                              )  /*이전차수에 제출한 업체여야 함*/
+	                   )
+	                OR (
+	                       RQHD.SLCTN_TYP_CCD != 'TOT' OR RQHD.RFX_RND = 1
+	                   )
+	               )
+	           )
+	       )
+	   AND RQHD.RFX_STS_CCD NOT IN ('T','A')
+	   <if test="p.RFX_BID_STS_CCD != null and p.RFX_BID_STS_CCD != ''">
+	     <choose>
+	       <when test="p.RFX_BID_STS_CCD == 'P,T'">
+	   AND (
+	           QTHD.RFX_BID_STS_CCD IS NULL /* P : 미접수 */
+	        OR QTHD.RFX_BID_STS_CCD = 'T'   /* T : 임시저장 */
+	       )
+	       </when>
+	       <otherwise>
+	   AND QTHD.RFX_BID_STS_CCD = #{p.rfx_bid_sts_ccd}
+	       </otherwise>
+	     </choose>
+	   </if>
+	</select>
+	
+	<select id="countSpPo" resultType="java.lang.Integer">
+	/* portal-widget.countSpPo */
+      <!-- PO생성일자 조회시작일 : 한달 전 (String) -->
+      <bind name="poFromDate" value='g.getFormatNow(g.increaseDate(g.now, "M", -1), "yyyyMMdd")'/>
+      <!-- PO생성일자 조회시작일 : 오늘 (String) -->
+      <bind name="poToDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+	SELECT COUNT(POHD.PO_UUID)
+	  FROM PO POHD
+	 WHERE POHD.TEN_ID       = #{g.tenant}
+	   AND POHD.VD_CD        = #{g.vd_cd}
+	   AND POHD.PO_STS_CCD IN ('APVD', 'CHG', 'TRMN') /* C:발주승인완료, M:발주변경, D:발주해지 */
+	   <if test="p.vd_po_sts_ccd != null and p.vd_po_sts_ccd != ''">
+	   AND POHD.VD_PO_STS_CCD  = #{p.vd_po_sts_ccd}
+	   </if>
+	   AND POHD.PO_CRN_DT >= #{poFromDate}
+	   AND POHD.PO_CRN_DT <![CDATA[<=]]> #{poToDate}
+	   AND POHD.STS         != 'D'
+	</select>
+</mapper>

@@ -1,0 +1,110 @@
+<dom-module id="es-import-list">
+
+	<style>
+		:host {
+            @apply(--vbox-layout); 
+        }
+	</style>
+	
+	<template>
+		<div class="vbox flex">
+			<sc-toolbar>
+				<sc-label text="엑셀 업로드 예제" i18n-disabled></sc-label>
+				<sc-spacer></sc-spacer>
+				<sc-button text="엑셀 업로드" on-click="onImport" i18n-disabled></sc-button>
+				<sc-button text="추가" on-click="onAddItem" i18n-disabled></sc-button>
+			</sc-toolbar>
+			
+			<sc-grid id="gridPanel" class="flex" editable="true">
+				<sc-grid-columns>
+					<sc-data-column	data-field="id"	header-text="아이디"	width="150"></sc-data-column>
+					<sc-data-column	data-field="no"	header-text="번호"		width="150"></sc-data-column>
+					<sc-data-column	data-field="test"	header-text="itemTest" item-editor-function="itemFunctionTest" width="150" editable="true"></sc-data-column>
+					<sc-data-column	data-field="name"	header-text="이름"	width="150"></sc-data-column>
+					<sc-data-column	data-field="type"	header-text="유형"	width="150"></sc-data-column>
+					<sc-data-column	data-field="requesttype"	header-text="요청 유형"	width="150"></sc-data-column>
+					<sc-data-column	data-field="createdatetime"	header-text="요청 일자"	width="150"></sc-data-column>
+					<sc-data-column	data-field="boolean"		header-text="참 거짓"	width="150"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field	data-field="id"></sc-grid-field>
+					<sc-grid-field data-field="no"></sc-grid-field>
+					<sc-grid-field data-field="name"></sc-grid-field>
+					<sc-grid-field data-field="type"></sc-grid-field>
+					<sc-grid-field data-field="requesttype"></sc-grid-field>
+					<sc-grid-field data-field="createdatetime"></sc-grid-field>
+					<sc-grid-field	data-field="boolean"	data-type="boolean"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'es-import-list',
+			properties : {
+                importerPopup: Object
+			},
+			
+			/**
+				Grid Initialize Functions
+			*/
+			_addResizeEvent: function(gridView, container){
+				var me = this,
+					resizeListener = function(){
+		        		gridView.resetSize();
+		        	};
+	            container.addEventListener("content-resize", resizeListener);
+	            me._removeResizeEvent = function(){
+	        		container.removeEventListener("content-resize", resizeListener);
+	        		resizeListener = null;
+	        		gridView = null;
+	        		container = null;
+	        		me = null;
+	        	};
+		    },
+		    
+		    _removeResizeEvent: function(){
+		    	// defined _addResizeEvent Fn
+		    },
+			
+			onImport : function() {
+				var me = this;
+				
+				var importerPopup = UT.popup('cc-excel-import', me, 800, 600, null, {closable : false});
+				var importer = importerPopup.getContent();
+				importer.doImport(me.$.gridPanel, function(rows){
+					this.$.gridPanel.setDataProvider(rows);
+				}, me);
+				
+				importerPopup.show();
+				
+			},
+			onAddItem: function(){
+				var me = this,
+						provider = me.$.gridPanel.getDataProvider();
+
+				// 그리드 신규행 추가
+				var row = {
+				};
+				provider.addItemAt(0,row);
+			},
+
+			itemFunctionTest:function(data, item){
+				return {type:"list", items: [
+						{ label:'테스트1',data:'1'},
+						{ label:'테스트2',data:'2'},
+						{ label:'테스트3',data:'3'},
+						{ label:'테스트4',data:'4'},
+						{ label:'테스트5',data:'5'},
+					] , valueField:"data", displayField:"label"};
+			},
+			
+			
+			initialized : function() {
+				var me = this;
+			}
+		});
+	</script>
+
+</dom-module>

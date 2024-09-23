@@ -1,0 +1,69 @@
+<sc-link rel="import" href="es-user-list.html"></sc-link>
+<sc-link rel="import" href="es-user-info.html"></sc-link>
+<sc-link rel="import" href="es-user-role.html"></sc-link>
+<sc-link rel="import" href="es-user-operorg.html"></sc-link>
+
+<dom-module id="em-user">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+	        <es-user-list id="userList" on-find-userinfo="onFindUserinfo" on-init-user="onInitUser" on-clear="onClear" class="flex"></es-user-list>
+	        <div class="hspace-10"></div>
+	        <sc-tab-navigation id="tabNavi"  class="flex">
+	            <es-user-info id="userInfo" title-text="정보" on-find-userinfo="onFindUserinfo"  on-find-user-list="onFindUserList"></es-user-info>
+	            <es-user-role id="userRole" title-text="역할" ></es-user-role>
+	            <es-user-operorg id="userOperationOrganization" title-text="운영조직" ></es-user-operorg>
+	        </sc-tab-navigation>
+    	</div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-user',
+            // 사용자 현황 : 아이디 선택 시
+            onFindUserinfo : function(e, data) {
+                var me = this;
+                me.$.userInfo.load(data);
+                me.$.userRole.load(data);
+                me.$.userOperationOrganization.load(data);
+            },
+
+            // 사용자 현황 : 사용자 추가 시
+            onInitUser : function() {
+                var me  = this;
+
+                me.$.userInfo.initUser();
+                me.$.userRole.clear();
+                me.$.userOperationOrganization.clear();
+
+                me.$.tabNavi.selectItem(me.$.userInfo);
+
+            },
+
+            // 사용자 현황 : 조회 시 사용자 정보 초기화
+            onClear : function() {
+                var me  = this;
+
+                me.$.userInfo.clear();
+                me.$.userRole.clear();
+                me.$.userOperationOrganization.clear();
+
+                me.$.tabNavi.selectItem(me.$.userInfo);
+            },
+
+            // 사용자 정보 저장 후 사용자 현황 재조회
+            onFindUserList: function() {
+                var me  = this;
+                me.$.userList.onReFindList();
+            }
+
+        });
+    </script>
+</dom-module>

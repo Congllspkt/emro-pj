@@ -1,0 +1,42 @@
+<sc-link rel="import" href="es-printout-list.html"></sc-link>
+<sc-link rel="import" href="es-printout-detail.html"></sc-link>
+
+<dom-module id="em-printout">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		
+		<div class="hbox flex">
+			<es-printout-list id="docPrintoutList" class="flex-5" on-find-printout-detail="onFindPrintoutDetail" on-reset-printout-detail="onResetPrintoutDetail"></es-printout-list>
+			<div class="hspace-5"></div>
+			<es-printout-detail id="printoutDetail" class="flex-5"></es-printout-detail>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-printout',
+			
+			// 문서 출력물 현황 : 문서ID 선택
+            onFindPrintoutDetail: function(e, data) {
+                var me = this;
+                me.$.printoutDetail.load(data);
+			},
+
+			// 문서 출력물 현황 조회 시 상세 내용 초기화
+            onResetPrintoutDetail: function() {
+                var me = this;
+                me.$.printoutDetail.clear();
+			}
+		})
+		
+	</script>
+	
+	
+	
+</dom-module>

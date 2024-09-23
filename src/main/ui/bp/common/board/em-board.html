@@ -1,0 +1,69 @@
+<sc-link rel="import" href="es-board-list.html"></sc-link>
+<sc-link rel="import" href="es-board-detail.html"></sc-link>
+
+<dom-module id="em-board">
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+    </style>
+
+	<template>
+		<sc-pages id="pages" selected="0" class="fit">
+			<es-board-list id="boardList" on-show-board-detail="onShowBoardDetail"></es-board-list>
+			<template>
+				<es-board-detail id="boardDetail" on-show-boardlist="onShowBoardList"></es-board-detail>
+			</template>
+		</sc-pages>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-board',
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+			initialized: function(e) {
+			    var me = this;
+
+			    if(!UT.isEmpty(this.params)){
+                    // bbd_uuid 전달
+                    var param = {
+                        mode:"view",
+                        bbd_uuid : this.params.bbd_uuid,
+                        pst_no: this.params.pst_no
+                    };
+                    me.$.boardList.load(param);
+				}
+
+			},
+
+			load: function(data) {
+			    var me = this;
+
+			    var param = {
+			        bbd_uuid : data.bbd_uuid
+				}
+                me.$.boardList.load(param);
+			},
+
+			// 게시판 목록 -> 게시판 상세
+			onShowBoardDetail: function(e, data){
+                var me = this;
+
+                me.$.pages.selectItem(me.$.boardDetail);
+                me.$.boardDetail.load(data);
+			},
+
+			// 게시판 상세 -> 게시판 목록
+			onShowBoardList: function(e, data) {
+				// 게시판 목록화면 이동
+				var me = this;
+				me.$.pages.selectItem(me.$.boardList);
+                this.$.boardList.onSearch(data);
+			}
+		});
+	</script>
+</dom-module>

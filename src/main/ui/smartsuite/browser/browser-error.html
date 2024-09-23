@@ -1,0 +1,118 @@
+<script>
+    (function (window) {
+        var errorFn = function (e) {
+            window.removeEventListener("error", errorFn); //기존 이벤트 제거 후 5초 뒤 다시 등록
+            try {
+                var err_uuid = UT.generateUUID();
+                errorHandler.call(this, e.message, e.filename, e.lineno, e.colno, e.error, err_uuid);
+            } catch (e) {
+            	console.error(e);
+            }
+        };
+        window.addEventListener("error", errorFn);
+
+        function errorHandler(message, source, lineno, colno, error, err_uuid) {
+
+            var idx = 0;
+            if((idx = source.indexOf("sourceURL")) > -1) {
+                source = source.slice(idx, source.length); //IE 소스 길이가 길어서 자르기
+            }
+
+            var errorObj = {
+                err_uuid: err_uuid,
+                err_occr_src_path: replaceContentToPath(decodeContent(source)).slice(0,150),
+                sys_err_msg: replaceMsg(message),
+                err_ln_no: lineno,
+                err_col_no: colno,
+                stk_trce_cont: decodeContent(error && error.stack || ""),
+                usr_webbr_kind: navigator.userAgent,
+                err_occr_dttm: new Date()
+            };
+            
+            //DEV, TEST 메뉴 제외
+            var currentMenu = document.querySelector("sc-mdi-tabbar sc-tab.item-selected");
+            if(currentMenu) {
+            	var menuId = currentMenu.getAttribute("data-window-id");
+            	if(menuId && (menuId.indexOf("DEV") > -1 || menuId.indexOf("TEST") > -1 )) {
+            		return;
+            	}
+            } 
+            
+            
+            //에러 전송
+            /*sendError(errorObj);
+            
+            window.openErrorUserMessage(err_uuid);*/
+            
+            (function () {
+                try {
+//                    html2canvas(document.querySelector("sc-mdi-window.item-selected")).then(function (canvas) {
+//                        console.log(canvas.toDataURL());
+//                        document.querySelector("sc-mdi-window.item-selected").appendChild(canvas);
+//                    });
+                } catch(e) {
+                	console.error(e);
+                } finally {
+                    setTimeout(function() {
+                        window.addEventListener("error", errorFn);
+                    }, 5000);
+                }
+            })();
+        }
+
+        function sendError(errorObj) {
+            var scAjax = document.createElement("sc-ajax");
+            scAjax.url = "saveBrowserErrorInfo.do";
+            scAjax.body = errorObj || {};
+
+            scAjax.request();
+        }
+
+
+        function replaceContentToPath(src) {
+            if(/sourceURL=([^\b]*)/i.test(src)) { //Only IE
+                return src.replace(/sourceURL=([^\b]*)/i, function(all, matched) {
+                    return matched;
+                });
+            } else { // Other Browser
+                return src;
+            }
+        }
+
+        function decodeContent(str) {
+            return decodeURIComponent(str || "")
+                .replace(/&nbsp;/g, " ")
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .replace(/&apos;/g, "'");
+        }
+        
+        function replaceMsg(str){
+            return decodeURIComponent(str || "")
+                  .replaceAll("$", "")
+                  .replaceAll("\\", "");
+         }
+        
+        //전역으로 사용할 수 있도록 등록
+        window.openErrorUserMessage = function (err_uuid) {
+            //에러 발생 시 사용자가 에러 내용을 입력하도록 할 것인지
+            if(err_uuid && window.useErrorUserMessage === true) {
+                Polymer.Base.importLink("./ui/lib/custom/html/ep-error-user-message.html", function () {
+                    if(!window.userErrorMessagePopup) {
+                        window.userErrorMessagePopup = UT.popup("ep-error-user-message", window, 400, 350, {
+                            "send-error-user-message": function (popup) {
+                                popup.hide();
+                            }
+                        }, {destroyOnHided: false});
+                    }
+
+                    window.userErrorMessagePopup.show();
+                    window.userErrorMessagePopup.getWindowContent().load(err_uuid);
+                });
+            }
+        }
+        
+    })(window);
+</script>

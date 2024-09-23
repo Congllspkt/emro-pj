@@ -1,0 +1,23 @@
+<sc-link rel="import" href="es-terms-history.html"></sc-link>
+
+<dom-module id="ep-terms-history">
+    <style>
+        :host{
+            @apply(--fit-layout);
+        }
+    </style>
+    <template>
+            <es-terms-history id="termsHistory"></es-terms-history>
+    </template>
+    <script>
+        Polymer({
+            is: 'ep-terms-history',
+
+            load: function(param){
+                var me = this;
+                me.$.termsHistory.load(param);
+            }
+        });
+    </script>
+
+</dom-module>

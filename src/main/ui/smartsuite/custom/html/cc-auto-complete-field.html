@@ -1,0 +1,326 @@
+<!--
+`<cc-auto-complete-field></cc-auto-complete-field>` `SCPickerFieldBehavior` 를 상속받아
+code와 name을 검색조건으로 결과 값을 드롭다운형태로 표현하는 엘리먼트입니다.
+display 되는 text 는 조회된 결과값의 `[code 명] : [label 명]`으로 표현됩니다.
+
+### 기본예제
+
+	<cc-auto-complete-field value="{{testObj.vd_cd}}" label="{{testObj.vd_nm}}"></cc-auto-complete-field>
+
+### type
+`typeMapping` 프로퍼티에  type 별로 요청 url 을 지정 할 수 있으며,
+`value`,`label` 에 mapping 할 key 를 지정할 수 있습니다.
+type과 해당하는 url 을 지정하지 않으면 정상동작 하지 않습니다.
+
+	<cc-auto-complete-field type="vendor"></cc-auto-complete-field>
+
+ -->
+<dom-module id="cc-auto-complete-field">
+    <style>
+        :host {
+            display :table;
+        }
+        :host > * {
+            display: table-cell;
+            vertical-align : middle;
+        }
+
+        sc-dropdown {
+            width : 220px;
+        }
+
+        sc-dropdown > sc-listbox  {
+            max-height : 150px;
+        }
+
+        .reset {
+            font: normal normal normal 14px/18px FontAwesome;
+            background: transparent;
+            color: #292929;
+            padding: 0;
+            height: 20px;
+        }
+        .reset:before {
+            margin-left: 5px;
+            margin-right: 5px;
+            content : "\f0e2";
+        }
+
+        .reset:hover {
+            color : #66afe9;
+        }
+        .reset:focus {
+            box-shadow: 0 0 0 0.5px steelblue inset !important;
+        }
+    </style>
+    <template>
+        <sc-ajax id="dataPublisher"></sc-ajax>
+
+        <sc-text-field on-enter="_onEnter" value="{{value}}" on-keydown="_onKeyDownValue" required="[[required]]" readonly="[[readonly]]" disabled="[[disabled]]" style="width:85px;"></sc-text-field>
+        <span class="hspace-5"></span>
+        <sc-text-field on-enter="_onEnter" value="{{label}}" on-keydown="_onKeyDownLabel" required="[[required]]" readonly="[[readonly]]" disabled="[[disabled]]" style="width:130px;"></sc-text-field>
+        <button class="reset" on-tap="onReset" hidden="[[readonly]]"></button>
+        <template class="picker-template">
+            <sc-dropdown match-position-target-width="false">
+                <sc-listbox class="picker dropdown" items="[[items]]">
+                    <template>
+                        <div class="sc-combobox-item">[[_itemToDisplay(item)]]</div>
+                    </template>
+                </sc-listbox>
+            </sc-dropdown>
+        </template>
+
+    </template>
+    <script>
+        Polymer({
+            is: "cc-auto-complete-field",
+            properties: {
+                /**
+                 * items 배열 중 선택된 오브젝트의 value(code) 입니다.
+                 *
+                 * @type {String}
+                 */
+                value: {
+                    type: String,
+                    notify: true
+                },
+
+                /**
+                 * items 배열 중 선택된 오브젝트의 label(name) 입니다.
+                 *
+                 * @type {String}
+                 */
+                label: {
+                    type: String,
+                    notify: true
+                },
+
+                /**
+                 * type 별로 요청 url 을 지정할 수 있습니다. (`typeMapping`프로퍼티)
+                 *
+                 * @type {String}
+                 */
+                type: {
+                    type: String
+                },
+
+                /**
+                 *  드롭다운에 표시될 item의 배열입니다.
+                 *
+                 * @type {Array}
+                 */
+                items: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+                /**
+                 *  listbox에 보여지는 item 개수입니다. 음수 일 경우 기본 높이값으로 표현합니다.
+                 *
+                 * `<cc-auto-complete-field visible-item-size="5">`
+                 * @type {Number}
+                 */
+                visibleItemSize : {
+                    type : Number,
+                    value : -1
+                },
+
+                /**
+                 *  type 별로 요청 url 그리고 value,label 에 mapping 할 key 를 지정할 수 있습니다.
+                 *
+                 * @type {Object}
+                 */
+                _typeMapping : {
+                    type: Object,
+                    value: function() {
+                        return {
+                            vendor: {
+                                url : "findListVendorMaster.do",
+                                value : "vd_cd",
+                                label: "vd_nm"
+                            },
+                            user: {
+                                url : "developerController/getPopupList.do", //사용시 수정필요
+                                value : "usr_id",
+                                label: "usr_nm"
+                            }
+                        }
+                    }
+                },
+
+                required: {
+                    type: Object,
+                    value: function(){
+                        return false;
+                    }
+                },
+                readonly: {
+                    type: Object,
+                    value: function(){
+                        return false;
+                    }
+                },
+                disabled: {
+                    type: Object,
+                    value: function(){
+                        return false;
+                    }
+                }
+            },
+
+            listeners : {
+                'picker-expanded' : '_onPickerExpanded',
+                'picker-collapsed' : '_onPickerCollapsed'
+            },
+
+            /**
+             * 지정한 `type`으로 `_typeMapping` 에 정의된 객체를 반환 합니다.
+             *
+             * @type {Object}
+             */
+            get _typeObject() {
+                if(!this._typeObj) {
+                    this._typeObj = this._typeMapping[this.type];
+                }
+                return this._typeObj;
+            },
+
+            ready: function() {
+                this._setField(false);
+            },
+
+            /**
+             * value 필드와 label 필드에서 엔터 입력 시 호출하며, 명시된 url 로 request 합니다.
+             *
+             * @private
+             */
+            _onEnter: function(e) {
+                var me = this,
+                    typeObj = me._typeObject;
+
+                me._focusEl = e.target;
+                if(me.readonly || !typeObj.url){
+                    console.error('Not found request url.')
+                    return;
+                }
+                me.$.dataPublisher.url = typeObj.url;
+
+                var param = {};
+                param[typeObj.value] = me.value;
+                param[typeObj.label] = me.label;
+
+                me.$.dataPublisher.body = param;
+
+                UT.request(me.$.dataPublisher, function(e, res) {
+                    var result = res.response;
+                    if(result.length === 0) {
+                        UT.alert("STD.N2800", function() { // 검색 결과가 없습니다.
+                            me._focusEl.focus();
+                        });
+                    } else if (result.length === 1){
+                        me.set("value", result[0][typeObj.value]);
+                        me.set("label", result[0][typeObj.label]);
+                    } else {
+                        me.set("items", result);
+                        me.expand();
+                    }
+                });
+            },
+
+            /**
+             * value 필드와 label 필드 값을 초기화 합니다.
+             */
+            onReset: function() {
+                this.set("value", "");
+                this.set("label", "");
+            },
+
+            /**
+             * value 필드에서 키 입력이 발생할 경우 label 필드값을 초기화 합니다.
+             *
+             * @private
+             */
+            _onKeyDownValue: function(e) {
+                if (!UT.isSpecialKeyDown(e) && !this.readonly) {
+                    this.set("label", "");
+                }
+            },
+
+            /**
+             * label 필드에서 키 입력이 발생할 경우 value 필드값을 초기화 합니다.
+             *
+             * @private
+             */
+            _onKeyDownLabel: function(e) {
+                if (!UT.isSpecialKeyDown(e) && !this.readonly) {
+                    this.set("value", "");
+                }
+            },
+
+            /**
+             * 드롭다운에 표현될 item의 text를 반환합니다.
+             *
+             * @private
+             * @return {String}
+             */
+            _itemToDisplay: function(item) {
+                if(item){
+                    return item[this._typeObject.value]+" : "+item[this._typeObject.label];
+                }
+                return item;
+            },
+
+            /**
+             * item 이 선택되면 value 와 label 에 데이터를 바인딩하고 드롭다운을 collapse 합니다.
+             *
+             * @private
+             */
+            _onItemSelect: function(event) {
+                var idx = event.detail.index,
+                    item = this.items[idx];
+                this.set("value", item[this._typeObject.value]);
+                this.set("label", item[this._typeObject.label]);
+                this.collapse();
+            },
+
+            /**
+             * 드롭다운이 expand 되면  `_onItemSelect` 이벤트를 등록합니다.
+             *
+             * @private
+             */
+            _onPickerExpanded: function() {
+                if(this.visibleItemSize > -1){
+                    var el = this._pickerElement.elements[0];
+                    if(typeof el !== "undefined"){
+                        this._pickerElement.style.maxHeight = this.visibleItemSize * el.clientHeight + 'px';
+                    }
+                }
+                this.listen(this._pickerElement, 'item-select', '_onItemSelect');
+            },
+
+            /**
+             * 드롭다운이 expand 되면  `_onItemSelect` 이벤트를 해지합니다.
+             *
+             * @private
+             */
+            _onPickerCollapsed: function() {
+                this._focusEl.focus();
+                this.unlisten(this._pickerElement, 'item-select', '_onItemSelect');
+            },
+
+            /**
+             * SCPickerFieldBehavior 의 아래 방향키 이벤트를 방지합니다.
+             *
+             * @private
+             */
+            _onKeyDown : function() {
+            },
+
+            behaviors: [
+                Polymer.SCPickerFieldBehavior
+            ]
+        })
+    </script>
+</dom-module>

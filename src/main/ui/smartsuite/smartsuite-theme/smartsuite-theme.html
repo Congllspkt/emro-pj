@@ -1,0 +1,40 @@
+<script src="smartsuite-theme-manager.js"></script>
+
+<dom-module id="smartsuite-theme">
+	<style>
+		ul li{display:inline;padding:0 4px}
+		.default-theme-btn {background:#152B3C;border-radius:50px;padding:0; width:8px; height:8px;cursor:pointer;border:2px solid #152B3C}
+		.default-theme-btn:hover {background:#FFFFFF}
+		.gray-theme-btn {background:#5C6062;border-radius:50px;padding:0; width:8px; height:8px;cursor:pointer;border:2px solid #5C6062}
+		.gray-theme-btn:hover {background:#FFFFFF}
+		.red-theme-btn {background:#FF0000;border-radius:50px;padding:0; width:8px; height:8px;cursor:pointer;border:2px solid #FF0000}
+		.red-theme-btn:hover {background:#FFFFFF}
+		.white-theme-btn {background:#FFFFFF;border-radius:50px;padding:0; width:10px; height:10px;cursor:pointer;border:1px solid #CACACA}
+		.white-theme-btn:hover {box-shadow:inset 0 0 0 3px #FFFFFF,inset 0 0 0 5px #000000;}
+	</style>
+	<template>
+		<ul>
+			<li><sc-button title="indigo" class="default-theme-btn" on-click="onThemeStyleClick"></sc-button></li>
+			<li><sc-button title="gray" class="gray-theme-btn" on-click="onThemeStyleClick" data-args="gray-theme"></sc-button></li>
+			<li><sc-button title="red" class="red-theme-btn" on-click="onThemeStyleClick" data-args="red-theme"></sc-button></li>
+			<li><sc-button title="white" class="white-theme-btn" on-click="onThemeStyleClick" data-args="white-theme"></sc-button></li>
+		</ul>
+	</template>
+	<script>
+		Polymer({
+			is : 'smartsuite-theme',
+
+            onThemeStyleClick: function(e) {
+			    var styleName = e.target.dataset.args;
+			    if(styleName){
+                    SmartsuiteTheme.applySmartsuiteTheme(styleName);
+                    return;
+			    }
+                SmartsuiteTheme.removeSmartsuiteTheme();
+
+
+
+			}
+		})
+	</script>
+</dom-module>

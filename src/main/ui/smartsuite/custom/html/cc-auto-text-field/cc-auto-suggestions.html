@@ -1,0 +1,836 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-auto-suggestions
+    ** Author          : choijh
+    ** Create Date     : 2017.07.12
+    ** History         : 2017.07.12 choijh 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="cc-auto-suggestions">
+    <template>
+        <div>
+            <sc-listbox id="suggestionsWrapper"></sc-listbox>
+            <!-- Default suggestion template -->
+            <template id="defaultTemplate">
+                <li id$="[[_getSuggestionId(index)]]" on-tap="_onSelect" class="defualt-template suggestions">
+                    <div>[[_getItemText(item)]]</div>
+                </li>
+            </template>
+            <!-- Custom template -->
+            <content id="templates" select="[autocomplete-custom-template]"></content>
+        </div>
+    </template>
+    <script>
+        (function () {
+            var DIRECTION = {
+                UP: 'up',
+                DOWN: 'down'
+            };
+
+            var KEY_CODES = {
+                LEFT_ARROW: 37,
+                RIGHT_ARROW: 39,
+                UP_ARROW: 38,
+                DOWN_ARROW: 40,
+                ENTER: 13,
+                ESCAPE: 27
+            };
+
+            Polymer({
+                is: "cc-auto-suggestions",
+
+                behaviors: [
+                    Polymer.Templatizer
+                ],
+
+                properties: {
+                    /**
+                     * Input의 ID
+                     */
+                    'for': {
+                        type: String
+                    },
+
+                    /**
+                     * Suggestion bar의 open 유무
+                     */
+                    isOpen: {
+                        type: Boolean,
+                        value: false,
+                        notify: true
+                    },
+
+                    /**
+                     * Suggestion이 보이는 최소 개수
+                     */
+                    minSuggestionLength: {
+                        type: Number,
+                        value: 1
+                    },
+
+                    /**
+                     * Suggestion이 보이는 최대 개수
+                     */
+                    maxViewableItems: {
+                        type: Number,
+                        value: 7
+                    },
+
+                    /**
+                     * Datasource의 text Property
+                     */
+                    displayField: {
+                        type: String,
+                        value: 'text'
+                    },
+
+                    /**
+                     * Datasource의 value Property
+                     */
+                    valueField: {
+                        type: String,
+                        value: 'value'
+                    },
+
+                    /**
+                     * 검색 대상이 저장
+                     */
+                    source: {
+                        type: Array,
+                    },
+
+                    /**
+                     * 비동기 검색 대상
+                     */
+                    remoteSource: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    /**
+                     *  Object containing information about the current selected option. The structure of the object depends on the
+                     *  structure of each element in the data source.
+                     */
+                    selectedOption: {
+                        type: Object,
+                        notify: true
+                    },
+
+                    /**
+                     * 이벤트 구분자
+                     */
+                    eventNamespace: {
+                        type: String,
+                        value: '-'
+                    },
+
+                    /**
+                     * Current highlighted suggestion. The structure of the object is:
+                     * ```
+                     * {
+                     *    elementId: ID // id of the highlighted DOM element
+                     *    option: // highlighted option data
+                     * }
+                     * ```
+                     */
+                    highlightedSuggestion: {
+                        type: Object,
+                        value: {},
+                        notify: true
+                    },
+
+                    /**
+                     * 템플릿의 레펀런스. 커스텀 템플릿이 없으면 기본 템플릿을 사용한다
+                     */
+                    _suggestionTemplate: {
+                        type: Object,
+                        value: function () {
+                            var customTemplate = this.getEffectiveChildren();
+
+                            return customTemplate.length > 0 ? customTemplate[0] : this.$.defaultTemplate;
+                        }
+                    },
+
+                    /**
+                     * 현대 Display되어 있는 suggestions
+                     */
+                    _suggestions: {
+                        type: Array,
+                        observer: '_onSuggestionsChanged'
+                    },
+
+                    /**
+                     * 현재 Index를 의미. 선택되어 있지 않은 Index가 -1 (0이 첫번째)
+                     * Indicates the position in the suggestions popup of the currently highlighted element, being `0` the first one,
+                     * and `this._suggestions.length - 1` the position of the last one.
+                     */
+                    _currentIndex: {
+                        type: Number,
+                        value: -1
+                    },
+
+                    /**
+                     * 현재 스크롤의 Index
+                     * Indicates the current position of the scroll. Then the `scrollTop` position is calculated multiplying the
+                     * `_itemHeight` with the current index.
+                     */
+                    _scrollIndex: {
+                        type: Number,
+                        value: 0
+                    },
+
+                    /**
+                     * Item하나의 높이 (Pixel 단위)
+                     * Height of each suggestion element in pixels
+                     */
+                    _itemHeight: {
+                        type: Number,
+                        value: 100,
+                        observer: '_itemHeightChanged'
+                    },
+
+                    // TODO: check if we need _value and _text properties. It seems they can be removed
+                    _value: {
+                        value: undefined
+                    },
+
+                    _text: {
+                        value: undefined
+                    },
+
+                    /**
+                     * Item ID (변경될 수 있음)
+                     * This value is used as a base to generate unique individual ids that need to be added to each suggestion for
+                     * accessibility reasons.
+                     */
+                    _idItemSeed: {
+                        type: String,
+                        value: 'aria-' + new Date().getTime() + '-' + (Math.floor(UT.mathRandom() * 1000)),
+                        readOnly: true
+                    },
+
+                    /**
+                     * Reference to binded functions so we can call removeEventListener on element detached
+                     */
+                    _bindedFunctions: {
+                        type: Object,
+                        value: function () {
+                            return {
+                                _onKeypress: null,
+                                _onFocus: null,
+                                _onBlur: null
+                            };
+                        }
+                    },
+
+                    /**
+                     * Indicates if the the height of each suggestion item has been already calculated.
+                     * The assumption is that item height is fixed and it will not change.
+                     */
+                    _hasItemHighBeenCalculated: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    /**
+                     * SFNSUPP-7704 브라우저별 sc-listbox 스크롤 클릭시 동작방식 상이함으로 인한 추가
+                     * 커서가 리스트박스 안인지 여부
+                     */
+                     isInSCListBox: {
+                         type: Boolean,
+                         value: false
+                     }
+                },
+
+                // Element Lifecycle
+                ready: function () {
+                    this._value = this.value;
+
+                    // This is important to be able to access component methods inside the templates used with Templatizer
+                    this.dataHost = this;
+
+                    // templatize must be called once before stamp is called
+                    this.templatize(this._suggestionTemplate);
+
+                    // Need to capture mousedown to prevent the focus to switch from input field when user clicks in the scrollbar
+                    // and the autosuggest is a child of an element with tabindex.
+                    this.$.suggestionsWrapper.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                    });
+
+                    this.$.suggestionsWrapper.addEventListener('mouseenter', function (event) {
+                        this.isInSCListbox = true;
+                        event.preventDefault();
+                    }.bind(this));
+
+                    this.$.suggestionsWrapper.addEventListener('mouseleave', function (event) {
+                        this.isInSCListbox = false;
+                        event.preventDefault();
+                    }.bind(this));
+                },
+
+                attached: function () {
+                	if(!this._attachedCalled) {
+                        this._attachedCalled = true;
+                        //한번만 호출되도록 로직작성
+
+                        this._input = this.parentNode.querySelector('#' + this.for);
+
+                        if(this._input === null) {
+                            throw new Error('Cannot find input field with id: ' + this.for);
+                        }
+
+                        this._bindedFunctions._onKeypress = this._onKeypress.bind(this);
+                        this._bindedFunctions._onFocus = this._onFocus.bind(this);
+                        this._bindedFunctions._onBlur = this._onBlur.bind(this);
+
+                        this._input.addEventListener('keydown', this._bindedFunctions._onKeypress);
+                        this._input.addEventListener('focus', this._bindedFunctions._onFocus);
+                        this._input.addEventListener('blur', this._bindedFunctions._onBlur);
+                    }
+                },
+
+                _destroy: function () {
+                    this.cancelDebouncer('_onSuggestionChanged');
+
+                    this._input.removeEventListener('keydown', this._bindedFunctions._onKeypress);
+                    this._input.removeEventListener('focus', this._bindedFunctions._onFocus);
+                    this._input.removeEventListener('blur', this._bindedFunctions._onBlur);
+
+                    this._input = null;
+                },
+
+                // Element Behavior
+
+                /**
+                 * Get the text property from the suggestion
+                 * @param {Object} suggestion The suggestion item
+                 * @return {String}
+                 */
+                _getItemText: function (suggestion) {
+                    return suggestion[this.displayField];
+                },
+
+                /**
+                 * Show the suggestions wrapper
+                 */
+                _showSuggestionsWrapper: function () {
+                    var suggestionsWrapper = this.$.suggestionsWrapper;
+
+                    suggestionsWrapper.style.display = 'block';
+
+                    this.isOpen = true;
+                },
+
+                /**
+                 * Hide the suggestions wrapper
+                 */
+                _hideSuggestionsWrapper: function () {
+                    var suggestionsWrapper = this.$.suggestionsWrapper;
+
+                    suggestionsWrapper.style.display = 'none';
+
+                    this.isInSCListbox = false;
+                    this.isOpen = false;
+                    this.highlightedSuggestion = {};
+
+                    this._clearSuggestions();
+                },
+
+                _handleSuggestions: function (event) {
+                    if(!this.remoteSource) this._createSuggestions(event);
+                    else this._remoteSuggestions();
+                },
+
+                _remoteSuggestions: function () {
+                    var value = this._input.value;
+
+                    var option = {
+                        text: value,
+                        value: value
+                    };
+
+                    if(value && value.length >= this.minSuggestionLength) {
+                        this._fireEvent(option, 'change');
+                    } else {
+                        this._suggestions = [];
+                    }
+                },
+
+                _bindSuggestions: function (arr) {
+                    if(arr.length && arr.length > 0) {
+                        this._suggestions = arr;
+                        this._currentIndex = -1;
+                        this._scrollIndex = 0;
+                    } else {
+                        this._suggestions = [];
+                    }
+                },
+
+                _createSuggestions: function (event) {
+                    this._currentIndex = -1;
+                    this._scrollIndex = 0;
+
+                    var value = event.target.value;
+
+                    if(value && value.length >= this.minSuggestionLength) {
+                        value = value.toLowerCase();
+
+                        // Search for the word in the source properties.
+                        if(this.source && this.source.length > 0) {
+                            // Call queryFn. User can override queryFn() to provide custom search functionality
+                            this._suggestions = this.queryFn(this.source, value);
+                        }
+                    } else {
+                        this._suggestions = [];
+                    }
+                },
+
+                /**
+                 * Render suggestions in the suggestionsWrapper container
+                 * @param {Array} suggestions An array containing the suggestions to be rendered. This value is not optional, so
+                 *    in case no suggestions need to be rendered, you should either not call this method or provide an empty array.
+                 */
+                _renderSuggestions: function (suggestions) {
+                    var suggestionsContainer = Polymer.dom(this.$.suggestionsWrapper);
+
+                    this._clearSuggestions();
+
+                    suggestions.forEach(function (result, index) {
+                        // clone the template and bind with the model
+                        var clone = this.stamp({
+                            item: result,
+                            index: index
+                        });
+
+                        suggestionsContainer.appendChild(clone.root);
+                    }.bind(this));
+                },
+
+                _clearSuggestions: function () {
+                    var suggestionsContainer = Polymer.dom(this.$.suggestionsWrapper);
+
+                    suggestionsContainer.children.forEach(function (child) {
+                        suggestionsContainer.removeChild(child);
+                    });
+                },
+
+                /**
+                 * Listener to changes to _suggestions state
+                 */
+                _onSuggestionsChanged: function () {
+                    this.debounce('_onSuggestionChanged', function () {
+                        this._renderSuggestions(this._suggestions);
+
+                        if(this._suggestions.length > 0) {
+                            this._showSuggestionsWrapper();
+                        } else {
+                            this._hideSuggestionsWrapper();
+                        }
+
+                        Polymer.dom.flush();
+
+                        this._resetScroll();
+
+                        if(!this._hasItemHighBeenCalculated) {
+                            var firstSuggestionElement = this.$.suggestionsWrapper.querySelector('.suggestions');
+
+                            if(firstSuggestionElement !== null) {
+                                // Update maxHeight of suggestions wrapper depending on the height of each item result
+                                this._itemHeight = firstSuggestionElement.offsetHeight;
+
+                                this._hasItemHighBeenCalculated = true;
+                            }
+                        }
+                    }, 100);
+                },
+
+                _selection: function (index) {
+                    var selectedOption = this._suggestions[index];
+
+                    this._input.value = selectedOption[this.displayField];
+                    this.selectedOption = selectedOption;
+
+                    this._value = this.value;
+                    this._text = this.text;
+                    this.isInSCListbox = false;
+                    this._emptyItems();
+
+                    this._fireEvent(selectedOption, 'selected');
+
+                    this.hideSuggestions();
+                },
+
+                /**
+                 * Suggestion Element를 가져온다.
+                 * Template에서 suggestions class를 지정해야 한다.
+                 * @return {Array} a list of all suggestion elements
+                 */
+                _getItems: function () {
+                    return this.$.suggestionsWrapper.querySelectorAll('.suggestions');
+                },
+
+                /**
+                 * Empty the list of current suggestions being displayed
+                 */
+                _emptyItems: function () {
+                    this._suggestions = [];
+                },
+
+                _getId: function () {
+                    var id = this.getAttribute('id');
+                    if(!id) id = this.dataset.id;
+                    return id;
+                },
+
+                /**
+                 * Remove the the active state from all suggestion items
+                 */
+                _removeActive: function (items) {
+                    [].slice.call(items).forEach(function (item) {
+                        item.classList.remove('active');
+                    });
+                },
+
+                /**
+                 * Key press event handler
+                 */
+                _onKeypress: function (event) {
+                    var keyCode = event.which || event.keyCode;
+
+                    switch(keyCode) {
+                        case KEY_CODES.DOWN_ARROW:
+                            if(this.isOpen) {
+                                this._moveHighlighted(DIRECTION.DOWN);
+                            } else {
+                                this._handleSuggestions(event);
+                            }
+                            break;
+                        case KEY_CODES.UP_ARROW:
+                            this._moveHighlighted(DIRECTION.UP);
+                            break;
+                        case KEY_CODES.ENTER:
+                            this._keyenter();
+                            break;
+                        case KEY_CODES.ESCAPE:
+                            this._hideSuggestionsWrapper();
+                            break;
+                        // For left and right arrow, component should do nothing
+                        case KEY_CODES.LEFT_ARROW:
+                        // fall through
+                        case KEY_CODES.RIGHT_ARROW:
+                            break;
+                        default:
+                        	var down = {
+                        		code: event.code || event.key,
+                        		value: event.code ? "ArrowDown" : "Down"
+                        	};
+                        	var up = {
+                        		code: event.code || event.key,
+                        		value: event.code ? "ArrowUp" : "Up"
+                        	};
+                        	if((down.code != down.value) && (up.code != up.value)){
+                        		setTimeout(function () {
+                                    this._handleSuggestions(event);
+                                }.bind(this), 0);
+                        	}
+                    }
+
+                    this._input.$.input.focus();
+                },
+
+                /**
+                 * Event handler for the key ENTER press event
+                 */
+                _keyenter: function () {
+                    if(this.$.suggestionsWrapper.style.display === 'block' && this._currentIndex > -1) {
+                        var index = this._currentIndex;
+                        this._selection(index);
+                    }
+                },
+
+                /**
+                 *  Move the current highlighted suggestion up or down
+                 *  @param {string} direction Possible values are DIRECTION.UP or DIRECTION.DOWN
+                 */
+                _moveHighlighted: function (direction) {
+                    var items = this._getItems();
+
+                    if(items.length === 0) {
+                        return;
+                    }
+
+                    var numberOfItems = items.length - 1;
+
+                    var isFirstItem = this._currentIndex === 0;
+                    var isLastItem = this._currentIndex === numberOfItems;
+                    var isNoItemHighlighted = this._currentIndex === -1;
+
+                    if((isNoItemHighlighted || isFirstItem) && direction === DIRECTION.UP) {
+                        this._currentIndex = numberOfItems;
+                    } else if(isLastItem && direction === DIRECTION.DOWN) {
+                        this._currentIndex = 0;
+                    } else {
+                        var modifier = direction === DIRECTION.DOWN ? 1 : -1;
+                        this._currentIndex = this._currentIndex + modifier;
+                    }
+
+                    var highlightedOption = this._suggestions[this._currentIndex];
+                    var highlightedItem = items[this._currentIndex];
+
+                    this._removeActive(items);
+
+                    highlightedItem.classList.add('active');
+
+                    this._setHighlightedSuggestion(highlightedOption, highlightedItem.id);
+
+                    this._scroll(direction);
+                },
+
+                /**
+                 * Move scroll (if needed) to display the active element in the suggestions list.
+                 * @param {string} direction Direction to scroll. Possible values are `DIRECTION.UP` and `DIRECTION.DOWN`.
+                 */
+                _scroll: function (direction) {
+                    var newScrollValue, isSelectedOutOfView;
+
+                    var viewIndex = this._currentIndex - this._scrollIndex;
+
+                    // This happens only when user switch from last item to first one
+                    var isFirstItemAndOutOfView = this._currentIndex === 0 && viewIndex < 0;
+
+                    // This happens only when user switch from first or no item to last one
+                    var isLastItemAndOutOfView =
+                        this._currentIndex === this._suggestions.length - 1 && viewIndex >= this.maxViewableItems;
+
+                    if(isFirstItemAndOutOfView && direction === DIRECTION.DOWN) {
+                        newScrollValue = 0;
+                        isSelectedOutOfView = true;
+                    } else if(isLastItemAndOutOfView && direction === DIRECTION.UP) {
+                        newScrollValue = this._suggestions.length - this.maxViewableItems;
+                        isSelectedOutOfView = true;
+                    } else if(direction === DIRECTION.UP) {
+                        newScrollValue = this._scrollIndex - 1;
+                        isSelectedOutOfView = viewIndex < 0;
+                    } else {
+                        newScrollValue = this._scrollIndex + 1;
+                        isSelectedOutOfView = viewIndex >= this.maxViewableItems;
+                    }
+
+                    // Only when the current active element is out of view, we need to move the position of the scroll
+                    if(isSelectedOutOfView) {
+                        this._scrollIndex = newScrollValue;
+                        this.$.suggestionsWrapper.scrollTop = this._scrollIndex * this._itemHeight;
+                    }
+                },
+
+                /**
+                 * Reset scroll back to zero
+                 */
+                _resetScroll: function () {
+                    this.$.suggestionsWrapper.scrollTop = 0;
+                },
+
+                /**
+                 * Set the current highlighted suggestion
+                 * @param {Object} option Data of the highlighted option
+                 * @param {string} elementId id of the highlighted dom element.
+                 */
+                _setHighlightedSuggestion: function (option, elementId) {
+                    this.highlightedSuggestion = {
+                        option: option,
+                        elementId: elementId,
+                        textValue: option[this.displayField],
+                        value: option[this.valueField]
+                    };
+                },
+
+                _fireEvent: function (option, evt) {
+                    var id = this._getId();
+                    var event = 'autocomplete' + this.eventNamespace + evt;
+
+                    this.fire(event, {
+                        id: id,
+                        value: option[this.valueField] || option.value,
+                        text: option[this.displayField] || option.text,
+                        target: this,
+                        option: option
+                    });
+                },
+
+                _onSelect: function (event) {
+                    var index = event.model.index;
+                    this._selection(index);
+                },
+
+                /**
+                 * Event handler for the onBlur event
+                 */
+                _onBlur: function () {
+                    if(this.isInSCListbox){
+                        this._input.$.input.focus();
+                        return;
+                    }
+
+                    var option = {
+                        text: this.text,
+                        value: this.value
+                    };
+
+                    this._fireEvent(option, 'blur');
+
+                    if(this.isOpen) {
+                        this.hideSuggestions();
+                    }
+
+
+                },
+
+                /**
+                 * Event handler for the onFocus event
+                 */
+                _onFocus: function () {
+                    var option = {
+                        text: this.text,
+                        value: this.value
+                    };
+
+                    this._fireEvent(option, 'focus');
+                },
+
+                /**
+                 * Generate a suggestion id for a certain index
+                 * @param {number} index Position of the element in the suggestions list
+                 * @returns {string} a unique id based on the _idItemSeed and the position of that element in the suggestions popup
+                 * @private
+                 */
+                _getSuggestionId: function (index) {
+                    return this._idItemSeed + '-' + index;
+                },
+
+                /**
+                 * When item height is changed, the maxHeight of the suggestionWrapper need to be updated
+                 */
+                _itemHeightChanged: function () {
+                    this.$.suggestionsWrapper.style.maxHeight = this._itemHeight * this.maxViewableItems + 'px';
+                },
+
+                /****************************
+                 * PUBLIC
+                 ****************************/
+
+                /**
+                 * Sets the component's current suggestions
+                 * @param {Array} arr
+                 */
+                suggestions: function (arr) {
+                    this._bindSuggestions(arr);
+                },
+
+                /**
+                 * Hides the suggestions popup
+                 */
+                hideSuggestions: function () {
+                    setTimeout(function () {
+                        this._hideSuggestionsWrapper();
+                    }.bind(this), 300);
+                },
+
+                /**
+                 * suggestions 팝업을 보여줍니다.
+                 */
+                showSuggestion: function (event) {
+                    if(!this.isOpen) {
+                        this._handleSuggestions(event);
+                    }
+                    //event.preventDefault();
+                    this._input.$.input.focus();
+                },
+
+                /**
+                 * Query function is called on each keystroke to query the data source and returns the suggestions that matches
+                 * with the filtering logic included.
+                 * @param {Array} datasource An array containing all items before filtering
+                 * @param {string} query Current value in the input field
+                 * @returns {Array} an array containing only those items in the data source that matches the filtering logic.
+                 */
+                queryFn: function (datasource, query) {
+                    var queryResult = [];
+
+                    datasource.forEach(function (item) {
+                        var objText, objValue;
+
+                        if(typeof item === 'object') {
+                            objText = item[this.displayField];
+                            objValue = item[this.valueField];
+                        } else {
+                            objText = item.toString();
+                            objValue = objText;
+                        }
+
+                        if(objText.toLowerCase().indexOf(query) === 0) {
+                            // NOTE: the structure of the result object matches with the current template. For custom templates, you
+                            // might need to return more data
+                            queryResult.push({
+                                text: objText,
+                                value: objValue
+                            });
+                        }
+                    }.bind(this));
+
+                    return queryResult;
+                },
+
+
+                /**
+                 * 한글 글자(자음 포함) 검색
+                 * Locale이 한글인 경우에만 해당
+                 * */
+                matchHangulString: function (target, search) {
+                    var HANGUL_CHO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+
+                    //초성인지 확인
+                    function isCho(c) {
+                        return HANGUL_CHO.indexOf(c) > -1;
+                    }
+
+                    //초성을 가지고 온다
+                    function getCho(str) {
+                        var HANGUL_CHO = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+                        var result = "";
+                        var code;
+
+                        for(var i = 0; i < str.length; i++) {
+                            code = str.charCodeAt(i) - 44032;
+                            if(code > -1 && code < 11172) result += HANGUL_CHO[Math.floor(code / 588)];
+                        }
+                        return result;
+                    }
+
+                    // 가-힣
+                    function isHangul(c) {
+                        return 0xAC00 <= c && c <= 0xd7a3;
+                    }
+
+                    for(var i = 0, t = 0, targetLen = target.length; i < targetLen; i++) {
+                        if(isCho(search.charAt(t)) && isHangul(target.charCodeAt(i))) {
+                            if(getCho(target.charAt(i)) == search.charAt(t)) {
+                                //각각의 초성끼리 같은지 비교한다
+                                t++;
+                            }
+                        } else {
+                            //char이 초성이 아니라면
+                            if(target.charAt(i).toLowerCase() === search.charAt(t).toLowerCase()) {
+                                //그냥 같은지 비교한다.
+                                t++;
+                            }
+                        }
+                    }
+
+                    //검색 길이와 일치 수가 같으면 True를 반환
+                    return t === search.length;
+                }
+            });
+		})();
+    </script>
+</dom-module>

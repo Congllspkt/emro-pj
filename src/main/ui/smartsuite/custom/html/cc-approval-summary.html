@@ -1,0 +1,167 @@
+<!-- 
+/**
+ * 협력사 커스텀 태그
+ *
+ *     <cc-approval-summary app-id="{{poId}}" aprv-typcd="{{aprvTypcd}}"></cc-approval-summary>
+ *
+ * @element cc-approval-summary
+ *
+ *
+ * @attribute app-id 해당 모듈의 id binding value <br>
+ * [string]
+ *
+ * @attribute aprv-typcd 해당 모듈의 apvl_typ_ccd binding value <br>
+ * [string]
+ *
+ */
+-->
+
+<dom-module id="cc-approval-summary">
+    <template>
+        <!-- 상세정보 조회 -->
+        <sc-ajax id="findInfo" url="findApprovalSummary.do" on-response="completeFindInfo"></sc-ajax>
+        <!-- 코드 -->
+        <sc-request-group auto>
+	        <sc-code-group id="codes">
+	            <sc-code code="G002" value="{{codes.aprvStsCd}}" ></sc-code> <!-- 결재상태코드 -->
+	            <sc-code code="G003" value="{{codes.aprvTypCd}}" ></sc-code> <!-- 결재 유형 코드 -->
+	        </sc-code-group>
+        </sc-request-group>
+        <sc-cache id="aprvStsCode" key="aprv-[[aprvStsCd}]]" value="{{codes.aprvStsCd}}}" async></sc-cache>
+        <sc-cache id="aprvTypCode" key="aprv-[[aprvTypCd}]]" value="{{codes.aprvTypCd}}}" async></sc-cache>
+        <cc-form-panel title-text="결재 정보" collapsible="true" hidden="[[!formula('visiblePanel')]]" column="2">
+                <cc-fieldset>
+                    <sc-label text="결재 유형"></sc-label>
+                        <sc-combobox-field items="{{codes.aprvTypCd}}" value="{{approval.apvl_typ_ccd}}"
+                            display-field="label" value-field="data"
+                            class="w-150" disabled="true">
+                        </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="결재 상태"></sc-label>
+                        <sc-combobox-field items="{{codes.aprvStsCd}}" value="{{approval.apvl_sts_ccd}}"
+                            display-field="label" value-field="data"
+                            class="w-150" disabled="true">
+                        </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="결재 번호"></sc-label>
+                    <div class="field-box">
+                        <sc-text-field value="{{approval.apvl_docno}}" class="w-150" readonly="true"></sc-text-field>
+                        <span style="margin-left:5px">/</span>
+                        <sc-text-field value="{{approval.apvl_revno}}" class="w-50" readonly="true"></sc-text-field>
+                        <sc-trigger-field style="margin-left:5px" trigger-cls="search" on-trigger-click="onPopupApproval" hide-trigger="[[!formula('visibleTriggerIcon')]]" hidden="[[!formula('visibleTriggerIcon')]]"></sc-trigger-field>
+                    </div>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="결재 제목"></sc-label>
+                        <sc-text-field value="{{approval.apvl_tit}}" readonly="true"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="결재 요청자"></sc-label>
+                        <sc-text-field value="{{approval.display_crtr_nm}}" class="w-150" readonly="true"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="결재 승인 일시"></sc-label>
+                        <sc-text-field value="{{approval.last_aprv_dt_format}}" class="w-150" readonly="true"></sc-text-field>
+                </cc-fieldset>
+        </cc-form-panel>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-approval-summary",
+            properties: {
+            	approval: {
+            		type: Object,
+            		value: function(){
+            			return {};
+            		}
+            	},
+                appId: {
+                    type: String,
+                    value: function() {
+                        return "";
+                    },
+                    observer: "onFindInfo"
+                },
+                aprvTypcd: {
+                    type: String,
+                    value: function() {
+                        return "";
+                    },
+                    observer: "onFindInfo"
+                },
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            aprvStsCd: [],
+                            aprvTypCd: []
+                        }
+                    },
+                    reset: false
+                }
+            },
+            
+            formulas: {
+            	visiblePanel : function(){
+            		var me = this;
+            		var data = me.get("approval");
+            		return (UT.isObject(data) && (data.apvl_sts_ccd === "APVD" || data.apvl_sts_ccd === "RET" || data.apvl_sts_ccd === "PRGSG"));
+            	},
+            	visibleTriggerIcon: function(){
+            		var me = this;
+            		var data = me.get("approval");
+            		return (UT.isObject(data) && (data.apvl_sts_ccd === "APVD" || data.apvl_sts_ccd === "RET" || data.apvl_sts_ccd === "PRGSG"));
+            	}
+            },
+
+            // 상세정보 조회
+            onFindInfo: function() {
+                var me = this;
+                var appId = me.get("appId");
+                var aprvTypcd = me.get("aprvTypcd");
+                
+                if( UT.isEmpty(appId) || UT.isEmpty(aprvTypcd) ) {
+                	// SMARTNINE-1757 : appId, aprvTypCd 둘 중 하나라도 값이 없으면 approval 초기화
+                	me.set("approval", me.getPropertyInfo("approval").value());
+                	
+                	me.applyFormula();
+                    return;
+                }
+                
+                // 코드 생성, 에디터 생성, 업로더 생성
+                me.$.findInfo.body = {
+                    task_uuid: appId,
+                    apvl_typ_ccd: aprvTypcd
+                };
+                UT.request(me.$.findInfo);
+            },
+            
+            // 상세정보 조회 완료
+            completeFindInfo: function(e, res) {
+                var me = this;
+                var data = res.response;
+                
+                me.set("approval", data);
+                // C:승인, B:반려, P:진행
+                if (UT.isObject(data) && (data.apvl_sts_ccd === "APVD" || data.apvl_sts_ccd === "RET" || data.apvl_sts_ccd === "PRGSG")) {
+                    var lastAprvDt = me.get("approval.fnl_apvl_dttm");
+                    if (UT.isDate(lastAprvDt)) {
+                        me.set("approval.last_aprv_dt_format", UT.formatDate(lastAprvDt, "yyyy/MM/dd HH:mm"));
+                    }
+                }
+                me.applyFormula();
+            },
+            
+            // 결재팝업
+            onPopupApproval: function() {
+                var me = this;
+                UT.popupApproval(me, {apvl_uuid: me.get("approval.apvl_uuid"), apvl_typ_ccd: me.get("approval.apvl_typ_ccd")}, null, true);
+            },
+            behaviors: [
+            	Polymer.CCModuleBehavior
+            ]
+        });
+    </script>
+</dom-module>

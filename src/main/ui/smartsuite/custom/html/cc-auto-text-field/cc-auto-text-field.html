@@ -1,0 +1,317 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-auto-text-field
+    ** Author          : choijh
+    ** Create Date     : 2017.07.12
+    ** History         : 2017.07.12 choijh 최초작성
+    ******************************************************************************************
+-->
+<link rel="import" href="cc-auto-suggestions.html">
+
+<dom-module id="cc-auto-text-field">
+    <style>
+        :host {
+            display : table;
+        }
+
+        :host > * {
+            display: table-cell;
+            vertical-align : middle;
+        }
+    </style>
+    <template>
+        <sc-text-field id="autocompleteInput"
+                       value="[[value]]"
+                       input-clear="[[inputClear]]"
+                       disabled="[[disabled]]"
+                       readonly="[[readonly]]"
+                       mask-re="[[maskRe]]"
+                       placeholder="[[placeholder]]"
+                       autofocus="[[autofocus]]"
+                       trigger-cls="[[triggerCls]]"></sc-text-field>
+        <cc-auto-suggestions for="autocompleteInput"
+                             id="autocompleteSuggestions"
+                             display-field="[[displayField]]"
+                             value-field="[[valueField]]"
+                             remote-source="[[remoteSource]]"
+                             event-namespace="[[eventNamespace]]"
+                             highlighted-suggestion="{{_highlightedSuggestion}}"
+                             is-open="{{_isSuggestionsOpened}}">
+            <content id="templates" select="[autocomplete-custom-template]"></content>
+        </cc-auto-suggestions>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-auto-text-field",
+            properties: {
+                /**
+                 * Input Clear 사용여부
+                 */
+                inputClear: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 * disabled 여부
+                 */
+                disabled: Boolean,
+
+                /**
+                 * readonly 여부
+                 */
+                readonly: Boolean,
+
+                /**
+                 * 정규식으로 입력 제어를 하기 위한 문자열 입니다.
+                 */
+                maskRe: String,
+
+                /**
+                 * text-field에 보여질 '힌트' 문자열입니다.
+                 *
+                 * `<cc-auto-text-field placeholder="검색어를 입력하세요">`
+                 */
+                placeholder: String,
+
+                /**
+                 * 'true'일 경우 해당 엘리먼트에 최초 focus가 이동합니다. 여러 엘리먼트에 선언되었다면 마지막에 정의된 엘리먼트에 포커스됩니다.
+                 *
+                 * `<sc-text-field autofocus='true'>`
+                 * @type {Boolean}
+                 */
+                autofocus: Boolean,
+
+                /**
+                 * 사용자가 입력한 Value 값입니다.
+                 */
+                value: {
+                    type: String,
+                    notify: true,
+                    value: ''
+                },
+
+                /**
+                 * 필터링 대상이 되는 원본 배열입니다.
+                 */
+                source: {
+                    type: Array,
+                    observer: '_onSourceChanged'
+                },
+
+                /**
+                 * 외부에서 queryFn을 주입해야 합니다.
+                 */
+                queryFn: {
+                    type: Function
+                },
+
+                /**
+                 * 비동기 방식으로 Source
+                 */
+                remoteSource: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 * Event 구분자입니다.
+                 */
+                eventNamespace: {
+                    type: String,
+                    value: '-'
+                },
+
+                /**
+                 * 제안 List의 최소 개수입니다.
+                 */
+                minLength: {
+                    type: Number,
+                    value: 1
+                },
+
+                /**
+                 * cc-auto-suggestions 에서 사용되는 queryFn을 Override하기 위해 제공되는 Property 입니다.
+                 */
+                queryFn: {
+                    type: Function
+                },
+
+                triggerCls: {
+                    type: String
+                },
+
+                /*************
+                 * PRIVATE
+                 *************/
+                // TODO: check if we need _value and _text properties. It seems they can be removed
+                _value: {
+                    value: undefined
+                },
+
+                _text: {
+                    value: undefined
+                },
+
+                /**
+                 * 제안 팝업이 표시되는지 여부를 나타낸다
+                 */
+                _isSuggestionsOpened: {
+                    type: Boolean,
+                    value: false
+                }
+            },
+
+            listeners: {
+                'autocompleteInput.input': '_onInput'
+            },
+
+            observers: [
+                '_onQueryFnChanged(queryFn)'
+            ],
+
+            // Element Lifecycle
+            ready: function () {
+                this._value = this.value;
+
+                this.addEventListener(
+                    'autocomplete' + this.eventNamespace + 'selected',
+                    this._onAutocompleteSelected.bind(this)
+                );
+            },
+
+            /**
+             * Input Text를 초기화합니다.
+             */
+            _clear: function () {
+                this.value = null;
+                this._value = null;
+                this.text = '';
+                this._text = '';
+
+                this._hideClearButton();
+                this.$.autocompleteInput.focus();
+            },
+
+            /**
+             * source가 변경되면 suggestions과 값을 동기화합니다.
+             */
+            _onSourceChanged: function () {
+                this.$.autocompleteSuggestions.source = this.source;
+            },
+
+            /**
+             * queryFn이 변경되면 suggestions과 값을 동기화합니다.
+             */
+            _onQueryFnChanged: function () {
+                this.$.autocompleteSuggestions.queryFn = this.queryFn;
+            },
+
+            /**
+             * Input 필드에 값 입력 시 호출되는 이벤트 핸들러입니다.
+             */
+            _onInput: function () {
+                if(this.$.autocompleteInput.value) {
+                    this._showClearButton();
+                } else {
+                    this._hideClearButton();
+                }
+            },
+
+            /**
+             * cc-auto-suggestions에서 선택되었을때 값을 cc-auto-text-field에 동기화합니다.
+             */
+            _onAutocompleteSelected: function (event) {
+                var selection = event.detail;
+
+                this.value = selection.value;
+                this.text = selection.text;
+            },
+
+            /**
+             * inputClear를 보여줍니다.
+             */
+            _showClearButton: function () {
+                this.inputClear = true;
+            },
+
+            /**
+             * inputClear를 숨깁니다.
+             */
+            _hideClearButton: function () {
+                this.inputClear = false;
+            },
+
+            /****************************
+             * PUBLIC
+             ****************************/
+
+            /**
+             * Input Value 값을 가져오는 함수입니다.
+             * @returns {String}
+             */
+            getValue: function () {
+                return this.value;
+            },
+
+            /**
+             * suggestions을 설정할 수 함수입니다.
+             * @param {Array} arr
+             */
+            suggestions: function (arr) {
+                this.$.autocompleteSuggestions.suggestions(arr);
+            },
+
+            /**
+             * cc-auto-text-field 내부의 sc-text-field의 validate함수를 호출합니다.
+             * @returns {Boolean}
+             */
+            validate: function () {
+                this.$.autocompleteInput.validate();
+            },
+
+            /**
+             * 현재 입력값을 초기화합니다.
+             */
+            clear: function () {
+                this._value = '';
+                this._text = '';
+                this._clear();
+            },
+
+            /**
+             * reset 함수를 호출하면 cc-auto-text-field가 초기화 됩니다.
+             */
+            reset: function () {
+                this.$.autocompleteInput.reset();
+                this.clear();
+            },
+
+            /**
+             * suggestions 팝업을 숨기기 위한 함수입니다.
+             */
+            hideSuggestions: function () {
+                this._hideClearButton();
+                this.$.autocompleteSuggestions.hideSuggestions();
+            },
+            
+            /**
+             * suggestions 팝업을 보여주기 위한 함수입니다.
+             */
+            showSuggestions: function(event) {
+                if(this.$.autocompleteInput.value && !this._isSuggestionsOpened){
+                    this.$.autocompleteSuggestions.showSuggestion(event);
+                }
+            },
+
+            /**
+             * cc-auto-text-field의 input 필드에 focus를 주는 함수입니다 .
+             */
+            focus: function () {
+                this.$.autocompleteInput.focus();
+            }
+
+        });
+    </script>
+
+</dom-module>

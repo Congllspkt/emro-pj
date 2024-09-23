@@ -1,0 +1,164 @@
+<!-- 
+/**
+ * 환율 적용 커스텀 태그
+ * ajax통신을 사용하는 custom dom으로 promise로 묶어야함으로 id를 부여 하여 구현한다.
+ * service함수를 구현 한다.
+ *
+ *
+ * @element cc-exchange
+ *	
+ *		사용예시
+ *	<cc-exchange id="exchange" value="{{codes.exchangeList}}"></cc-exchange>
+ *
+ *		그리드에서 계산시
+ *		//grid aggregate
+ *			onAmtAggregateFn: function(dataField, datas){
+ *				var me = this;
+ *            	var result = new BigNumber('0');
+ *            	//환율계산
+ *            	var ex = me.get("codes.exchangeList");
+            	var len = ex.length;
+            	for(var i=0; i<datas.length; ++i){
+            		var price = new BigNumber(datas[i][dataField] || 0);
+            		var cur = datas[i]["cur"];
+            		price = me.$.ecahgne.getExchange(price,cur);
+            		
+            		result = result.plus(price);
+            	}
+            	me.set('prData.pr_tot_amt', result.toFixed());
+            	return '';
+            },
+            
+ *
+ *
+ * @attribute value 해당 텍스트 필드 input value binding <br>
+ * [string] [optional] 
+ *
+ */
+-->
+<!-- 
+ author : Yeon-u Kim
+ Since 2016. 4. 14.
+ 변경이력 : [2016. 4. 14.] Yeon-u Kim 최초작성
+-->
+<dom-module id="cc-exchange">
+    <style>
+        :host {
+            display : table;
+            width: 100%;
+        }    
+        
+        :host > * {
+            vertical-align : middle;
+            display: table-cell;
+        }
+    </style>
+    <template>
+        <!-- ajax 선언 부 -->
+        <!-- 최근 환율 조회 -->
+       <sc-ajax
+       		id="findListLatelyExchange"
+           url="findListLatelyExchange.do"
+           body$="[[cur]]"
+           content-type="text/plain" 
+           on-response="_onResponse"
+           last-response="{{codes.exchangeList}}">
+       </sc-ajax>
+       <sc-cache id="exchangeCache" key="exchangeList" value="{{codes.exchangeList}}" async></sc-cache>
+    </template>
+    <script>
+        Polymer({
+            is : 'cc-exchange',
+            properties : {
+            	init : {
+            		type : Boolean,
+            		value : true,
+            		reflectToAttribute : true
+            	},
+                required: {
+            	    type: Boolean,
+                    value: function(){
+                        return false;
+                    }
+                },
+                readonly : {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                disabled : {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                cur : {
+            		type : Object,
+            		value : function(){
+            			return "KRW";
+            		}
+            	},
+                value : {
+                    type : Object,
+                    notify: true            //One-way binding (downward)
+                /*<!-- changes to "{{value}}" propagate downward to "value" on child -->
+                    <!-- changes to "value" are ignored by host due to square-bracket syntax -->*/
+                },
+                codes :  {
+                    type : Object,
+                    value : function(){
+                        return {
+                        	exchangeList : []
+                        };
+                    }
+                }
+            },
+            
+            attached : function() {
+            	if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            if(this.$.exchangeCache.isCached) {
+	            		if(this.$.exchangeCache.value) {
+	            			this._completed(this.$.exchangeCache.value);
+		           		}
+	            		else {
+		            		this.listen(this.$.exchangeCache, 'value-changed', function() {
+			            		this._completed(this.$.exchangeCache.value);
+		            		}.bind(this), {single : true});
+	            		}
+	            	}
+	            	else {
+		            	this.$.findListLatelyExchange.request();
+	            	}
+            	}
+            },
+            
+            _onResponse : function(event) {
+            	var response = event.target.lastResponse;
+            	this.$.exchangeCache.put(response);
+            	this._completed(response);
+            },
+            
+            _completed : function(value) {
+            	this.fire('response', value, {bubbles : false});
+            },
+            
+            getExchange: function(price,cur){
+            	var me = this, ex = me.get("codes.exchangeList") || [];
+            	var len = ex.length;
+            	for(var j=0; j < len ; j++){
+        			if(ex[j].conv_cur_ccd === cur){
+        				if(cur == "JPY"){
+        					//엔화 100엔 나눔
+        					price = price.div(100);
+        				}
+        				price = price.mul(ex[j].bas_rate);
+        			}
+        		}
+            	return price;
+            }
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:cache="http://www.springframework.org/schema/cache"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd"
+	   default-lazy-init="true">
+
+	<!-- Smartsuite Module Configuration Scanner -->
+	<import resource="classpath:smartsuite/module-context.xml"/>
+	<!-- Smartsuite Module Configuration Scanner -->
+	
+	<!-- properties 설정 -->
+	<import resource="classpath*:smartsuite/module/*-context.xml"/>
+	<!-- properties 설정 -->
+
+	<!-- 기본 설정 -->
+	<import resource="classpath:smartsuite/mybatis-context.xml"/>
+	<!-- 기본 설정 -->
+	
+	<!-- 메일 설정 -->
+	<import resource="classpath:smartsuite/mail-context.xml"/>
+	<!-- 메일 설정 -->
+
+	<!-- modules -->
+	<context:component-scan base-package="smartsuite.*.web,
+										  smartsuite.security,
+										  smartsuite.tenancy,
+										  smartsuite.app,
+										  smartsuite.mybatis,
+										  smartsuite.config.workplace,
+										  smartsuite5.*.web"
+							use-default-filters="false">
+		<context:include-filter type="annotation"
+								expression="org.springframework.stereotype.Service" />
+	</context:component-scan>
+	<!-- modules -->
+
+	<!-- moduleManager -->
+	<bean name="methodInvokingFactoryBean" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod" value="smartsuite.module.ModuleManager.setLocalProperties"/>
+		<property name="arguments">
+			<array>
+				<value>classpath*:smartsuite/module/*.properties</value>
+			</array>
+		</property>
+	</bean>
+	
+	<!-- moduleManager -->
+
+	<!-- ehcach -->
+	<cache:annotation-driven cache-manager="cacheManager" />
+	<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager" p:cache-manager-ref="ehcacheManager"/>
+	<bean id="ehcacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:config-location="classpath:ehcache.xml"/>
+
+	<!-- objectMapper -->
+	<bean id="objectMapper" class="com.fasterxml.jackson.databind.ObjectMapper" />
+
+	<!-- captcha 인증 -->
+	<bean id="captchaGenerator" class="smartsuite.security.captcha.CaptchaGenerator"/>
+	<!-- captcha -->
+
+	<!-- restTemplate -->
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate"/>
+
+	<!-- Gson -->
+	<bean id="gsonBuilder" class="com.google.gson.GsonBuilder"/>
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="gsonBuilder"/>
+		<property name="targetMethod" value="disableHtmlEscaping"/>
+	</bean>
+	<bean id="gson" class="com.google.gson.Gson" factory-bean="gsonBuilder" factory-method="create"/>
+
+</beans>

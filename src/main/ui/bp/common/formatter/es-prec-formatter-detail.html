@@ -1,0 +1,161 @@
+<dom-module id="es-prec-formatter-detail">
+<!-- 
+/**
+ *
+ *	@description : 소수점 관리 상세
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 4. 12.
+ */
+-->
+	<style>
+		:host{
+			@apply(--vbox-layout)
+		}
+	</style>
+	
+	<template>
+		<!-- ajax -->
+		<sc-request-group init>
+			<sc-code-group>
+				<!-- 소수점처리방법 -->
+				<sc-code code="C999" value="{{codes.C999}}"></sc-code>
+			</sc-code-group>
+			<sc-ajax id="findListPrecisionGroupCode"
+					url="findListPrecisionGroupCode.do"
+					on-response="completePrecGrpCd">
+			</sc-ajax>
+		</sc-request-group>
+		
+		<sc-ajax id="updateDisplayPrecisionFormat"
+            url="updateDisplayPrecisionFormat.do"
+            body="{{precInfo}}"
+            on-response="completeSave">
+        </sc-ajax>
+        
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        
+       <div style="height:3px"></div>
+       <cc-detail-title-bar title-text="[[precInfo.fmter_cd]]"	i18n-disabled>
+       	<sc-button text="저장"	on-click="onSavePrecFormatDetail" hidden="[[!formula('isSelectedFormat')]]" auth-s></sc-button>
+       </cc-detail-title-bar>
+		<cc-form-panel validation-group="save" label-width="120">
+			<cc-fieldset>
+				<sc-label text="소수점 사용"></sc-label>
+				<sc-combobox-field class="w-150" value="{{precInfo.decpt_use_ccd}}" readonly="[[!formula('isSelectedFormat')]]"
+								   display-field="ccd_nm" value-field="decpt_use_ccd" items="{{precGrpCds}}" placeholder="선택"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="소수점 길이 제한"></sc-label>
+				<sc-number-field	id="num" value="{{precInfo.decpt_len_lmt}}"	readonly="[[!formula('isSelectedFormat')]]"
+									format-type="integer" min-value="0" max-length="2"></sc-number-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="소수점 절사 유형"></sc-label>
+				<sc-combobox-field	value="{{precInfo.decpt_trunc_typ_ccd}}" readonly="[[!formula('isSelectedFormat')]]"
+									  display-field="label" value-field="data" items="{{codes.C999}}" placeholder="선택"></sc-combobox-field>
+			</cc-fieldset>
+		</cc-form-panel>
+       	<div class="flex-1" style="color:red;font-weight:bold;">[[messageDesc1]]</div>
+       	<div class="flex-1" style="color:red;font-weight:bold;">[[messageDesc2]]</div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'es-prec-formatter-detail',
+			properties : {
+				codes: {
+					type: Object,
+					value: function(){
+						return {
+							FMT_TYP_CCD: [],
+							C999: []
+						};
+					},
+					reset: false
+				},
+				precGrpCds: {
+					type: Array,
+					value: function(){
+						return {};
+					},
+					reset: false
+				},
+				precInfo: {
+					type: Object,
+					value: function(){
+						return {
+							fmter_cd: ""
+						};
+					}
+				},
+				messageDesc1: {
+					type: Object,
+					value: function(){
+						return this.translate('STD.ADM1065');		//※소수점 제어는 값을 해당 소수점으로 변경하므로 포맷터에서 표기하지 않습니다.
+					}
+				},
+				messageDesc2: {
+					type: Object,
+					value: function(){
+						return this.translate('STD.ADM1066');		//Validation/입력제한 해당 이벤트에서 CCPrecManager를 사용해서 처리합니다.개발자 가이드참고
+					}
+				}
+			},
+			formulas: {
+				isSelectedFormat: function(){
+					var me = this;
+					return UT.isNotEmpty(me.get("precInfo.fmter_cd"));
+				}
+			},
+			completePrecGrpCd: function(e,res){
+				var me = this,
+					lastResponse = res.response;
+				var precGrpCds = lastResponse || [];
+				precGrpCds.push({
+					"ccd_nm" : "직접",
+					"decpt_use_ccd" : "DIRECTBLANK"
+				});
+				me.set("precGrpCds",precGrpCds);
+			},
+			/************************************************** 
+			 * 
+			 **************************************************/
+			// 1. 초기화함수
+			initialized : function(){
+				var me = this;
+				me.$.num.regex = CCPrecManager.regex("integer");
+			},
+			load: function(data){
+				var me = this;
+				var data = UT.copy(data);
+				me.set("precInfo",data);
+				me.applyFormula();
+			},
+			onSavePrecFormatDetail: function(){
+				var me = this;
+				
+				if(UT.isEmpty(me.get("precInfo.fmt_setup_uuid"))){
+					UT.alert(me.translate("STD.E1012",null,me.translate('포맷터')),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+				}
+				UT.confirm("STD.N1200",function(){
+					UT.request(me.$.updateDisplayPrecisionFormat);
+				});
+			},
+			completeSave: function(){
+				var me = this,
+	        	message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message);
+				me.fire("reload-format-detail");
+			},
+			//소수점관리 매핑 공통코드 재조회
+			onResetPrecGrpCd: function(){
+				var me = this;
+				UT.request(me.$.findListPrecisionGroupCode);
+			}
+		});
+	</script>
+</dom-module>

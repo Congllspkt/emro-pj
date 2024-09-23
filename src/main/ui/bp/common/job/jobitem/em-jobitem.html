@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-jobitem-job-list.html"></sc-link>
+<sc-link rel="import" href="es-jobitem-list.html"></sc-link>
+
+<dom-module id="em-jobitem">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }   
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+			<es-jobitem-job-list id="jobList" on-selected-job="onSelectedJob" on-clear-jobitem="onClearJobItem" class="flex-4"></es-jobitem-job-list>
+			<div class="hspace-10"></div>
+			<es-jobitem-list id="jobItemList"  class="flex-6"></es-jobitem-list>
+    	</div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-jobitem',
+            
+            // 직무 목록 : 직무 선택
+            onSelectedJob: function(e, data) {
+                var me = this;
+                me.$.jobItemList.load(data);
+            },
+            
+        	// 직무 목록 재조회시 품목분류 초기화
+        	onClearJobItem: function(){
+                var me = this;
+        		me.$.jobItemList.clear();
+        	}
+        });
+    </script>
+
+</dom-module>

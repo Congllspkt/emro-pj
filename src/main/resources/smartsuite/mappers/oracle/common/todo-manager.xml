@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="todo-manager">
+
+	<select id="findListTodoGroup" resultType="map">
+	/* todo-manager.findListTodoGroup : 할일 그룹 목록 조회 */
+	SELECT TODOTT.USR_TYP_CCD
+	     , TODOTT.TODO_GRP_CD
+	     , TODOTT.TODO_GRP_NM
+	     , TODOTT.COMM_MENU_YN
+	  FROM TODO_TASK_TYP TODOTT
+	 WHERE TODOTT.TEN_ID  = #{g.tenant}
+	   AND TODOTT.USR_TYP_CCD = #{p.usr_typ_ccd}
+	 ORDER BY TODOTT.TODO_GRP_CD
+	</select>
+	
+	<insert id="insertTodoGroup">
+	/* todo-manager.insertTodoGroup : 할일 그룹 신규 추가 */
+	INSERT INTO TODO_TASK_TYP
+	    (
+	        TEN_ID
+	      , USR_TYP_CCD
+	      , TODO_GRP_CD
+	      , TODO_GRP_NM
+	      , COMM_MENU_YN
+	      , STS
+	      , REGR_ID
+	      , REG_DTTM
+	      , MODR_ID
+	      , MOD_DTTM
+	    )
+	VALUES
+	    (
+	        #{g.tenant}
+	      , #{p.usr_typ_ccd}
+	      , #{p.todo_grp_cd}
+	      , #{p.todo_grp_nm}
+	      , #{p.comm_menu_yn}
+	      , 'C'
+	      , #{g.username}
+	      , #{g.now}
+	      , #{g.username}
+	      , #{g.now}
+	    )
+	</insert>
+	
+	<update id="updateTodoGroup">
+	/* todo-manager.updateTodoGroup : 할일 그룹 수정 */
+	UPDATE TODO_TASK_TYP
+	   SET TODO_GRP_NM = #{p.todo_grp_nm}
+	     , COMM_MENU_YN = #{p.comm_menu_yn}
+	     , STS    = 'U'
+	     , MODR_ID = #{g.username}
+	     , MOD_DTTM = #{g.now}
+	 WHERE TEN_ID  = #{g.tenant}
+	   AND USR_TYP_CCD = #{p.usr_typ_ccd}
+	   AND TODO_GRP_CD  = #{p.todo_grp_cd}
+	</update>
+	
+	<delete id="deleteTodoGroup">
+	/* todo-manager.deleteTodoGroup : 할일 그룹 삭제 */
+	DELETE
+	  FROM TODO_TASK_TYP
+	 WHERE TEN_ID  = #{g.tenant}
+	   AND USR_TYP_CCD = #{p.usr_typ_ccd}
+	   AND TODO_GRP_CD  = #{p.todo_grp_cd}
+	</delete>
+	
+	<select id="findListTodoFactor" resultType="map">
+	/* todo-manager.findListTodoFactor : 할일 항목 목록 조회 */
+	SELECT TODOIT.TODO_GRP_CD
+	     , TODOTT.TODO_GRP_NM
+	     , TODOTT.COMM_MENU_YN
+	     , TODOIT.USR_TYP_CCD
+	     , TODOIT.TODOITEM_UUID
+	     , TODOIT.TODOITEM_NM
+	     , TODOIT.TODOITEM_NM_EN
+	     , TODOIT.MENU_CD
+	     , TODOIT.TODOITEM_EXPLN
+	     , TODOIT.MENU_URL_PARM
+	     , TODOIT.SQL_ID
+	     , TODOIT.TODOITEM_SORT
+	     , TODOIT.USE_YN
+	  FROM TODOITEM TODOIT
+	 INNER JOIN TODO_TASK_TYP TODOTT
+	    ON TODOTT.TEN_ID  = TODOIT.TEN_ID
+	   AND TODOTT.USR_TYP_CCD = TODOIT.USR_TYP_CCD
+	   AND TODOTT.TODO_GRP_CD  = TODOIT.TODO_GRP_CD
+	 WHERE TODOIT.TEN_ID  = #{g.tenant}
+	   AND TODOIT.USR_TYP_CCD = #{p.usr_typ_ccd}
+	 <if test="p.todo_grp_cd != null and p.todo_grp_cd != ''">
+	   AND TODOIT.TODO_GRP_CD  = #{p.todo_grp_cd}
+	 </if>
+	 <if test="p.todoitem_nm != null and p.todoitem_nm != ''">
+	   <bind name="factNmPattern" value="'%'+p.todoitem_nm+'%'"/>
+	   AND TODOIT.TODOITEM_NM LIKE #{factNmPattern}
+	 </if>
+	 <if test="p.menu_cd != null and p.menu_cd != ''">
+	   <bind name="menuCdPattern" value="'%'+p.menu_cd+'%'"/>
+	   AND UPPER(TODOIT.MENU_CD) LIKE UPPER(#{menuCdPattern})
+	 </if>
+	 <if test="p.usr_id != null and p.usr_id != ''">
+	   AND EXISTS ( SELECT USR_ID
+	                  FROM TODOITEM_USR
+	                 WHERE TEN_ID  = TODOIT.TEN_ID
+	                   AND TODOITEM_UUID = TODOIT.TODOITEM_UUID
+	                   AND USR_ID  = #{p.usr_id}
+	              )
+	 </if>
+	 ORDER BY TODOTT.TODO_GRP_CD, TODOIT.TODOITEM_SORT
+	</select>
+	
+	<insert id="insertTodoFactor">
+	/* todo-manager.insertTodoFactor : 할일 항목 신규 추가 */
+	INSERT INTO TODOITEM
+	    (
+	        TEN_ID
+	      , TODOITEM_UUID
+	      , USR_TYP_CCD
+	      , TODO_GRP_CD
+	      , TODOITEM_NM
+	      , TODOITEM_NM_EN
+	      , MENU_CD
+	      , TODOITEM_EXPLN
+	      , MENU_URL_PARM
+	      , SQL_ID
+	      , TODOITEM_SORT
+	      , USE_YN
+	      , STS
+	      , REGR_ID
+	      , REG_DTTM
+	      , MODR_ID
+	      , MOD_DTTM
+	    )
+	VALUES
+	    (
+	        #{g.tenant}
+	      , #{p.todoitem_uuid}
+	      , #{p.usr_typ_ccd}
+	      , #{p.todo_grp_cd}
+	      , #{p.todoitem_nm}
+	      , #{p.todoitem_nm_en}
+	      , #{p.menu_cd}
+	      , #{p.todoitem_expln}
+	      , #{p.menu_url_parm}
+	      , #{p.sql_id}
+	      , #{p.todoitem_sort}
+	      , #{p.use_yn}
+	      , 'C'
+	      , #{g.username}
+	      , #{g.now}
+	      , #{g.username}
+	      , #{g.now}
+	    )
+	</insert>
+	
+	<update id="updateTodoFactor">
+	/* todo-manager.updateTodoFactor : 할일 항목 수정 */
+	UPDATE TODOITEM
+	   SET TODOITEM_SORT     = #{p.todoitem_sort}
+	     , TODOITEM_NM    = #{p.todoitem_nm}
+	     , TODOITEM_NM_EN = #{p.todoitem_nm_en}
+	     , MENU_CD    = #{p.menu_cd}
+	     , TODOITEM_EXPLN  = #{p.todoitem_expln}
+	     , MENU_URL_PARM = #{p.menu_url_parm}
+	     , SQL_ID     = #{p.sql_id}
+	     , TODO_GRP_CD   = #{p.todo_grp_cd}
+	     , USE_YN     = #{p.use_yn}
+	     , STS        = 'U'
+	     , MODR_ID     = #{g.username}
+	     , MOD_DTTM     = #{g.now}
+	 WHERE TEN_ID  = #{g.tenant}
+	   AND TODOITEM_UUID = #{p.todoitem_uuid}
+	</update>
+	
+	<delete id="deleteTodoFactor">
+	/* todo-manager.deleteTodoFactor : 할일 항목 삭제 */
+	DELETE
+	  FROM TODOITEM
+	 WHERE TEN_ID = #{g.tenant}
+	 <choose>
+	   <when test="p.todoitem_uuid != null and p.todoitem_uuid != ''">
+	   AND TODOITEM_UUID = #{p.todoitem_uuid}
+	   </when>
+	   <otherwise>
+	   AND USR_TYP_CCD = #{p.usr_typ_ccd}
+	   AND TODO_GRP_CD  = #{p.todo_grp_cd}
+	   </otherwise>
+	 </choose>
+	</delete>
+	
+	<select id="findListTodoUser" resultType="map">
+	/* todo-manager.findListTodoUser : 할일 항목 별 사용자 목록 조회 */
+	SELECT TUSR.TODOITEM_UUID
+	     , TUSR.USR_ID
+	     , USR.USR_NM
+		, USR.DEPT_CD
+		, DP.DEPT_NM
+		 , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN ELSE USR.USR_NM END AS DISPLAY_USR_NM
+		 , CASE WHEN 'en_US' = #{g.locale} THEN (CASE WHEN DP.DEPT_NM_EN IS NULL THEN ''
+												  ELSE DP.DEPT_NM_EN END ) ELSE (CASE WHEN DP.DEPT_NM IS NULL THEN ''
+																					  ELSE DP.DEPT_NM END )  END AS DISPLAY_DEPT_NM   /* 부서명 */
+	  FROM TODOITEM_USR TUSR
+	 INNER JOIN USR USR
+	    ON USR.TEN_ID = TUSR.TEN_ID
+	   AND USR.USR_ID = TUSR.USR_ID
+	 LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+					 ON USR.TEN_ID = ODM.TEN_ID
+						 AND USR.CO_CD = ODM.LOGIC_ORG_CD
+						 AND USR.DEPT_CD = ODM.DEPT_CD
+						 AND ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+	 LEFT OUTER JOIN DEPT DP             /* C : 부서 */
+					 ON USR.TEN_ID = DP.TEN_ID
+						 AND USR.CO_CD = ODM.LOGIC_ORG_CD
+						 AND DP.DEPT_CD = ODM.DEPT_CD
+						 AND DP.STS != 'D'
+	 WHERE TUSR.TEN_ID  = #{g.tenant}
+	   AND TUSR.TODOITEM_UUID = #{p.todoitem_uuid}
+	</select>
+
+
+
+	<insert id="insertTodoUser">
+	/* todo-manager.insertTodoUser : 할일 항목 별 사용자 신규 추가 */
+	INSERT INTO TODOITEM_USR
+	    (
+	        TEN_ID
+	      , TODOITEM_UUID
+	      , USR_ID
+	      , REGR_ID
+	      , REG_DTTM
+	      , MODR_ID
+	      , MOD_DTTM
+	    )
+	VALUES
+	    (
+	        #{g.tenant}
+	      , #{p.todoitem_uuid}
+	      , #{p.usr_id}
+	      , #{g.username}
+	      , #{g.now}
+	      , #{g.username}
+	      , #{g.now}
+	    )
+	</insert>
+	
+	<delete id="deleteTodoUser">
+	/* todo-manager.deleteTodoUser : 할일 항목 별 사용자 삭제 */
+	DELETE
+	  FROM TODOITEM_USR
+	 WHERE TEN_ID = #{g.tenant}
+	 <choose>
+	   <when test="p.todoitem_uuid != null and p.todoitem_uuid != ''">
+	   AND TODOITEM_UUID = #{p.todoitem_uuid}
+	     <if test="p.usr_id != null and p.usr_id != ''">
+	   AND USR_ID  = #{p.usr_id}
+	     </if>
+	   </when>
+	   <otherwise>
+	   AND TODOITEM_UUID IN ( SELECT TODOITEM_UUID
+	                      FROM TODOITEM
+	                     WHERE TEN_ID  = #{g.tenant}
+	                       AND USR_TYP_CCD = #{p.usr_typ_ccd}
+	                       AND TODO_GRP_CD  = #{p.todo_grp_cd}
+	                  )
+	   </otherwise>
+	 </choose>
+	</delete>
+	
+	<select id="findListTodoFactorByCurrentUser" resultType="map">
+	/* todo-manager.findListTodoFactorByCurrentUser : 현재 사용자의 할일 항목 목록 조회 */
+	SELECT FT.TODO_GRP_CD
+	     , GP.TODO_GRP_NM
+	     , GP.COMM_MENU_YN
+	     , FT.USR_TYP_CCD
+	     , FT.TODOITEM_UUID
+	     , CASE WHEN #{g.locale} = 'ko_KR'
+	                 THEN FT.TODOITEM_NM
+	            ELSE FT.TODOITEM_NM_EN
+	       END  AS TODOITEM_NM
+	     , CASE WHEN US.USR_ID IS NULL
+	                 THEN 'N'
+	            ELSE 'Y'
+	       END  AS SHOW_YN
+	  FROM TODOITEM FT
+	 INNER JOIN TODO_TASK_TYP GP
+	    ON GP.TEN_ID  = FT.TEN_ID
+	   AND GP.USR_TYP_CCD = FT.USR_TYP_CCD
+	   AND GP.TODO_GRP_CD  = FT.TODO_GRP_CD
+	  LEFT OUTER JOIN TODOITEM_USR US
+	    ON US.TEN_ID  = FT.TEN_ID
+	   AND US.TODOITEM_UUID = FT.TODOITEM_UUID
+	   AND US.USR_ID  = #{g.username}
+	 WHERE FT.TEN_ID  = #{g.tenant}
+	   AND FT.USR_TYP_CCD = #{g.usr_typ_ccd}
+	 <if test="p.todo_grp_cd != null and p.todo_grp_cd != ''">
+	   AND FT.TODO_GRP_CD  = #{p.todo_grp_cd}
+	 </if>
+	   AND FT.USE_YN  = 'Y'
+	 ORDER BY GP.TODO_GRP_CD, FT.TODOITEM_SORT
+	</select>
+	
+	<select id="findListTodoUserByCurrentUser" resultType="map">
+		/* todo-manager.findListTodoUserByCurrentUser */
+		SELECT
+		FCT.TEN_ID
+		, FCT.TODOITEM_UUID
+		, USR.USR_ID
+		, FCT.REGR_ID
+		, FCT.REG_DTTM
+		, FCT.MODR_ID
+		, FCT.MOD_DTTM
+		FROM TODOITEM_USR USR
+		INNER JOIN TODOITEM FCT
+		ON USR.TEN_ID  = FCT.TEN_ID
+		AND USR.TODOITEM_UUID = FCT.TODOITEM_UUID
+		WHERE USR.TEN_ID  = #{g.tenant}
+		AND USR.USR_ID = #{g.username}
+		<choose>
+			<when test="p.todoitem_uuids != null and p.todoitem_uuids.size() > 0">
+				AND FCT.TODOITEM_UUID IN
+				<foreach collection="p.todoitem_uuids" item="todoitem_uuid" open="(" separator="," close=")">
+					#{todoitem_uuid}
+				</foreach>
+			</when>
+			<otherwise>
+				AND FCT.TODOITEM_UUID = #{p.todoitem_uuid}
+			</otherwise>
+		</choose>
+		AND FCT.USE_YN  = 'Y'
+	</select>
+
+
+	<insert id="insertTodoUserByCurrentUser">
+		/* todo-manager.insertTodoUserByCurrentUser */
+		 INSERT INTO TODOITEM_USR
+		         (
+					TEN_ID
+				  , TODOITEM_UUID
+				  , USR_ID
+				  , REGR_ID
+				  , REG_DTTM
+				  , MODR_ID
+				  , MOD_DTTM
+				)
+				VALUES (
+					#{g.tenant}
+				  , #{p.todoitem_uuid}
+				  , #{g.username}
+				  , #{g.username}
+				  , #{g.now}
+				  , #{g.username}
+				  , #{g.now}
+				)
+	</insert>
+
+	<delete id="deleteTodoUserByCurrentUser">
+	/* todo-manager.deleteTodoUserByCurrentUser : 할일 항목 별 사용자에 현재 사용자 삭제 */
+	DELETE
+	  FROM TODOITEM_USR
+	 WHERE TEN_ID = #{g.tenant}
+	 <choose>
+	   <when test="p.todoitem_uuids != null and p.todoitem_uuids.size() > 0">
+	   AND TODOITEM_UUID IN
+	       <foreach collection="p.todoitem_uuids" item="todoitem_uuid" open="(" separator="," close=")">
+	           #{todoitem_uuid}
+	       </foreach>
+	   </when>
+	   <otherwise>
+	   AND TODOITEM_UUID = #{p.todoitem_uuid}
+	   </otherwise>
+	 </choose>
+	   AND USR_ID  = #{g.username}
+	</delete>
+</mapper>

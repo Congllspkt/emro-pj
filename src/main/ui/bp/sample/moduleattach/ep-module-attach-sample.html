@@ -1,0 +1,43 @@
+<dom-module id="ep-module-attach-sample">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+		<cc-sub-title-bar title-text="샘플 화면">
+		<sc-button text="모듈 첨부파일 샘플" on-click="onTestModuleAttachCode"></sc-button>
+		</cc-sub-title-bar>
+			<div class="flex" style="overflow:auto;">
+				<!-- code "MDAT"에 해당하는 코드를 value에 삽입 -->
+				<cc-module-attach value="PR"></cc-module-attach>
+			<table class="tb-form">
+				<colgroup>
+					<col style="width:60px">
+					<col>
+					<col>
+					<col>
+				</colgroup>
+			</table>
+			</div>
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "ep-module-attach-sample",
+            properties: {
+            },
+
+			onTestModuleAttachCode : function (){
+				var me = this;
+				UT.popupModuleAttach(me, "PR_MUL_02", null, {});
+			},
+        });
+    </script>
+
+</dom-module>

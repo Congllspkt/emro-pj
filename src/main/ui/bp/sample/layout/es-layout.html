@@ -1,0 +1,156 @@
+<dom-module id="es-layout">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+        <sc-toolbar>
+            <sc-label text="Layout Test" width="300"></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="저장" i18n-disabled></sc-button>
+            
+            <sc-button text="삭제" i18n-disabled></sc-button>
+        </sc-toolbar>	
+    	<!--  scrollable contents -->
+    	<div class="flex"><!-- start page -->
+    		
+    		<sc-panel title-text="Form1" >
+				<table class="tb-form">
+					<tr>
+						<th width="200px"><sc-label text="Combobox enabled" width="200"></sc-label></th>
+						<td><sc-combobox-field display-field="comp_nm" value-field="co_cd"	class="w-150"
+										items="{{comboCompanies.result}}"  value="{{userInfo.co_cd}}" placeholder="선택">
+								</sc-combobox-field>
+						</td>
+					</tr>
+					<tr>
+						<th><sc-label text="Combobox disabled" width="200"></sc-label></th>
+						<td><sc-combobox-field display-field="comp_nm" value-field="co_cd"	 class="w-150"
+										items="{{comboCompanies.result}}"  value="{{userInfo.co_cd}}" placeholder="선택" readonly="readonly" disabled$="{{_readonly}}" >
+								</sc-combobox-field>
+						</td>
+					</tr>					
+					<tr>
+						<th><sc-label text="일자"></sc-label></th>
+						<td><sc-date-field  class="date"></sc-date-field>&nbsp;~&nbsp; <sc-date-field  class="date"></sc-date-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="일자"></sc-label></th>
+						<td><sc-date-field  class="date"></sc-date-field> ~ <sc-date-field  class="date"></sc-date-field></td>
+					</tr>					
+					<tr>
+						<th><sc-label text="사용 여부"></sc-label></th>
+						
+						<td><sc-checkbox-field></sc-checkbox-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이름"></sc-label></th>
+						<td><sc-text-field value="test" class="w-50" readonly$="{{_readonly}}"></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이름(영문)"></sc-label></th>
+						<td><sc-text-field value="test"  readonly></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="부서"></sc-label></th>
+						<td><sc-textarea-field value="" class="h-100"></sc-textarea-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="전화"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="HP번호"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="팩스"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이메일 수신" ></sc-label></th>
+						<td><sc-checkbox-field input-value=""></sc-checkbox-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="SMS 수신"></sc-label></th>
+						<td><sc-checkbox-field input-value=""></sc-checkbox-field></td>
+					</tr>																									
+				</table>
+			</sc-panel>    		
+    		
+    		<sc-panel title-text="Form1" >
+				<table class="tb-form">
+					<tr>
+						<th width="120px"><sc-label text="회사" ></sc-label></th>
+						<td><sc-combobox-field display-field="comp_nm" value-field="co_cd"
+										items="{{comboCompanies.result}}"  value="{{userInfo.co_cd}}" placeholder="선택">
+								</sc-combobox-field>
+						</td>
+					</tr>
+					<tr>
+						<th><sc-label text="아이디"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="사용 여부"></sc-label></th>
+						<td><sc-checkbox-field></sc-checkbox-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이름"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이름(영문)"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="부서"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이메일"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="전화"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="HP번호"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="팩스"></sc-label></th>
+						<td><sc-text-field value=""></sc-text-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="이메일 수신" ></sc-label></th>
+						<td><sc-checkbox-field input-value=""></sc-checkbox-field></td>
+					</tr>
+					<tr>
+						<th><sc-label text="SMS 수신"></sc-label></th>
+						<td><sc-checkbox-field input-value=""></sc-checkbox-field></td>
+					</tr>																									
+				</table>
+			</sc-panel>    		
+    		
+
+   		</div><!-- end page -->
+   		   		
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'es-layout',
+            properties : {
+				_readonly : {
+					type : Boolean,
+					value : true
+				}
+            }
+        });
+        </script>            
+
+</dom-module>

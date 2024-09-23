@@ -1,0 +1,28 @@
+<sc-link rel="import" href="es-code-compare-list.html"></sc-link>
+<sc-link rel="import" href="es-code-compare-detail.html"></sc-link>
+
+<dom-module id="em-code-compare">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<sc-tab-navigation id="tabNavi"  class="flex">
+            <es-code-compare-list id="compareList" title-text="테이블 정보"></es-code-compare-list>
+            <template>
+            	<es-code-compare-detail id="compareDetail" title-text="공통코드"></es-code-compare-detail>
+            </template>
+        </sc-tab-navigation>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-code-compare',
+        });
+    </script>
+
+</dom-module>

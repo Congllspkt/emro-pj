@@ -1,0 +1,306 @@
+<!--
+ * @Desc notice widget
+ * @Author patrick.sung
+ * @Created 2016-05-03
+ -->
+<link rel="import" href="../sc-widget-content-behavior.html"/>
+<dom-module id="sc-widget-po-chart">
+    <template>
+        <style>
+            :host {
+                @apply(--fit-layout);
+            }
+        </style>
+                 
+        <sc-ajax auto id="protocolGetSetting" url="../portal/findWidgetProperties.do" body$='{"wdgt_id":"[[widgetId]]"}'
+                 handle-as="json"
+                 last-response="{{_data}}" on-response="_onGetSetting" method="post"
+                 contentType="application/json"></sc-ajax>                 
+
+		<div id="chartContainer" style="height:100%;width:100%"></div>
+    </template>
+    <script>
+        Polymer({
+            is: "sc-widget-po-chart",
+
+            behaviors: [BehaviorWidgetContent,
+                        Polymer.SCResizableBehavior
+            ],
+
+            properties: {
+            	columnChart: {
+            		type: Object,
+            		value: function(){
+            			return {};
+            		}
+            	},
+                searchParam: {
+                    type: Object,
+                    value: {}
+                },
+                responseResult: Array,
+                _opened: Boolean,
+                columnChart : {
+                	type: Object
+                }
+            },
+            onClose: function(){
+            	//
+            },
+            /* 화면 생성 완료 후 실행 */
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                	//me.$.container.removeChild(me.$.container.firstElementChild);
+                	if(me.initialized){
+                		//debugger;
+                	}
+    				if (me.isVisible(true)) {
+    				    me.initLineChart();
+    				    me.doContentResize();
+    				}
+                }
+            },            
+
+            _onGetSetting: function () {
+
+            },
+
+            doContentResize: function(e) {
+            	var me = this;
+            	if(UT.isEmpty(me.chartMain) && !me.isVisible(true)){
+    				return;
+    			}
+            	//hightchart로 구현시 위에 체크로직의 me.chartMain -> me.columnChart로 변경해야함!
+    			//me.columnChart.reflow();
+    			//smart-chart로 구현시
+    			if(me.chartMain){
+                    me.chartMain.resize();
+                }
+            },
+
+
+            initLineChart: function() {
+				var me = this;
+				if(UT.isEmpty(me.columnChart)){
+					me.chartContainer = new DLChart.ChartComponent(false, me.$.chartContainer,{
+						"name": "Highcharts:Basic column",
+					    "type": "column",
+						"palettes":[{
+							"name": "color1",
+					        "alpha": 1.0,
+							"fills": ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9',
+								'#f15c80', '#e4d354', '#2b908f', '#f45b5b', '#91e8e1']
+						}],
+					    "title": {
+					        "text": "Monthly Average Rainfall",
+					        "styles" : {
+							},
+					    },
+						"subtitle": {
+							"visible": true,
+							"anchor": "title",
+							"anchorAlign": "bottom",
+							"text": "Source: WorldClimate.com",
+							"styles": {
+							}
+						},
+						"titlePane": {
+							"styles": {
+								"padding": 4
+							}
+						},
+					    "xAxes": {
+					        "title": "",
+							"paddingNear": 0.2,
+							"paddingFar": 0.2,
+					        "categories":[
+					            "Jan",
+					            "Feb",
+					            "Mar",
+					            "Apr",
+					            "May",
+					            "Jun",
+					            "Jul",
+					            "Aug",
+					            "Sep",
+					            "Oct",
+					            "Nov",
+					            "Dec"
+					         ],
+					        "tick": {
+					            "styles": {
+					                "fontSize": 10,
+					                "suffix": "##"
+					            }
+					        }
+					    },
+					    "yAxes": {
+					        "title": "Rainfall (mm)"
+					    },
+					    "series": [{
+					        "name": "Tokyo",
+							"itemWidth": 0.7,
+					        "items": [49.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4],
+					        "label": {
+					            "styles": {
+					                "fontSize": "11",
+					            },
+					            "hovered": {
+					                "fill": null,
+					                "visible": true
+					            }
+					        },
+					        "styles": {
+					            "fill": "p(color1:0)",
+								"border":"",
+								"hovered": {
+									fillBrightness: 1.5
+								}
+					       	},
+							"animations": [{
+							}],
+							"itemAnimations": [{
+								"property": "value"
+							}]
+						}, {
+					        "name": "New York",
+					        "itemWidth": 0.7,
+					        "items": [83.6, 78.8, 98.5, 93.4, 106.0, 84.5, 105.0, 104.3, 91.2, 83.5, 106.6, 92.3],
+					        "label": {
+					        },
+					        "styles": {
+								"fontSize": "9",
+								"lineType": "curved",
+								"fill": "p(color1:1)",
+								"border":"",
+							},
+							"animations": [{
+							}],
+							"itemAnimations": [{
+								"property": "value"
+							}]
+						}, {
+							"name": "London",
+					        "itemWidth": 0.7,
+					        "items": [48.9, 38.8, 39.3, 41.4, 47.0, 48.3, 59.0, 59.6, 52.4, 65.2, 59.3, 51.2],
+					        "label": {
+					        },
+					        "styles": {
+								"fontSize": "7",
+								"lineType": "curved",
+					        	"fill": "p(color1:2)",
+								"border":"",
+							},
+							"animations": [{
+							}],
+							"itemAnimations": [{
+								"property": "value"
+							}]
+						}, {
+							"name": "Berlin",
+					        "itemWidth": 0.7,
+							"items": [42.4, 33.2, 34.5, 39.7, 52.6, 75.5, 57.4, 60.4, 47.6, 39.1, 46.8, 51.1],
+					        "label": {
+					        },
+							"styles": {
+								"fontSize": "7",
+					        	"lineType": "curved",
+					    		"fill": "p(color1:3)",
+								"border":"",
+								"label": {
+					                "property": "value"
+								}	
+							},
+							"animations": [{
+							}],
+							"itemAnimations": [{
+								"property": "value"
+							}]
+						}],
+					    "legend": {
+							"styles": {
+							}
+					    }
+					} );
+					me.chartMain = me.chartContainer.chartView();
+				 /* me.columnChart = new Highcharts.Chart({
+
+			        chart: {
+			        	type : 'column',
+			        	renderTo: me.$.chartContainer,
+			        	events:{
+							load : function(e){
+								var c = e.chart;
+								me.initialized = true;
+								//me.fire('chart-loaded',c);
+							}
+						}
+			        },
+			        title: {
+			            text: '월별 PO 실적',
+			            style: {
+			                fontSize: '14px'
+			             }			            
+			        },
+			        xAxis: {
+			            categories: [
+			                '1M',
+			                '2M',
+			                '3M',
+			                '4M',
+			                '5M',
+			                '6M'
+			            ],
+			            crosshair: true
+			        },
+			        yAxis: {
+			            min: 0,
+			            title: {
+			                text: '금액 (백만원)'
+			            }
+			        },
+			        tooltip: {
+			            headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+			            pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+			                '<td style="padding:0"><b>{point.y:.1f} 백만원</b></td></tr>',
+			            footerFormat: '</table>',
+			            shared: true,
+			            useHTML: true
+			        },
+			        plotOptions: {
+			            column: {
+			                pointPadding: 0.2,
+			                borderWidth: 0
+			            }
+			        },
+			        legend:{
+			        	itemDistance: 70
+			       	},			        
+			        series: [{
+			            name: '원자재',
+			            data: [100, 71, 106, 129, 144, 176]
+
+			        }, {
+			            name: '공사/용역',
+			            data: [83, 78, 98, 93, 106, 84]
+
+			        }, {
+			            name: '설비',
+			            data: [48, 38, 39, 41, 47, 48]
+
+			        }, {
+			            name: '간접재',
+			            data: [42, 33, 34, 39, 52, 75]
+
+			        }]
+			    });	  */
+				
+				}
+			}            
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,34 @@
+<script>
+	SCGrid.prototype.$$_initialized = SCGrid.prototype._initialized;
+	SCGrid.prototype._initialized = function() {
+	    var me = this;
+	    if(typeof SmartsuiteTheme != "undefined") { // [SMARTNINE-2551] smartsuite-theme.html을 사용하는 경우에만 적용 (MDI로 띄우지 않는 경우 사용하지 않음)
+	    	var theme = SmartsuiteTheme;
+	    	var themeName = theme.getThemeStyleName();
+
+		    if(typeof theme.getGridDefaultTheme() === "undefined") {
+	            theme.setGridDefaultTheme(blueSkySkin);
+		    }
+
+		    if(themeName && !theme.getGridReflect()) {
+		        blueSkySkin = theme.getGridTheme(themeName);
+		    }	    	
+	    }
+
+	    SCGrid.prototype.$$_initialized.call(me);
+	}
+	if(typeof SCSessionManager != "undefined" && typeof SCSessionManager.currentUser != "undefined" && UT.isNotEmpty(SCSessionManager.currentUser.tzFormat)){
+		var gridFormat = SCSessionManager.currentUser.tzFormat.toLowerCase();
+		gridFormat = gridFormat.replace('mm','MM');
+		Polymer.SCDateColumnBehaviorImpl.properties.displayFormat.value = gridFormat;
+	}
+	Polymer.SCGridBehaviorImpl.properties.headerHeight ={
+		    type : Number,
+		    value : 36,
+		    observer:'_headerHeightChanged'
+	}
+
+	Polymer.SCGridBehaviorImpl.properties.rowHeight ={
+		    value: 32, //높이 지정
+	}
+</script>

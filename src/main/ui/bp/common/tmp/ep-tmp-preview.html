@@ -1,0 +1,89 @@
+<dom-module id="ep-tmp-preview">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <!-- 상세정보 조회 -->
+        <sc-ajax id="findTemplatePreview"
+                 url="findTemplatePreview.do"
+                 body="{{findInfo.param}}"
+                 last-response="{{findInfo.result}}"
+                 on-response="completeFindInfo">
+        </sc-ajax>
+
+		<cc-sub-title-bar title-text="미리보기">
+		</cc-sub-title-bar>
+		
+        <sc-editor id="editor" class="flex" value="{{findInfo.result.previewHtml}}" editable="false"></sc-editor>
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-tmp-preview",
+            properties: {
+                findInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            param: {},
+                            result: {}
+                        };
+                    }
+                }
+            },
+
+            // 화면 생성 완료
+            initialized: function() {
+                var me = this;
+
+                me.fire("attached");
+            },
+
+            // 기본 파라미터 설정
+            load: function(options) {
+                var me = this;
+                options = options || {};
+
+                if (UT.isObject(options.defaultParam)) {
+                    me.set("findInfo.param", options.defaultParam);
+                    
+                    // 템플릿 값이 있는 경우(템플릿 과 내용을 합쳐서 보여줌)
+                    if(options.defaultParam.basc_ctmpl_cd){
+                    	me.onFindInfo();
+                    	
+                    // 템플릿 값이 없는 경우(내용만 보여줌)
+                    }else{
+                    	me.set("findInfo.result.previewHtml", options.defaultParam.contents);
+                    }
+                    
+                }
+            },
+
+            // 상세정보 조회
+            onFindInfo: function() {
+                var me = this;
+
+                UT.request(me.$.findTemplatePreview);
+            },
+
+            // 상세정보 조회 완료
+            completeFindInfo: function(e, res) {
+            	var me = this;
+            	
+            	var result = res.response;
+            	
+            	if(result){
+            		me.set("findInfo.result.previewHtml", result.previewHtml);
+            	}
+            	
+            }
+
+        });
+    </script>
+
+</dom-module>

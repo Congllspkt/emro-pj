@@ -1,0 +1,111 @@
+<sc-link rel="import" href="es-menu-list.html"></sc-link>
+<sc-link rel="import" href="es-menu-role-mapping.html"></sc-link>
+<sc-link rel="import" href="es-menufunc-info.html"></sc-link>
+<sc-link rel="import" href="es-menufunc-role-mapping.html"></sc-link>
+
+<dom-module id="em-menu">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+
+    	<div class="hbox flex">
+	        <es-menu-list id="menuList" on-selected-menu="onSelectedMenu" on-complete-search="onCompleteSearch" class="flex-6"></es-menu-list>
+	        <div class="hspace-10"></div>
+	        <div class="flex-4">
+                <sc-tab-navigation id="tabNavi" class="fit">
+					<es-menu-role-mapping id="menuRole" title-text="역할" on-change-info="onChangeMenuInfo"></es-menu-role-mapping>
+					<template>
+						<es-menufunc-info id="menuFunc" title-text="액션" on-initialized="_onMenuFuncInitialized" on-change-info="onChangeMenuInfo"></es-menufunc-info>
+					</template>
+					<template>
+						<es-menufunc-role-mapping id="menuFuncRole" title-text="액션/역할" on-initialized="_onMenuFuncRoleInitialized" on-change-info="onChangeMenuInfo"></es-menufunc-role-mapping>
+					</template>
+				</sc-tab-navigation>
+	        </div>
+    	</div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-menu',
+            properties: {
+            	menuInfo : {
+	            	type: Object,
+	            	value: function(){
+	            		return {};
+	            	}
+            	}
+            },
+            // 메뉴 코드 선택 시
+            onSelectedMenu: function(e, data) {
+                var me = this;
+                me.set("menuInfo",data);
+                me.$.menuRole.load(data);
+
+                if(me.$.menuFunc.isInitialized) {
+                    me.$.menuFunc.load(data);
+                }
+                if(me.$.menuFuncRole.isInitialized) {
+                    me.$.menuFuncRole.load(data);
+                }
+            },
+            // 기능 코드 관리 탭 초기화 완료 시
+            _onMenuFuncInitialized: function() {
+                var me = this;
+                if(me.menuInfo.menu_cd){
+                    me.$.menuFunc.load(me.menuInfo);
+                }
+            },
+            //기능이 수정됨
+            onSavedFunc: function(){
+            	var me = this;
+            	var menuInfo = me.get("menuInfo");
+            	 me.$.menufuncList.load(menuInfo);
+            },
+            //기능코드별 역할설정
+            _onMenuFuncRoleInitialized: function(e,data){
+                var me = this;
+                if(me.menuInfo.menu_cd){
+                    me.$.menuFuncRole.load(me.menuInfo);
+                }
+            },
+            onCompleteSearch: function(){
+            	var me = this;
+            	
+            	me.set("menuInfo",{});
+            	if(me.$.menuRole.isInitialized){
+            		me.$.menuRole.clear();
+            	}
+            	if(me.$.menuFunc.isInitialized){
+            		me.$.menuFunc.clear();
+            	}
+            	if(me.$.menuFuncRole.isInitialized){
+            		me.$.menuFuncRole.clear();
+            	}
+            },
+            onChangeMenuInfo: function(e, res){
+                var me = this;
+                var target = e.target.id;
+
+                me.set("menuInfo",res);
+
+                if('menuRole' != target && me.$.menuRole.isInitialized){
+                    me.$.menuRole.load(res);
+                }
+                if('menuFunc' != target && me.$.menuFunc.isInitialized) {
+                    me.$.menuFunc.load(res);
+                }
+                if('menuFuncRole' != target && me.$.menuFuncRole.isInitialized) {
+                    me.$.menuFuncRole.load(res);
+                }
+            }
+        });
+    </script>
+
+</dom-module>

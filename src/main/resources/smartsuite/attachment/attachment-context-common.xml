@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+				http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+				http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+				http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd" 
+	default-lazy-init="true">
+	
+	<!-- [Storage Manager] -->
+	<bean id="storageConnMgr" class="smartsuite5.attachment.core.mgr.conn.StorageConnMgr">
+		<property name="defaultStorageId" value="fsStorageConn"/>
+		<property name="connCache">
+			<map>
+				<entry key="fsStorageConn"			value-ref="fsStorageConn" />
+ 				<!--<entry key="fsdirectStorageConn"	value-ref="fsdirectStorageConn" />-->
+ 				<!--<entry key="dbStorageConn"			value-ref="dbStorageConn" />-->
+ 				<!--<entry key="sftpStorageConn"		value-ref="sftpStorageConn" />-->
+			</map>
+		</property>
+	</bean>
+	
+	<!-- [Service] 저장소-->
+	<bean id="storageAthfService" class="smartsuite5.attachment.web.service.StorageAthfService">
+		<property name="storageConnMgr" ref="storageConnMgr"/>
+	</bean>
+	
+	<!-- [Process] '파일 아이디 암/복호화' -->
+	<bean id="athfCryptoPrcs" class="smartsuite5.attachment.core.prcs.impl.AthUuidCryptoPrcs" />
+	
+	<!-- [Process] '썸네일 생성' -->
+	<bean id="thumbnailPrcs" class="smartsuite5.attachment.core.prcs.impl.ThumbnailPrcs">
+		<property name="thumbnailPostfix" value="thumb" />
+		<property name="width" value="120" />
+		<property name="height" value="120" />
+		<property name="thumbnailFormat" value="PNG" />
+		<property name="targetMimeTypes">
+			<list>
+				<value>png</value>
+				<value>jpg</value>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- [Process] '파일 서비스 접근 로그'  -->
+	<bean id="accessLogPrcs" class="smartsuite5.attachment.core.prcs.impl.AccessLogPrcs" />
+	
+	<!-- [Util] 'mimetype' -->
+	<bean id="mimeTypeUtil" class="smartsuite5.attachment.core.util.MimeTypeUtil" />
+	
+	<!-- [Util] '파일 아이디 암/복호화' -->
+	<bean id="athfCryptoUtil" class="smartsuite5.attachment.core.crypto.impl.BasicAthfCryptoUtil"/>
+ 	<!--<bean id="athfCryptoUtil" class="smartsuite5.attachment.core.crypto.impl.HttpSessionAthfCryptoUtil"/>-->
+
+	<!-- 기본 예외 처리기 -->
+	<bean id="storageExceptionHandler" class="smartsuite5.attachment.core.exception.handler.impl.BasicStorageAthfExceptionHandler" />
+	
+	
+
+</beans>

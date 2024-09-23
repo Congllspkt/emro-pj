@@ -1,0 +1,207 @@
+<dom-module id="es-menufunc-role-mapping">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-ajax id="findListMenuFunc"
+                 url="findListMenuFunc.do"
+                 body="{{searchParam}}"
+                 last-response="{{funcList}}">
+        </sc-ajax>
+
+        <sc-ajax id="findListMenuFuncRole"
+                 url="findListMenuFuncRole.do"
+                 last-response="{{roleList}}">
+        </sc-ajax>
+
+        <sc-ajax id="saveListMenuFuncRole"
+                 url="saveListRoleMenuFunc.do"
+                 on-response="completeSaveListMenuFuncRole">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="vbox page">
+            <div class="desc-box" hidden="[[!formula('isMenuCodeBinding')]]">
+                <p class="sub-text">
+					<!-- 역할을 부여할 액션 코드를 선택해주세요. 없을경우 액션 코드관리 탭에서 액션 코드를 추가 후 진행해주세요. -->
+                    <span class="label-emphasis" data-tooltip-text$="[[translate('STD.ADM1075')]]">[[searchParam.menu_cd]] : [[searchParam.menu_nm]]<span class="tooltip"></span></span>
+                </p>
+                <!-- <p class="sub-text">역할을 부여할 액션 코드를 선택해주세요.</p> -->
+            </div>
+            <div class="desc-box" hidden="[[formula('isMenuCodeBinding')]]">
+                <p class="sub-text">[[translate('STD.ADM1072')]]</p>
+            </div>
+            <sc-grid id="funcGridPanel" class="h-200" data-provider="{{funcList}}" use-selection="false" on-item-click="onItemClick" use-state="false">
+                <cc-grid-toolbar hidden="[[!formula('isMenuCodeBinding')]]">
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="act_cd" header-text="액션 코드" width="200" style-name="link"></sc-data-column>
+                    <sc-data-column data-field="act_nm" header-text="액션 명" width="200" text-align="left"></sc-data-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="menu_cd"></sc-grid-field>
+                    <sc-grid-field data-field="use_count_role_func" data-type="number"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+
+            <div class="desc-box" hidden="[[!formula('isFuncCodeBinding')]]">
+                <p class="sub-text">
+                    <span class="label-emphasis" data-tooltip-text$="[[translate('STD.ADM1076')]]">[[funcParam.act_cd]] : [[funcParam.act_nm]]<span class="tooltip"></span></span>
+                </p>
+                <!-- <p class="sub-text">액션 코드를 부여할 역할을 선택해주세요.</p> -->
+            </div>
+            <div class="desc-box" hidden="[[formula('isFuncCodeBinding')]]">
+                <p class="sub-text">[[translate('STD.ADM1077')]]<br>[[translate('STD.ADM1078')]]</p>
+            </div>
+
+            <sc-grid id="gridPanel" class="h-400" data-provider="{{roleList}}" editable="true" use-selection="false">
+                <cc-grid-toolbar hidden="[[!formula('isFuncCodeBinding')]]">
+                    <sc-button text="저장" on-click="onSaveFuncRoleMapping" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="role_cd" header-text="역할 코드" width="80" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="role_nm" header-text="역할 명" width="150" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="role_nm_en" header-text="역할 명 영문" width="150" text-align="left"></sc-data-column>
+                    <sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="100" text-align="center" editable="true"
+                                        display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field	data-field="menu_cd"		data-type="text"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'es-menufunc-role-mapping',
+
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                funcList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                funcParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+                roleList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+            },
+
+            formulas: {
+                isMenuCodeBinding: function () {
+                    return UT.isNotEmpty(this.searchParam.menu_cd);
+                },
+                isFuncCodeBinding: function () {
+                    return  this.formula('isMenuCodeBinding') && UT.isNotEmpty(this.funcParam.act_cd);
+                }
+            },
+
+            load: function (data) {
+                var me = this;
+                me.reset();
+                me.set('searchParam', data);
+                me._findListMenuFunc();
+            },
+
+            // 액션 코드 목록 조회 시 수행할 로직
+            _findListMenuFunc: function () {
+                var me = this;
+                UT.request(me.$.findListMenuFunc, function () {
+                    me.$.gridPanel.getDataProvider().removeAll();
+                    me.applyFormula();
+                });
+            },
+
+            //액션 코드 선택 이벤트
+            onItemClick: function(e){
+                var me = this,
+                    data = e.detail.data,
+                    item = e.detail.item;
+
+                if(item.dataField === 'act_cd'){
+                    if(UT.isEmpty(data.menu_cd)|| UT.isEmpty(data.act_cd)){
+                        return;
+                    }
+
+                    me.set("funcParam", data);
+
+                    me.applyFormula();
+
+                    me.$.findListMenuFuncRole.body = me.get("funcParam");
+                    UT.request(me.$.findListMenuFuncRole);
+                }
+            },
+
+            onSaveFuncRoleMapping: function(){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var updates = provider.getUpdateItems();
+
+                if(updates.length === 0){
+                    UT.alert('STD.N1700'); // 변경된 내용이 없습니다.
+                    return;
+                }
+
+                if(me.get('searchParam.menu_cd').indexOf("ADM") > -1){
+                    if(!Polymer.$Array.find(SCSessionManager.userDetails.authorities,function(role) { return role.authority == 'SA100' })){
+                        UT.alert("STD.ADM1070");		//관리자 권한은 일반 관리자가 수정할 수 없습니다.
+                        return;
+                    }
+                }
+
+                UT.confirm("STD.N1200", function() {	// "저장 하시겠습니까?"
+                    var inserts = [],
+                        deletes = [];
+                    updates.forEach(function(item){
+                        item.menu_cd = me.searchParam.menu_cd
+                        item.act_cd = me.funcParam.act_cd
+                        if (item.use_yn === "Y") {
+                            inserts.push(item);
+                        } else {
+                            deletes.push(item);
+                        }
+                    });
+                    me.$.saveListMenuFuncRole.body = {
+                        insertRoleFuncs: inserts,
+                        deleteRoleFuncs: deletes
+                    };
+                    UT.request(me.$.saveListMenuFuncRole);
+                });
+            },
+
+            completeSaveListMenuFuncRole: function(e, res){
+                var me = this;
+                UT.request(me.$.findListMenuFuncRole);
+                me.fire('change-info', me.get('searchParam'));
+                UT.alert('STD.N1500'); // 저장 하였습니다.
+            },
+            //초기화
+            clear: function(){
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            }
+        })
+    </script>
+</dom-module>

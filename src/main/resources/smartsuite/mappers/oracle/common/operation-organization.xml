@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+LOGIC_ORG: 조직
+OORG: 운영조직
+OORG_USR: 운영조직 사용자
+OORG_MAPG: 운영조직 연결정보
+ -->
+
+<mapper namespace="operation-organization">
+
+    <insert id="insertOperationOrganization">
+    /* operOrg.insertOperationOrganization: 운영조직 등록 */
+    INSERT 
+      INTO OORG (
+           TEN_ID
+         , OORG_CD
+         , PARNODE_OORG_CD
+         , OUNIT_CD
+         , LOGIC_ORG_TYP_CCD
+         , LOGIC_ORG_CD
+         , PARNODE_LOGIC_ORG_CD
+         , CHDNODE_YN
+         , USE_YN
+         , STS
+         , RMK
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.oorg_cd}
+         , #{p.parnode_oorg_cd}
+         , #{p.ounit_cd}
+         , #{p.logic_org_typ_ccd}
+         , #{p.logic_org_cd}
+         , #{p.parnode_logic_org_cd}
+         , #{p.chdnode_yn}
+         , #{p.use_yn}
+         , 'C'
+         , #{p.rmk}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <insert id="insertOperationOrganizationUser">
+    /* operOrg.insertOperationOrganizationUser: 운영조직의 사용자 등록 */
+    INSERT
+      INTO OORG_USR (
+           TEN_ID
+         , OORG_CD
+         , USR_ID
+         , USE_YN
+         , STS
+         , RMK
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.oorg_cd}
+         , #{p.usr_id}
+         , #{p.use_yn}
+         , 'C'
+         , #{p.rmk}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <insert id="insertOperationOrganizationDept">
+        INSERT INTO
+            OORG_DEPT (
+               TEN_ID,
+               OORG_CD,
+               DEPT_CD,
+               USE_YN,
+               RMK,
+               REGR_ID,
+               REG_DTTM,
+               MODR_ID,
+               MOD_DTTM
+           ) VALUES (
+              #{g.tenant}
+            , #{p.oorg_cd}
+            , #{p.dept_cd}
+            , #{p.use_yn}
+            , #{p.rmk}
+            , #{g.username}
+            , #{g.now}
+            , #{g.username}
+            , #{g.now}
+          )
+    </insert>
+
+    <insert id="insertOperationOrganizationLink">
+    /* operOrg.insertOperationOrganizationLink: 운영조직의 연결정보를 등록 */
+    INSERT
+      INTO OORG_MAPG (
+           TEN_ID
+         , CONN_TYP_CCD
+         , CONNSRC_OORG_CD
+         , CONNSUBJ_OORG_CD
+         , SRC_ORG_CD
+         , CONNSUBJ_ORG_CD
+         , CONN_YN
+         , REGR_ID
+         , REG_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.conn_typ_ccd}
+         , #{p.connsrc_oorg_cd}
+         , #{p.connsubj_oorg_cd}
+         , #{p.src_org_cd}
+         , #{p.connsubj_org_cd}
+         , #{p.conn_yn}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <update id="updateOperationOrganization">
+    /* operOrg.updateOperationOrganization: 운영조직 수정 */
+    UPDATE OORG
+       SET STS = 'U'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , PARNODE_OORG_CD = #{p.parnode_oorg_cd}
+         , OUNIT_CD = #{p.ounit_cd}
+         , LOGIC_ORG_TYP_CCD = #{p.logic_org_typ_ccd}
+         , LOGIC_ORG_CD = #{p.logic_org_cd}
+         , PARNODE_LOGIC_ORG_CD = #{p.parnode_logic_org_cd}
+         , CHDNODE_YN = #{p.chdnode_yn}
+         , USE_YN = #{p.use_yn}
+         , RMK = #{p.rmk}
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+    </update>
+
+    <update id="updateOperationOrganizationParentLeafNodeYn">
+    /* operOrg.updateOperationOrganizationParentLeafNodeYn: 운영조직의 상위노드의 leafYn 여부 수정 */
+    UPDATE OORG
+       SET CHDNODE_YN = (
+               SELECT CASE WHEN COUNT(*) = 0 THEN 'Y' ELSE 'N' END AS CHDNODE_YN
+                 FROM OORG
+                WHERE TEN_ID = #{g.tenant}
+                  AND PARNODE_OORG_CD = #{p.parnode_oorg_cd}
+           )
+    WHERE TEN_ID = #{g.tenant}
+      AND OORG_CD = #{p.parnode_oorg_cd}
+    </update>
+
+    <update id="updateOperationOrganizationUserInfo">
+    /* operOrg.updateOperationOrganizationUserInfo: 운영조직의 사용자 수정 */
+    UPDATE OORG_USR
+       SET STS = 'U'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , USE_YN = #{p.use_yn}
+         , RMK = #{p.rmk}
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+       AND USR_ID = #{p.usr_id}
+    </update>
+
+    <delete id="deleteOperationOrganization">
+    /* operOrg.deleteOperationOrganization: 운영조직 삭제 */
+    DELETE
+      FROM OORG
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+    </delete>
+
+    <delete id="deleteOperationOrganizationUser">
+    /* operOrg.deleteOperationOrganizationUser: 운영조직의 사용자 삭제 */
+    DELETE
+      FROM OORG_USR
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+       AND USR_ID = #{p.usr_id}
+    </delete>
+
+    <delete id="deleteOperationOrganizationDept">
+    /* operOrg.deleteOperationOrganizationDept: 운영조직의 부서 삭제 */
+    DELETE
+      FROM OORG_DEPT
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+       AND DEPT_CD = #{p.dept_cd}
+    </delete>
+
+    <delete id="deleteOperationOrganizationByUserId">
+    /* operOrg.deleteOperationOrganizationUser: 운영조직의 사용자 삭제 */
+    DELETE
+      FROM OORG_USR
+     WHERE TEN_ID = #{g.tenant}
+       AND USR_ID = #{p.usr_id}
+    </delete>
+
+    <delete id="deleteOperationOrganizationLink">
+    /* operOrg.deleteOperationOrganizationLink: 운영조직의 연결정보 삭제 */
+    DELETE
+      FROM OORG_MAPG
+     WHERE TEN_ID = #{g.tenant}
+       AND CONN_TYP_CCD = #{p.conn_typ_ccd}
+       AND CONNSRC_OORG_CD = #{p.connsrc_oorg_cd}
+       AND CONNSUBJ_OORG_CD = #{p.connsubj_oorg_cd}
+    </delete>
+
+    <select id="findListOperationOrganization" resultType="map">
+    /* operOrg.findListOperationOrganization: 운영조직 목록 */
+    SELECT T.*
+    <if test='p.conn_typ_ccd != null and p.conn_typ_ccd != "" and p.connsrc_oorg_cd != null and p.connsrc_oorg_cd != ""'>
+    ,      CASE WHEN USE_COUNT_OPER_ORG_LINK > 0 THEN 'Y'
+                ELSE 'N'
+           END AS CONN_YN
+    </if>
+    , CASE WHEN USE_COUNT_OPER_ORG_LINK + USE_COUNT_OPER_ORG_USER + USE_COUNT_OPER_ORG_DEPT > 0 THEN 'Y'
+        ELSE 'N'
+        END AS USE_COUNT_YN
+    FROM (
+         SELECT A.TEN_ID
+              , A.OORG_CD
+              , A.PARNODE_OORG_CD
+              , A.OUNIT_CD
+              , A.LOGIC_ORG_TYP_CCD
+              , A.LOGIC_ORG_CD
+              , A.PARNODE_LOGIC_ORG_CD
+              , A.CHDNODE_YN
+              , A.USE_YN
+              , A.STS
+              , A.RMK
+              , A.REGR_ID
+              , A.REG_DTTM
+              , A.MODR_ID
+              , A.MOD_DTTM
+              , B.LOGIC_ORG_CD AS CO_CD
+              , CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), B.LOGIC_ORG_NM) AS OORG_NM
+               , CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), B.LOGIC_ORG_NM_EN) AS OORG_NM_EN
+              , B.LOGIC_ORG_NM
+              , B.LOGIC_ORG_NM_EN
+              , B.USE_YN AS LOGIC_ORG_USE_YN
+              , DTLML.DTLCD_NM AS LOGIC_ORG_TYP_NM
+              <choose>
+              <when test='p.conn_typ_ccd != null and p.conn_typ_ccd != "" and p.connsrc_oorg_cd != null and p.connsrc_oorg_cd != ""'>
+              , (
+                SELECT COUNT(*)
+                  FROM OORG_MAPG
+                 WHERE TEN_ID = A.TEN_ID
+                   AND CONN_TYP_CCD = #{p.conn_typ_ccd}
+                   AND CONNSRC_OORG_CD = #{p.connsrc_oorg_cd}
+                   AND CONNSUBJ_OORG_CD = A.OORG_CD
+                ) AS USE_COUNT_OPER_ORG_LINK
+              </when>
+              <otherwise>
+              , (
+                SELECT COUNT(*)
+                  FROM OORG_MAPG
+                 WHERE TEN_ID = A.TEN_ID
+                   AND (CONNSRC_OORG_CD = A.OORG_CD OR CONNSUBJ_OORG_CD = A.OORG_CD)
+                )  AS USE_COUNT_OPER_ORG_LINK
+              </otherwise>
+              </choose>
+              , (
+                SELECT COUNT(*)
+                  FROM OORG_USR
+                 WHERE TEN_ID = A.TEN_ID
+                   AND OORG_CD = A.OORG_CD
+                ) AS USE_COUNT_OPER_ORG_USER
+              , (
+                SELECT COUNT(*)
+                  FROM OORG_DEPT
+                 WHERE TEN_ID = A.TEN_ID
+                   AND OORG_CD = A.OORG_CD
+                ) AS USE_COUNT_OPER_ORG_DEPT
+           FROM OORG A
+          INNER JOIN LOGIC_ORG B
+             ON A.TEN_ID = B.TEN_ID
+            AND A.LOGIC_ORG_TYP_CCD = B.LOGIC_ORG_TYP_CCD
+            AND A.LOGIC_ORG_CD = B.LOGIC_ORG_CD
+            <if test='p.logic_org_cd != null and p.logic_org_cd != ""'>
+                AND B.LOGIC_ORG_CD IN ( WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                AS (
+                SELECT LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                WHERE TEN_ID = #{g.tenant}
+                AND STS !='D'
+                AND LOGIC_ORG_CD = #{p.logic_org_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                AND RECURSIVE_LOGIC_ORG.STS !='D'
+                AND RECURSIVE.LOGIC_ORG_CD = RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD
+                )
+                SELECT LOGIC_ORG_CD
+                FROM RECURSIVE )
+            </if>
+            AND B.USE_YN = 'Y'
+            AND B.STS != 'D'
+         INNER JOIN DTLCD_MULTLANG DTLML
+            ON DTLML.TEN_ID = A.TEN_ID
+            AND DTLML.CCD =  'C079'
+            AND DTLML.LANG_CCD = #{g.locale}
+            AND A.LOGIC_ORG_TYP_CCD = DTLML.DTLCD
+          INNER JOIN OUNIT OUNIT
+           ON A.TEN_ID = OUNIT.TEN_ID
+           AND A.OUNIT_CD = OUNIT.OUNIT_CD
+          WHERE A.TEN_ID = #{g.tenant}
+            AND A.OUNIT_CD = #{p.ounit_cd}
+            AND A.STS != 'D'
+            ) T
+    </select>
+
+    <select id="findListOperationOrganizationUser" resultType="map">
+    /* operOrg.findListOperationOrganizationUser: 운영조직의 사용자 목록 */
+    SELECT OU.TEN_ID
+         , OU.OORG_CD
+         , OU.USR_ID
+         , OU.USE_YN
+         , OU.STS
+         , OU.RMK
+         , OU.REGR_ID
+         , OU.REG_DTTM
+         , OU.MODR_ID
+         , OU.MOD_DTTM
+         , USR.CO_CD
+         , USR.USR_ID
+         , USR.USR_NM
+         , USR.USR_NM_EN
+         , USR.DEPT_CD
+         , DP.DEPT_NM
+         , DP.DEPT_NM_EN
+         , LOGIC_ORG.LOGIC_ORG_NM AS COMP_NM
+         , LOGIC_ORG.LOGIC_ORG_NM_EN AS COMP_NM_EN
+      FROM OORG_USR OU
+     INNER JOIN USR USR
+        ON OU.TEN_ID = USR.TEN_ID
+       AND OU.USR_ID = USR.USR_ID
+       AND USR.STS != 'D'
+     INNER JOIN LOGIC_ORG LOGIC_ORG
+        ON OU.TEN_ID = LOGIC_ORG.TEN_ID
+       AND USR.CO_CD = LOGIC_ORG.LOGIC_ORG_CD
+       AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+       AND LOGIC_ORG.STS != 'D'
+     LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+         ON USR.TEN_ID = ODM.TEN_ID
+         AND USR.CO_CD = ODM.LOGIC_ORG_CD
+         AND USR.DEPT_CD = ODM.DEPT_CD
+         AND ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+     LEFT OUTER JOIN DEPT DP             /* C : 부서 */
+         ON USR.TEN_ID = DP.TEN_ID
+         AND USR.CO_CD = ODM.LOGIC_ORG_CD
+         AND DP.DEPT_CD = ODM.DEPT_CD
+         AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = ODM.LOGIC_ORG_TYP_CCD
+         AND DP.STS != 'D'
+     WHERE OU.TEN_ID = #{g.tenant}
+       AND OU.OORG_CD = #{p.oorg_cd}
+       AND OU.STS != 'D'
+    </select>
+
+    <select id="findListOperationOrganizationDept" resultType="map">
+    /* operOrg.findListOperationOrganizationDept: 운영조직의 부서 목록 */
+    SELECT OORG_DEPT.TEN_ID
+         , OORG_DEPT.OORG_CD
+         , OORG_DEPT.DEPT_CD
+         , OORG_DEPT.USE_YN
+         , OORG_DEPT.STS
+         , OORG_DEPT.RMK
+         , OORG_DEPT.REGR_ID
+         , OORG_DEPT.REG_DTTM
+         , OORG_DEPT.MODR_ID
+         , OORG_DEPT.MOD_DTTM
+         , DEPT.DEPT_NM
+         , DEPT.DEPT_NM_EN
+      FROM OORG_DEPT OORG_DEPT
+     INNER JOIN DEPT DEPT
+        ON OORG_DEPT.TEN_ID = DEPT.TEN_ID
+       AND OORG_DEPT.DEPT_CD = DEPT.DEPT_CD
+       AND DEPT.STS != 'D'
+      INNER JOIN OORG OORG
+        ON OORG_DEPT.TEN_ID = OORG.TEN_ID
+        AND OORG_DEPT.OORG_CD = OORG.OORG_CD
+     WHERE OORG_DEPT.TEN_ID = #{g.tenant}
+       AND OORG_DEPT.OORG_CD = #{p.oorg_cd}
+       AND OORG_DEPT.STS != 'D'
+    </select>
+
+    <select id="findListOperationOrganizationLink" resultType="map">
+    /* operOrg.findListOperationOrganizationLink: 운영조직의 연결정보 목록 */
+    SELECT OM.TEN_ID
+         , OM.CONN_TYP_CCD
+         , OM.CONNSRC_OORG_CD
+         , CONCAT(CONCAT(CONCAT('[', SOUNIT.OUNIT_NM ), '] '), SGORG.LOGIC_ORG_NM)AS CONNSRC_OORG_NM
+         , CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM ), '] '), LOGIC_ORG.LOGIC_ORG_NM)AS CONNSUBJ_OORG_NM
+         , CONCAT(CONCAT(CONCAT('[', SOUNIT.OUNIT_NM_EN ), '] '), SGORG.LOGIC_ORG_NM_EN)AS CONNSRC_OORG_NM_EN
+         , CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN ), '] '), LOGIC_ORG.LOGIC_ORG_NM_EN)AS CONNSUBJ_OORG_NM_EN
+         , OM.CONNSUBJ_OORG_CD
+         , OM.SRC_ORG_CD
+         , OM.CONNSUBJ_ORG_CD
+         , OM.CONN_YN
+         , OM.REGR_ID
+         , OM.REG_DTTM
+         , SGORG.LOGIC_ORG_NM AS SRC_ORG_NM
+         , SGORG.LOGIC_ORG_NM_EN AS SRC_ORG_NM_EN
+         , OT.DTLCD_NM AS SRC_ORG_TYP_NM
+         , LOGIC_ORG.LOGIC_ORG_NM AS TARG_ORG_NM
+         , LOGIC_ORG.LOGIC_ORG_NM_EN AS TARG_ORG_NM_EN
+         , OT.DTLCD_NM AS TARG_ORG_TYP_NM
+      FROM OORG_MAPG OM
+     INNER JOIN OORG SGOORG
+        ON OM.TEN_ID = SGOORG.TEN_ID
+       AND OM.CONNSRC_OORG_CD = SGOORG.OORG_CD
+       AND OM.SRC_ORG_CD = SGOORG.LOGIC_ORG_CD
+       AND SGOORG.STS != 'D'
+        INNER JOIN OUNIT SOUNIT
+        ON SGOORG.TEN_ID = SOUNIT.TEN_ID
+        AND SGOORG.OUNIT_CD = SOUNIT.OUNIT_CD
+     INNER JOIN LOGIC_ORG SGORG
+        ON SGOORG.TEN_ID = SGORG.TEN_ID
+       AND SGOORG.LOGIC_ORG_TYP_CCD = SGORG.LOGIC_ORG_TYP_CCD
+       AND SGOORG.LOGIC_ORG_CD = SGORG.LOGIC_ORG_CD
+       AND SGORG.STS != 'D'
+    INNER JOIN DTLCD_MULTLANG SGOT
+    ON SGOT.TEN_ID = SGOORG.TEN_ID
+    AND SGOT.CCD =  'C079'
+    AND SGOT.LANG_CCD = 'ko_KR'
+    AND SGOORG.LOGIC_ORG_TYP_CCD = SGOT.DTLCD
+     INNER JOIN OORG OORG
+        ON OM.TEN_ID = OORG.TEN_ID
+       AND OM.CONNSUBJ_OORG_CD = OORG.OORG_CD
+       AND OM.CONNSUBJ_ORG_CD = OORG.LOGIC_ORG_CD
+       AND OORG.STS != 'D'
+     INNER JOIN LOGIC_ORG LOGIC_ORG
+        ON OORG.TEN_ID = LOGIC_ORG.TEN_ID
+       AND OORG.LOGIC_ORG_TYP_CCD = LOGIC_ORG.LOGIC_ORG_TYP_CCD
+       AND OORG.LOGIC_ORG_CD = LOGIC_ORG.LOGIC_ORG_CD
+       AND LOGIC_ORG.STS != 'D'
+        INNER JOIN OUNIT OUNIT
+        ON OORG.TEN_ID = OUNIT.TEN_ID
+        AND OORG.OUNIT_CD = OUNIT.OUNIT_CD
+    INNER JOIN DTLCD_MULTLANG OT
+        ON OT.TEN_ID = OORG.TEN_ID
+        AND OT.CCD =  'C079'
+        AND OT.LANG_CCD = 'ko_KR'
+        AND OORG.LOGIC_ORG_TYP_CCD = OT.DTLCD
+     WHERE OM.TEN_ID = #{g.tenant}
+       AND OM.CONN_YN = 'Y'
+        <if test='p.logic_org_cds != null and p.logic_org_cds.size() != 0'>
+        AND SGORG.LOGIC_ORG_CD IN
+            <foreach collection="p.logic_org_cds" item="logic_org_cd" open="(" close=")" separator=",">
+                #{logic_org_cd}
+            </foreach>
+        </if>
+     	<if test='p.conn_typ_ccd != null and p.conn_typ_ccd != ""'>
+       AND OM.CONN_TYP_CCD = #{p.conn_typ_ccd}
+       </if>
+     ORDER BY CONN_TYP_CCD ASC
+    </select>
+
+    <select id="getCountOperationOrganizationByOperationOrganizationCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationByOperationOrganizationCode: 운영조직 카운트 by 운영조직코드 */
+    SELECT COUNT(*)
+      FROM OORG
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+    </select>
+
+    <select id="getCountOperationOrganizationByOrganizationCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationByOrganizationCode: 운영조직 카운트 by 조직코드 */
+    SELECT COUNT(*)
+      FROM OORG
+     WHERE TEN_ID = #{g.tenant}
+       AND LOGIC_ORG_CD = #{p.logic_org_cd}
+    </select>
+
+    <select id="getCountOperationOrganizationByOperationUnitCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationByOrganizationCode: 운영조직 카운트 by 운영단위코드 */
+    SELECT COUNT(*)
+      FROM OORG
+     WHERE TEN_ID = #{g.tenant}
+       AND OUNIT_CD = #{p.ounit_cd}
+    </select>
+
+    <select id="getCountOperationOrganizationUserByOperationOrganizationCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationUserByOperationOrganizationCode: 운영조직의 사용자 카운트 by 운영조직코드 */
+    SELECT COUNT(*)
+      FROM OORG_USR
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+    </select>
+
+    <select id="getCountOperationOrganizationUserByUserId" resultType="int">
+    /* operOrg.getCountOperationOrganizationUserByUserId: 운영조직의 사용자 카운트 by 사용자아이디 */
+    SELECT COUNT(*)
+      FROM OORG_USR
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+       AND USR_ID = #{p.usr_id}
+    </select>
+
+    <select id="getCountOperationOrganizationUserByDeptCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationUserByDeptCode: 운영조직의 부서 카운트 by 부서코드 */
+    SELECT COUNT(*)
+      FROM OORG_DEPT
+     WHERE TEN_ID = #{g.tenant}
+       AND OORG_CD = #{p.oorg_cd}
+       AND DEPT_CD = #{p.dept_cd}
+    </select>
+
+    <select id="getCountOperationOrganizationLinkByOperationOrganizationCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationLinkByOperationOrganizationCode: 운영조직의 연결정보 카운트 by 운영조직코드 */
+    SELECT COUNT(*)
+      FROM OORG_MAPG
+     WHERE TEN_ID = #{g.tenant}
+       AND (CONNSRC_OORG_CD = #{p.oorg_cd}
+            OR CONNSUBJ_OORG_CD = #{p.oorg_cd})
+    </select>
+
+    <select id="getCountOperationOrganizationLinkBySourceOperationOrganizationCodeAndTargetOperationOrganizationCode" resultType="int">
+    /* operOrg.getCountOperationOrganizationLinkBySourceOperationOrganizationCodeAndTargetOperationOrganizationCode: 운영조직의 연결정보 카운트 by 소스운영조직코드/타겟운영조직코드 */
+    SELECT COUNT(*)
+      FROM OORG_MAPG
+     WHERE TEN_ID = #{g.tenant}
+       AND CONN_TYP_CCD = #{p.conn_typ_ccd}
+       AND CONNSRC_OORG_CD = #{p.connsrc_oorg_cd}
+       AND CONNSUBJ_OORG_CD = #{p.connsubj_oorg_cd}
+    </select>
+
+    <select id="findCompanyCodeByLogicOrganizationCode"  resultType="String">
+        /** operation-organization.findListIncludeCompanyLoginOrganizationCodeByLogicOrganizationCode  특정 LOGIC_ORG_CD를 통해, 회사코드(LOGIC_ORG_CD)를 취득한다. **/
+        WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                 AS (
+                SELECT LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                WHERE TEN_ID = #{g.tenant}
+                  AND STS !='D'
+                  AND LOGIC_ORG_CD = #{p.logic_org_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                  AND RECURSIVE_LOGIC_ORG.STS !='D'
+                  AND RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD = RECURSIVE.PARNODE_LOGIC_ORG_CD
+            )
+        SELECT LOGIC_ORG_CD
+        FROM RECURSIVE
+        WHERE LOGIC_ORG_TYP_CCD = 'COMPANY'
+    </select>
+
+    <select id="findListIncludeCompanyLoginOrganizationCodeByLogicOrganizationCode"  resultType="String">
+        /** operation-organization.findListIncludeCompanyLoginOrganizationCodeByLogicOrganizationCode  특정 LOGIC_ORG_CD를 통해, 소속된 상위 LOGIC_ORG_CD를 취득한다. **/
+        WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                 AS (
+                SELECT LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                WHERE TEN_ID = #{g.tenant}
+                  AND STS !='D'
+                  AND LOGIC_ORG_CD = #{p.logic_org_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                  AND RECURSIVE_LOGIC_ORG.STS !='D'
+                  AND RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD = RECURSIVE.PARNODE_LOGIC_ORG_CD
+            )
+        SELECT LOGIC_ORG_CD
+        FROM RECURSIVE
+    </select>
+
+
+    <select id="findListLoginOrganizationCodeByIncludeCompanyLoginOrganizationCode"  resultType="String">
+        /** operation-organization.findListLoginOrganizationCodeByIncludeCompanyLoginOrganizationCode  회사 코드(LOGIC_ORG_CD)를 통해 소속된 LOGIC_ORG_CD LIST를 취득한다. **/
+        WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                 AS (
+                SELECT LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                WHERE TEN_ID = #{g.tenant}
+                  AND STS !='D'
+                  AND LOGIC_ORG_CD = #{p.logic_org_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                  AND RECURSIVE_LOGIC_ORG.STS !='D'
+                  AND RECURSIVE.LOGIC_ORG_CD = RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD
+            )
+        SELECT LOGIC_ORG_CD
+        FROM RECURSIVE
+    </select>
+
+    <select id="findCompanyCodeByOorgCd"  resultType="String">
+        /** operation-organization.findCompanyCodeByOorgCd  특정 LOGIC_ORG_CD를 통해, 소속된 상위 LOGIC_ORG_CD를 취득한다. **/
+        WITH RECURSIVE ( LOGIC_ORG_CD , PARNODE_LOGIC_ORG_CD , ORG_CD , LOGIC_ORG_NM ,LOGIC_ORG_NM_EN ,LOGIC_ORG_TYP_CCD )
+                 AS (
+                SELECT LOGIC_ORG.LOGIC_ORG_CD , LOGIC_ORG.PARNODE_LOGIC_ORG_CD , LOGIC_ORG.ORG_CD , LOGIC_ORG.LOGIC_ORG_NM ,LOGIC_ORG.LOGIC_ORG_NM_EN ,LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG
+                INNER JOIN OORG
+                    ON(OORG.TEN_ID = LOGIC_ORG.TEN_ID
+                           AND OORG.LOGIC_ORG_TYP_CCD = LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                           AND OORG.LOGIC_ORG_CD = LOGIC_ORG.LOGIC_ORG_CD
+                           AND OORG.STS != 'D')
+                WHERE LOGIC_ORG.TEN_ID =#{g.tenant}
+                  AND LOGIC_ORG.STS !='D'
+                  AND OORG.OORG_CD = #{p.oorg_cd}
+
+                UNION ALL
+
+                SELECT RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD ,RECURSIVE_LOGIC_ORG.PARNODE_LOGIC_ORG_CD , RECURSIVE_LOGIC_ORG.ORG_CD , RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_NM_EN ,RECURSIVE_LOGIC_ORG.LOGIC_ORG_TYP_CCD
+                FROM LOGIC_ORG RECURSIVE_LOGIC_ORG , RECURSIVE
+                WHERE RECURSIVE_LOGIC_ORG.TEN_ID =  #{g.tenant}
+                  AND RECURSIVE_LOGIC_ORG.STS !='D'
+                  AND RECURSIVE_LOGIC_ORG.LOGIC_ORG_CD = RECURSIVE.PARNODE_LOGIC_ORG_CD
+            )
+        SELECT LOGIC_ORG_CD
+        FROM RECURSIVE
+        WHERE LOGIC_ORG_TYP_CCD = 'COMPANY'
+    </select>
+
+    <select id="findOperationOrgVendorList" resultType="map">
+    /* operation-organization.findOperationOrgVendorList */
+        SELECT OV.OORG_CD
+             , OV.VD_CD
+             , O.OUNIT_CD
+             , O.ORG_CD
+             , O.ORG_TYP_CCD
+             , O.PARNODE_OORG_CD
+             , O.PARNODE_LOGIC_ORG_CD
+             , O.LOGIC_ORG_CD
+        FROM OORG O
+        INNER JOIN OORG_VD OV
+          ON (O.TEN_ID = OV.TEN_ID
+         AND O.OORG_CD = OV.OORG_CD)
+        WHERE O.TEN_ID = #{g.tenant}
+          AND OV.VD_CD = #{p.vd_cd}
+    </select>
+
+</mapper>

@@ -1,0 +1,184 @@
+<dom-module id="ep-column-list">
+<!--
+	******************************************************************************************
+	** @Program-name    : BID 동적 컬럼 관리
+	** @Description     : 
+	** @Author          : GaRam, Choi
+	** @Create Date     : 2020.07.31
+	******************************************************************************************
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+<!--
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+-->
+        <sc-code-group>
+            <sc-code code="BID001" value="{{codes.columnType}}" ></sc-code> <!-- 컬럼 타입 -->
+            <sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+            <sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+            <sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+        </sc-code-group>
+
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findListColumnMaster"
+				url="findListColumnListNotGroup.do"
+				body="{{searchParam}}"
+				last-response="{{resultList}}">
+		</sc-ajax>
+
+
+		<cc-auth-checker check-list="auth-r"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<!-- 조회조건 -->
+			<cc-search-container on-search="onSearch" >
+				<table>
+					<colgroup>
+						<col style="width:120px">
+						<col>
+						<col style="width:120px">
+						<col>
+					</colgroup>
+					<tr>
+						<th><sc-label text="컬럼 코드"></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.col_cd}}" on-enter="onSearch" maxlength="18"></sc-text-field>
+						</td>
+						<th><sc-label text="컬럼 이름" ></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.col_nm}}" on-enter="onSearch" ></sc-text-field>
+						</td>
+					</tr>
+				</table>
+			</cc-search-container>
+			
+			<!-- 그리드 -->
+			<sc-grid id="columnGridPanel" data-provider="{{resultList}}" class="flex" use-state="true" use-selection="true" validation-group="save">
+				<cc-grid-toolbar>
+					<sc-button text="추가" on-click="onAdd" auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="col_cd" header-text="컬럼 코드" width="150" text-align="left" ></sc-data-column>
+					<sc-data-column data-field="col_nm" header-text="컬럼 이름" width="150" text-align="left" ></sc-data-column>
+                    <sc-combobox-column data-field="col_typ_cd" header-text="컬럼 타입" display-field="label" value-field="data" items="{{codes.columnType}}"></sc-combobox-column>
+					<sc-data-column data-field="col_len" data-type="number"	 header-text="컬럼 길이" width="150" text-align="right" ></sc-data-column>
+					<sc-data-column data-field="point_len" data-type="number"	 header-text="소수점 자리수" width="150" text-align="right" item-editable-function="itemDecimalFunction"></sc-data-column>
+                    <sc-combobox-column data-field="point_cal_typ" header-text="소수점 포맷팅" display-field="label" value-field="data" item-editable-function="itemDecimalFunction" items="{{codes.precHndlTyp}}"></sc-combobox-column>
+                    <sc-data-column data-field="grp_cd" header-text="그룹 코드" width="150" text-align="center" ></sc-data-column>
+                    <sc-data-column data-field="common_cd" header-text="공통 코드" width="150" text-align="center" ></sc-data-column>
+                    <sc-combobox-column data-field="field_align" header-text="field 정렬" display-field="label" value-field="data" items="{{codes.fieldAlign}}"></sc-combobox-column>
+                    <sc-combobox-column data-field="use_yn" header-text="사용 여부" display-field="label" value-field="data" items="{{codes.C022}}"></sc-combobox-column>
+					</sc-date-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field	data-field="col_id"	></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+			
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "ep-column-list",
+            properties : {
+                codes: {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                        }
+                    }
+                },
+
+                // 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+						return {
+							sheet_nm:"",
+							sheet_typ:"",
+							col_typ_cd:"",
+							col_cd:"",
+							col_nm:"",
+						};
+                    }
+                },
+
+                // 조회 결과 리스트
+                resultList: {
+                    type: Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+            },
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+            },
+
+			load: function(data){
+				var me = this;
+
+				me.set("searchParam",data);
+				me.onSearch();
+			},
+
+
+			onSearch : function() {
+				var me = this;
+				me.$.findListColumnMaster.body= me.searchParam;
+				UT.request(me.$.findListColumnMaster);
+			},
+			onAdd : function(){
+				var me = this,provider = me.$.columnGridPanel.getDataProvider();
+				var selected = provider.selectionCheckedItems();
+
+				if(UT.isEmpty(selected)){
+					UT.alert("STD.N1600");
+				}else{
+					me.fire("selected-items", selected);
+				}
+			},
+			itemDecimalFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "point_len":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "point_cal_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					default:
+						return false;
+				}
+			},
+
+
+        });
+	</script>
+
+</dom-module>

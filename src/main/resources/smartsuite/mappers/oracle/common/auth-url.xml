@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+MENU_ACT_URL	: 롤기능
+ -->
+
+<mapper namespace="auth-url">
+
+    <insert id="insertFuncUrl">
+    /* roleUrl.insertFuncUrl: 역할url 등록 */
+    INSERT
+      INTO MENU_ACT_URL (
+           TEN_ID
+         , ACT_CD
+         , MENU_CD
+         , MENU_ACT_URL
+         , REGR_ID
+         , REG_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.act_cd}
+         , #{p.menu_cd}
+         , #{p.menu_act_url}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <select id="getCountFuncUrl" resultType="int">
+    /* roleUrl.getCountFuncUrl: 역할url 카운트 */
+    SELECT COUNT(*)
+      FROM MENU_ACT_URL
+     WHERE TEN_ID = #{g.tenant}
+       AND MENU_CD = #{p.menu_cd}
+       AND MENU_ACT_URL = #{p.menu_act_url}
+    </select>
+
+    <update id="updateMenuFuncPattern">
+   		UPDATE MENU_ACT_URL
+    	<set>
+    	ACT_CD = #{p.act_cd}
+    	</set>
+    	<where>
+		TEN_ID = #{g.tenant}
+		AND MENU_CD = #{p.menu_cd}
+		AND MENU_ACT_URL = #{p.menu_act_url}
+		</where>
+    </update>
+
+    <delete id="deleteFuncUrlAll">
+    /* roleUrl.getCountFuncUrl: 호출패턴 역할 전체 삭제 */
+        DELETE FROM MENU_ACT_URL
+         WHERE TEN_ID  = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+    </delete>
+
+    <delete id="deleteFuncUrl">
+    /* auth-url.deleteFuncUrl: 호출패턴 역할 삭제 */
+        DELETE FROM MENU_ACT_URL
+         WHERE TEN_ID  = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+           AND MENU_ACT_URL = #{p.menu_act_url}
+    </delete>
+</mapper>

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+APVL_TYP_DAPVL_TBL: 전결설정테이블항목
+ -->
+
+<mapper namespace="arbitrary-table">
+
+    <insert id="insertTable">
+    /* arbitrary-table.insertTable: 전결테이블설정 등록 */
+    INSERT 
+      INTO APVL_TYP_DAPVL_TBL (
+           TEN_ID
+         , DAPVL_TBL_ID
+         , DAPVL_TBL_NM
+         , APVL_TYP_CCD
+         , SORT
+         , DAPVL_TBL_EXPLN
+         , STS
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_tbl_id}
+         , #{p.dapvl_tbl_nm}
+         , #{p.apvl_typ_ccd}
+         , #{p.sort}
+         , #{p.dapvl_tbl_expln}
+         , 'C'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <insert id="insertTableFactor">
+    /* arbitrary-table.insertTableFactor: 전결테이블항목 등록 */
+    INSERT 
+      INTO APVL_TYP_DAPVL_CND_INPVAR (
+           TEN_ID
+         , DAPVL_TBL_ID
+         , DAPVL_CND_INPVAR_UUID
+         , SORT
+         , MAND_YN
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_tbl_id}
+         , #{p.dapvl_cnd_inpvar_uuid}
+         , #{p.sort}
+         , #{p.mand_yn}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <update id="updateTable">
+    /* arbitrary-table.updateTable: 전결테이블설정 수정 */
+    UPDATE APVL_TYP_DAPVL_TBL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , DAPVL_TBL_NM = #{p.dapvl_tbl_nm}
+         , APVL_TYP_CCD = #{p.apvl_typ_ccd}
+         , SORT = #{p.sort}
+         , DAPVL_TBL_EXPLN = #{p.dapvl_tbl_expln}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </update>
+
+    <update id="updateTableSts">
+    /* arbitrary-table.updateTableSts: 전결테이블설정 상태 수정 */
+    UPDATE APVL_TYP_DAPVL_TBL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , STS = #{p.sts}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </update>
+
+    <update id="updateTableFactor">
+    /* arbitrary-table.updateTableFactor: 전결테이블항목 수정 */
+    UPDATE APVL_TYP_DAPVL_CND_INPVAR
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , SORT = #{p.sort}
+         , MAND_YN = #{p.mand_yn}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_CND_INPVAR_UUID = #{p.dapvl_cnd_inpvar_uuid}
+    </update>
+    
+    <delete id="deleteTable">
+    /* arbitrary-table.deleteTable: 전결테이블설정 삭제 */
+    DELETE 
+      FROM APVL_TYP_DAPVL_TBL
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <delete id="deleteTableFactor">
+    /* arbitrary-table.deleteTableFactor: 전결테이블항목 삭제 */
+    DELETE 
+      FROM APVL_TYP_DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+       AND DAPVL_CND_INPVAR_UUID = #{p.dapvl_cnd_inpvar_uuid}
+    </delete>
+
+    <delete id="deleteTableFactorByTbId">
+    /* arbitrary-table.deleteTableFactorByTbId: 전결테이블항목 삭제 */
+    DELETE 
+      FROM APVL_TYP_DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+    </delete>
+
+    <select id="selectListTable" resultType="map">
+    /* arbitrary-table.selectListTable: 전결테이블설정 목록 */
+    SELECT APVL_TYP_DAPVL_TBL.TEN_ID
+         , APVL_TYP_DAPVL_TBL.DAPVL_TBL_ID
+         , APVL_TYP_DAPVL_TBL.DAPVL_TBL_NM
+         , APVL_TYP_DAPVL_TBL.APVL_TYP_CCD
+         , APVL_TYP_DAPVL_TBL.SORT
+         , APVL_TYP_DAPVL_TBL.DAPVL_TBL_EXPLN
+         , APVL_TYP_DAPVL_TBL.STS
+         , APVL_TYP_DAPVL_TBL.REGR_ID
+         , APVL_TYP_DAPVL_TBL.REG_DTTM
+         , APVL_TYP_DAPVL_TBL.MODR_ID
+         , APVL_TYP_DAPVL_TBL.MOD_DTTM
+         , (SELECT COUNT(*)
+              FROM APVL_TYP_DAPVL_CND_INPVAR APVL_TYP_DAPVL_CND_INPVAR
+             WHERE APVL_TYP_DAPVL_CND_INPVAR.TEN_ID = APVL_TYP_DAPVL_TBL.TEN_ID
+               AND APVL_TYP_DAPVL_CND_INPVAR.DAPVL_TBL_ID = APVL_TYP_DAPVL_TBL.DAPVL_TBL_ID
+           ) AS FACT_COUNT
+         , (SELECT COUNT(*)
+              FROM DAPVL_TBL DAPVL_TBL
+             WHERE DAPVL_TBL.TEN_ID = APVL_TYP_DAPVL_TBL.TEN_ID
+               AND DAPVL_TBL.DAPVL_TBL_ID = APVL_TYP_DAPVL_TBL.DAPVL_TBL_ID
+           ) AS DT_COUNT
+      FROM APVL_TYP_DAPVL_TBL APVL_TYP_DAPVL_TBL
+     WHERE APVL_TYP_DAPVL_TBL.TEN_ID = #{g.tenant}
+       AND APVL_TYP_DAPVL_TBL.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+     ORDER 
+        BY APVL_TYP_DAPVL_TBL.SORT ASC
+    </select>
+
+    <select id="selectListTableFactor" resultType="map">
+    /* arbitrary-table.selectListTableFactor: 전결테이블항목 목록 */
+    SELECT APVL_TYP_DAPVL_CND_INPVAR.TEN_ID
+         , APVL_TYP_DAPVL_CND_INPVAR.DAPVL_TBL_ID
+         , APVL_TYP_DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID
+         , APVL_TYP_DAPVL_CND_INPVAR.SORT
+         , APVL_TYP_DAPVL_CND_INPVAR.MAND_YN
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_NM
+         , DAPVL_CND_INPVAR.PARM_KEY
+         , DAPVL_CND_INPVAR.PARM_NM
+         , DAPVL_CND_INPVAR.SCR_TYP_CCD
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_CCD
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_FROM_ID
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_FROM_NM
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_VAL
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_EXPLN
+         , CCD_CSTR_CND_VAL.CSTR_CND_VAL AS SQL_ID
+         , DAPVL_CND_INPVAR.PARNODE_PARM_KEY
+      FROM APVL_TYP_DAPVL_CND_INPVAR APVL_TYP_DAPVL_CND_INPVAR
+     INNER JOIN DAPVL_CND_INPVAR DAPVL_CND_INPVAR
+        ON APVL_TYP_DAPVL_CND_INPVAR.TEN_ID = DAPVL_CND_INPVAR.TEN_ID
+       AND APVL_TYP_DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID = DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID
+      LEFT JOIN CCD_CSTR_CND_VAL CCD_CSTR_CND_VAL
+        ON APVL_TYP_DAPVL_CND_INPVAR.TEN_ID = CCD_CSTR_CND_VAL.TEN_ID
+       AND DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_CCD = CCD_CSTR_CND_VAL.DTLCD
+       AND CCD_CSTR_CND_VAL.CCD = 'G009'
+       AND CCD_CSTR_CND_VAL.CSTR_CND_CD = 'SQL_ID'
+     WHERE APVL_TYP_DAPVL_CND_INPVAR.TEN_ID = #{g.tenant}
+       AND APVL_TYP_DAPVL_CND_INPVAR.DAPVL_TBL_ID = #{p.dapvl_tbl_id}
+     ORDER
+        BY APVL_TYP_DAPVL_CND_INPVAR.SORT ASC
+    </select>
+    
+    <select id="selectListTableAprvType" resultType="map">
+    /* arbitrary-table.selectListTableAprvType: 결재유형 목록 */
+    SELECT DT.TEN_ID
+         , DT.CCD
+         , DT.DTLCD AS APVL_TYP_CCD
+         , DL.DTLCD_NM AS CTMPL_NM
+         , DT.DTLCD_SORT
+         , (SELECT COUNT(*)
+              FROM APVL_TYP_DAPVL_TBL TB
+             WHERE TB.TEN_ID = DT.TEN_ID
+               AND TB.APVL_TYP_CCD = DT.DTLCD
+           ) AS TABLE_COUNT
+      FROM DTLCD DT
+     INNER JOIN DTLCD_MULTLANG DL
+        ON DT.TEN_ID = DL.TEN_ID
+       AND DT.CCD = DL.CCD
+       AND DT.DTLCD = DL.DTLCD
+       AND DL.LANG_CCD = #{g.locale}
+     WHERE DT.TEN_ID = #{g.tenant}
+       AND DT.USE_YN = 'Y'
+       AND DT.STS != 'D'
+       AND DT.CCD = 'G003' -- 결재유형
+     ORDER 
+        BY DT.DTLCD_SORT ASC
+    </select>
+    
+</mapper>

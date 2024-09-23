@@ -1,0 +1,73 @@
+<sc-link rel="import" href="es-boardconfig-list.html"></sc-link>
+<sc-link rel="import" href="es-boardconfig-info.html"></sc-link>
+<sc-link rel="import" href="es-boardconfig-account.html"></sc-link>
+<sc-link rel="import" href="es-boardconfig-company.html"></sc-link>
+<dom-module id="em-boardconfig">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<es-boardconfig-list id="boardAdminList" class="flex-4" on-find-boardadmin-detail="onFindBoardAdminDetail" on-add-boardadmin="onAddBoardAdmin" on-show-board="onShowBoard"></es-boardconfig-list>
+			<div class="hspace-10"></div>
+			<div class="vbox flex-6">
+				<div class="page flex">
+				<es-boardconfig-info id="boardAdminInfo" class="flex-6" on-clear="onClear" on-change-company-use="onChangeCompanyUse"></es-boardconfig-info>
+					<div class="flex-4" style="position:relative">
+						<sc-tab-navigation id="tabNavi" style="height:380px">
+							<es-boardconfig-account id="boardAdminAccount" title-text="관리자"></es-boardconfig-account>
+							<es-boardconfig-company id="boardConfigCompany" title-text="사용 회사"></es-boardconfig-company>
+						</sc-tab-navigation>
+						</div>
+						</div>
+			</div>
+		</div>
+	</template>
+
+	<script>
+        Polymer({
+            is : 'em-boardconfig',
+
+            onFindBoardAdminDetail: function(e, data) {
+              	var me = this;
+
+              	me.$.boardAdminInfo.load(data);
+                me.$.boardAdminAccount.load(data)
+				me.$.boardConfigCompany.load(data);
+
+                me.$.tabNavi.selectItem(me.$.boardAdminAccount);
+			},
+
+            onAddBoardAdmin: function(e, data) {
+              	var me = this;
+              	me.onClear();
+              	me.$.boardAdminInfo.load(data);
+			},
+
+			onClear: function() {
+                var me = this;
+                me.$.boardAdminInfo.onClear();
+                me.$.boardAdminAccount.onClear();
+				me.$.boardConfigCompany.onClear();
+
+                me.$.tabNavi.selectItem(me.$.boardAdminAccount);
+                me.searchBoardList();
+			},
+			
+			searchBoardList: function() {
+				var me = this;
+				me.$.boardAdminList.onSearch();
+			},
+
+			onChangeCompanyUse: function(e, data){
+				var me = this;
+				me.$.boardConfigCompany.doFormulas(data);
+			}
+
+        });
+	</script>
+</dom-module>

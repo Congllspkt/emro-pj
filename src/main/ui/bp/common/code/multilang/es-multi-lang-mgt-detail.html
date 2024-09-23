@@ -1,0 +1,166 @@
+<dom-module id="es-multi-lang-mgt-detail">
+
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+    </style>
+
+    <template>
+        <!-- 공통 코드 조회-->
+        <sc-code-group>
+            <sc-code code="C002" value="{{codes.localeCds}}"></sc-code> <!-- 언어코드 -->
+            <sc-code code="C009" value="{{codes.useYns}}" ></sc-code> <!-- 사용여부코드 -->
+        </sc-code-group>
+
+        <!-- 상세정보 조회 -->
+        <sc-ajax id="findMessageList"
+                 url="findMessageList.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}"
+                 on-response="completeFindMessageList">
+        </sc-ajax>
+
+        <!-- 상세정보 저장 -->
+        <sc-ajax id="saveMessageList"
+                 url="saveMessageList.do"
+                 on-response="completeSaveMessageList">
+        </sc-ajax>
+
+        <sc-grid id="gridPanel" class="fit" editable="true" use-selection="false" data-provider="{{resultList}}">
+            <cc-grid-toolbar title-text="[[formula('title')]]" i18n-disabled>
+                <sc-button text="저장" on-click="onSaveMessageList" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-combobox-column data-field="multlang_ccd" header-text="코드" width="100" text-align="center" editable="false"
+                                    items="{{codes.localeCds}}" display-field="label" value-field="data"></sc-combobox-column>
+                <sc-data-column data-field="multlang_transl_cont" 		header-text="메시지" 		width="250" text-align="left" editable="true" required="true" max-length="500"></sc-data-column>
+				<sc-group-column header-text="축약어 정보"	width="230">
+					<sc-data-column data-field="multlang_transl_cont_abbr" 	header-text="축약어" 		width="150" text-align="left" editable="true" required="true" max-length="500"></sc-data-column>
+					<sc-combobox-column data-field="multlang_abbr_use_yn" 	header-text="사용 여부" 	width="80" text-align="center" editable="true" required="true" items="{{codes.useYns}}" display-field="label" value-field="data"></sc-combobox-column>
+				</sc-group-column>
+                <sc-date-column	data-field="reg_dttm" 					header-text="등록 일시" 	width="150"	text-align="center" format-type="datetime"	string-date="false"></sc-date-column>
+                <sc-date-column	data-field="mod_dttm" 					header-text="수정 일시" 	width="150"	text-align="center" format-type="datetime"	string-date="false"></sc-date-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="multlang_key"></sc-grid-field>
+                <sc-grid-field data-field="multlang_type"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-multi-lang-mgt-detail',
+            properties: {
+
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            localeCds: [],
+                            useYns: []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function(){
+                        return [];
+                    }
+                }
+                
+            },
+
+            formulas : {
+                title : function() {
+                    var me = this;
+                    if(UT.isEmpty(me.searchParam.multlang_key)) {
+                        return me.translate('');
+                    }
+                    return  'Key : '+me.searchParam.multlang_key;
+                },
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data) {
+                var me = this;
+                me.set("searchParam", data);
+
+                me.onFindMessageList();
+            },
+
+            // 초기화
+            clear: function() {
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+
+            // 조회
+            onFindMessageList: function() {
+                var me = this;
+                UT.request(me.$.findMessageList);
+            },
+
+            // 조회 완료
+            completeFindMessageList: function() {
+                var me = this;
+                me.applyFormula();
+            },
+
+            // 저장
+            onSaveMessageList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    updated = provider.getUpdateItems();
+
+                if(updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+                
+                for(var i in updated){
+                	updated[i].multlang_type = this.searchParam['multlang_type'];
+                }
+
+                UT.confirm( "STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveMessageList.body = {
+                        messageList: updated
+                    };
+                    UT.request(me.$.saveMessageList);
+                });
+            },
+
+            // 저장 완료
+            completeSaveMessageList: function() {
+                var me = this;
+
+				localStorage.removeItem('i18n-en_US.lastUpdated');
+
+                // 버튼의 TEXT를 A
+                UT.completeAlert("저장", function(){
+                    me.onFindMessageList();
+                });
+            }
+
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,22 @@
+<sc-link rel="import" href="es-exchange-rate-list.html"></sc-link>
+
+<dom-module id="em-exchange-rate">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<es-exchange-rate-list class="flex"></es-exchange-rate-list>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-exchange-rate'
+		});
+	</script>
+
+
+</dom-module>

@@ -1,0 +1,179 @@
+<dom-module id="cc-search-container">
+    <!--
+        ******************************************************************************************
+        ** @Program-name     :
+        ** @Description        :
+        ** @Author             : hjhwang
+        ** @Create Date     : 2017.03.15
+        ** @History         : 2017.03.15 hjhwang 최초작성
+
+        ex )
+        <cc-search-container></cc-search-container>
+
+        ******************************************************************************************
+    -->
+    <template>
+        <div id="_searchContainer" class="sc-wrap-srch">
+        	<div id="_toggleTarget">
+            	<content id="contents"></content>
+            </div>
+            <div id="_buttonContainer" class="sc-wrap-btn">
+                <div class="wrap-srch-btn">
+                    <sc-button id="_searchBtn" class="btn_srch" on-click="_onSearchButtonClick" hidden="[[searchButtonHidden]]"></sc-button>
+                </div>
+                <sc-button id="_resetBtn" class="btn_reset" on-click="_onResetButtonClick" hidden="[[!formula('resetButtonVisible')]]"></sc-button>
+                <sc-button id="_hideBtn" class="btn_toggle_up" on-click="_onHideButtonClick" hidden="[[!formula('hideButtonVisible')]]"></sc-button>
+            </div>
+        </div>
+        <div id="_hideButtonContainer" class="sc-wrap-btn _toggleHide">
+	    	<sc-button id="_showBtn" class="btn_toggle_down" on-click="_onShowButtonClick" title="Show Search"></sc-button>
+	   	</div>
+    </template>
+    <script>
+        Polymer({
+            is: 'cc-search-container',
+            properties: {
+                searchButtonHidden:{
+                    type: Object,
+                    value: function(){
+                        return false;
+                    }
+                },
+                trLength: {
+                    type: Number
+                },
+
+                buttonMinHeight: {
+                    type: Number,
+                    value: 20
+                }
+            },
+
+            formulas:{
+                resetButtonVisible: function(){
+                    this.trLength = Polymer.dom(this).querySelectorAll('tr:not([hidden])').length;
+                    return (this.trLength > 1);
+                },
+                hideButtonVisible: function(){
+                    this.trLength = Polymer.dom(this).querySelectorAll('tr:not([hidden])').length;
+                    return (this.trLength > 2);
+                }
+            },
+
+            ready: function(){
+            	var me = this;
+                var boundHandler = this._contentsChanged.bind(this);
+                this._observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(boundHandler);  
+                });
+                // Observe attribute changes to child elements
+                this._observer.observe(this.$._toggleTarget, {
+                    attributes: true,
+                    subtree: true
+                }); 
+            },
+            
+            _contentsChanged: function(mutationRecord){
+            	if(mutationRecord.target instanceof HTMLTableRowElement){
+	            	this.debounce('_contentsChanged', function () {
+	                	this.applyFormula();
+	                }, 10);
+            	}
+            },
+
+            attached: function(){
+                //this.async(this._onButtonResize, 100);
+            },
+            
+            _destroy: function(){
+            	this._observer.disconnect();
+            	this.cancelDebouncer('_contentsChanged');
+            },
+            
+            get resetBtnHeight() {
+                var height = this._searchContainerHeight;
+                if(this.$._resetBtn.hidden)
+                    return 0;
+                var resetBtnMarginTop = parseInt(window.getComputedStyle(this.$._resetBtn).marginTop, 10);
+                var resetBtnHeight = ((height * 0.25) > this.buttonMinHeight) ? (height * 0.25) : this.buttonMinHeight;
+                this.$._resetBtn.style.height = resetBtnHeight + "px";
+
+                return resetBtnHeight + resetBtnMarginTop;
+            },
+
+            get hideBtnHeight() {
+                var height = this._searchContainerHeight;
+                if(this.$._hideBtn.hidden)
+                    return 0;
+                var hideBtnMarginTop = parseInt(window.getComputedStyle(this.$._hideBtn).marginTop, 10);
+                var hideBtnHeight = ((height * 0.25) > this.buttonMinHeight) ? (height * 0.25) : this.buttonMinHeight;
+                this.$._hideBtn.style.height = hideBtnHeight + "px";
+
+                return hideBtnHeight + hideBtnMarginTop;
+            },
+
+            _onSearchButtonClick: function(e){
+                var me = this;
+                me.fire("search", e, {bubbles: false});
+            },
+
+            _onResetButtonClick: function(e){
+                var me = this;
+                var targetElement =  me.$._searchContainer;
+                var fields = targetElement.querySelectorAll('[field]:not([reset="false"])');
+
+                // field 가 아니면서 reset="false"인 대상 중 field 가 reset="false"가 아닌 대상 추출 (ex => cc-user-search 의 fields)
+                var noResetFields = targetElement.querySelectorAll("*:not([field])[reset='false'] [field]:not([reset='false'])");
+                var noResetFieldArr = Array.prototype.slice.call(noResetFields);
+
+                for (var i = 0, len = fields.length, field; i < len; i++) {
+                    field = fields[i];
+                    if(field.reset && noResetFieldArr.indexOf(field) === -1) {
+                        field.reset();
+                    }
+                }
+
+                me.fire("reset", e, {bubbles: false});
+            },
+
+            _onHideButtonClick: function(e){
+                var me = this;
+                me.$._searchContainer.classList.add('_toggleHide');
+                me.$._buttonContainer.classList.add('_toggleHide');
+                me.$._hideButtonContainer.classList.remove('_toggleHide');
+                me.fire("hide", e, {bubbles: false});
+                me.fire("sc-resize", e);
+            },
+            
+            _onShowButtonClick: function(e){
+            	var me = this;
+            	me.visible = false;
+                me.$._searchContainer.classList.remove('_toggleHide');
+                me.$._buttonContainer.classList.remove('_toggleHide');
+                me.$._hideButtonContainer.classList.add('_toggleHide');
+                me.fire("show", e, {bubbles: false});
+                me.fire("sc-resize", e);
+            },
+            
+            _onButtonResize: function(){
+                /*
+                    1. 버튼 컨테이너의 높이를 계산
+                    2. 리셋 버튼의 높이를 계산
+                       a. 리셋 버튼이 보이는 경우
+                          - 버튼 컨테이너 높이 * 0.25 와 buttonMinHeight 프로퍼티의 값 비교 후 큰 값으로 리셋 버튼 높이 계산
+                          - margin-top 값을 더하여 계산
+                       b. 리셋 버튼이 보이지 않는 경우 margin-top 없이 0으로 계산
+                    3. 토글 버튼의 높이를 계산
+                       a. 토글 버튼이 보이는 경우
+                          - 버튼 컨테이너 높이 * 0.25 와 buttonMinHeight 프로퍼티의 값 비교 후 큰 값으로 토글 버튼 높이 계산
+                          - margin-top 값을 더하여 계산
+                       b. 토글 버튼이 보이지 않는 경우 margin-top 없이 0으로 계산
+                    4. 서치 버튼의 높이를 계산
+                       a. 버튼 컨테이너 높이 - 리셋 버튼 높이 - 토글 버튼 높이
+                */
+                this._searchContainerHeight = parseInt(window.getComputedStyle(this.$._searchContainer).height, 10);
+                this.$._searchBtn.style.height = (this._searchContainerHeight - this.resetBtnHeight - this.hideBtnHeight) + "px";
+            }
+        });
+    </script>
+</dom-module>

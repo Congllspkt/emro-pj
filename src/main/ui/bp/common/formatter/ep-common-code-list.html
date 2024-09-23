@@ -1,0 +1,168 @@
+<dom-module id="ep-common-code-list">
+<!-- 
+/**
+ *
+ *	@description : 공통코드 선택 팝업
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 2. 18.
+ */
+-->
+	<style>
+		:host {
+            @apply(--vbox-layout);
+        }
+	</style>
+	
+	<template>
+		<!-- 코드 데이터 조회 -->
+        <sc-code-group>
+            <sc-code code="C003" value="{{codes.codeType}}" ></sc-code> <!-- 유형 -->
+        </sc-code-group>
+
+        <!-- 그룹코드 현황 조회 -->
+        <sc-ajax id="findListGroupCode"
+                 url="findListGroupCodeByNoFormatter.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+        
+        <div class="vbox flex">
+        	<cc-sub-title-bar title-text="공통코드 목록">
+        	</cc-sub-title-bar>
+
+			<cc-search-condition-panel on-search="onSearchGrpCode" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="공통코드 유형"></sc-label>
+					<sc-combobox-field
+							display-field="label" value-field="data"
+							items="{{codes.codeType}}" value="{{searchParam.ccd_typ}}" placeholder="전체"
+							validation-group="addRow">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="공통코드"></sc-label>
+					<sc-text-field value="{{searchParam.grp_cd}}" on-enter="onSearchGrpCode" max-length="16"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="공통코드 명"></sc-label>
+					<sc-text-field value="{{searchParam.ccd_nm}}" on-enter="onSearchGrpCode" max-length="60"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+        	
+            <sc-grid id="gridPanel" data-provider="{{resultList}}" editable="false" class="flex"
+                     on-item-click="onDataCellClicked">
+                <cc-grid-toolbar>
+                    <sc-button text="선택" on-click="onSelectedList"></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="ccd_typ" header-text="공통코드 유형" width="100" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="ccd" header-text="공통코드" width="100" text-align="center" style-name="link" max-length="18"></sc-data-column>
+                    <sc-data-column data-field="ccd_nm" header-text="공통코드 명" width="250" text-align="left" editable="true" max-length="60"></sc-data-column>
+                </sc-grid-columns>
+            </sc-grid>
+        </div>
+       
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'ep-common-code-list',
+			properties : {
+				// 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            codeType: []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                }
+			},
+			/******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function () {
+                var me = this;
+                UT.request(me.$.findListGroupCode);
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+          //그리드이벤트
+            onDataCellClicked: function(e){
+            	var me = this,
+                data = e.detail.data,
+                item = e.detail.item;
+                var grid = me.$.gridPanel;
+                var current = grid.getCurrentCell();
+                
+                var index = current.rowIndex;
+                
+                grid.selectionCheck(index,true,false);
+            },
+            
+          	//선택 목록 반환
+            selectedList: function(selected){
+            	var me = this;
+            	if(selected.length > 0) {
+                    me.fire('selected-items', selected);
+                    if(me.get("autoComplete")){
+                    	me.onClose();
+                    }
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				}
+            },
+            
+            // 선택 목록 반환
+            onSelectedList: function() {
+                var me = this;
+                var provider = me.$.gridPanel.getDataProvider();
+            	var selected = provider.selectionCheckedItems();
+            	//ZER-333
+				me.selectedList(selected);
+            },
+          	//닫기
+            onClose : function() {
+            	var me = this;
+            	
+            	me.clearData();
+            	me.fire('close');
+            },
+            clearData : function() {
+            	var me = this;
+                me.reset();
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 그룹 코드 현황 조회
+            onSearchGrpCode: function() {
+                var me = this;
+                UT.request(me.$.findListGroupCode);
+            }
+		});
+	</script>
+</dom-module>

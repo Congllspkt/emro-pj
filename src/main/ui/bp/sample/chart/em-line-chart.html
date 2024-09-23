@@ -1,0 +1,35 @@
+<sc-link rel="import" href="es-line-chart.html"></sc-link>
+
+<dom-module id="em-line-chart">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+    <template>
+    
+  		<div id="wrap">
+			    
+			<div class="mdiCenter">
+	
+				<es-line-chart id="linechart" title="Chart Test"></es-line-chart>
+		        
+		    </div>
+	        
+    	</div>
+
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-line-chart',
+        
+            
+        });
+    </script>
+
+</dom-module>

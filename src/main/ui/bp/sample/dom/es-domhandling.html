@@ -1,0 +1,72 @@
+<sc-link rel="import" href="../../shared/ep-dept-list.html"></sc-link>
+<sc-link rel="import" href="/bower_components/sc-list/sc-list.html"></sc-link>
+
+<dom-module id="es-domhandling">
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+    </style>
+    
+    <template>
+
+        <sc-toolbar class="page-title">
+            <sc-label text="DOM Handling Test" width="300"></sc-label>
+            <sc-spacer></sc-spacer>
+             <sc-button text="추가" on-click="onAddTable" i18n-disabled></sc-button>
+        </sc-toolbar>	
+            
+    	<!--  scrollable contents -->
+    	<div class="page"><!-- start page -->
+    	
+    	
+			<sc-list items="[[data]]" as="item">
+		      <template>
+				<table class="tb-form">
+					<tr>
+						<th><sc-label text="협력사" i18n-disabled></sc-label></th>
+						<td>&nbsp;<sc-button text="검색" on-click="onFindVendor" i18n-disabled></sc-button></td>
+						<th><sc-label text="협력사코드" i18n-disabled></sc-label></th>
+						<td><sc-text-field  value="{{item.vd_cd}}"></sc-date-field></td>
+						<th><sc-label text="협력사 명" i18n-disabled></sc-label></th>
+						<td><sc-text-field  value="{{item.vd_nm}}"></sc-date-field></td>
+					</tr>
+				</table>
+		      </template>
+		    </sc-list>
+
+   		</div><!-- end page -->
+   		   		
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'es-domhandling',
+            properties : {
+            	data : {
+            		type : Array,
+            		value : function(){
+            			return new Array();	
+            		}
+            	},	
+            },
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                	var listData = [{'vd_cd' : 'VD001', 'vd_nm' : '첫번째 협력사'}, {'vd_cd' : 'VD002', 'vd_nm' : '두번째 협력사'}, {'vd_cd' : 'VD003', 'vd_nm' : '세번째 협력사'}]
+                	me.set("data", listData);
+                }
+            }, 
+            onFindVendor : function(){
+				var me = this;
+				
+				SCAlert.show('search Vendor');
+			}
+        });
+        </script>            
+
+</dom-module>

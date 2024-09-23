@@ -1,0 +1,195 @@
+<!--
+
+수량단위 검색 자동완성 text field 커스텀 태그
+
+<cc-amt-unit-search value="{{입력 value}}" result-value="{{검색 결과 value}}"></cc-amt-unit-search>
+
+1. 주요 Property
+1) value : 해당 텍스트 필드 input value binding
+[string]
+
+2) result-value : 검색 결과 값 binding
+[string] [optional]
+
+
+2. value Proeprty
+1) value-class : 입력 텍스트 필드 크기
+[string] [optional]
+
+2) value-placeholder : 입력 텍스트 필드 placeholder
+[string] [optional]
+
+3) readonly, required, disabled 입력 텍스트 필드 제어
+[boolean] [optional]
+
+
+3. result Value Property
+1) result-class : 결과 텍스트 필드 크기
+[string] [optional]
+
+2) result-placeholder : 결과 텍스트 필드 placeholder
+[string] [optional]
+
+3) result-hidden : 결과 텍스트 필드 숨김 제어
+[boolean] [optional]
+
+
+4. trigger Field Property
+1) disabled-trigger : Trigger Field disabled 제어
+[boolean] [optional]
+
+2) hide-trigger : Trigger Field 숨김 제어
+[boolean] [optional]
+
+-->
+
+<sc-link rel="import" href="../../../bp/shared/ep-amt-unit.html"></sc-link>
+
+<dom-module id="cc-amt-unit-search">
+    <!--
+        ******************************************************************************************
+        ** @Program-name 	: 수량단위 검색 자동완성 컴포넌트
+        ** @Description		:
+        ** @Author 			: jeKim
+        ** @Create Date 	: 2016.05.04
+        ** @History 		: 2016.05.04 jeKim 최초작성
+                              2019.04.23 Dhlee 수정
+        ******************************************************************************************
+    -->
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <template>
+        <sc-code code="C007" value="{{codes}}" auto></sc-code>
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <sc-text-field class$="[[valueClass]] value-field"
+                       placeholder="[[valuePlaceholder]]"
+                       required="[[required]]"
+                       disabled="[[disabled]]"
+                       readonly="[[readonly]]"
+                       value="{{value}}"
+                       on-enter="onFindAmtUnit"
+                       on-keyDown="onKeyDown"
+                       max-length="200">
+        </sc-text-field>
+        <div class="hspace-5" hidden="[[hideTrigger]]"></div>
+        <sc-trigger-field trigger-cls="field-search" on-trigger-click="onPopAmtUnit" disabled="[[disabledTrigger]]" hide-trigger="[[hideTrigger]]" hidden="[[hideTrigger]]"></sc-trigger-field>
+        <div class="hspace-5" hidden="[[resultHidden]]"></div>
+        <sc-text-field class$="[[resultClass]]" value="{{resultValue}}" hidden="[[resultHidden]]" placeholder="[[resultPlaceholder]]" readonly></sc-text-field>
+    </template>
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is : 'cc-amt-unit-search',
+
+            behaviors : [
+                Polymer.CCSearchFieldBehavior
+            ],
+
+            properties: {
+                // 코드 List
+                codes : {
+                    type: Array,
+                    reset: false,
+                    value : function() {
+                        return []
+                    }
+                },
+
+                // value Field
+                valueField: {
+                    type: String,
+                    value: "dtlcd"
+                },
+
+                // result-Value Field
+                resultField : {
+                    type : String,
+                    value : 'dtlcd_nm'
+                },
+            },
+
+            // Field ValueChaged
+            valueChanged: function (value) {
+                if (this.clearFlag) {
+                    this.set("resultValue", "");
+                }else {
+                    var item = this.codes.filter(function (item) {
+                        return (item.data === value);
+                    });
+                    this.set("resultValue", item.length > 0 ? item[0].label : "");
+                }
+                this.clearFlag = false;
+            },
+
+            // text-field 검색
+            onFindAmtUnit: function(){
+                var me = this;
+
+                if(!me.readonly) {
+                    // 자동완성 함수 시작
+                    var amtUnitPopup = me.createPopup();
+                    amtUnitPopup.show();
+                    amtUnitPopup.getWindowContent().load({
+                        defaultParam: {
+                            dtlcd: me.value,
+                        },
+                        autoComplete: true
+                    });
+                }
+            },
+
+            // 검색버튼 클릭
+            onPopAmtUnit: function(){
+                var me = this;
+                var amtUnitPopup = me.createPopup();
+                amtUnitPopup.show();
+                amtUnitPopup.getWindowContent().load({
+                    defaultParam: {
+                        dtlcd: me.value,
+                    },
+                });
+            },
+
+            // Popup 생성
+            createPopup: function(){
+                var me = this;
+                return UT.popup("ep-amt-unit", me, 450,500,{
+                    // Single Select
+                    "selected-item" : function(popup,e){
+                        var result = e.detail;
+                        // 선택 완료 후 callback
+                        if(result){
+                            me.clearFlag = false;
+                            me.set("value",       result[me.valueField]);    // 코드
+                            me.set("resultValue", result[me.resultField]);   // 코드명
+                        }
+                        popup.close();
+                    },
+                    // AutoComplete
+                    "selected-items" : function(popup, e){
+                        var result = e.detail[0];
+                        // 선택 완료 후 callback
+                        if(result){
+                            me.clearFlag = false;
+                            me.set("value",       result[me.valueField]);    // 코드
+                            me.set("resultValue", result[me.resultField]);   // 코드명
+                        }
+                        popup.close();
+                    }
+                });
+            }
+        });
+    </script>
+</dom-module>

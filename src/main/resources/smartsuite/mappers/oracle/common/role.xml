@@ -1,0 +1,551 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="role">
+    <select id="findListRole" resultType="map">
+    /* auth.findListRole 전체 롤 목록 조회 */
+        SELECT
+             RH.ROLE_CD
+            ,RH.ROLE_NM
+            ,RH.ROLE_NM_EN
+            ,RH.USE_YN
+            ,RH.USR_TYP_CCD
+            ,RH.VD_USR_TASK_YN
+            ,CONCAT(CONCAT((SELECT COUNT(TEN_ID) FROM ROLE_MENU WHERE TEN_ID = RH.TEN_ID AND ROLE_CD = RH.ROLE_CD)
+            ,(SELECT COUNT(TEN_ID) FROM ROLE_USR WHERE TEN_ID = RH.TEN_ID AND ROLE_CD = RH.ROLE_CD))
+            ,(SELECT COUNT(TEN_ID) FROM ROLE_DEPT WHERE TEN_ID = RH.TEN_ID AND ROLE_CD = RH.ROLE_CD)) AS MAP_CNT
+        FROM ROLE RH
+        WHERE
+            RH.TEN_ID = #{g.tenant}
+        AND RH.STS != 'D'
+        <if test="p.role_nm != null and p.role_nm != ''">
+            <bind name="namePattern" value="'%' + p.role_nm + '%'" />
+            AND (UPPER(RH.ROLE_NM_EN) like UPPER(#{namePattern} OR UPPER(RH.ROLE_NM) like UPPER(#{namePattern})
+        </if>
+        <if test="p.usr_typ_ccd != null and p.usr_typ_ccd != ''">
+            AND RH.USR_TYP_CCD = #{p.usr_typ_ccd}
+        </if>
+        <if test="p.role_cd != null and p.role_cd != ''">
+            <bind name="namePattern2" value="'%' + p.role_cd + '%'" />
+            AND UPPER(RH.ROLE_CD) LIKE UPPER(#{namePattern2})
+        </if>
+        ORDER BY RH.ROLE_CD
+    </select>
+
+    <select id="findRoleByCode" resultType="java.util.Map">
+    /* role.findRoleByCode */
+        SELECT
+        ROLE.ROLE_CD,
+        ROLE.ROLE_NM,
+        ROLE.USE_YN
+        FROM ROLE ROLE
+        WHERE
+        ROLE.TEN_ID = #{g.tenant}
+        AND ROLE_CD = #{p}
+    </select>
+
+    <select id="findListUserByRole" resultType="map">
+    /* 롤 별 사용자 역할 확인 findListUserByRole*/
+        SELECT
+              U.USR_ID
+            , U.USR_NM
+            , U.USR_NM_EN
+            , U.CO_CD
+            , U.DEPT_CD
+            , CASE WHEN RP.ROLE_CD IS NULL OR RP.ROLE_CD = '' THEN 'N' ELSE 'Y' END AS USE_YN
+            , DP.DEPT_NM
+            , DP.DEPT_NM_EN
+            , MG.LOGIC_ORG_NM AS COMP_NM
+            , MG.LOGIC_ORG_NM_EN AS COMP_NM_EN
+            FROM USR U
+            LEFT OUTER JOIN ROLE_USR RP
+            ON (
+                U.TEN_ID = RP.TEN_ID
+                AND U.USR_ID = RP.USR_ID
+                AND RP.ROLE_CD = #{p.role_cd}
+            )
+            LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+                ON U.TEN_ID = ODM.TEN_ID
+                AND U.CO_CD = ODM.LOGIC_ORG_CD
+                AND U.DEPT_CD = ODM.DEPT_CD
+                AND ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+            LEFT OUTER JOIN DEPT DP
+                ON ODM.TEN_ID = DP.TEN_ID
+                AND ODM.DEPT_CD = DP.DEPT_CD
+            LEFT OUTER JOIN LOGIC_ORG MG
+                ON ODM.TEN_ID = MG.TEN_ID
+               AND ODM.LOGIC_ORG_TYP_CCD = MG.LOGIC_ORG_TYP_CCD
+               AND ODM.LOGIC_ORG_CD = MG.LOGIC_ORG_CD
+               AND MG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+            WHERE U.TEN_ID = #{g.tenant}
+            <if test="p.usr_nm != null and p.usr_nm != ''">
+            <bind name="namePattern" value="'%' + p.usr_nm + '%'" />
+            AND (UPPER(U.USR_NM_EN) LIKE UPPER(#{namePattern} OR UPPER(U.USR_NM) LIKE UPPER(#{namePattern})
+            </if>
+            <if test="p.usr_id != null and p.usr_id != ''">
+                <bind name="namePattern3" value="'%' + p.usr_id + '%'" />
+                AND UPPER(U.USR_ID) like UPPER(#{namePattern3})
+            </if>
+            <if test="p.dept_nm != null and p.dept_nm != ''">
+                <bind name="deptNmPattern" value="'%' + p.dept_nm + '%'" />
+                AND (UPPER(DP.DEPT_NM_EN) LIKE UPPER(#{deptNmPattern}) OR UPPER(DP.DEPT_NM) LIKE UPPER(#{deptNmPattern}))
+            </if>
+            <if test="p.co_cd != null and p.co_cd != ''">
+                AND U.CO_CD = #{p.co_cd}
+            </if>
+            	AND U.USR_TYP_CCD = 'BUYER'
+            	AND U.STS != 'D'
+            ORDER BY U.USR_ID	
+    </select>
+
+    <insert id="insertRoleUser">
+        INSERT INTO ROLE_USR
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            ROLE_CD,
+            USR_ID,
+            <if test="p.rmk != null and p.rmk != ''">
+                RMK,
+            </if>
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.role_cd},
+            #{p.usr_id},
+            <if test="p.rmk != null and p.rmk != ''">
+                #{p.rmk},
+            </if>
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now},
+        </trim>
+    </insert>
+
+    <insert id="insertRoleMenu">
+    /*insertRoleMenu*/
+        INSERT INTO ROLE_MENU
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            ROLE_CD,
+            MENU_CD,
+            REGR_ID,
+            REG_DTTM,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.role_cd},
+            #{p.menu_cd},
+            #{g.username},
+            #{g.now},
+        </trim>
+    </insert>
+
+    <delete id="deleteRoleMenu">
+        DELETE
+        FROM ROLE_MENU
+        WHERE
+        TEN_ID = #{g.tenant}
+        AND
+        ROLE_CD = #{p.role_cd}
+        <if test="p.menu_cd != null and p.menu_cd != ''">
+            AND MENU_CD = #{p.menu_cd}
+        </if>
+    </delete>
+
+
+
+    <delete id="deleteRoleUser">
+        DELETE FROM ROLE_USR
+        WHERE TEN_ID = #{g.tenant}
+        AND
+        ROLE_CD = #{p.role_cd}
+        <if test="p.usr_id != null and p.usr_id != ''">
+            AND USR_ID = #{p.usr_id}
+        </if>
+    </delete>
+
+    <delete id="deleteRoleDept">
+        DELETE FROM ROLE_DEPT
+        WHERE TEN_ID = #{g.tenant}
+        AND
+        ROLE_CD = #{p.role_cd}
+        <if test="p.dept_cd != null and p.dept_cd != ''">
+            AND DEPT_CD = #{p.dept_cd}
+        </if>
+        <if test="p.logic_org_cd != null and p.logic_org_cd != ''">
+            AND LOGIC_ORG_CD = #{p.logic_org_cd}
+        </if>
+        <if test="p.logic_org_typ_ccd != null and p.logic_org_typ_ccd != ''">
+            AND LOGIC_ORG_TYP_CCD = #{p.logic_org_typ_ccd}
+        </if>
+    </delete>
+
+    <delete id="deleteRole">
+        DELETE
+        FROM ROLE
+        WHERE TEN_ID = #{g.tenant}
+        AND
+        ROLE_CD = #{p.role_cd}
+    </delete>
+
+    <select id="findListRoleDept" resultType="java.util.Map">
+    /*findListRoleDept */
+        SELECT
+           DP.PAR_DEPT_CD,
+           DP.TEN_ID,
+           DP.DEPT_CD,
+           DP.DEPT_NM,
+           DP.DEPT_NM_EN,
+           ODM.LOGIC_ORG_CD,
+           ODM.LOGIC_ORG_TYP_CCD,
+           RM.ROLE_CD,
+           CASE WHEN RM.ROLE_CD IS NULL OR RM.ROLE_CD = '' THEN 'N' ELSE 'Y' END AS USE_YN,
+           MG.LOGIC_ORG_CD AS CO_CD,
+           MG.LOGIC_ORG_NM AS COMP_NM,
+           MG.LOGIC_ORG_NM_EN AS COMP_NM_EN,
+           CASE WHEN DP.PAR_DEPT_CD = 'ROOT'
+                THEN ''
+                ELSE PARDP.DEPT_NM
+           END AS PAR_DEPT_NM
+       FROM DEPT DP
+       INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+           ON DP.TEN_ID = ODM.TEN_ID
+           AND DP.DEPT_CD = ODM.DEPT_CD
+       INNER JOIN LOGIC_ORG MG
+            ON DP.TEN_ID = MG.TEN_ID
+           AND ODM.LOGIC_ORG_TYP_CCD = MG.LOGIC_ORG_TYP_CCD
+           AND ODM.LOGIC_ORG_CD = MG.LOGIC_ORG_CD
+       LEFT OUTER JOIN ROLE_DEPT RM
+            ON DP.TEN_ID = RM.TEN_ID
+           AND ODM.LOGIC_ORG_CD = RM.LOGIC_ORG_CD
+           AND ODM.LOGIC_ORG_TYP_CCD = RM.LOGIC_ORG_TYP_CCD
+           AND DP.DEPT_CD = RM.DEPT_CD
+           AND RM.ROLE_CD = #{p.role_cd}
+        LEFT OUTER JOIN DEPT PARDP
+            ON PARDP.TEN_ID = ODM.TEN_ID
+            AND PARDP.DEPT_CD = DP.PAR_DEPT_CD
+       WHERE DP.TEN_ID = #{g.tenant}
+           AND DP.STS != 'D'
+           AND DP.USE_YN = 'Y'
+       <if test="p.logic_org_cd != null and p.logic_org_cd !=''">
+           AND MG.LOGIC_ORG_CD = #{p.logic_org_cd}
+       </if>
+    </select>
+
+    <insert id="insertRoleDept">
+    /*insertRoleDept*/
+        INSERT INTO ROLE_DEPT
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            ROLE_CD,
+            LOGIC_ORG_TYP_CCD,
+            LOGIC_ORG_CD,
+            DEPT_CD,
+            <if test="p.rmk != null">
+                RMK,
+            </if>
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.role_cd},
+            #{p.logic_org_typ_ccd},
+            #{p.logic_org_cd},
+            #{p.dept_cd},
+            <if test="p.rmk != null">
+                #{p.rmk},
+            </if>
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now},
+        </trim>
+    </insert>
+
+    <insert id="insertRole">
+    /*insertRole */
+        INSERT INTO ROLE
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            ROLE_CD,
+            <if test="p.role_nm != null and p.role_nm != ''">
+                ROLE_NM,
+            </if>
+            <if test="p.role_nm_en != null and p.role_nm_en != ''">
+                ROLE_NM_EN,
+            </if>
+                USE_YN,
+            <if test="p.rmk != null and p.rmk != ''">
+                RMK,
+            </if>
+            USR_TYP_CCD,
+            VD_USR_TASK_YN,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.role_cd},
+            <if test="p.role_nm != null and p.role_nm != ''">
+                #{p.role_nm},
+            </if>
+            <if test="p.role_nm_en != null and p.role_nm_en != ''">
+                #{p.role_nm_en},
+            </if>
+                #{p.use_yn},
+            <if test="p.rmk != null and p.rmk != ''">
+                #{p.rmk},
+            </if>
+            #{p.usr_typ_ccd},
+            #{p.vd_usr_task_yn},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now},
+        </trim>
+    </insert>
+
+    <update id="updateRole">
+    /*updateRole */
+        UPDATE ROLE RH
+        <set>
+            <if test="p.role_nm != null and p.role_nm != ''">
+                ROLE_NM = #{p.role_nm},
+            </if>
+            <if test="p.role_nm_en != null and p.role_nm_en != ''">
+                ROLE_NM_EN = #{p.role_nm_en},
+            </if>
+            USE_YN = #{p.use_yn},
+            <if test="p.rmk != null and p.rmk != ''">
+                RMK = #{p.rmk},
+            </if>
+            <choose>
+                <when test="p.sts =null or p.sts = '' or p.sts !='D'">
+                    STS = 'U',
+                </when>
+                <otherwise>
+                    STS = 'D',
+                </otherwise>
+            </choose>
+            USR_TYP_CCD = #{p.usr_typ_ccd},
+            VD_USR_TASK_YN = #{p.vd_usr_task_yn},
+            MODR_ID = #{g.username},
+            MOD_DTTM = #{g.now}
+        </set>
+        <where>
+            RH.TEN_ID = #{g.tenant}
+            AND RH.ROLE_CD = #{p.role_cd}
+        </where>
+    </update>
+
+    <select id="findListRoleMenu" resultType="map">
+    /*findListRoleMenu */
+    	SELECT MM.PAR_MENU_CD
+              , MM.TEN_ID
+              , MM.MENU_CD
+              , MM.USR_TYP_CCD
+              , MM.MENU_SORT
+              , ML.MENU_NM
+              , ML.LANG_CCD
+              , ML.MENU_CD AS ML_MENU_CD
+              , RM.ROLE_CD
+              , CASE
+                WHEN RM.ROLE_CD IS NULL OR RM.ROLE_CD = '' THEN 'N'
+                ELSE 'Y'
+                END AS USE_YN
+           FROM MENU MM
+           LEFT OUTER JOIN MENU_MULTLANG ML
+             ON MM.TEN_ID = ML.TEN_ID
+            AND MM.MENU_CD = ML.MENU_CD
+            <if test="p.lang_ccd != null and p.lang_ccd != ''">
+            AND ML.LANG_CCD = #{p.lang_ccd}
+            </if>
+           LEFT OUTER JOIN ROLE_MENU RM
+             ON MM.TEN_ID = RM.TEN_ID
+            AND MM.MENU_CD = RM.MENU_CD
+            AND RM.ROLE_CD = #{p.role_cd}
+          WHERE MM.TEN_ID = #{g.tenant}
+            AND MM.STS != 'D'
+            <if test="p.usr_typ_ccd != null and p.usr_typ_ccd != ''">
+            AND MM.USR_TYP_CCD = #{p.usr_typ_ccd}
+            </if>
+            AND MM.USE_YN = 'Y'
+            ORDER BY MM.MENU_SORT
+    </select>
+
+
+
+    <insert id="insertCallPattern">
+    /* insertCallPattern */
+    	INSERT INTO MENU_ACT_URL_COLL
+     	<trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            MENU_CD,
+            MENU_ACT_URL,
+            REGR_ID,
+            REG_DTTM
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.menu_cd},
+            #{p.menu_act_url},
+            #{g.username},
+            #{g.now}
+        </trim>
+    </insert>
+
+    <select id="findListCallPattern" resultType="map">
+    /* findListCallPattern */
+    SELECT MENU_CD
+    	 , MENU_ACT_URL
+     FROM MENU_ACT_URL_COLL
+    WHERE TEN_ID = #{g.tenant}
+      AND MENU_CD = #{p.menu_cd}
+      AND MENU_ACT_URL = #{p.menu_act_url}
+    </select>
+<!--
+    <select id="selectRoleWithUrl" resultType="map">
+    /* "selectRoleWithUrl" */
+    SELECT COUNT(1)
+	  FROM ROLE_MENU AURM
+ 	 WHERE AURM.TEN_ID = #{g.tenant}
+       AND AURM.MENU_CD = #{p.menu_cd}
+       AND AURM.ROLE_CD IN
+                        <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                        #{role}
+                        </foreach>
+       AND EXISTS ( SELECT 1
+                      FROM MENU_ACT_URL_COLL AUMS
+                     WHERE AUMS.TEN_ID = AURM.TEN_ID
+                       AND AUMS.MENU_CD = #{p.menu_cd}
+                       AND AUMS.MENU_ACT_URL = #{p.menu_act_url}
+                   )
+    </select>
+-->
+    <select id="selectRoleWithUrl" resultType="map">
+    /* "selectRoleWithUrl" */
+	SELECT M.TEN_ID
+	      ,M.MENU_CD
+	      ,S.MENU_ACT_URL
+	      ,MNAU.ACT_CD
+	  FROM MENU M
+	 INNER JOIN MENU_ACT_URL_COLL S
+	    ON M.TEN_ID = S.TEN_ID
+	   AND M.MENU_CD = S.MENU_CD
+	  LEFT JOIN MENU_ACT_URL MNAU
+	    ON S.TEN_ID = MNAU.TEN_ID
+	   AND MNAU.MENU_CD = S.MENU_CD
+	   AND MNAU.MENU_ACT_URL = S.MENU_ACT_URL
+ 	 WHERE S.TEN_ID = #{g.tenant}
+ 	   AND S.MENU_ACT_URL LIKE CONCAT('%',#{p.menu_act_url})
+ 	  <if test="p.menu_cd != null and p.menu_cd != ''">
+ 	   AND S.MENU_CD = #{p.menu_cd}
+ 	  </if>
+    </select>
+<!--
+    <select id="selectUrlAuthcodeMapping" resultType="map">
+    /* "selectUrlAuthcodeMapping" */
+    SELECT MENU_CD
+    	 , ACT_CD
+    	 , MENU_ACT_URL
+     FROM MENU_ACT_URL
+    WHERE TEN_ID = #{g.tenant}
+      AND ACT_CD = #{p.act_cd}
+      AND MENU_CD = #{p.menu_cd}
+      AND MENU_ACT_URL = #{p.menu_act_url}
+    </select>
+
+    <insert id="insertUrlAuthcodeMapping">
+    /* insertUrlAuthcodeMapping */
+    	INSERT INTO MENU_ACT_URL
+     	<trim prefix="(" suffix=")" suffixOverrides=",">
+            TEN_ID,
+            ACT_CD,
+            MENU_CD,
+            MENU_ACT_URL,
+            REGR_ID,
+            REG_DTTM
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{g.tenant},
+            #{p.act_cd},
+            #{p.menu_cd},
+            #{p.menu_act_url},
+            #{g.username},
+            #{g.now}
+        </trim>
+    </insert>
+-->
+    <delete id="deleteCallPatternAll">
+    /* role.deleteCallPatternAll: 수집된 호출패턴 전체 삭제 */
+        DELETE FROM MENU_ACT_URL_COLL
+         WHERE TEN_ID  = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+    </delete>
+
+    <select id="findListMenuRole" resultType="map">
+    /* role.findListMenuRole : 메뉴에 맵핑된 롤 리스트 조회*/
+        SELECT RH.ROLE_CD
+              ,RH.ROLE_NM
+              ,RH.ROLE_NM_EN
+              ,#{p.menu_cd}                                             AS MENU_CD
+              ,(CASE WHEN RM.ROLE_CD IS NOT NULL THEN 'Y' ELSE 'N' END) AS USE_YN
+          FROM ROLE RH
+          LEFT OUTER JOIN ROLE_MENU RM
+            ON RM.TEN_ID = RH.TEN_ID
+           AND RM.MENU_CD = #{p.menu_cd}
+           AND RM.ROLE_CD = RH.ROLE_CD
+         WHERE RH.TEN_ID = #{g.tenant}
+           AND RH.USE_YN = 'Y'
+           AND RH.STS != 'D'
+    </select>
+
+    <delete id="deleteMenuRole">
+    /* role.deleteMenuRole : 메뉴에 맵핑된 롤 삭제*/
+        DELETE FROM ROLE_MENU
+         WHERE TEN_ID = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+           AND ROLE_CD = #{p.role_cd}
+    </delete>
+
+
+
+    <delete id="deleteCallPattern">
+    /* role.deleteCallPattern: 수집된 호출패턴 삭제 */
+        DELETE FROM MENU_ACT_URL_COLL
+         WHERE TEN_ID  = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+           AND MENU_ACT_URL = #{p.menu_act_url}
+    </delete>
+
+    <delete id="deleteRolePortlet">
+    /* role.deleteRolePortlet: 포틀릿 연계 롤 삭제 */
+        DELETE FROM PORTLT_ROLE
+        WHERE TEN_ID = #{g.tenant}
+          AND
+            ROLE_CD = #{p.role_cd}
+        <if test="p.portl_usr_typ_ccd != null and p.portl_usr_typ_ccd != ''">
+            AND PORTL_USR_TYP_CCD = #{p.portl_usr_typ_ccd}
+        </if>
+        <if test="p.portlt_id != null and p.portlt_id != ''">
+            AND PORTLT_ID = #{p.portlt_id}
+        </if>
+    </delete>
+</mapper>

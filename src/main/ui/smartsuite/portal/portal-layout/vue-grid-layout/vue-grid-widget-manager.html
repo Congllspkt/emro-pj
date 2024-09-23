@@ -1,0 +1,166 @@
+<!--
+ * @Desc 포탈 엘리먼트
+ * @Author dmwon
+ * @Created 2017-06-20
+ -->
+
+<dom-module id="vue-grid-widget-manager"> 
+	<template>
+		<sc-ajax id="findComposableWidgetList"
+			url="findComposableWidgetList.do"
+			on-response="onWidgetsLoaded"></sc-ajax>
+	</template>
+	<script>
+		Polymer({
+  			is: 'vue-grid-widget-manager',
+  		
+  		properties: {
+  			/** 사용가능한 위젯 리스트 */
+  			widgets : {
+  				type : Array,
+  				value : function() {
+  					return [];
+  				}
+  			},
+  			
+  			/**  */
+  			widgetToolbarRef : {
+  				type : Object,
+  				value : function() {
+  					return {};	
+  				}
+  			},
+  			
+  			/**  */
+  			hasLoadedWidget: {
+  				type: Object,
+  				value: function() {
+  					return false;
+  				}
+  			}
+  		},
+  		
+  		listeners: {
+  			'show-widget-list' : 'onShowWidgetList'
+  		},
+  		
+  		/** 설정된 위젯 정보를 가져온다. */
+  		attached: function(){
+  			this.$.findComposableWidgetList.generateRequest();
+		},
+		
+		/** 위젯 리스트에 위젯(sc-button) 추가 */
+		appendWidget: function(widget){
+           	var button = document.createElement('sc-button'),
+           		toolbar = this.getToolbar();
+           	
+           	button.text = button.title = widget.title;
+            button.iconCls = 'btn add-col';
+            button.classList.add('portal-tool-button');
+            button.widget = widget;
+            button.addEventListener('click', this.onWidgetClick.bind(this));
+            Polymer.dom(toolbar).appendChild(button);
+        },
+        
+        /** (중복 포틀릿 체크) 이미 포틀릿으로 존재하는 위젯인지 확인. */
+        existWidget: function(widget){
+        	var me = this,
+        		vueGridLayout = me.getVueGridLayout(),
+        		portletContainerSchemaList = vueGridLayout.getPortletContainerSchemaList();
+        	
+        	for(var i=0; i<portletContainerSchemaList.length; i++){
+        		if(widget.type === portletContainerSchemaList[i].type){
+        			return true;
+        		}
+        	}
+        	return false;
+        },
+        
+        /** 위젯 툴바 */
+        getToolbar: function(){
+        	return this.getVueGridLayout().$[this.widgetToolbarRef];
+        },
+        
+        /** (Main Dom) VueGridLayout */
+        getVueGridLayout: function(){
+        	return this.domHost;
+        },
+        
+        /** (위젯 제거) 메모리 회수 */
+        removeWidget: function(widget){
+        	var me = this,
+        		toolbar = me.getToolbar();
+        	widget.widget = null;
+        	widget.removeEventListener('click', this.onWidgetClick);
+        	Polymer.dom(toolbar).removeChild(widget);
+        },
+        
+        /** (사용여부/역할체크 후) 사용가능한 위젯 리스트 조회완료 */
+        onWidgetsLoaded: function(e){
+        	if(typeof e.target.lastResponse.baseAttr == "string"){
+        		this.widgets = JSON.parse(e.target.lastResponse.baseAttr)
+        	}else{
+        		this.widgets = e.target.lastResponse.baseAttr;
+        	}
+        	
+        	//this._zIndexIncrement = this.widgets.length;
+        	this.fire('after-widget-loaded');
+        },
+        
+        /** 위젯 툴바 생성 */
+        onShowWidgetList: function(e){
+        	var me = this,
+        		widgets = me.widgets,
+        		toolbar = me.getToolbar();
+        	
+        	$(toolbar).toggle();
+        	var toolbarDom = Polymer.dom(toolbar); 
+        	for(var i=0; i<toolbar.children.length; i++){
+        		toolbarDom.removeChild( toolbar.children[i] );
+        	}
+        	
+        	me.hasLoadedWidget = false;
+        	for(i=0; i<widgets.length; i++){
+        		/** 포틀릿 매니저로부터 포틀릿 리스트를 받아옴 */
+        		if(!me.existWidget(widgets[i])){
+        			me.appendWidget(widgets[i]);
+        		} else {
+        			me.hasLoadedWidget = true;
+        		}
+        	}
+        	
+        	// 만약 보여지는 위젯이 있다면 
+        	if(me.hasLoadedWidget) {
+        		this.addRemoveAllButton(toolbarDom);
+        	}
+        },
+        
+        /** 모두 제거 버튼 추가 */
+        addRemoveAllButton: function(toolbarDom) {
+        	var button = document.createElement('sc-button');
+        	button.text = 'Remove All';
+           	button.iconCls = 'btn add-col';
+           	button.classList.add('portal-tool-button');
+           	button.addEventListener('click', function(){
+           		this.fire('remove-all-widget');
+           		this.hasLoadedWidget = false;
+           		toolbarDom.removeChild(button);
+           	}.bind(this));
+           	toolbarDom.insertBefore(button, toolbarDom.children[0]);
+       	},
+       	
+       	/** 포틀릿으로 추가할 위젯 */
+        onWidgetClick: function(e){
+        	var widget = e.currentTarget.widget,
+        		toolbar = this.getToolbar();
+        	this.removeWidget(e.currentTarget);
+        	this.fire('widget-click', {widget:widget});
+        	
+        	if(!this.hasLoadedWidget) {
+        		this.addRemoveAllButton(Polymer.dom(this.getToolbar()));
+        		this.hasLoadedWidget = true;
+        	}
+        }
+      });
+  	</script> 
+</dom-module>

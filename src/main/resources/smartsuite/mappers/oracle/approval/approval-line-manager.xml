@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="approval-line-manager">
+	<select id="findApprovalLineMasterList" resultType="map">
+	/* approval-line-manager.findApprovalLineMasterList : 결재선 마스터 조회 */
+		SELECT
+			USR_APVLLN_UUID,
+			USR_ID,
+			USR_APVLLN_TIT,
+			APVLLN_SORT
+		FROM	USR_APVLLN
+		WHERE	TEN_ID = #{g.tenant}
+			AND USR_ID = #{g.username}
+		ORDER BY MOD_DTTM DESC
+	</select>
+	
+	<select id="findApprovalLineMasterDetailList" resultType="map">
+		/* approval-line-manager.findApprovalLineMasterDetailList : 결재선 내용 조회 */
+		SELECT USR_APVLLN_APVR.USR_APVLLN_UUID
+		     , USR_APVLLN_APVR.APVR_ID
+		     , USR_APVLLN_APVR.APVR_TYP_CCD
+		     , USR_APVLLN_APVR.APVR_SORT
+		     , USR_APVLLN_APVR.SEQ_PARLL_TYP_CCD
+		     , USR.POSI_CCD AS APRVEMP_POS_CD
+		     , (
+		        SELECT CODE.DTLCD_NM
+		          FROM DTLCD_MULTLANG CODE
+		         WHERE CODE.TEN_ID = #{g.tenant}
+		           AND CODE.CCD = 'C005'
+		           AND CODE.DTLCD = USR.POSI_CCD
+		           AND CODE.LANG_CCD = #{g.locale}
+		       ) AS APRVEMP_POS_NM
+		     , USR.USR_NM AS APRVEMP_USR_NM
+		     , DEPT.DEPT_CD AS APRVEMP_DEPT_CD
+		     , DEPT.DEPT_NM AS APRVEMP_DEPT_NM
+		  FROM USR_APVLLN USR_APVLLN
+		 INNER JOIN USR_APVLLN_APVR USR_APVLLN_APVR
+		    ON USR_APVLLN.TEN_ID = USR_APVLLN_APVR.TEN_ID
+		   AND USR_APVLLN.USR_APVLLN_UUID = USR_APVLLN_APVR.USR_APVLLN_UUID
+		  LEFT OUTER JOIN USR USR		/* USR : 사용자 */
+		    ON USR_APVLLN_APVR.TEN_ID = USR.TEN_ID
+		   AND USR_APVLLN_APVR.APVR_ID = USR.USR_ID
+		 INNER JOIN LOGIC_ORG LOGIC_ORG                   /* CMP : 조직 */
+		    ON USR.TEN_ID = LOGIC_ORG.TEN_ID
+		   AND USR.CO_CD = LOGIC_ORG.LOGIC_ORG_CD
+		   AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		   AND LOGIC_ORG.STS != 'D'
+		  LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG LOGIC_ORG_DEPT_MAPG
+		    ON USR.TEN_ID = LOGIC_ORG_DEPT_MAPG.TEN_ID
+		   AND USR.CO_CD = LOGIC_ORG_DEPT_MAPG.LOGIC_ORG_CD
+		   AND USR.DEPT_CD = LOGIC_ORG_DEPT_MAPG.DEPT_CD
+		   AND LOGIC_ORG_DEPT_MAPG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		  LEFT OUTER JOIN DEPT DEPT             /* DEPT : 부서 */
+		    ON LOGIC_ORG_DEPT_MAPG.TEN_ID = DEPT.TEN_ID
+		   AND LOGIC_ORG_DEPT_MAPG.DEPT_CD = DEPT.DEPT_CD
+		   AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = LOGIC_ORG_DEPT_MAPG.LOGIC_ORG_TYP_CCD
+		   AND DEPT.STS != 'D'
+		 WHERE USR_APVLLN_APVR.TEN_ID = #{g.tenant}
+		   AND USR_APVLLN.USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+		 ORDER BY USR_APVLLN_APVR.APVR_SORT ASC
+	</select>
+	
+	<insert id="insertApprovalLineMaster">
+		/* approval-line-manager.insertApprovalLineMaster : 결재선 마스터 등록 */
+		INSERT	INTO USR_APVLLN(
+			TEN_ID,
+			USR_APVLLN_UUID,
+			USR_ID,
+			APVLLN_TYP_CCD,
+			USR_APVLLN_TIT,
+			APVLLN_SORT,
+			STS,
+			REGR_ID,
+			REG_DTTM,
+			MODR_ID,
+			MOD_DTTM
+			)
+		VALUES (
+			#{g.tenant},
+			#{p.usr_apvlln_uuid},
+			#{g.username},
+			'',
+			#{p.usr_apvlln_tit},
+			#{p.apvlln_sort},
+			'C',
+			#{g.username},
+			#{g.now},
+			#{g.username},
+			#{g.now}
+		)
+	</insert>
+	
+	<insert id="insertApprovalLineDetail">
+	/* approval-line-manager.insertApprovalLineDetail : 결재선 내용 추가 */
+		INSERT INTO USR_APVLLN_APVR(
+			TEN_ID,
+			USR_APVLLN_UUID,
+			APVR_ID,
+			APVR_TYP_CCD,
+			APVR_SORT,
+			STS,
+			SEQ_PARLL_TYP_CCD,
+			REGR_ID,
+			REG_DTTM,
+			MODR_ID,
+			MOD_DTTM
+		)
+		VALUES 
+		(
+			#{g.tenant},
+			#{p.usr_apvlln_uuid},
+			#{p.apvr_id},
+			#{p.apvr_typ_ccd},
+			#{p.apvr_sort},
+			'C',
+			#{p.seq_parll_typ_ccd},
+			#{g.username},
+			#{g.now},
+			#{g.username},
+			#{g.now}
+		)
+	</insert>
+
+	<update id="updateApprovalLineMaster">
+	/* approval-line-manager.updateApprovalLineMaster : 결재선 마스터 수정 */
+		UPDATE USR_APVLLN
+		<set>
+			<if test="p.usr_apvlln_tit != null">
+				USR_APVLLN_TIT = #{p.usr_apvlln_tit},
+			</if>
+			<if test="p.apvlln_sort != null and p.apvlln_sort !=''">
+				APVLLN_SORT = #{p.apvlln_sort},
+			</if>
+			STS = 'U',
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		</set>
+		WHERE TEN_ID = #{g.tenant}
+		AND USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+	</update>
+	
+	<update id="updateApprovalLineDetail">
+		/* approval-line-manager.updateApprovalLineDetail : 결재선 내용 수정 */
+		UPDATE USR_APVLLN_APVR
+		<set>
+			APVR_TYP_CCD = #{p.apvr_typ_ccd},
+			APVR_SORT = #{p.apvr_sort},
+			SEQ_PARLL_TYP_CCD =#{p.seq_parll_typ_ccd},
+			STS = 'U',
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		</set>
+		WHERE TEN_ID = #{g.tenant}
+			AND USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+			AND APVR_ID = #{p.apvr_id}
+	</update>
+	
+	<delete id="deleteApprovalLineMasterInfo">
+		/* approval-line-manager.deleteApprovalLineMasterInfo : 결재선 마스터 내용 삭제 */
+		DELETE FROM USR_APVLLN_APVR
+		WHERE TEN_ID = #{g.tenant}
+		AND USR_APVLLN_UUID IN
+			<foreach collection="p.deleteds" item="item" separator="," open="(" close=")">
+                   #{item.usr_apvlln_uuid}
+             </foreach>
+	</delete>
+	
+	<delete id="deleteApprovalLineMasterDetail">
+		/* approval-line-manager.deleteApprovalLineMasterDetail : 결재자 상세 내용 삭제 */
+		DELETE FROM USR_APVLLN_APVR
+		WHERE TEN_ID = #{g.tenant}
+	 	  AND USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+          AND APVR_ID IN
+        	<foreach collection="p.deleteds" item="item" separator="," open="(" close=")">
+                   #{item.apvr_id}
+             </foreach>
+	</delete>
+	
+	<delete id="deleteApprovalLineMasterList">
+	/* approval-line-manager.deleteApprovalLineMasterList : 결재선 마스터 리스트 삭제 */
+		DELETE FROM USR_APVLLN
+		WHERE	TEN_ID = #{g.tenant}
+		AND USR_APVLLN_UUID IN
+               <foreach collection="p.deleteds" item="item" separator="," open="(" close=")">
+                   #{item.usr_apvlln_uuid}
+               </foreach>
+	</delete>
+	
+	<select id="findListApprovalLineDetailForApproval" resultType="map">
+		/* approval-line-manager.findListApprovalLineDetailForApproval : 결재선 사용자 결재라인 적용을 위한 조회 */
+		WITH GRADE AS (
+			SELECT DTLCD.TEN_ID
+			     , DTLCD.DTLCD
+			     , DTLCD.DTLCD_SORT
+			     , DTLCD_MULTLANG.DTLCD_NM
+			  FROM DTLCD DTLCD
+			 INNER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+			    ON DTLCD_MULTLANG.TEN_ID = DTLCD.TEN_ID
+			   AND DTLCD_MULTLANG.CCD = DTLCD.CCD
+			   AND DTLCD_MULTLANG.DTLCD = DTLCD.DTLCD
+			 WHERE DTLCD.TEN_ID = #{g.tenant}
+			   AND DTLCD.CCD = 'C005'
+			   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		), JOBTIT AS (
+			SELECT DTLCD.TEN_ID
+			     , DTLCD.DTLCD
+			     , DTLCD.DTLCD_SORT
+			     , DTLCD_MULTLANG.DTLCD_NM
+			  FROM DTLCD DTLCD
+			 INNER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+			    ON DTLCD_MULTLANG.TEN_ID = DTLCD.TEN_ID
+			   AND DTLCD_MULTLANG.CCD = DTLCD.CCD
+			   AND DTLCD_MULTLANG.DTLCD = DTLCD.DTLCD
+			 WHERE DTLCD.TEN_ID = #{g.tenant}
+			   AND DTLCD.CCD = 'G012'
+			   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		)
+		SELECT USR_APVLLN_APVR.APVR_ID AS USR_ID
+		     , USR_APVLLN_APVR.APVR_TYP_CCD
+		     , USR_APVLLN_APVR.APVR_SORT
+		     , USR_APVLLN_APVR.SEQ_PARLL_TYP_CCD
+		     , USR.POSI_CCD
+		     , GRADE.DTLCD_NM AS POSI_NM
+		     , USR.JOBTIT_CCD
+		     , JOBTIT.DTLCD_NM AS APVR_JOBTIT_NM
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS USR_NM
+		     , DEPT.DEPT_CD
+		     , CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+		            ELSE DEPT.DEPT_NM
+		        END AS APVR_DEPT_NM
+		  FROM USR_APVLLN USR_APVLLN
+		 INNER JOIN USR_APVLLN_APVR USR_APVLLN_APVR
+		    ON USR_APVLLN.TEN_ID = USR_APVLLN_APVR.TEN_ID
+		   AND USR_APVLLN.USR_APVLLN_UUID = USR_APVLLN_APVR.USR_APVLLN_UUID
+		 INNER JOIN USR USR /* USR : 사용자 */
+		    ON USR_APVLLN_APVR.TEN_ID = USR.TEN_ID
+		   AND USR_APVLLN_APVR.APVR_ID = USR.USR_ID
+		  LEFT OUTER JOIN JOBTIT
+		    ON JOBTIT.TEN_ID = USR.TEN_ID
+		   AND JOBTIT.DTLCD  = USR.JOBTIT_CCD
+		  LEFT OUTER JOIN GRADE
+		    ON GRADE.TEN_ID = USR.TEN_ID
+		   AND GRADE.DTLCD  = USR.POSI_CCD
+		  LEFT OUTER JOIN DEPT DEPT             /* DEPT : 부서 */
+		    ON DEPT.TEN_ID = USR.TEN_ID
+		   AND DEPT.DEPT_CD = USR.DEPT_CD
+		   AND DEPT.STS != 'D'
+		 WHERE USR_APVLLN_APVR.TEN_ID = #{g.tenant}
+		   AND USR_APVLLN_APVR.APVR_TYP_CCD IN ('APVL', 'AG', 'PARLL_AG')
+		   AND USR_APVLLN.USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+		 ORDER BY USR_APVLLN_APVR.APVR_SORT ASC
+	</select>
+	
+	<select id="findListReferenceListDetailForApproval" resultType="map">
+		/* approval-line-manager.findListReferenceListDetailForApproval : 수신,참조자 결재라인 적용을 위한 조회 */
+		WITH GRADE AS (
+			SELECT DTLCD.TEN_ID
+			     , DTLCD.DTLCD
+			     , DTLCD.DTLCD_SORT
+			     , DTLCD_MULTLANG.DTLCD_NM
+			  FROM DTLCD DTLCD
+			 INNER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+			    ON DTLCD_MULTLANG.TEN_ID = DTLCD.TEN_ID
+			   AND DTLCD_MULTLANG.CCD = DTLCD.CCD
+			   AND DTLCD_MULTLANG.DTLCD = DTLCD.DTLCD
+			 WHERE DTLCD.TEN_ID = #{g.tenant}
+			   AND DTLCD.CCD = 'C005'
+			   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		), JOBTIT AS (
+			SELECT DTLCD.TEN_ID
+			     , DTLCD.DTLCD
+			     , DTLCD.DTLCD_SORT
+			     , DTLCD_MULTLANG.DTLCD_NM
+			  FROM DTLCD DTLCD
+			 INNER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+			    ON DTLCD_MULTLANG.TEN_ID = DTLCD.TEN_ID
+			   AND DTLCD_MULTLANG.CCD = DTLCD.CCD
+			   AND DTLCD_MULTLANG.DTLCD = DTLCD.DTLCD
+			 WHERE DTLCD.TEN_ID = #{g.tenant}
+			   AND DTLCD.CCD = 'G012'
+			   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		)
+		SELECT USR_APVLLN_APVR.APVR_ID AS USR_ID
+		     , USR_APVLLN_APVR.APVR_TYP_CCD AS RDG_TYP_CCD
+		     , USR_APVLLN_APVR.APVR_SORT
+		     , USR_APVLLN_APVR.SEQ_PARLL_TYP_CCD
+		     , USR.POSI_CCD
+		     , GRADE.DTLCD_NM AS POSI_NM
+		     , USR.JOBTIT_CCD
+		     , JOBTIT.DTLCD_NM AS USR_JOBTIT_NM
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS USR_NM
+		     , DEPT.DEPT_CD
+		     , CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+		            ELSE DEPT.DEPT_NM
+		        END AS USR_DEPT_NM
+		  FROM USR_APVLLN USR_APVLLN
+		 INNER JOIN USR_APVLLN_APVR USR_APVLLN_APVR
+		    ON USR_APVLLN.TEN_ID = USR_APVLLN_APVR.TEN_ID
+		   AND USR_APVLLN.USR_APVLLN_UUID = USR_APVLLN_APVR.USR_APVLLN_UUID
+		 INNER JOIN USR USR /* USR : 사용자 */
+		    ON USR_APVLLN_APVR.TEN_ID = USR.TEN_ID
+		   AND USR_APVLLN_APVR.APVR_ID = USR.USR_ID
+		  LEFT OUTER JOIN JOBTIT
+		    ON JOBTIT.TEN_ID = USR.TEN_ID
+		   AND JOBTIT.DTLCD  = USR.JOBTIT_CCD
+		  LEFT OUTER JOIN GRADE
+		    ON GRADE.TEN_ID = USR.TEN_ID
+		   AND GRADE.DTLCD  = USR.POSI_CCD
+		  LEFT OUTER JOIN DEPT DEPT             /* DEPT : 부서 */
+		    ON DEPT.TEN_ID = USR.TEN_ID
+		   AND DEPT.DEPT_CD = USR.DEPT_CD
+		   AND DEPT.STS != 'D'
+		 WHERE USR_APVLLN_APVR.TEN_ID = #{g.tenant}
+		   AND USR_APVLLN_APVR.APVR_TYP_CCD IN ('RCPT', 'REF')
+		   AND USR_APVLLN.USR_APVLLN_UUID = #{p.usr_apvlln_uuid}
+		 ORDER BY USR_APVLLN_APVR.APVR_SORT ASC
+	</select>
+	
+</mapper>

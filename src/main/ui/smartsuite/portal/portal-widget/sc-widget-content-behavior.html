@@ -1,0 +1,77 @@
+<!--
+ * @Desc 포탈에 사용되는 위젯의 공통 behavior
+ * @Author patrick.sung
+ * @Created 2016-03-28
+ -->
+
+<script>
+    BehaviorWidgetContent = {
+        properties: {
+            widgetId: String,
+            relatedObject: Object,
+            _data: Object,
+            _opened: Boolean
+        },
+
+        attached: function () {
+        	if(!this._attachedCalled) {
+                this._attachedCalled = true;
+                //한번만 호출되도록 로직작성
+                this.listen(this, 'toggleWidget', '_onToggleWidget');
+                this.listen(this, 'refresh-widget', '_onRefreshWidget');
+            }
+        },
+
+        parseForDomRepeatBind: function(value) {
+            return JSON.parse(JSON.stringify(value));
+        },
+
+        _onToggleWidget: function () {
+            this.relatedObject._data = this._data;
+            this.relatedObject.refresh();
+            this.saveData();
+            this.hide();
+        },
+
+        _onRefreshWidget: function() {
+        	this.refresh();
+        },
+        
+        refresh: function () {
+            // abstract
+        },
+
+        saveData: function() {
+            //abstract
+        },
+
+        show: function () {
+            this._opened = true;
+            this.style.display = 'inline';
+            this.classList.add('pt-page-flipInBottom');
+        },
+
+        hide: function () {
+            this._opened = false;
+            if (!this._opened) {
+                this.classList.add('pt-page-flipOutTop')
+                this.async(this._onHideFinish, null, 2000);
+
+            }
+        },
+
+        _onHideFinish: function () {
+            this.style.display = 'none';
+            this.relatedObject.show();
+        },
+
+        _formatCurrency: function(money) {
+            return accounting.formatMoney(money, "", 0);
+        },
+
+        _formatDate: function(date) {
+            return UT.formatDate(date, "yyyy/MM/dd");
+        }
+
+    };
+</script>

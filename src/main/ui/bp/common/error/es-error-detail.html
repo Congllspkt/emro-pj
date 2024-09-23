@@ -1,0 +1,262 @@
+<sc-link rel="import" href="./ep-error-extract.html"></sc-link>
+<script src="../../../lib/browser/ua-parser.js"></script>
+
+<dom-module id="es-error-detail">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+        .tb-form td sc-label {
+            font-weight: bold;
+            white-space: inherit;
+        }
+    </style>
+    <template>
+        <sc-code-group init>
+            <sc-code code="C016" value="{{codes.C016}}"></sc-code> <!-- 사용자구분 -->
+        </sc-code-group>
+        <sc-ajax id="findError"
+                 url="findErrorInfo.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindError">
+        </sc-ajax>
+
+        <cc-sub-title-bar>
+            <sc-button text="다운로드" on-click="onDownload" disabled="[[!formula('downloadable')]]"></sc-button>
+        </cc-sub-title-bar>
+        <cc-form-panel validation-group="save" column="2" label-width="120" title-text="[[changeLabel(errorInfo.err_occr_typ)]] " collapsible="true">
+            <cc-fieldset>
+                <sc-label text="아이디"></sc-label>
+                <sc-text-field value="{{errorInfo.err_uuid}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="구분"></sc-label>
+                <sc-text-field value="{{errorInfo.err_cls_txt}}"  readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="메뉴 코드"></sc-label>
+                <sc-text-field value="{{errorInfo.menu_cd}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="메뉴 경로"></sc-label>
+                <sc-text-field value="{{errorInfo.menu_path}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="메뉴 명"></sc-label>
+                <sc-text-field value="{{errorInfo.menu_nm}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="클래스 명"></sc-label>
+                <sc-text-field value="{{errorInfo.class_nm}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="메소드 명"></sc-label>
+                <sc-text-field value="{{errorInfo.meth_nm}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="발생 일시"></sc-label>
+                <sc-text-field value="{{errorInfo.err_occur_dt_txt}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[formula('isBrowserError')]]">
+                <sc-label text="세션 아이디"></sc-label>
+                <sc-text-field value="{{errorInfo.sess_id}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="메뉴 코드"></sc-label>
+                <sc-text-field value="{{errorInfo.menu_cd}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="메뉴 PATH"></sc-label>
+                <sc-text-field value="{{errorInfo.menu_path}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[formula('isBrowserError')]]">
+                <sc-label text="서버 아이피"></sc-label>
+                <sc-text-field value="{{errorInfo.svr_ip}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="브라우저 종류"></sc-label>
+                <sc-text-field value="{{errorInfo.usr_webbr_kind}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="사용자 브라우저 정보"></sc-label>
+                <sc-text-field value="{{errorInfo.usr_agent_text}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="발생 소스 경로"></sc-label>
+                <sc-text-field value="{{errorInfo.err_occr_src_path}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[!formula('isBrowserError')]]">
+                <sc-label text="발생 라인/컬럼 번호"></sc-label>
+                <sc-text-field value="{{errorInfo.err_ln_no}} line / {{errorInfo.err_col_no}} column" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="메시지"></sc-label>
+                <sc-text-field value="{{errorInfo.sys_err_msg}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 아이디"></sc-label>
+                <sc-text-field value="{{errorInfo.usr_id}} ({{errorInfo.usr_nm}})" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 구분"></sc-label>
+                <sc-text-field value="{{errorInfo.usr_cls_txt}}" readonly="true" i18n-disabled></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 메시지"></sc-label>
+                <div id="usr_err_msg" style="max-height: 80px; overflow: auto;"></div>
+            </cc-fieldset>
+        </cc-form-panel>
+            <!--<div style="width:600px; height:400px;"><img src="https://vignette.wikia.nocookie.net/half-life/images/6/66/Tag_logo.png/revision/latest?cb=20120621211832&path-prefix=en"></div>-->
+            <cc-sub-title-bar title-text="StackTrace"></cc-sub-title-bar>
+            <cc-source-editor id="editor" class="flex" value="{{errorInfo.stk_trce_cont}}" editable="true" view-hidden="true" mode-hidden="true" mode="[[formula('mode')]]" use-worker="false"></cc-source-editor>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "es-error-detail",
+            properties: {
+                err_occr_typ: {
+                    type: Array,
+                    value: function () {
+                        return [
+                            {label: "브라우저", data: "B"},
+                            {label: "서버", data: "S"}
+                        ]
+                    }
+                },
+                errorInfo: {
+                    type: Object,
+                    value: function () {
+                        return {
+                            stk_trce_cont: ""
+                        };
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            C016  : []
+                        };
+                    },
+                    reset: false
+                },
+            },
+
+            formulas: {
+                downloadable: function () {
+                    return UT.isNotEmpty(this.errorInfo && this.errorInfo.err_uuid);
+                },
+                mode: function () {
+                    return (this.errorInfo && this.errorInfo.err_occr_typ === "B") ? "javascript" : "text";
+                },
+                isBrowserError: function () {
+                    return (this.errorInfo && this.errorInfo.err_occr_typ === "B");
+                }
+            },
+
+            load: function (param) {
+                var me = this;
+                me.$.findError.body = param;
+                UT.request(me.$.findError);
+            },
+
+            changeLabel: function (label) {
+                var me = this;
+
+                var err_occr_typ = me.err_occr_typ || [];
+                for(var i=0,len=err_occr_typ.length;i<len;i++) {
+                    var cls = err_occr_typ[i];
+                    if(cls.data === label) {
+                        return UT.copy(me.translate(cls.label)) + me.translate('상세');
+                    }
+                }
+
+                return me.translate('상세');
+            },
+
+            onDownload: function () {
+                var me = this;
+
+                var errorExtractPopup = UT.popup("ep-error-extract", this, 800, 600);
+                errorExtractPopup.show();
+                errorExtractPopup.getWindowContent().load(me.errorInfo, basicTable.outerHTML);
+            },
+
+            completeFindError: function (e, res) {
+                var me = this;
+                var result = res.response || {};
+
+                //에러 발생 일시 텍스트 변환
+                if(UT.isDate(result.err_occr_dttm)) {
+                    result.err_occur_dt_txt = UT.formatDate(result.err_occr_dttm, "yyyy/MM/dd HH:mm:ss");
+                }
+                //에러 구분 텍스트 변환
+                if(result.err_occr_typ === "S") {
+                    result.err_cls_txt = me.translate('서버');
+                } else if(result.err_occr_typ === "B") {
+                    result.err_cls_txt = me.translate('브라우저');
+                }
+
+                result.usr_cls_txt = me._getCodeName("C016",result.usr_typ_ccd);
+
+                //메뉴 ID 로 메뉴 경로 가져오기
+                if(UT.isString(result.menu_cd)) {
+                    var mdi = MDIUT.getMdi();
+                    if(mdi && UT.isFunction(mdi.getMenuPath)) {
+                        var td = document.createElement("td"); //가공하기 위한 임시
+                        td.innerHTML = mdi.getMenuPath(result.menu_cd);
+                        result.menu_path = td.innerText;
+                    }
+                }
+
+                if(UT.isString(result.usr_webbr_kind)) {
+                    var ua = UAParser(result.usr_webbr_kind);
+                    ua = ua || {};
+                    ua.browser = ua.browser || {};
+                    ua.os = ua.os || {};
+
+                    var objStr = "[Browser]";
+                    for(var prop in ua.browser) {
+                        objStr += prop + ": " + ua.browser[prop] + " / ";
+                    }
+
+                    objStr += "\n[OS]";
+                    for(var prop in ua.os) {
+                        objStr += prop + ": " + ua.os[prop] + " / ";
+                    }
+                    result.usr_agent_text = objStr;
+                }
+
+                me.$.usr_err_msg.innerText = result.usr_err_msg;
+
+                me.set("errorInfo", result);
+                me.applyFormula();
+            },
+            
+            _errorReset: function () {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+                me.$.editor.value = "";
+                me.$.usr_err_msg.innerText = "";
+            },
+
+            _getCodeName: function(code, value) {
+                var me = this;
+                var codes = me.get("codes."+code);
+                var filtered = codes.filter(function(cd) {
+                    return cd["data"] === value;
+                });
+                if(filtered.length > 0) {
+                    return filtered[0]["label"];
+                }
+                return null;
+            },
+
+            getMenuPath: function (path) {
+                return path;
+            }
+        })
+    </script>
+</dom-module>

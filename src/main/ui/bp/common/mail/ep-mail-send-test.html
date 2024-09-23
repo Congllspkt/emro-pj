@@ -1,0 +1,151 @@
+<sc-link href="../../../lib/jsoneditor/dist/jsoneditor.min.css" rel="stylesheet" type="text/css"></sc-link>
+<script src="../../../lib/jsoneditor/dist/jsoneditor.min.js"></script>
+
+<dom-module id="ep-mail-send-test">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- SMTP 연동 테스트를 위한 Ajax -->
+		<sc-ajax id="smtpSyncTestSendMail"
+				 url="smtpSyncTestSendMail.do"
+				 body="{{testMailInfo}}">
+		</sc-ajax>
+
+		<cc-sub-title-bar>
+			<sc-button text="이메일 테스트 전송"	on-click="smtpSyncTestSendMail"></sc-button>
+		</cc-sub-title-bar>
+		<table class="tb-form">
+			<tr>
+				<th><sc-label text="이메일 템플릿"></sc-label></th>
+				<td><sc-text-field value="{{testMailInfo.mailKey}}" disabled="true"></sc-text-field></td>
+			</tr>
+			<tr>
+				<th><sc-label text="수신자 이메일"></sc-label></th>
+				<td><sc-text-field value="{{testMailInfo.rcpnt_eml}}" required="true"></sc-text-field></td>
+			</tr>
+			<tr>
+				<th><sc-label text="수신자 이름"></sc-label></th>
+				<td><sc-text-field value="{{testMailInfo.to_nm}}"></sc-text-field></td>
+			</tr>
+		</table>
+
+		<sc-panel title-text="Data입력" class="flex">
+			<div>템플릿과 데이터의 결합은 FreeMarker템플릿 엔진을 사용합니다.</div>
+			<cc-sub-title-bar>
+				<sc-button text="Data Reset" on-click="onClickDataReset" i18n-disabled></sc-button>
+			</cc-sub-title-bar>
+			<div id="jsonEditor" style="height:350px;"></div>
+		</sc-panel>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'ep-mail-send-test',
+
+            properties:{
+                testMailInfo: {
+                    type: Object,
+					value: function () {
+						return {
+							to_nm: "",
+							data: {}
+						};
+                    }
+				},
+				titleText: {
+                    type: String,
+					value: I18N.translate("이메일 테스트 전송")
+				}
+            },
+
+			initialized: function () {
+                var me = this;
+
+                /** JSON Data Load **/
+                if(window.jsoneditor && window.jsoneditor.JSONEditor){
+                    jsonEditor = window.jsoneditor.JSONEditor;
+                }else if(window.JSONEditor){
+                    if(window.JSONEditor.JSONEditor){
+                        jsonEditor = window.JSONEditor.JSONEditor;
+                    }else{
+                        jsonEditor = window.JSONEditor;
+                    }
+                }
+
+                var options = {};
+                me.jsonEditor = new jsonEditor(me.$.jsonEditor, options);
+            },
+
+            load: function(mailKey, getEditorValueFn){
+                var me = this;
+
+                me.set("testMailInfo.mailKey", mailKey);
+
+                me.setDefaultJsonEditorData(getEditorValueFn());
+            },
+            
+            onClickDataReset: function() {
+            	var me = this;
+            	me.setDefaultJsonEditorData();
+            },
+
+          	//Default Json Data Setting
+			setDefaultJsonEditorData: function (editorValue) {
+                var me = this;
+                me.editorValue = editorValue || me.editorValue || "";
+                var matched = me.editorValue.match(/\${[a-zA-Z0-9_.]{1,}/g);
+
+                var obj = {};
+                if(matched && matched.length) {
+                	for(var i=0,len=matched.length; i<len; i++) {
+                		var prop = (matched[i] || "").replace("${", "");
+                		dotToObj(obj, prop);
+                	}
+                }
+                
+                me.jsonEditor.set({ //data 라는 property에 기본값이 들어감
+                    data: obj
+                });
+                
+                /* 
+                input -> 1.2.3
+                output -> {1: {2: {3: ""}}}
+                */
+                function dotToObj(obj, str) {
+
+                	var split = str.split(".");
+                	if(split.length > 1) {
+                		obj[split[0]] = obj[split[0]] || {};
+                		dotToObj(obj[split[0]], split.slice(1).join("."));
+                	} else {
+                		obj[str] = obj[str] || "";
+                    }
+                	return obj;
+                }
+            },
+
+			//SMTP 연동 테스트
+            smtpSyncTestSendMail: function () {
+                var me = this;
+
+                if(!me.validate()) {
+                    UT.alert("STD.E0000");
+                    return;
+				}
+
+				//JSONEditor 에서 설정한 값을 불러와서 파라미터(data)에 넣어줌
+                me.testMailInfo.data = me.jsonEditor.get().data;
+
+				UT.request(me.$.smtpSyncTestSendMail, function() {
+                    UT.alert("STD.EDO1003", null, true);
+				});
+            }
+        });
+	</script>
+
+</dom-module>

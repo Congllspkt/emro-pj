@@ -1,0 +1,642 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="common-code">
+
+<!-- 
+	그룹코드(CCD)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2
+-->
+	<!-- 그룹코드 목록의 값을 반환한다. -->
+	<select id="findListGroupCode" resultType="map">
+	/* common-code.findListGroupCode */
+           SELECT TEN_ID        /*시스템 아이디*/
+                 ,CCD        /*그룹 코드*/
+                 ,CCD_TYP        /*코드 유형*/
+                 ,CCD_NM     /*그룹 코드 명*/
+                 ,CCD_NM_EN  /*그룹 코드 영문 명*/
+                 ,USE_YN        /*사용 여부*/ 
+                 ,RMK           /*비고*/
+                 ,STS           /*상태*/ 
+                 ,REGR_ID        /*등록자 아이디*/
+                 ,REG_DTTM        /*등록 일시*/
+                 ,MODR_ID        /*수정자 아이디*/
+                 ,MOD_DTTM        /*수정 일시*/
+             FROM CCD
+		<trim prefix="WHERE" prefixOverrides="AND">
+		      AND TEN_ID = #{g.tenant}
+			<if test="p.ccd != null and p.ccd != ''">
+			<bind name="grpCdPattern" value="'%' + p.ccd + '%'" />
+			  AND UPPER(CCD) LIKE UPPER(#{grpCdPattern})
+			</if>
+			<if test="p.ccd_typ != null and p.ccd_typ != ''">
+              AND CCD_TYP = #{p.ccd_typ}
+			</if>
+			<if test="p.ccd_nm != null and p.ccd_nm != ''">
+			<bind name="grpCdNmPattern" value="'%' + p.ccd_nm + '%'" />
+			  AND UPPER(CCD_NM) LIKE UPPER(#{grpCdNmPattern})
+			</if>
+		</trim>
+         ORDER BY CCD_TYP
+                 ,CCD
+	</select>
+
+	<!-- 그룹 코드(CCD) INSERT -->
+	<insert id="insertGroupCodeInfo">
+	/* common-code.insertGroupCodeInfo */
+       INSERT INTO CCD
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+	            STS            /*상태*/
+	           ,TEN_ID         /*시스템 아이디*/
+	           ,REGR_ID         /*등록자 아이디*/
+	           ,REG_DTTM         /*등록 일시*/
+	           ,CCD         /*그룹 코드*/
+	           ,CCD_TYP         /*코드 유형*/
+	           ,CCD_NM      /*그룹 코드 명*/
+	           ,CCD_NM_EN   /*그룹 코드 영문 명*/
+	           ,USE_YN         /*사용 여부*/
+	           ,RMK            /*비고*/
+    	</trim>
+    	<trim prefix="VALUES (" suffix=")" prefixOverrides=",">
+				'C'
+				,#{g.tenant}
+				,#{g.username}
+				,#{g.now}
+				,#{p.ccd}
+				,#{p.ccd_typ}
+	        	,#{p.ccd_nm}
+	        	,#{p.ccd_nm_en}
+		        ,#{p.use_yn}
+		        ,#{p.rmk}
+    	</trim>
+  	</insert>
+	
+	<!-- 그룹 코드(CCD) UPDATE -->
+	<update id="updateGroupCodeInfo">
+	/* common-code.updateGroupCodeInfo */
+		  UPDATE CCD
+		<trim prefix="set" prefixOverrides=",">
+				 MODR_ID 		= #{g.username}		/*수정자 아이디*/
+				,MOD_DTTM 		= #{g.now}			/*수정 일시*/
+		   		,CCD_NM 		= #{p.ccd_nm} 	/*그룹 코드 명*/
+		 		,CCD_NM_EN 	= #{p.ccd_nm_en}	/*그룹 코드 영문 명*/
+		 		,USE_YN 		= #{p.use_yn}		/*사용 여부*/
+		</trim>
+		   WHERE TEN_ID = #{g.tenant}
+		     AND CCD = #{p.ccd}
+	</update>
+	
+	<!-- 그룹 코드(CCD) DELETE -->
+	<delete id="deleteGroupCodeInfo">
+	/* common-code.deleteGroupCodeInfo */
+		DELETE 
+		  FROM CCD
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+	</delete>
+	
+	
+	
+<!--
+	그룹 코드 속성(CCD_CSTR_CND)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2 
+-->	
+	<!-- 그룹코드 속성(CCD_CSTR_CND) 목록 조회 -->
+	<select id="findListGroupCodeAttribute" resultType="map">
+	/* common-code.findListGroupCodeAttribute */
+           SELECT TEN_ID         /*시스템 아이디*/
+                 ,CCD         /*그룹 코드*/
+                 ,CSTR_CND_CD        /*속성 코드*/
+                 ,CSTR_CND_NM     /*속성 코드 명*/
+                 ,CSTR_CND_NM_EN  /*속성 코드 영문 명*/
+                 ,CSTR_CND_SORT       /*정렬 순서*/
+                 ,USE_YN         /*사용 여부*/ 
+                 ,RMK            /*비고*/
+                 ,STS            /*상태*/ 
+                 ,REGR_ID         /*등록자 아이디*/
+                 ,REG_DTTM         /*등록 일시*/
+                 ,MODR_ID         /*수정자 아이디*/
+                 ,MOD_DTTM         /*수정 일시*/
+             FROM CCD_CSTR_CND
+		<trim prefix="WHERE" prefixOverrides="AND">
+              AND TEN_ID 	= #{g.tenant}
+			<if test="p.ccd != null">
+              AND CCD	= #{p.ccd}
+			</if>
+			<if test="p.cstr_cnd_cd != null">
+              AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+          	</if>
+       </trim>
+         ORDER BY CSTR_CND_SORT
+                 ,CSTR_CND_CD
+	</select>
+	
+	<!-- 그룹코드 속성(CCD_CSTR_CND&CCD_CSTR_CND_VAL) 목록 조회  -->
+	<select id="findListGroupCodeAttributeAndAttrValue" resultType="map">
+	/* common-code.findListGroupCodeAttributeAndAttrValue */
+           SELECT CCC.TEN_ID           /*시스템 아이디*/
+                 ,CCC.CCD           /*그룹 코드*/
+                 ,CCC.CSTR_CND_CD          /*속성 코드*/
+                 ,CCC.CSTR_CND_NM       /*속성 코드 명*/
+                 ,CCC.CSTR_CND_NM_EN    /*속성 코드 영문 명*/
+                 ,CCC.CSTR_CND_SORT         /*정렬 순서*/
+                 ,CCC.USE_YN           /*사용 여부*/ 
+                 ,CCC.RMK              /*비고*/
+                 ,CCC.STS              /*상태*/ 
+                 ,CCC.REGR_ID           /*등록자 아이디*/
+                 ,CCC.REG_DTTM           /*등록 일시*/
+                 ,CCC.MODR_ID           /*수정자 아이디*/
+                 ,CCC.MOD_DTTM           /*수정 일시*/
+                 ,CCCV.CSTR_CND_VAL  /*상세 코드 속성 값 */
+             FROM CCD_CSTR_CND CCC
+        LEFT JOIN CCD_CSTR_CND_VAL CCCV
+               ON CCCV.TEN_ID  = CCC.TEN_ID
+              AND CCCV.CCD  = CCC.CCD
+              AND CCCV.CSTR_CND_CD = CCC.CSTR_CND_CD
+              AND CCCV.DTLCD  = #{p.dtlcd}
+            WHERE CCC.TEN_ID 	= #{g.tenant}
+              AND CCC.CCD 	= #{p.ccd}
+         ORDER BY CCC.CSTR_CND_SORT
+                 ,CCC.CSTR_CND_CD
+	</select>
+	
+	<!-- 그룹 코드 속성(CCD_CSTR_CND) INSERT -->
+	<insert id="insertGroupCodeAttributeInfo">
+	/* common-code.insertGroupCodeAttributeInfo */
+		INSERT INTO CCD_CSTR_CND
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+				 STS			/*상태*/
+        		,TEN_ID			/*시스템 아이디*/
+        		,REGR_ID			/*등록자 아이디*/
+        		,REG_DTTM			/*등록 일시*/
+        		,CCD			/*그룹 코드*/
+        		,CSTR_CND_CD		/*속성 코드*/
+        		,CSTR_CND_NM		/*속성 코드 명*/
+        		,CSTR_CND_NM_EN	/*속성 코드 영문 명*/
+        		,CSTR_CND_SORT		/*정렬 순서*/
+        		,USE_YN			/*사용 여부*/
+        		,RMK			/*비고*/
+		</trim>
+		<trim prefix="values (" suffix=")" prefixOverrides=",">
+				 'C'
+        		,#{g.tenant}
+        		,#{g.username}
+        		,#{g.now}
+        		,#{p.ccd}
+        		,#{p.cstr_cnd_cd}
+        		,#{p.cstr_cnd_nm}
+        		,#{p.cstr_cnd_nm_en}
+        		,#{p.cstr_cnd_sort,jdbcType=INTEGER}
+        		,#{p.use_yn}
+        		,#{p.rmk}
+      	</trim> 		
+	</insert>
+	
+	<!-- 그룹 코드 속성(CCD_CSTR_CND) UPDATE -->
+	<update id="updateGroupCodeAttributeInfo">
+	/* common-code.updateGroupCodeAttributeInfo */
+		  UPDATE CCD_CSTR_CND
+		<trim prefix="set" prefixOverrides=",">
+				 STS			= 'U'
+				,MODR_ID 		= #{g.username}			/*수정자 아이디*/
+				,MOD_DTTM 		= #{g.now}				/*수정 일시*/
+				,CSTR_CND_NM 	= #{p.cstr_cnd_nm}		/*속성 코드 명*/
+				,CSTR_CND_NM_EN 	= #{p.cstr_cnd_nm_en}	/*속성 코드 영문 명*/
+				,CSTR_CND_SORT 		= #{p.cstr_cnd_sort,jdbcType=INTEGER}		/*정렬 순서*/
+				,USE_YN			= #{p.use_yn}			/*사용 여부*/
+				,RMK 			= #{p.rmk}				/*비고*/
+		</trim>
+		   WHERE TEN_ID 	= #{g.tenant}
+		     AND CCD 	= #{p.ccd}
+		     AND CSTR_CND_CD 	= #{p.cstr_cnd_cd}
+	</update>
+	
+	<!-- 그룹 코드 속성(CCD_CSTR_CND) DELETE -->
+	<delete id="deleteGroupCodeAttributeInfoByAttrCode">
+	/* common-code.deleteGroupCodeAttributeInfoByAttrCode */
+		DELETE 
+		  FROM CCD_CSTR_CND
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+		   AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+	</delete>
+
+	<!-- 그룹 코드 속성(CCD_CSTR_CND) DELETE by CCD -->
+	<delete id="deleteGroupCodeAttributeInfo">
+	/* common-code.deleteGroupCodeAttributeInfo */
+		DELETE 
+		  FROM CCD_CSTR_CND
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+	</delete>
+
+<!--
+	상세 코드(DTLCD)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2
+-->
+	<!-- 상세코드 목록(DTLCD) 조회 -->
+	<select id="findListGroupDetailCode" resultType="map">
+	/* common-code.findListGroupDetailCode */
+           SELECT DTL.TEN_ID      /*시스템 아이디*/
+                 ,DTL.CCD      /*그룹 코드*/
+                 ,DTL.DTLCD      /*상세 코드*/
+                 ,DTL.DTLCD_SORT    /*정렬 순서*/
+                 ,DTL.USE_YN      /*사용 여부*/
+                 ,DTL.RMK         /*비고*/
+                 ,DTL.STS         /*상태*/
+                 ,DTL.REGR_ID      /*등록자 아이디*/
+                 ,DTL.REG_DTTM      /*등록 일시*/
+                 ,DTL.MODR_ID      /*수정자 아이디*/
+                 ,DTL.MOD_DTTM      /*수정 일시*/
+                 ,#{p.lang_ccd}  AS LANG_CCD     /*언어 코드*/
+                 ,DTLML.DTLCD_NM   /*상세 코드 명*/
+                 ,CASE WHEN DTLML.DTLCD IS NULL THEN 'N'
+                       ELSE 'Y'
+                  END           AS CDDL_SAVE_YN
+             FROM DTLCD DTL
+         LEFT OUTER JOIN DTLCD_MULTLANG DTLML
+               ON DTL.TEN_ID 	= DTLML.TEN_ID
+              AND DTL.CCD 	= DTLML.CCD
+              AND DTL.DTLCD 	= DTLML.DTLCD
+              AND DTLML.LANG_CCD = #{p.lang_ccd}
+            WHERE DTL.TEN_ID 	= #{g.tenant}
+              AND DTL.CCD	= #{p.ccd}
+              AND DTL.STS != 'D'
+         ORDER BY DTL.DTLCD_SORT
+                 ,DTL.DTLCD
+	</select>
+	
+	<!-- 상세 코드 테이블(DTLCD) INSERT -->
+	<insert id="insertEsacddt">
+	/* common-code.insertEsacddt */
+		INSERT INTO DTLCD
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+				 STS		/*상태*/ 
+        		,TEN_ID		/*시스템 아이디*/
+        		,REGR_ID		/*등록자 아이디*/
+        		,REG_DTTM		/*등록 일시*/
+      			,CCD		/*그룹 코드*/
+      			,DTLCD		/*상세 코드*/
+      			,DTLCD_SORT	/*정렬 순서*/
+      			,USE_YN		/*사용 여부*/ 
+      			,RMK		/*비고*/
+      	</trim>	
+      	<trim prefix="values (" suffix=")" prefixOverrides=",">
+      			 'C'
+      			,#{g.tenant}
+      			,#{g.username}
+      			,#{g.now} 
+      			,#{p.ccd}
+      			,#{p.dtlcd}
+      			,#{p.dtlcd_sort,jdbcType=INTEGER}
+      			,#{p.use_yn} 
+      			,#{p.rmk}
+      	</trim>
+	</insert>
+	
+	<!-- 상세 코드 테이블(DTLCD) UPDATE -->
+	<update id="updateGroupCodeDetailInfo">
+	/* common-code.updateGroupCodeDetailInfo */
+		UPDATE DTLCD
+		<trim prefix="set" prefixOverrides=",">
+				 MODR_ID 	= #{g.username}		/*수정자 아이디*/
+			  	,MOD_DTTM 	= #{g.now}			/*수정 일시*/
+				,DTLCD_SORT	= #{p.dtlcd_sort,jdbcType=INTEGER}		/*정렬 순서*/
+				,USE_YN		= #{p.use_yn}		/*사용 여부*/
+				,RMK		= #{p.rmk}			/*비고*/
+		</trim>
+		 WHERE TEN_ID = #{g.tenant}
+		   AND CCD = #{p.ccd}
+		   AND DTLCD = #{p.dtlcd}
+	</update>
+	
+	<update id="mergeGroupCodeDetailInfo">
+	/* common-code.updateGroupCodeDetailInfo */
+		MERGE INTO DTLCD DTL
+		USING ( SELECT #{g.tenant}                    AS TEN_ID
+		             , #{p.ccd}                    AS CCD
+		             , #{p.dtlcd}                    AS DTLCD
+		             , #{p.dtlcd_sort,jdbcType=INTEGER} AS DTLCD_SORT
+		             , #{p.use_yn}                    AS USE_YN
+		             , #{p.rmk}                       AS RMK
+		             , #{g.username}                  AS REGR_ID
+		             , #{g.now}                       AS REG_DTTM
+		             , #{g.username}                  AS MODR_ID
+		             , #{g.now}                       AS MOD_DTTM
+		          FROM DUM_TBL /* ONE ROW DATA DUMMY TABLE */
+		      ) B
+		   ON ( DTL.TEN_ID = B.TEN_ID
+		    AND DTL.CCD = B.CCD
+		    AND DTL.DTLCD = B.DTLCD
+		      )
+		 WHEN MATCHED THEN
+		      UPDATE
+		         SET DTL.MODR_ID   = B.MODR_ID	/* 수정자 아이디 */
+		           , DTL.MOD_DTTM   = B.MOD_DTTM			/* 수정 일시 */
+		           , DTL.DTLCD_SORT = B.DTLCD_SORT		/*정렬 순서*/
+		           , DTL.USE_YN   = B.USE_YN			/*사용 여부*/
+	 WHEN NOT MATCHED THEN
+	      INSERT ( TEN_ID		/*시스템 아이디*/
+	             , STS			/*상태*/
+	             , REGR_ID		/*등록자 아이디*/
+	             , REG_DTTM		/*등록 일시*/
+	             , CCD		/*그룹 코드*/
+	             , DTLCD		/*상세 코드*/
+	             , DTLCD_SORT		/*정렬 순서*/
+	             , USE_YN		/*사용 여부*/
+	             , RMK			/*비고*/
+	             )
+	      VALUES ( B.TEN_ID
+	             , 'C'
+	             , B.REGR_ID
+	             , B.REG_DTTM
+	             , B.CCD
+	             , B.DTLCD
+	             , B.DTLCD_SORT
+	             , B.USE_YN
+	             , B.RMK
+	             )
+	</update>
+
+	<select id="findGroupCodeDetailInfo" resultType="map">
+		/* common-code.findGroupCodeDetailInfo */
+		SELECT    TEN_ID
+		          ,CCD
+		          ,DTLCD
+		          ,DTLCD_SORT
+		          ,USE_YN
+		          ,RMK
+		          ,REGR_ID
+		          ,REG_DTTM
+		          ,MODR_ID
+		          ,MOD_DTTM
+		          FROM DTLCD
+		          WHERE TEN_ID = #{g.tenant}
+		          AND CCD = #{p.ccd}
+		          AND DTLCD = #{p.dtlcd}
+	</select>
+
+
+
+	<insert id="insertGroupCodeDetailInfo">
+		/* common-code.insertGroupCodeDetailInfo */
+		 INSERT INTO DTLCD
+		         ( TEN_ID		/*시스템 아이디*/
+	             , STS			/*상태*/
+	             , REGR_ID		/*등록자 아이디*/
+	             , REG_DTTM		/*등록 일시*/
+	             , CCD		/*그룹 코드*/
+	             , DTLCD		/*상세 코드*/
+	             , DTLCD_SORT		/*정렬 순서*/
+	             , USE_YN		/*사용 여부*/
+	             , RMK			/*비고*/
+	             )
+	      VALUES ( #{g.tenant}
+	             , 'C'
+	             , #{g.username}
+	             , #{g.now}
+	             , #{p.ccd}
+	             , #{p.dtlcd}
+	             , #{p.dtlcd_sort,jdbcType=INTEGER}
+	             , #{p.use_yn}
+	             , #{p.rmk}
+	             )
+	</insert>
+
+
+
+	<!-- 상세 코드 테이블(DTLCD) DELETE -->
+	<delete id="deleteGroupCodeDetailInfoByDetailCode">
+	/* common-code.deleteGroupCodeDetailInfoByDetailCode */
+		DELETE 
+		  FROM DTLCD
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+		   AND DTLCD	= #{p.dtlcd}
+	</delete>
+	
+	<!-- 상세 코드 테이블(DTLCD) DELETE by CCD -->
+	<delete id="deleteGroupCodeDetailInfo">
+	/* common-code.deleteGroupCodeDetailInfo */
+		DELETE 
+		  FROM DTLCD
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+	</delete>
+	
+
+<!--
+	상세 코드 명(DTLCD_MULTLANG)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2
+-->
+	<!-- 상세 코드 명(DTLCD_MULTLANG) INSERT -->
+	<insert id="insertGroupCodeDetailName">
+	/* common-code.insertGroupCodeDetailName */
+		INSERT INTO DTLCD_MULTLANG
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+				 STS		/*상태 */
+        		,TEN_ID		/*시스템 아이디*/
+        		,LANG_CCD	/*언어 코드 */
+        		,REGR_ID		/*등록자 아이디 */
+        		,REG_DTTM		/*등록 일시 */
+        		,CCD		/*그룹 코드 */
+        		,DTLCD		/*상세 코드 */
+        		,DTLCD_NM	/*상세 코드 명 */
+        		,RMK		/*비고 */
+      	</trim>
+      	<trim prefix="values (" suffix=")" prefixOverrides=",">
+      			 'C'
+      			,#{g.tenant}
+        		,#{p.lang_ccd}
+        		,#{g.username}
+        		,#{g.now}
+        		,#{p.ccd}
+        		,#{p.dtlcd}
+        		,#{p.dtlcd_nm}
+        		,#{p.rmk}
+      	</trim>
+	</insert>
+
+	<!-- 상세 코드 명(DTLCD_MULTLANG) UPDATE -->
+	<update id="updateGroupCodeDetailName">
+	/* common-code.updateGroupCodeDetailName */
+		UPDATE DTLCD_MULTLANG
+		<trim prefix="set" prefixOverrides=",">
+				 STS 		= 'U'
+				,MODR_ID 	= #{g.username}		/*수정자 아이디*/
+			  	,MOD_DTTM 	= #{g.now}			/*수정 일시*/
+				,DTLCD_NM 	= #{p.dtlcd_nm} 	/*상세 코드 명 */
+				,RMK		= #{p.rmk}			/*비고*/
+		</trim>
+		 WHERE TEN_ID		= #{g.tenant}
+		   AND LANG_CCD		= #{p.lang_ccd}
+		   AND CCD		= #{p.ccd}
+		   AND DTLCD		= #{p.dtlcd}
+	</update>
+	
+	<!-- 상세 코드 명(DTLCD_MULTLANG) DELETE -->
+	<delete id="deleteGroupCodeDetailNameByDetailCode">
+	/* common-code.deleteGroupCodeDetailNameByDetailCode */
+		DELETE 
+		  FROM DTLCD_MULTLANG
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+		   AND DTLCD	= #{p.dtlcd}
+	</delete>
+	
+	<!-- 상세 코드 명(DTLCD_MULTLANG) DELETE by CCD -->
+	<delete id="deleteGroupCodeDetailName">
+	/* common-code.deleteGroupCodeDetailName */
+		DELETE 
+		  FROM DTLCD_MULTLANG
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+	</delete>
+
+
+<!-- 
+	상세 코드 속성 값(CCD_CSTR_CND_VAL)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2
+-->		
+	<!-- 상세 코드 속성 값(ESADATA) SELECT -->
+	<select id="findDetailCodeAttributeValue" resultType="map">
+	/* common-code.findDetailCodeAttributeValue */
+		   SELECT TEN_ID				/*시스템 아이디 */
+				 ,CCD				/*그룹 코드 */
+				 ,DTLCD				/*상세 코드 */
+				 ,CSTR_CND_CD			/*속성 코드 */
+				 ,CSTR_CND_VAL	/*상세 코드 속성 값 */
+				 ,REGR_ID				/*등록자 아이디 */
+				 ,REG_DTTM				/*등록 일시 */
+				 ,MODR_ID				/*수정자 아이디 */
+				 ,MOD_DTTM				/*수정 일시 */
+			 FROM CCD_CSTR_CND_VAL
+		    WHERE TEN_ID 	= #{g.tenant}
+		      AND CCD 	= #{p.ccd}
+		      AND DTLCD 	= #{p.dtlcd}
+		      AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+	</select>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) INSERT -->
+	<insert id="insertGroupCodeAttributeValue">
+	/* common-code.insertGroupCodeAttributeValue */
+		INSERT INTO CCD_CSTR_CND_VAL
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+        		 TEN_ID				/*시스템 아이디*/
+        		,REGR_ID				/*등록자 아이디 */
+        		,REG_DTTM				/*등록 일시 */
+      			,CCD				/*그룹 코드 */
+      			,DTLCD				/*상세 코드 */
+      			,CSTR_CND_CD			/*속성 코드 */
+      			,CSTR_CND_VAL	/*상세 코드 속성 값 */
+      	</trim>
+      	<trim prefix="values (" suffix=")" prefixOverrides=",">
+      			 #{g.tenant}
+      			,#{g.username}
+      			,#{g.now}
+      			,#{p.ccd}
+      			,#{p.dtlcd}
+      			,#{p.cstr_cnd_cd}
+      			,#{p.cstr_cnd_val}
+      	</trim>
+	</insert>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) UPDATE -->
+	<update id="updateGroupCodeAttributeValue">
+	/* common-code.updateGroupCodeAttributeValue */
+		UPDATE CCD_CSTR_CND_VAL
+		   SET MODR_ID 			= #{g.username} 		/*수정자 아이디*/
+			  ,MOD_DTTM 			= #{g.now} 				/*수정 일시*/
+			  ,CSTR_CND_VAL 	= #{p.cstr_cnd_val}	/*상세 코드 속성 값 */
+		 WHERE TEN_ID	= #{g.tenant}
+		   AND CCD	= #{p.ccd}
+		   AND DTLCD	= #{p.dtlcd}
+		   AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+	</update>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) DELETE -->
+	<delete id="deleteGroupCodeAttributeValueByAttributeCodeAndDetailCode">
+	/* common-code.deleteGroupCodeAttributeValueByAttributeCodeAndDetailCode */
+		DELETE 
+		  FROM CCD_CSTR_CND_VAL
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD 	= #{p.ccd}
+		   AND DTLCD 	= #{p.dtlcd}
+		   AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+	</delete>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) DELETE by CCD -->
+	<delete id="deleteGroupCodeAttributeValue">
+	/* common-code.deleteGroupCodeAttributeValue */
+		DELETE 
+		  FROM CCD_CSTR_CND_VAL
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD 	= #{p.ccd}
+	</delete>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) DELETE by ATTR_CD -->
+	<delete id="deleteGroupCodeAttributeValueByAttributeCode">
+	/* common-code.deleteGroupCodeAttributeValueByAttributeCode */
+		DELETE 
+		  FROM CCD_CSTR_CND_VAL
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD 	= #{p.ccd}
+		   AND CSTR_CND_CD	= #{p.cstr_cnd_cd}
+	</delete>
+	
+	<!-- 상세 코드 속성 값(CCD_CSTR_CND_VAL) DELETE by DTLCD -->
+	<delete id="deleteGroupCodeAttributeValueByDetailCode">
+	/* common-code.deleteGroupCodeAttributeValueByDetailCode */
+		DELETE 
+		  FROM CCD_CSTR_CND_VAL
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND CCD 	= #{p.ccd}
+		   AND DTLCD 	= #{p.dtlcd}
+	</delete>
+	
+	<insert id="insertDefaultGroupCodeDetailName">
+	/* common-code.insertDefaultGroupCodeDetailName */
+		INSERT INTO DTLCD_MULTLANG
+			(
+			TEN_ID
+			,LANG_CCD
+			,CCD
+			,DTLCD
+			,DTLCD_NM
+			,RMK
+			,STS
+			,REGR_ID
+			,REG_DTTM
+			)
+			SELECT
+				   TEN_ID
+				  ,#{p.locale}
+				  ,CCD
+				  ,DTLCD
+				  ,DTLCD_NM
+				  ,RMK
+				  ,STS
+				  ,'SYSTEM'
+				  ,#{g.now}
+			 FROM DTLCD_MULTLANG
+			WHERE TEN_ID =  #{g.tenant}
+			  AND LANG_CCD = #{p.defaultLocale}
+			  AND CCD = #{p.ccd}
+			  AND DTLCD = #{p.dtlcd}
+			  AND STS != 'D'
+			  AND NOT EXISTS ( SELECT 1 
+                                 FROM DTLCD_MULTLANG
+                                WHERE TEN_ID = #{g.tenant}
+                                  AND LANG_CCD = #{p.locale}
+                                  AND CCD = #{p.ccd} 
+                                  AND DTLCD = #{p.dtlcd}
+                                  AND STS != 'D'
+                             )
+	</insert>
+</mapper>

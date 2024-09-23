@@ -1,0 +1,30 @@
+@charset "utf-8";
+
+/*~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ 
+2016.04. KCM
+S-OilTOTAL E-PROCUREMENT SYSTEM Default Css
+~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~*/
+
+/*Reset*/
+html, body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, hr, pre, code, form, fieldset, legend, input, textarea, button, p, blockquote, th, td {margin:0; padding:0;}
+#wrap {width:100%; height:100%;}
+#wrap {font-size:12px;line-height:1.5em;font-family:'맑은 고딕','malgungothic','Tahoma';color:#424242;-webkit-text-size-adjust:none; !important; min-height: 100%; height: 100%;}
+h1, h2, h3, h4, h5, h6{/*font-size:100%;*/font-family:'맑은 고딕','malgungothic','Tahoma'; !important;}
+/*li {list-style:none;}*/
+img, fieldset {border:0 none;}
+img {vertical-align:middle;}
+legend, hr {display:none;}
+legend {position:absolute; top:0; left:0; width:0; height:0; display:block; overflow:hidden; visibility:hidden; font-size:0; line-height:0;}
+caption {padding:0;width:0;height:0;overflow:hidden;visibility:hidden;font-size:0;line-height:0;}
+input, select, textarea {font-size:100%; color:#424242; font-family:'맑은 고딕','malgungothic','Tahoma';vertical-align:middle }
+input {border-radius:0; font-size:117%;}
+button {overflow:visible;border:0 none;background:transparent;vertical-align:top;cursor:pointer;font-family:'맑은 고딕','malgungothic','Tahoma';}
+button::-moz-focus-inner {border:0;padding:0;}
+em, address {font-style:normal;}
+table {border-spacing:0; border-collapse: collapse;;}
+/*a, a:link, a:visited {cursor:pointer;text-decoration:none; color:#424242;}*/
+p, a, h2, h3 {word-wrap:break-word;}
+a, em, label, span, strong, button {display:inline-block;}
+
+
+

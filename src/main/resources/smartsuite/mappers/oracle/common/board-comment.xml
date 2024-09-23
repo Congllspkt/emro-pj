@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board-comment">
+
+<!-- 
+	게시판 유형(BBD_SETUP)
+	@author JuEung Kim
+	@since 2016. 3. 16
+	@변경이력 : [2016. 3. 16] JuEung Kim 최초작성
+-->	
+	<!-- 게시판 유형 목록 조회  -->
+	<select id="findBoardAdminList" resultType="map">
+	/* boardAdmin.findBoardAdminList */
+           SELECT TEN_ID           /*시스템 아이디 */
+                 ,BBD_UUID         /*게시판_아이디 */
+                 ,BBD_NM         /*게시판_이름 */
+                 ,BBD_DSPY_NM    /*게시판_표시_명 */
+                 ,BBD_PAGE_LIST_CNT   /*게시판_목록_수 */
+                 ,BBD_PAGE_CNT   /*게시판_페이지_수 */
+                 ,PST_TIT_LEN    /*게시판_제목_길이 */
+                 ,PST_NO_SHOW_YN  /*게시물_번호_보이기_여부 */
+                 ,REG_DTTM_SHOW_YN   /*등록_일시_보이기_여부 */
+                 ,CRTR_SHOW_YN   /*등록자_명_보이기_여부 */
+                 ,VCNT_SHOW_YN /*조회_수_보이기_여부 */
+                 ,ATH_SHOW_YN      /*첨부_보이기_여부 */
+                 ,CAT_SHOW_YN     /*카테고리_보이기_여부 */
+                 ,PSTG_PD_USE_YN       /*기간_사용_여부 */
+                 ,CMNT_USE_YN     /*댓글_사용_여부 */
+                 ,CAT_USE_YN      /*카테고리_사용_여부 */
+                 ,SECTXT_USE_YN     /*비밀글_사용_여부 */
+                 ,ATH_USE_YN       /*첨부_사용_여부 */
+                 ,BBD_RE_USE_YN      /*답글_사용_여부 */
+                 ,EDTR_TYP         /*에디터_유형 */
+                 ,REG_DTTM           /*등록_일시 */
+                 ,MOD_DTTM           /*수정_일시 */
+                 ,REGR_ID           /*등록자_아이디 */
+                 ,MODR_ID           /*수정자_아이디 */
+           		 ,CO_BBD_USE_YN     /* 회사(법인)별 게시판 사용 여부 */
+             FROM BBD_SETUP
+            WHERE TEN_ID = #{g.tenant}
+		<if test="p.bbd_nm != null and p.bbd_nm != ''">
+			<bind name="boardNmPattern" value="'%' + p.bbd_nm + '%'"/>
+		      AND BBD_NM LIKE #{boardNmPattern}
+		</if>
+		<if test="p.bbd_dspy_nm != null and p.bbd_dspy_nm != ''">
+			<bind name="boardDispNmPattern" value="'%' + p.bbd_dspy_nm + '%'"/>
+		      AND BBD_DSPY_NM LIKE #{boardDispNmPattern}
+		</if>
+         ORDER BY BBD_UUID
+	</select>
+	
+	<!-- 신규 게시판 아이디 조회 -->
+	<select id="findBoardId" resultType="java.lang.String">
+	/* boardAdmin.findBoardId */
+           SELECT CASE WHEN BBD_UUID IS NULL THEN 1
+                       ELSE BBD_UUID+1 END
+             FROM (
+                   SELECT MAX(CAST(BBD_UUID AS INT)) AS BBD_UUID
+                     FROM BBD_SETUP
+                    WHERE TEN_ID = #{g.tenant}
+                  ) TMP
+	</select>
+	
+	<!-- 게시판 유형 단건 조회  -->
+	<select id="findBoardAdminInfo" resultType="map">
+	/* boardAdmin.findBoardAdminInfo */
+           SELECT TEN_ID            /*시스템 아이디 */
+                 ,BBD_UUID          /*게시판_아이디 */
+                 ,BBD_NM          /*게시판_이름 */
+                 ,PSTG_SUBJ_TYP     /*게시판_유형 */
+                 ,BBD_DSPY_NM     /*게시판_표시_명 */
+                 ,BBD_PAGE_LIST_CNT    /*게시판_목록_수 */
+                 ,BBD_PAGE_CNT    /*게시판_페이지_수 */
+                 ,PST_TIT_LEN     /*게시판_제목_길이 */
+                 ,PST_NO_SHOW_YN   /*게시물_번호_보이기_여부 */
+                 ,REG_DTTM_SHOW_YN    /*등록_일시_보이기_여부 */
+                 ,CRTR_SHOW_YN    /*등록자_명_보이기_여부 */
+                 ,VCNT_SHOW_YN  /*조회_수_보이기_여부 */
+                 ,ATH_SHOW_YN       /*첨부_보이기_여부 */
+                 ,CAT_SHOW_YN      /*카테고리_보이기_여부 */
+                 ,PSTG_PD_USE_YN        /*기간_사용_여부 */
+                 ,CMNT_USE_YN      /*댓글_사용_여부 */
+                 ,CAT_USE_YN       /*카테고리_사용_여부 */
+                 ,SECTXT_USE_YN      /*비밀글_사용_여부 */
+                 ,ATH_USE_YN        /*첨부_사용_여부 */
+                 ,BBD_RE_USE_YN       /*답글_사용_여부 */
+                 ,EDTR_TYP          /*에디터_유형 */
+                 ,REG_DTTM            /*등록_일시 */
+                 ,MOD_DTTM            /*수정_일시 */
+                 ,REGR_ID            /*등록자_아이디 */
+                 ,MODR_ID            /*수정자_아이디 */
+           		 ,CO_BBD_USE_YN		 /* 회사(법인)별 게시판 사용 여부*/
+             FROM BBD_SETUP
+            WHERE TEN_ID 	= #{g.tenant}
+              AND BBD_UUID 	= #{p.bbd_uuid}
+	</select>
+
+	<!-- 게시판 유형 INSERT -->
+	<insert id="insertBoardAdmin">
+	/* boardAdmin.insertBoardAdmin */
+		INSERT INTO BBD_SETUP
+		(
+			 TEN_ID				/*시스템 아이디 */
+			,BBD_UUID			/*게시판_아이디 */
+			,BBD_NM			/*게시판_이름 */
+			,PSTG_SUBJ_TYP		/*게시판_유형 */
+			,BBD_DSPY_NM		/*게시판_표시_명 */
+			,BBD_PAGE_LIST_CNT		/*게시판_목록_수 */
+			,BBD_PAGE_CNT		/*게시판_페이지_수 */
+			,PST_TIT_LEN		/*게시판_제목_길이 */
+			,PST_NO_SHOW_YN	/*게시물_번호_보이기_여부 */
+			,REG_DTTM_SHOW_YN		/*등록_일시_보이기_여부 */
+			,CRTR_SHOW_YN		/*등록자_명_보이기_여부 */
+			,VCNT_SHOW_YN	/*조회_수_보이기_여부 */
+			,ATH_SHOW_YN		/*첨부_보이기_여부 */
+			,CAT_SHOW_YN		/*카테고리_보이기_여부 */
+			,PSTG_PD_USE_YN			/*기간_사용_여부 */
+			,CMNT_USE_YN		/*댓글_사용_여부 */
+			,CAT_USE_YN		/*카테고리_사용_여부 */
+			,SECTXT_USE_YN		/*비밀글_사용_여부 */
+			,ATH_USE_YN			/*첨부_사용_여부 */
+			,BBD_RE_USE_YN		/*답글_사용_여부 */
+			,EDTR_TYP			/*에디터_유형 */
+			,REG_DTTM				/*등록_일시 */
+			,REGR_ID				/*등록자_아이디 */
+			,CO_BBD_USE_YN		/* 회사(법인)별 게시판 사용 여부 */
+		)
+		VALUES
+		(
+			 #{g.tenant}
+			,#{p.bbd_uuid}
+			,#{p.bbd_nm}
+			,#{p.pstg_subj_typ}
+			,#{p.bbd_dspy_nm}
+			,#{p.bbd_page_list_cnt}
+			,#{p.bbd_page_cnt}
+			,#{p.pst_tit_len}
+			,#{p.pst_no_show_yn}
+			,#{p.reg_dttm_show_yn}
+			,#{p.crtr_show_yn}
+			,#{p.vcnt_show_yn}
+			,#{p.ath_show_yn}
+			,#{p.cat_show_yn}
+			,#{p.pstg_pd_use_yn}
+			,#{p.cmnt_use_yn}
+			,#{p.cat_use_yn}
+			,#{p.sectxt_use_yn}
+			,#{p.ath_use_yn}
+			,#{p.bbd_re_use_yn}
+			,#{p.edtr_typ}
+			,#{g.now}
+			,#{g.username}
+			,#{p.co_bbd_use_yn}
+		)
+	</insert>
+	
+	<!-- 게시판 유형 UPDATE -->
+	<update id="updateBoardAdmin">
+	/* boardAdmin.updateBoardAdmin */
+		UPDATE BBD_SETUP SET
+				 MODR_ID = #{g.username}		/*수정자 아이디*/
+				,MOD_DTTM = #{g.now}			/*수정 일시*/
+				,BBD_NM		= #{p.bbd_nm} 			/*게시판_이름 */
+				,PSTG_SUBJ_TYP		= #{p.pstg_subj_typ} 			/*게시판_유형 */
+				,BBD_DSPY_NM 	= #{p.bbd_dspy_nm} 		/*게시판_표시_명 */
+				,BBD_PAGE_LIST_CNT	= #{p.bbd_page_list_cnt}		/*게시판_목록_수 */
+				,BBD_PAGE_CNT	= #{p.bbd_page_cnt}		/*게시판_페이지_수 */
+				,PST_TIT_LEN	= #{p.pst_tit_len}		/*게시판_제목_길이 */
+				,PST_NO_SHOW_YN	= #{p.pst_no_show_yn}	/*게시물_번호_보이기_여부 */
+				,REG_DTTM_SHOW_YN		= #{p.reg_dttm_show_yn}	/*등록_일시_보이기_여부 */
+				,CRTR_SHOW_YN		= #{p.crtr_show_yn}	/*등록자_명_보이기_여부 */
+				,VCNT_SHOW_YN	= #{p.vcnt_show_yn} /*조회_수_보이기_여부 */
+				,ATH_SHOW_YN		= #{p.ath_show_yn}		/*첨부_보이기_여부 */
+				,CAT_SHOW_YN		= #{p.cat_show_yn}		/*카테고리_보이기_여부 */
+				,PSTG_PD_USE_YN			= #{p.pstg_pd_use_yn}		/*기간_사용_여부 */
+				,CMNT_USE_YN		= #{p.cmnt_use_yn}		/*댓글_사용_여부 */
+				,CAT_USE_YN		= #{p.cat_use_yn}		/*카테고리_사용_여부 */
+				,SECTXT_USE_YN		= #{p.sectxt_use_yn} 	/*비밀글_사용_여부 */
+				,ATH_USE_YN			= #{p.ath_use_yn}		/*첨부_사용_여부 */
+				,BBD_RE_USE_YN		= #{p.bbd_re_use_yn}		/*답글_사용_여부 */
+				,EDTR_TYP			= #{p.edtr_typ}			/*에디터_유형 */
+		    	,CO_BBD_USE_YN		= #{p.co_bbd_use_yn}	/* 회사(법인)별 게시판 사용 여부 */
+		WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		  AND BBD_UUID 	= #{p.bbd_uuid}		/*게시판_아이디 */
+	</update>
+	
+	<!-- 게시판 유형 DELETE -->
+	<delete id="deleteBoardAdmin">
+	/* boardAdmin.deleteBoardAdmin */
+		DELETE 
+		  FROM BBD_SETUP
+		 WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		   AND BBD_UUID = #{p.bbd_uuid}		/*게시판_아이디 */
+	</delete>
+	
+
+	
+<!-- 게시물 조회 BY BBD_UUID -->
+	<select id="findBoardByBoardIdList" resultType="map">
+	/* boardAdmin.findBoardByBoardIdList */
+           SELECT *
+             FROM BBD A
+        LEFT JOIN BBD_CMNT B
+               ON A.TEN_ID   = B.TEN_ID
+              AND A.PST_NO  = B.PST_NO
+            WHERE A.TEN_ID   = #{g.tenant}
+              AND A.BBD_UUID = #{p.bbd_uuid}
+	</select>
+	
+	<!-- 게시판 ROLE DELETE BY BBD_UUID -->
+	<delete id="deleteBoardAuthById">
+	/* deleteBoardAuthById */
+		DELETE
+		  FROM BBD_ROLE
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND BBD_UUID = #{p.bbd_uuid}
+	</delete>
+	
+	<!-- 게시판 ADMIN DELETE BY BBD_UUID -->
+	<delete id="deleteAdminUserById">
+		DELETE
+		  FROM BBD_MGR
+		 WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		   AND BBD_UUID = #{p.bbd_uuid}		/*게시판_아이디 */
+	</delete>
+
+	
+	
+	
+<!-- 
+	게시판 어드민(BBD_MGR)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->
+	<!-- 게시판 어드민 목록 조회  -->
+	<select id="findAdminUserList" resultType="map">
+	/* boardAdmin.findAdminUserList */
+           SELECT BM.TEN_ID      /*시스템 아이디 */
+                 ,BM.BBD_UUID    /*게시판_아이디 */
+                 ,BM.CO_CD     /*회사 코드 */
+                 ,BM.USR_ID      /*사용자_아이디 */
+                 ,BM.REG_DTTM      /*등록 일시 */
+                 ,BM.REGR_ID      /*등록자 아이디 */
+                 ,USR.USR_NM      /*이름*/
+                 ,USR.USR_NM_EN      /*이름*/
+                 ,LOGIC_ORG.LOGIC_ORG_NM AS COMP_NM  /*회사*/
+                 ,LOGIC_ORG.LOGIC_ORG_NM_EN AS COMP_NM_EN  /*회사*/
+             FROM BBD_MGR BM
+       INNER JOIN USR USR
+               ON USR.TEN_ID      = BM.TEN_ID
+              AND USR.CO_CD     = BM.CO_CD
+              AND USR.USR_ID      = BM.USR_ID
+       INNER JOIN LOGIC_ORG LOGIC_ORG
+               ON LOGIC_ORG.TEN_ID      = USR.TEN_ID
+              AND LOGIC_ORG.LOGIC_ORG_TYP_CCD  = 'COMPANY'
+              AND LOGIC_ORG.LOGIC_ORG_CD      = USR.CO_CD
+            WHERE BM.TEN_ID      = #{g.tenant}    /*시스템 아이디 */
+              AND BM.BBD_UUID    = #{p.bbd_uuid}  /*게시판_아이디 */
+	</select>
+	
+	<!-- 게시판 어드민 여부 조회 -->
+	<select id="findBoardAdminYnInfo" resultType="map">
+	/* boardAdmin.findBoardAdminYnInfo */
+		SELECT CASE WHEN COUNT(*) > 0 THEN 'Y' ELSE 'N' END AS admin_yn
+		  FROM BBD_MGR
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND BBD_UUID = #{p.bbd_uuid}
+		   AND USR_ID	= #{g.username} 
+	</select>
+	
+	<!-- 게시판 어드민 INSERT -->
+	<insert id="insertAdminUser">
+	/* boardAdmin.insertAdminUser */
+		INSERT INTO BBD_MGR
+		(
+			 TEN_ID 	/*시스템 아이디 */
+			,BBD_UUID 	/*게시판_아이디 */
+			,CO_CD	/*회사 코드 */
+			,USR_ID 	/*사용자_아이디 */
+			,REG_DTTM 	/*등록 일시 */
+			,REGR_ID 	/*등록자 아이디 */
+		)
+		VALUES
+		(
+			 #{g.tenant}
+			,#{p.bbd_uuid}
+			,#{p.co_cd}
+			,#{p.usr_id}
+			,#{g.now}
+			,#{g.username}
+		)
+	</insert>
+	
+	<!-- 게시판 어드민 DELETE -->
+	<delete id="deleteAdminUser">
+	/* boardAdmin.deleteAdminUser */
+		DELETE
+		  FROM BBD_MGR
+		 WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		   AND BBD_UUID = #{p.bbd_uuid}		/*게시판_아이디 */
+		   AND CO_CD  = #{p.co_cd}		/*회사 코드*/
+		   AND USR_ID	= #{p.usr_id}		/*사용자_아이디 */
+	</delete>
+	
+
+
+<!-- 
+	게시판 롤(BBD_ROLE)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->	
+	<!-- 게시판 롤 조회 -->
+	<select id="findBoardAuthList" resultType="map">
+	/* boardAdmin.findBoardAuthList */
+           SELECT ROLE.TEN_ID      /*시스템 아이디 */
+                 ,ROLE.ROLE_CD     /*롤 코드 */
+                 ,ROLE.ROLE_NM     /*롤 명 */
+                 ,ROLE.ROLE_NM_EN  /*롤 영문 명 */
+                 ,#{p.bbd_uuid} AS BBD_UUID	/*게시판id*/
+                 ,BR.WRTG_PERM_YN      /*쓰기*/
+                 ,BR.SHOW_YN     /*조회*/
+             FROM ROLE ROLE
+        LEFT JOIN BBD_ROLE BR
+               ON BR.ROLE_CD   = ROLE.ROLE_CD
+              AND BR.BBD_UUID  = #{p.bbd_uuid}
+            WHERE ROLE.TEN_ID    = #{g.tenant}
+              AND ROLE.STS <![CDATA[<>]]> 'D'
+         ORDER BY ROLE.ROLE_CD
+	</select>
+	
+	<!-- 사용자 게시판 롤 여부 조회 -->
+	<select id="findInfoBoardRole" resultType="map">
+	/* boardAdmin.findInfoBoardRole */
+           SELECT MAX(B.WRTG_PERM_YN)  AS WRTG_PERM_YN
+                 ,MAX(B.SHOW_YN) AS SHOW_YN
+             FROM ROLE_USR A
+       INNER JOIN BBD_ROLE B
+               ON A.TEN_ID   = B.TEN_ID
+              AND A.ROLE_CD  = B.ROLE_CD
+            WHERE A.TEN_ID   = #{g.tenant}
+              AND A.USR_ID   = #{g.username}
+              AND B.BBD_UUID = #{p.bbd_uuid}
+	</select>
+	
+	<!-- 게시판 롤 INSERT -->
+	<insert id="insertBoardAuth">
+	/* boardAdmin.insertBoardAuth */
+		INSERT INTO BBD_ROLE
+		(
+			 TEN_ID		/*시스템 아이디 */
+			,BBD_UUID	/*게시판_아이디 */
+			,ROLE_CD	/*롤 코드 */
+			,WRTG_PERM_YN		/*쓰기 여부 */
+			,SHOW_YN	/*조회 여부 */
+			,REG_DTTM		/*등록 일시 */
+			,REGR_ID		/*등록자 아이디 */
+		)
+		VALUES
+		(
+			 #{g.tenant}
+			,#{p.bbd_uuid}
+			,#{p.role_cd}
+			,#{p.wrtg_perm_yn}
+			,#{p.show_yn}
+			,#{g.now}
+			,#{g.username}
+		)
+		
+	</insert>
+	
+	<!-- 게시판 롤 DELETE -->
+	<delete id="deleteBoardAuth">
+	/* boardAdmin.deleteBoardAuth */
+		DELETE
+		  FROM BBD_ROLE
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND BBD_UUID = #{p.bbd_uuid}
+		   AND ROLE_CD	= #{p.role_cd}
+	</delete>
+
+
+	<select id="findCompanyListForBoard" resultType="map">
+		/* boardAdmin.findCompanyListForBoard */
+		SELECT LO.LOGIC_ORG_CD AS CO_CD
+			 , LO.LOGIC_ORG_TYP_CCD
+		     , CASE WHEN 'en_US' = #{g.locale}
+		         		THEN LO.LOGIC_ORG_NM_EN
+		         		ELSE LO.LOGIC_ORG_NM
+		        END AS CO_NM
+			 , CASE WHEN EXISTS(SELECT 1
+			                      FROM BBD_CO BC
+			                     WHERE BC.TEN_ID = #{g.tenant}
+			                       AND BC.BBD_UUID = #{p.bbd_uuid}
+			                       AND BC.CO_CD = LO.LOGIC_ORG_CD
+			                    )
+						THEN 'Y'
+						ELSE 'N'
+				END AS USE_YN
+			, #{p.bbd_uuid} AS BBD_UUID
+		FROM LOGIC_ORG LO
+		WHERE LO.TEN_ID  = #{g.tenant}
+		  AND LO.LOGIC_ORG_TYP_CCD  = 'COMPANY'
+		  AND LO.USE_YN = 'Y'
+		  AND LO.STS != 'D'
+	 ORDER BY LO.LOGIC_ORG_CD
+	</select>
+
+	<select id="findBoardCompanyList" resultType="map">
+		/* boardAdmin.findBoardCompany : 게시판 사용 회사(법인) 조회*/
+		SELECT BC.CO_CD
+			 , (SELECT CASE WHEN 'en_US' = #{g.locale} THEN LOGIC_ORG_NM_EN
+							ELSE LOGIC_ORG_NM
+							END AS COMP_NM
+				 FROM LOGIC_ORG
+				WHERE TEN_ID = #{g.tenant}
+				 AND LOGIC_ORG_TYP_CCD = 'COMPANY'
+				 AND LOGIC_ORG_CD = BC.CO_CD
+				 AND USE_YN = 'Y'
+				 AND STS != 'D') AS COMP_NM
+		  FROM BBD_CO BC
+		WHERE BC.TEN_ID = #{g.tenant}
+		  AND BC.BBD_UUID = #{p.bbd_uuid}
+		  AND BC.STS != 'D'
+		  <if test="p.co_cd != null and p.co_cd != ''">
+		  AND BC.CO_CD = #{p.co_cd}
+		  </if>
+
+	</select>
+
+	<insert id="insertBoardCompany">
+		/* boardAdmin.insertBoardCompany : 게시판 사용 회사(법인) 등록 */
+		INSERT INTO BBD_CO
+		(
+		 	TEN_ID
+			, BBD_UUID
+			, CO_CD
+			, RMK
+			, REGR_ID
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES
+		(
+			#{g.tenant}
+			, #{p.bbd_uuid}
+			, #{p.co_cd}
+			, #{p.rmk}
+			, #{g.username}
+			, #{g.username}
+			, #{g.now}
+		)
+	</insert>
+
+	<delete id="deleteBoardCompany">
+		/* boardAdmin.insertBoardCompany : 게시판 사용 회사(법인) 삭제 */
+		DELETE
+		 FROM BBD_CO
+		WHERE TEN_ID = #{g.tenant}
+		  AND BBD_UUID = #{p.bbd_uuid}
+		  AND CO_CD = #{p.co_cd}
+	</delete>
+
+	<update id="updateBoardCompany">
+		/* boardAdmin.updateBoardCompany : 게시판 사용 회사(법인) 수정 */
+		UPDATE BBD_CO
+		   SET STS = #{p.sts}
+		     , MODR_ID = #{g.username}
+			 , MOD_DTTM = #{g.now}
+		WHERE TEN_ID = #{g.tenant}
+		  AND BBD_UUID = #{p.bbd_uuid}
+		  <if test="p.co_cd != null and p.co_cd != ''">
+		  AND CO_CD = #{p.co_cd}
+		  </if>
+	</update>
+</mapper>

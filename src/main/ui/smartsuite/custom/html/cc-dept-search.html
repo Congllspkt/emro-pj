@@ -1,0 +1,179 @@
+<!--
+
+부서검색 자동완성 text-field 커스텀 태그
+
+<cc-dept-search value="{{입력 value}}" result-field="결과 fieldName" result-value="{{검색 결과 value}}"></cc-dept-search>
+
+1. 주요 Property
+1) value : 해당 텍스트 필드 input value binding
+[string]
+
+2) result-field : 검색 결과 object field
+[string] [optional]
+
+3) result-value : result-field 에서 지정한 결과 object의 field의 value binding
+[string] [optional]
+
+
+2. value Proeprty
+1) value-class : 입력 텍스트 필드 크기
+[string] [optional]
+
+2) value-placeholder : 입력 텍스트 필드 placeholder
+[string] [optional]
+
+3) readonly, required, disabled 입력 텍스트 필드 제어
+[boolean] [optional]
+
+
+3. result Value Property
+1) result-class : 결과 텍스트 필드 크기
+[string] [optional]
+
+2) result-placeholder : 결과 텍스트 필드 placeholder
+[string] [optional]
+
+3) result-hidden : 결과 텍스트 필드 숨김 제어
+[boolean] [optional]
+
+
+4. trigger Field Property
+1) disabled-trigger : Trigger Field disabled 제어
+[boolean] [optional]
+
+2) hide-trigger : Trigger Field 숨김 제어
+[boolean] [optional]
+
+-->
+<!-- 
+ author : Yeon-u Kim
+ Since 2016. 4. 14.
+ 변경이력 : [2016. 4. 14.] Yeon-u Kim 최초작성
+-->
+<sc-link rel="import" href="../../../bp/shared/ep-dept-list.html" lazy></sc-link>
+
+<dom-module id="cc-dept-search">
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <!--
+        ************************************************************************************************************
+        * UI Area
+        ************************************************************************************************************
+    -->
+    <template>
+        <sc-text-field class$="[[valueClass]] value-field"
+                       placeholder="[[valuePlaceholder]]"
+                       requried="[[required]]"
+                       disabled="[[disabled]]"
+                       readonly="[[readonly]]"
+                       value="{{value}}"
+                       on-enter="onFindDept"
+                       on-keydown="onKeyDown"
+                       maxLength="200">
+        </sc-text-field>
+        <div class="hspace-5" hidden="[[hideTrigger]]"></div>
+        <sc-trigger-field trigger-cls="field-search" on-trigger-click="onShowPopupFindDept" disabled="[[disabledTrigger]]" hidden="[[hideTrigger]]"></sc-trigger-field>
+        <div class="hspace-5" hidden="[[resultHidden]]"></div>
+        <sc-text-field class$="[[resultClass]]" value="{{resultValue}}" placeholder="[[resultPlaceholder]]" hidden="[[resultHidden]]" readonly></sc-text-field>
+    </template>
+    <!--
+    ************************************************************************************************************
+    * Script Area
+    ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is : 'cc-dept-search',
+
+            behaviors : [
+                Polymer.CCSearchFieldBehavior
+            ],
+
+            properties : {
+                // value Field
+                valueField: {
+                    type: String,
+                    value: "dept_nm"
+                },
+                valueFieldEn: {
+                    type: String,
+                    value: "dept_nm_en"
+                },
+
+                // result-Value Field
+                resultField: {
+                    type: String,
+                    value: "dept_cd"
+                },
+
+                valuePlaceholder : {
+                    type: String,
+                    value: I18N.translate("부서 명")
+                },
+
+                resultPlaceholder : {
+                    type: String,
+                    value: I18N.translate("부서 코드")
+                },
+            },
+
+            // text-field 검색
+            onFindDept : function(){
+                var me = this;
+                if(!me.readonly) {
+                    //자동완성 함수 시작
+                    var deptPopup = me.createPopup();
+                    deptPopup.show();
+                    deptPopup.getWindowContent().load({
+                        singleSelect: true,
+                        defaultParam: {
+                            logic_org_cd: SCSessionManager.currentUser.co_cd,
+                            dept_nm: me.value
+                        },
+                        autoComplete: true
+                    });
+                }
+            },
+
+            // 검색버튼 클릭
+            onShowPopupFindDept : function(){
+                var me = this;
+                var deptPopup = me.createPopup();
+                deptPopup.show();
+                deptPopup.getWindowContent().load({
+                    singleSelect:true,
+                    defaultParam: {
+                        logic_org_cd: SCSessionManager.currentUser.co_cd,
+                        dept_nm: me.value
+                    }
+                });
+            },
+
+            // Popup 생성
+            createPopup: function(){
+                var me = this;
+                return UT.popup('ep-dept-list', me, 800, 608, {
+                    'selected-items' : function(popup, e) {
+                        var result = e.detail[0];
+
+                        if(result){
+                            me.clearFlag = false;
+                            if(UT.multiLocaleCheck()){
+                                me.set("value",       result[me.valueFieldEn]);  // 코드명 영문
+                            }else{
+                                me.set("value",       result[me.valueField]);  // 코드명
+                            }
+                            me.set("resultValue", result[me.resultField]); // 코드
+                            me.fire("result", result);
+                            popup.close();
+                        }
+                    }
+                }, {titleText : this.translate('부서 검색')});
+            },
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,115 @@
+<dom-module id="em-style-test">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <sc-ajax id="sampleAjax" url="ui/dev/pr/findListPr.do" body="{{searchParam}}" last-response="{{resultList}}"></sc-ajax>
+        <sc-ajax id="sampleAjax2" url="ui/dev/pr/findListPr.do" body="{{searchParam}}" on-response="onResponse"></sc-ajax>
+		
+         <sc-grid  id="gridPanel"  class="flex" editable="true" data-provider="{{resultList}}" selection-able-function="xxxxx">
+	         <cc-grid-toolbar titleText="그리드 조회 샘플">
+	         	<sc-number-field value="333" style="width:50px;"></sc-number-field>
+	         	<sc-number-field value="333" style="width:50px;"></sc-number-field>
+	         	<sc-combobox-field display-field="label" style="width:120px" value-field="data" items="{{comboList}}" placeholder="전체"></sc-combobox-field>
+         		<sc-combobox-field display-field="label" style="width:120px" value-field="data" items="{{comboList}}" placeholder="전체"></sc-combobox-field>
+	            <sc-button text="버튼1" on-click="onSearch" i18n-disabled></sc-button>
+	            <sc-button text="버튼2" on-click="onSearch2" i18n-disabled></sc-button>
+	        </cc-grid-toolbar>
+	        
+            <sc-grid-columns>
+                <sc-data-column data-field="col1"  header-text="컬럼1"  width="100"  text-align="center" required="true" converter="onConvert"></sc-data-column>
+                <sc-data-column data-field="col2"  header-text="컬럼2" editable="true"  width="200"  text-align="center" ></sc-data-column>
+                <sc-data-column data-field="col3"  header-text="컬럼3" editable="true"  width="200"  text-align="left"></sc-data-column>
+                <sc-data-column data-field="col4"  header-text="컬럼4"  width="200"  text-align="left"   ></sc-data-column>
+                <sc-data-column data-field="col5"  header-text="컬럼5"  width="200"  text-align="left"   ></sc-data-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+            	<sc-grid-field data-field="han"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+          
+    <script>
+        Polymer({
+            is: 'em-style-test',
+            
+            properties : {
+                gridEditable:{
+                    type : Object,
+                    value: true
+                },
+                searchParam : {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+                resultList: {
+                    type:Array
+                },
+                comboList : {
+                	type:Array,
+                	value : function(){
+                		return [ 
+                		         { label:'테스트1',data:'1'}, 
+                		         { label:'테스트2',data:'2'}, 
+                		         { label:'테스트3',data:'3'}, 
+                		         { label:'테스트4',data:'4'}, 
+                		         { label:'테스트5',data:'5'}, 
+                		        ] 
+                		
+                	}
+                }
+                
+            },
+            attached : function(){
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this.onSearch();
+                }
+            },
+            xxxxx : function(data){
+            	if(data.col2 === 'a'){
+            		return false;
+            	}
+            	return true;
+            },
+            onConvert : function(rowIndex, dataField, data){
+            	 var result = data[dataField];
+            	 
+                 return result*2;
+            },
+            onSearch : function(){
+               this.$.sampleAjax.service();
+            },
+            
+            onSearch2 : function(){
+               this.$.sampleAjax2.service();
+            },
+            onResponse : function(e, res){
+                var result = res.response;
+                /*
+                  for(var i = 0,len = result.length; i < len; i++ ){
+                     	 데이터 가공
+                  }
+                */
+                var list = [];
+                for(var i=0; i< result.length; i++){
+                	var data = result[i];
+                	data['col1'] = 2;
+                	
+                	list.push(data);
+                }
+                this.$.gridPanel.setDataProvider(list);
+
+            }
+            
+        });
+    </script>
+
+</dom-module>

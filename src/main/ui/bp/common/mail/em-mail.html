@@ -1,0 +1,62 @@
+<sc-link rel="import" href="es-mail-list.html"></sc-link>
+<sc-link rel="import" href="es-mail-form.html"></sc-link>
+<sc-link rel="import" href="es-mail-history.html"></sc-link>
+<sc-link rel="import" href="es-multi-mail-history.html"></sc-link>
+
+<dom-module id="em-mail">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+	        <es-mail-list id="list" on-selected-mail="onFindMailList" on-add-mail="onAddMail" on-delete-mail="onDeleteMail" class="flex-4"></es-mail-list>
+	        <div class="hspace-10"></div>
+	        <sc-tab-navigation id="tabNavi" class="flex-6">
+	            <es-mail-form id="form" title-text="이메일 템플릿" on-save-mail="onSaveMailList"></es-mail-form>
+	            <!--<es-mail-history id="history" title-text="이메일 전송 이력"></es-mail-history>-->
+	            <es-multi-mail-history id="multiHistory" title-text="이메일 전송 이력"></es-multi-mail-history>
+	        </sc-tab-navigation>
+    	</div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-mail',
+            
+            // 메일목록 : 메일아이디 선택
+            onFindMailList: function(e, data){
+                var me = this;
+                me.$.form.load(data);
+                //me.$.history.load(data);
+                me.$.multiHistory.load(data);
+            },
+            
+            // 메일목록 : 추가
+            onAddMail: function(){
+                var me = this;
+                
+                me.$.form.addMailForm();
+            },
+            
+         	// 메일목록 : 삭제
+            onDeleteMail: function(){
+                var me = this;
+                me.$.form.onClear();
+                //me.$.history.reset();
+                me.$.multiHistory.reset();
+            },
+            
+            // 메일양식 : 저장 완료
+            onSaveMailList: function(){
+                var me = this;
+                me.$.list.onSearch();
+            }
+            
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,137 @@
+<!-- 
+    그리드 searchItem을 위한 커스텀 컴포넌트
+ -->
+<dom-module id="cc-grid-search-item">
+	<style>
+		:host {
+			display: inline-flex;
+		}
+	</style>
+	<template>
+		<div style="display:flex">
+			<sc-combobox-field	class$="[[comboCls]]" value="{{_searchType}}" items="[[items]]" display-field="headerText" value-field="dataField"
+								required="true" selected-index="0" input-clear="false">
+			</sc-combobox-field>
+			<sc-text-field	class$="[[textCls]]" value="{{_searchValue}}" placeholder="검색어 입력" on-enter="onFind"
+							required="true" style="margin:0 2px">
+			</sc-text-field>
+			<sc-button text="찾기" on-click="onFind"></sc-button> 
+		</div>
+	</template>
+	<script>
+	Polymer({
+		is : 'cc-grid-search-item',
+		properties : {
+			comboCls : {
+				type : Object,
+				value : function() {
+					return "w-80"
+				}
+			},
+			textCls : {
+				type : Object,
+				value : function() {
+					return "w-150"
+				}
+			},
+			searchFields : {
+				type : Object,
+				value : function() {
+					return ""
+				},
+				observer : "_onChangeSearchFields"
+			},
+			items : {
+				type : Array,
+				value : function() {
+					return []
+				}
+			},
+			_searchType : {
+				type : String
+			},
+			_searchValue : {
+				type : String
+			},
+			isAttached : {
+				type : Boolean,
+				value : false
+			},
+			findResult:{
+				type: Object
+			}
+		},
+		// 상위 엘리먼트 중 sc-grid를 return 한다.
+		get searchGrid() {
+			var me = this;
+			
+			if(!me._searchGrid) {
+				me._searchGrid = getSearchGrid(me.parentElement);
+				
+				function getSearchGrid(el) {
+					if(el.nodeName && el.nodeName.indexOf("SC-GRID") > -1) {
+						return el;
+					} else {
+						return getSearchGrid(el.parentElement);
+					}
+				}
+			}
+			return me._searchGrid;
+		},
+		attached : function() {
+			if(!this._attachedCalled) {
+	            this._attachedCalled = true;
+	            //한번만 호출되도록 로직작성
+	            
+	            var me = this;
+				
+				me.isAttached = true;
+				me._setItems();
+	        }
+		},
+		onFind : function() {
+			var me = this;
+			
+			if(UT.isEmpty(me._searchValue)) {
+				UT.alert("STD.E1050");
+				return;
+			}
+			
+			var cell = me.searchGrid.getCurrentCell();
+			if(cell) {
+				if(!me.findResult){
+					me.findResult =  me.searchGrid.searchItem(me._searchType, me._searchValue, cell.rowIndex,true ,true, true, false,true,true  );	
+				}else{
+					me.findResult =  me.searchGrid.searchItem(me._searchType, me._searchValue, me.findResult.itemIndex ,true ,true, true, false,true,true  );
+				}
+			    
+			}
+		},
+		_onChangeSearchFields : function() {
+			var me = this;
+			
+			if(me.isAttached) {
+				me._setItems();
+			}
+		},
+		_setItems : function() {
+			var me = this, items = [];
+			
+			if(UT.isNotEmpty(me.searchFields)) {
+				var columns = me.searchGrid._gridColumns.getColumns(),
+					fields  = me.searchFields.split(/\s*,\s*/);
+				
+				for(var i=0; i<columns.length; i++) {
+					var column = columns[i];
+					if(fields.indexOf(column.fieldName) > -1) {
+						items.push({"dataField" : column.fieldName, "headerText" : column.header.text});
+						
+						if(items.length === fields.length) break;
+					}
+				}
+			}
+			me.set("items", items);
+		}
+	});
+	</script>
+</dom-module>

@@ -1,0 +1,147 @@
+<sc-link rel="import" href="es-arbitrary-table-aprv-type-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-table-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-table-factor-list.html"></sc-link>
+
+<dom-module id="em-arbitrary-table">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <cc-page-title-bar></cc-page-title-bar>
+        
+        <div class="hbox flex">
+            <es-arbitrary-table-aprv-type-list id="aprv_type_list" on-selected-aprv-type="onSelectedAprvType" class="flex-3"></es-arbitrary-table-aprv-type-list>
+
+            <div class="hspace-10"></div>
+            
+            <div class="vbox flex-7">
+                
+                <es-arbitrary-table-list id="table_list" editable="true" on-selected-table="onSelectedTable" on-saved-tables="onSavedTables" on-deleted-tables="onDeletedTables" 
+                    class="flex-4" disabled$="[[!formula('isSelectedAprvType')]]">
+                </es-arbitrary-table-list>
+                
+                <div class="hspace-10"></div>
+                
+                <es-arbitrary-table-factor-list id="factor_list" on-saved-table-factors="onSavedTableFactors" on-deleted-table-factors="onDeletedTableFactors" 
+                    class="flex-6" disabled$="[[!formula('isSelectedTable')]]">
+                </es-arbitrary-table-factor-list>
+            </div>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-arbitrary-table",
+
+            properties: {
+                selectedAprvType: { // 선택된 결재 유형
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                selectedTable: { // 선택된 전결테이블
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+            },
+            
+            formulas: {
+                isSelectedAprvType: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedAprvType);
+                },
+                isSelectedTable: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedTable);
+                }
+            },
+            
+            initialized: function() {
+                var me = this;
+
+                me.$.aprv_type_list.load(); // 결재 유형 조회
+                me.applyFormula();
+            },
+            
+            // 결재 유형 선택  
+            onSelectedAprvType: function(e, data) {
+                var me = this;
+
+                me.set("selectedAprvType", data);          // 결재 유형 선택
+                me.set("selectedTable", {});               // 전결테이블 선택 초기화
+
+                me.$.table_list.load(me.selectedAprvType); // 전결테이블 목록 조회
+                me.$.factor_list.clear();   // 전결항목 초기화
+                
+                me.applyFormula();
+            },
+
+            // 전결테이블 선택  
+            onSelectedTable: function(e, data) {
+                var me = this;
+
+                me.set("selectedTable", data);           // 전결테이블 선택
+                me.$.factor_list.load(me.selectedTable); // 전결항목 목록 조회
+                
+                me.applyFormula();
+            },
+
+            // 전결테이블 - 저장완료
+            onSavedTables: function() {
+                var me = this;
+
+                me.set("selectedTable", {});               // 전결테이블 선택 초기화
+
+                me.$.aprv_type_list.load();                // 결재 유형 조회
+                me.$.table_list.load(me.selectedAprvType); // 전결테이블 목록 조회
+                me.$.factor_list.clear();   // 전결항목 초기화
+                
+                me.applyFormula();
+            },
+            
+            // 전결테이블 - 목록삭제
+            onDeletedTables: function() {
+                var me = this;
+                
+                me.set("selectedTable", {});               // 전결테이블 선택 초기화
+
+                me.$.aprv_type_list.load();                // 결재 유형 조회
+                me.$.table_list.load(me.selectedAprvType); // 전결테이블 목록 조회
+                me.$.factor_list.clear();   // 전결항목 초기화
+                
+                me.applyFormula();
+            },
+
+            // 전결항목 - 저장완료
+            onSavedTableFactors: function() {
+                var me = this;
+
+                me.$.table_list.load(me.selectedAprvType); // 전결테이블 목록 조회
+                me.$.factor_list.load(me.selectedTable);   // 전결항목 목록 조회
+                
+                me.applyFormula();
+            },
+            
+            // 전결항목 - 목록삭제
+            onDeletedTableFactors: function() {
+                var me = this;
+                
+                me.$.table_list.load(me.selectedAprvType); // 전결테이블 목록 조회
+                me.$.factor_list.load(me.selectedTable);   // 전결항목 목록 조회
+                
+                me.applyFormula();
+            }
+            
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,164 @@
+<!--
+    버튼 클릭 시 현재 열린 창의 경로를 클립보드로 복사하는 커스텀 컴포넌트
+
+    <cc-link-url-copy title-text="링크복사" copyValue="{{상세화면 KEY}}"></cc-link-url-copy>
+
+    1. 주요 Property
+    - title-text  : 버튼 명 Property
+    - request-url : 요청할 URL
+    - copy-value  : 상세 화면의 경우 key 값을 전달하는데 사용되는 Property
+    - hide-copy   : hidden Property
+
+    2. 파라미터 정보
+    리스트 : menu_id
+    상세   : menu_id,
+             task_uuid : key,
+             oorg_cd : oorg_cd
+             기타 등등..
+             ex) 발주상세
+                 menu_id : PRO30040
+                 task_uuid  : e795de55-9fb7-4bde-bbb0-95648dd73937(key)
+
+                 협력사 Profile Popup
+                 menuID : SRM01000
+                 task_uuid : VA100252(VD_CD)
+                 oorg_cd : EOC100PU100(oorg_cd)
+
+    3. 설명
+    - /ssoLoginProcess.do 요청에 관해 security-context custom-filter bean 등록
+    - 등록된 Bean 에서 SSO 처리 및 app.do 요청(RootController에 app.do 등록)
+    - 버튼 클릭 시 기본적으로 menu_id는 mdiPages 클래스를 기준으로 자동 수집되어 리스트 화면의 경우는 파라미터 전달하지 않더라도 기본적으로 정의됨.
+    - 상세 화면의 경우 파라미터를 copy-value Attribute에 Binding 시켜야함
+    - IE 10+, Chrome 43+, Opera 29+, Firefox 브라우저 버전으로는 document.execCommand 제공
+    - 단, 제공되지 않는 경우, Prompt 창으로 대체.
+
+    ※ Default 버튼 Hidden 처리
+    정렬
+    1. hide-copy 속성에 Binding을 하는 경우
+        - 개발자가 직접 버튼 숨김 제어
+    2. domHost copyValue 선언 유무
+        - 선언 시    : 상세화면(task_uuid, 기타 파라미터 정의)
+        - 비 선언 시 : 현황화면(변수 선언 X)
+    3. copyValue 빈 값인지 판단
+        - 신규 데이터인지 판단(task_uuid, 기타 파라미터 값 존재 유무)
+-->
+<dom-module id="cc-link-url-copy">
+    <style>
+    </style>
+    <template>
+        <sc-button class="copyUrlBtn" text="[[titleText]]" on-click="onLinkUrlCopy" hidden$="[[hideCopy]]"></sc-button>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-link-url-copy",
+            properties: {
+                titleText : {
+                    type : String,
+                    value : "링크 복사"
+                },
+
+                // 요청 URL
+                requestUrl : {
+                    type : String,
+                    value : "/ssoLoginProcess.do"
+                },
+
+                // URL 복사를 하기위한 Parameter Set Property
+                copyValue: {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    },
+                    observer: "onCopyValueChanged"
+                },
+            },
+
+            // Button Hidden Default Set
+            onCopyValueChanged : function() {
+                /*
+                    버튼의 숨김 처리 정렬
+                    1. hide-copy 속성에 Binding을 하는 경우
+                        - 개발자가 직접 버튼 숨김 제어
+                    2. domHost copyValue 선언 유무
+                        - 선언 시    : 상세화면(task_uuid, 기타 파라미터 정의)
+                        - 비 선언 시 : 현황화면(변수 선언 X)
+                    3. copyValue 빈 값인지 판단
+                        - 신규 데이터인지 판단(task_uuid, 기타 파라미터 값 존재 유무)
+                 */
+                if(UT.isEmpty(this.hideCopy)){
+                    var btn = this.querySelector('.copyUrlBtn');
+                    var exists = this.domHost.properties.hasOwnProperty('copyValue');
+                    if(exists){
+                        btn.hidden = UT.isEmpty(this.copyValue) ? true : false;
+                    }else{
+                        btn.hidden = false;
+                    }
+                }
+            },
+
+            // Button Click Event
+            onLinkUrlCopy : function() {
+                var origin = window.location.origin;
+                var path = location.pathname.substring(0,location.pathname.lastIndexOf("/"));
+                var menuId = document.querySelector('#mdiPages').selectedItem.getMenuId();
+                var url = origin + path +this.requestUrl + "?menuId=" + menuId;
+                var params = this.copyValue;
+
+                // Parameter Check
+                if(!UT.isEmpty(params)){
+                    var keys = Object.keys(params);
+                    keys.forEach(function(data) {
+                        url += "&" + data + "=" + params[data];
+                    })
+                }
+                // Function Check
+                if(document.execCommand){
+                    // Clipboard 복사
+                    this.onCopyToClipboard(url);
+                }else{
+                    // Prompt Alert
+                    this.onUrlPrompt(url);
+                }
+            },
+
+            // Copy to Clipboard
+            onCopyToClipboard : function(url) {
+                // IE 10+, Chrome 43+, Opera 29+, Firefox 가능
+                var element = document.createElement('div');
+                var result, selection, range;
+
+                element.textContent = url;
+                document.body.appendChild(element);
+                selection = window.getSelection();       // Get the Selection object
+                range = document.createRange();          // Create a new range
+                range.selectNode(element);               // Select the content of the node
+                selection.removeAllRanges();             // Delete any old ranges
+                selection.addRange(range);               // Add the range to selection
+                result = document.execCommand('copy');   // Execute the command
+                document.body.removeChild(element);
+                if(result){
+                    UT.alert(this.translate("STD.N2600"), null, true);
+                }else{
+                    this.onUrlPrompt(url);
+                }
+            },
+
+            // Prompt Alert Show
+            onUrlPrompt : function(url) {
+                var message = this.translate("STD.N7004");		//아래의 링크를 복사하세요.
+                // Show
+                SCAlert._messagebox.show({
+                    isPrompt: true,
+                    multiline: true,
+                    title : "STD.N1100",
+                    promptValue : url,
+                    message : message,
+                    buttons: "ok",
+                    handler : null,
+                    modal : true,
+                    i18nDisabled: true
+                });
+            }
+        })
+    </script>
+</dom-module>

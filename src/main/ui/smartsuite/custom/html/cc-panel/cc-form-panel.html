@@ -1,0 +1,120 @@
+<dom-module id="cc-form-panel">
+<style>
+	:host {
+				display: block;
+			}
+</style>
+    <template>
+		
+		<cc-collapse-panel id="collapsePanel"
+				  title-text="[[translate(titleText)]]" 
+				  host-cls="form-grid-container" 
+				  class="border-box" collapsible="[[collapsible]]">
+
+			<!-- 검색 영역 : search-condition-group label-row : searchConditionGroupCssClass-->
+			<div class="form-container">
+				<div id="formGrid">
+					<content></content>
+				</div>
+			</div>
+
+		</cc-collapse-panel>
+
+
+	</template>
+	<script>
+	
+		Polymer({ 
+    		is: 'cc-form-panel',
+			
+			className : 'CCFormPanel',
+			
+			behaviors: [
+				Polymer.SCElementBehavior,
+				Polymer.CCPanelMediatorBehavior,
+				Polymer.SCCSSClassStyleBehavior
+			],
+			
+			properties: {
+				
+				titleText: {
+					type: String
+				},
+				
+				/** [Smartsuite 10] 검색 영역 CSS 클래스 : 디폴트 */
+				defaultFormCls: {
+					type: String,
+					value: "grid-wrap",
+					observer: "onChangeFormGridWrapCssClass"
+				},
+				
+				formCls: {
+					type: String,
+					value: function(){
+						var defaultCls = "label-row";
+						var userFormcls =  "HORIZ"; // 수평
+						if(UT.isNotEmpty(SCSessionManager.getCurrentUser())){
+							userFormcls = SCSessionManager.getCurrentUser().lbl_sort_typ_ccd || "HORIZ"; // 수평
+						}
+						if(userFormcls == "VERT"){
+							defaultCls = "label-column";
+						}
+						return defaultCls;
+					},
+					observer: "onChangeFormGridWrapCssClass"
+				},
+				
+				columnCls: {
+					type: String,
+					value: "grid_col--"
+				},
+				
+				column: {
+					type: String,
+					value: "2",
+					observer: "onChangeColumn"
+				},
+				
+				/** 개별 아이템 별 CSS 클래스 */
+				childrenCls: {
+					type: String,
+					value: "form-warp"
+				},
+				collapsible: {
+					type: Object,
+					value: false,
+					observer: "onChangeCollapsible"
+				}
+			},
+			
+			get _formGridElement() {
+				if(!this._formGridEl) {
+					this._formGridEl = this.querySelector('#formGrid');
+				}
+				return this._formGridEl;
+			},
+			
+			onChangeFormGridWrapCssClass: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this._formGridElement, oldValue);	
+				}
+				if(newValue == "label-column"){
+					this.set("labelWidth", this.freeLabelWidth); 
+				}
+				this.addCls( 
+						this._formGridElement,
+						this.combindCssClass(this.defaultFormCls, this.formCls));
+			},
+
+			onChangeColumn: function(newValue, oldValue){
+				this._formGridEl.classList.add(this.columnCls+newValue);
+				//this.addCls(this, this.columnCls+newValue);
+			},
+
+			onChangeCollapsible: function(newValue, oldValue){
+			}
+			
+	  	});
+	
+	</script>
+</dom-module>

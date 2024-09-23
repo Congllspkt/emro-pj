@@ -1,0 +1,2774 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="bid">
+
+	<select id="findListColumnMaster" resultType="map">
+        /* bid.xml findListColumnMaster */
+		SELECT
+            TEN_ID,
+            COL_ID,
+            COL_CD,
+            COL_NM,
+            COL_TYP_CD,
+            COL_FMT_TYP,
+            COL_LEN,
+            POINT_LEN,
+            POINT_CAL_TYP,
+            GRP_CD,
+            HD_GRP_CD,
+            FIELD_ALIGN,
+            COMMON_CD,
+            USE_YN
+		 FROM ESBTRCM
+		 WHERE TEN_ID = #{g.tenant}
+		<if test="p.col_cd != null and p.col_cd != ''">
+			<bind name="colCd" value="'%' + p.col_cd + '%'" />
+			AND UPPER(COL_CD) LIKE UPPER(#{colCd})
+		</if>
+		<if test="p.col_nm != null and p.col_nm != ''">
+			<bind name="colNm" value="'%' + p.col_nm + '%'" />
+			AND UPPER(COL_NM) LIKE UPPER(#{colNm})
+		</if>
+         ORDER BY REG_DTTM ASC
+	</select>
+
+	<select id="findListColumnListNotGroup" resultType="map">
+        /* bid.xml findListColumnListNotGroup */
+
+		SELECT
+		TEN_ID,
+		COL_ID,
+		COL_CD,
+		COL_NM,
+		COL_TYP_CD,
+        COL_FMT_TYP,
+		COL_LEN,
+		POINT_LEN,
+		POINT_CAL_TYP,
+		GRP_CD,
+		HD_GRP_CD,
+		FIELD_ALIGN,
+        COMMON_CD,
+		USE_YN
+		 FROM ESBTRCM
+		 WHERE TEN_ID = #{g.tenant}
+        AND COL_TYP_CD != '6'
+		<if test="p.col_cd != null and p.col_cd != ''">
+			<bind name="colCd" value="'%' + p.col_cd + '%'" />
+			AND UPPER(COL_CD) LIKE UPPER(#{colCd})
+		</if>
+		<if test="p.col_nm != null and p.col_nm != ''">
+			<bind name="colNm" value="'%' + p.col_nm + '%'" />
+			AND UPPER(COL_NM) LIKE UPPER(#{colNm})
+		</if>
+	</select>
+
+	<select id="selectGroupColumnMasterList" resultType="map">
+        /* bid.xml selectGroupColumnMasterList */
+
+		SELECT
+		TEN_ID,
+		COL_ID,
+		COL_CD,
+		COL_NM,
+		COL_TYP_CD,
+        COL_FMT_TYP,
+		COL_LEN,
+		POINT_LEN,
+		POINT_CAL_TYP,
+		GRP_CD,
+		HD_GRP_CD,
+		FIELD_ALIGN,
+        COMMON_CD,
+		USE_YN
+		 FROM ESBTRCM
+		 WHERE TEN_ID = #{g.tenant}
+		<if test="p.col_cd != null and p.col_cd != ''">
+			<bind name="colCd" value="'%' + p.col_cd + '%'" />
+			AND UPPER(COL_CD) LIKE UPPER(#{colCd})
+		</if>
+		<if test="p.col_nm != null and p.col_nm != ''">
+			<bind name="colNm" value="'%' + p.col_nm + '%'" />
+			AND UPPER(COL_NM) LIKE UPPER(#{colNm})
+		</if>
+		<if test="p.col_typ_cd != null and p.col_typ_cd != ''">
+			AND COL_TYP_CD = #{p.col_typ_cd}
+		</if>
+	</select>
+
+
+	<delete id="deleteListBidColumnMaster">
+        /* bid.xml deleteListBidColumnMaster */
+
+		DELETE FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_ID = #{p.col_id}
+	</delete>
+
+
+    <select id="selectColumnMasterInfo" resultType="int">
+        /* bid.xml selectColumnMasterInfo */
+        SELECT
+        COUNT(*)
+        FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_ID = #{p.col_id}
+    </select>
+
+    <update id="updateColumnMasterInfo">
+        /* bid.xml updateColumnMasterInfo */
+        UPDATE ESBTRCM
+        SET
+            COL_NM = #{p.col_nm},
+            COL_TYP_CD = #{p.col_typ_cd},
+            COL_FMT_TYP = #{p.col_fmt_typ},
+            COL_LEN = #{p.col_len},
+            POINT_LEN = #{p.point_len},
+            POINT_CAL_TYP = #{p.point_cal_typ},
+            GRP_CD = #{p.grp_cd},
+            HD_GRP_CD = #{p.hd_grp_cd},
+            FIELD_ALIGN = #{p.field_align},
+            USE_YN = #{p.use_yn},
+            COMMON_CD = #{p.common_cd}
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_ID = #{p.col_id}
+    </update>
+
+    <insert id="insertColumnMasterInfo">
+        /* bid.xml insertColumnMasterInfo */
+        INSERT INTO ESBTRCM
+        (
+            TEN_ID,
+            COL_ID,
+            COL_CD,
+            COL_NM,
+            COL_TYP_CD,
+            COL_FMT_TYP,
+            COL_LEN,
+            POINT_LEN,
+            POINT_CAL_TYP,
+            GRP_CD,
+            HD_GRP_CD,
+            FIELD_ALIGN,
+            COMMON_CD,
+            USE_YN
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.col_cd},
+            #{p.col_nm},
+            #{p.col_typ_cd},
+            #{p.col_fmt_typ},
+            #{p.col_len},
+            #{p.point_len},
+            #{p.point_cal_typ},
+            #{p.grp_cd},
+            #{p.hd_grp_cd},
+            #{p.field_align},
+            #{p.common_cd},
+            #{p.use_yn}
+        )
+    </insert>
+
+
+
+    <select id="findListSheetMaster" resultType="map">
+        /* bid.xml findListSheetMaster */
+
+        SELECT
+        TEN_ID,
+        SHEET_ID,
+        SHEET_CD,
+        SHEET_NM,
+        SHEET_TYP
+        FROM ESBTRSM
+        WHERE TEN_ID = #{g.tenant}
+        <if test="p.sheet_nm != null and p.sheet_nm != ''">
+            <bind name="sheetNm" value="'%' + p.sheet_nm + '%'" />
+            AND UPPER(SHEET_NM) LIKE UPPER(#{sheetNm})
+        </if>
+        <if test="p.sheet_typ != null and p.sheet_typ != ''">
+            <bind name="sheetTyp" value="'%' + p.sheet_typ + '%'" />
+            AND UPPER(SHEET_TYP) LIKE UPPER(#{sheetTyp})
+        </if>
+        ORDER BY REG_DTTM DESC
+    </select>
+
+
+
+    <delete id="deleteSheetMasterInfo">
+        /* bid.xml deleteSheetMasterInfo */
+		DELETE FROM ESBTRSM
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+	</delete>
+
+    <delete id="deleteSheetMasterDataInfo">
+        /* bid.xml deleteSheetMasterDataInfo */
+
+		DELETE FROM ESBTRSC
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+	</delete>
+
+    <select id="selectSheetMasterInfo" resultType="int">
+        /* bid.xml selectSheetMasterInfo */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRSM
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+    </select>
+
+    <update id="updateSheetMasterInfo">
+        /* bid.xml updateSheetMasterInfo */
+
+        UPDATE ESBTRSM
+        SET
+            SHEET_NM = #{p.sheet_nm},
+            SHEET_TYP = #{p.sheet_typ}
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+    </update>
+
+    <insert id="insertSheetMasterInfo">
+        /* bid.xml insertSheetMasterInfo */
+
+        INSERT INTO ESBTRSM
+        (
+            TEN_ID,
+            SHEET_ID,
+            SHEET_CD,
+            SHEET_NM,
+            SHEET_TYP,
+            REGR_ID,
+            REG_DTTM
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.sheet_cd},
+            #{p.sheet_nm},
+            #{p.sheet_typ},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+
+
+    <select id="findSheetColumnHeaders" resultType="map">
+        /* bid.xml findSheetColumnHeaders */
+        SELECT
+        TRSC.SHEET_COL_ID,
+        TRSC.SHEET_ID,
+        TRSC.DISP_NM,
+        TRSC.COL_NM,
+        TRSC.COL_TYP_CD,
+        TRSC.COL_FMT_TYP,
+        TRSC.COL_LEN,
+        TRSC.POINT_LEN,
+        TRSC.POINT_CAL_TYP,
+        TRSC.CAL_FOR,
+        TRSC.MAN_YN,
+        TRSC.GRP_CD,
+        TRSC.HD_GRP_CD,
+        TRSC.USR_TYP,
+        TRSC.SORT_ORD,
+        TRSC.DISP_YN,
+        TRSC.TEN_ID,
+        TRSC.COL_CD,
+        TRSC.COL_ID,
+        TRSC.FIELD_ALIGN,
+        TRSC.COMMON_CD,
+        TRSM.SHEET_NM
+        FROM ESBTRSC TRSC
+        INNER JOIN ESBTRSM TRSM
+        ON TRSC.TEN_ID = TRSM.TEN_ID
+        AND TRSC.SHEET_ID = TRSM.SHEET_ID
+        WHERE TRSC.TEN_ID = #{g.tenant}
+        AND TRSC.SHEET_ID = #{p.sheet_id}
+        ORDER BY TRSC.SORT_ORD ASC
+    </select>
+
+    <select id="findSheetMasterGroupColumnHeaders" resultType="map">
+        /* bid.xml findSheetMasterGroupColumnHeaders */
+
+        SELECT COL_CD , COL_NM
+        FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_CD IN ( SELECT TRSC.GRP_CD
+                        FROM ESBTRSC TRSC
+                        INNER JOIN ESBTRSM TRSM
+                        ON TRSC.TEN_ID = TRSM.TEN_ID
+                        AND TRSC.SHEET_ID = TRSM.SHEET_ID
+                        WHERE TRSC.TEN_ID = #{g.tenant}
+                        AND TRSC.SHEET_ID = #{p.sheet_id}
+                        AND ( TRSC.GRP_CD  <![CDATA[<>]]>  '' OR TRSC.GRP_CD IS NOT NULL )
+                        GROUP BY TRSC.GRP_CD) GROUP BY COL_CD , COL_NM
+    </select>
+
+    <select id="findSheetMasterHeaderDepthGroupColumnHeaders" resultType="map">
+        /* bid.xml findSheetMasterHeaderDepthGroupColumnHeaders */
+
+        SELECT COL_CD , COL_NM
+        FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_CD IN ( SELECT TRSC.HD_GRP_CD
+                        FROM ESBTRSC TRSC
+                        INNER JOIN ESBTRSM TRSM
+                        ON TRSC.TEN_ID = TRSM.TEN_ID
+                        AND TRSC.SHEET_ID = TRSM.SHEET_ID
+                        WHERE TRSC.TEN_ID = #{g.tenant}
+                        AND TRSC.SHEET_ID = #{p.sheet_id}
+                        AND ( TRSC.HD_GRP_CD  <![CDATA[<>]]>  '' OR TRSC.HD_GRP_CD IS NOT NULL )
+                        GROUP BY TRSC.HD_GRP_CD) GROUP BY COL_CD , COL_NM
+    </select>
+
+
+    <select id="findSheetColumnInfo" resultType="map">
+        /* bid.xml findSheetColumnInfo */
+
+        SELECT
+        SHEET_COL_ID,
+        SHEET_ID,
+        DISP_NM,
+        COL_NM,
+        COL_TYP_CD,
+        COL_FMT_TYP,
+        COL_LEN,
+        POINT_LEN,
+        POINT_CAL_TYP,
+        CAL_FOR,
+        MAN_YN,
+        GRP_CD,
+        HD_GRP_CD,
+        USR_TYP,
+        SORT_ORD,
+        DISP_YN,
+        FIELD_ALIGN,
+        COMMON_CD,
+        TEN_ID,
+        COL_CD,
+        COL_ID
+        FROM ESBTRSC
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+        AND COL_ID = #{p.col_id}
+        AND SHEET_COL_ID = #{p.sheet_col_id}
+        ORDER BY SORT_ORD ASC
+    </select>
+
+
+
+    <update id="updateSheetColumnInfo">
+        /* bid.xml updateSheetColumnInfo */
+
+        UPDATE ESBTRSC
+        SET
+            DISP_NM = #{p.disp_nm},
+            COL_NM = #{p.col_nm},
+            COL_TYP_CD = #{p.col_typ_cd},
+            COL_FMT_TYP = #{p.col_fmt_typ},
+            COL_LEN = #{p.col_len},
+            POINT_LEN = #{p.point_len},
+            POINT_CAL_TYP = #{p.point_cal_typ},
+            CAL_FOR = #{p.cal_for},
+            MAN_YN = #{p.man_yn},
+            GRP_CD = #{p.grp_cd},
+            HD_GRP_CD = #{p.hd_grp_cd},
+            USR_TYP = #{p.usr_typ},
+            SORT_ORD = #{p.sort_ord},
+            FIELD_ALIGN = #{p.field_align},
+            COMMON_CD = #{p.common_cd},
+            DISP_YN = #{p.disp_yn}
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+        AND SHEET_COL_ID = #{p.sheet_col_id}
+    </update>
+
+    <insert id="insertSheetColumnInfo">
+        /* bid.xml insertSheetColumnInfo */
+
+        INSERT INTO ESBTRSC
+        (
+            TEN_ID,
+            SHEET_COL_ID,
+            SHEET_ID,
+            DISP_NM,
+            COL_NM,
+            COL_TYP_CD,
+            COL_FMT_TYP,
+            COL_LEN,
+            POINT_LEN,
+            POINT_CAL_TYP,
+            CAL_FOR,
+            MAN_YN,
+            GRP_CD,
+            HD_GRP_CD,
+            USR_TYP,
+            SORT_ORD,
+            FIELD_ALIGN,
+            COMMON_CD,
+            DISP_YN,
+            COL_CD,
+            COL_ID
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.sheet_id},
+            #{p.disp_nm},
+            #{p.col_nm},
+            #{p.col_typ_cd},
+            #{p.col_fmt_typ},
+            #{p.col_len},
+            #{p.point_len},
+            #{p.point_cal_typ},
+            #{p.cal_for},
+            #{p.man_yn},
+            #{p.grp_cd},
+            #{p.hd_grp_cd},
+            #{p.usr_typ},
+            #{p.sort_ord},
+            #{p.field_align},
+            #{p.common_cd},
+            #{p.disp_yn},
+            #{p.col_cd},
+            #{p.col_id}
+        )
+    </insert>
+
+
+
+    <select id="selectSheetColumnInfo" resultType="int">
+        /* bid.xml selectSheetColumnInfo */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRSC
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+        AND SHEET_COL_ID = #{p.sheet_col_id}
+    </select>
+
+    <delete id="deleteSheetColumnInfo">
+        /* bid.xml deleteSheetColumnInfo */
+
+        DELETE FROM ESBTRSC
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_ID = #{p.sheet_id}
+        AND SHEET_COL_ID = #{p.sheet_col_id}
+    </delete>
+
+
+
+    <select id="findListBidTemplateMaster" resultType="map">
+        /* bid.xml findListBidTemplateMaster */
+
+        SELECT
+        TEN_ID,
+        TEMPL_ID,
+        TEMPL_CD,
+        TEMPL_NM,
+        CONFIRM_YN
+        FROM ESBTRTL
+        <where>
+            TEN_ID = #{g.tenant}
+            <if test="p.templ_cd != null and p.templ_cd != ''">
+                <bind name="templCd" value="'%' + p.templ_cd + '%'" />
+                AND UPPER(TEMPL_CD) LIKE UPPER(#{templCd})
+            </if>
+            <if test="p.templ_nm != null and p.templ_nm != ''">
+                <bind name="templNm" value="'%' + p.templ_nm + '%'" />
+                AND UPPER(TEMPL_NM) LIKE UPPER(#{templNm})
+            </if>
+        </where>
+        ORDER BY REG_DTTM DESC
+    </select>
+
+    <select id="findListConfirmBidTemplate" resultType="map">
+        /* bid.xml findListConfirmBidTemplate */
+
+        SELECT
+        TEN_ID,
+        TEMPL_ID,
+        TEMPL_CD,
+        TEMPL_NM,
+        CONFIRM_YN
+        FROM ESBTRTL
+        <where>
+            TEN_ID = #{g.tenant}
+            AND CONFIRM_YN = 'Y'
+            <if test="p.templ_cd != null and p.templ_cd != ''">
+                <bind name="templCd" value="'%' + p.templ_cd + '%'" />
+                AND UPPER(TEMPL_CD) LIKE UPPER(#{templCd})
+            </if>
+            <if test="p.templ_nm != null and p.templ_nm != ''">
+                <bind name="templNm" value="'%' + p.templ_nm + '%'" />
+                AND UPPER(TEMPL_NM) LIKE UPPER(#{templNm})
+            </if>
+        </where>
+        ORDER BY REG_DTTM DESC
+    </select>
+
+    <select id="findListBidTemplateConfirm" resultType="map">
+        /* bid.xml findListBidTemplateConfirm */
+
+        SELECT
+        TEN_ID,
+        TEMPL_ID,
+        TEMPL_CD,
+        TEMPL_NM,
+        CONFIRM_YN
+        FROM ESBTRTL
+        <where>
+            TEN_ID = #{g.tenant}
+            AND CONFIRM_YN ='Y'
+            <if test="p.templ_cd != null and p.templ_cd != ''">
+                <bind name="templCd" value="'%' + p.templ_cd + '%'" />
+                AND UPPER(TEMPL_CD) LIKE UPPER(#{templCd})
+            </if>
+            <if test="p.templ_nm != null and p.templ_nm != ''">
+                <bind name="templNm" value="'%' + p.templ_nm + '%'" />
+                AND UPPER(TEMPL_NM) LIKE UPPER(#{templNm})
+            </if>
+        </where>
+        ORDER BY REG_DTTM DESC
+    </select>
+
+
+
+    <select id="selectBidTemplateSheetInfo" resultType="int">
+        /* bid.xml selectBidTemplateSheetInfo */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRTL
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+    </select>
+
+
+    <update id="updateBidTemplateInfo">
+        /* bid.xml updateBidTemplateInfo */
+
+        UPDATE ESBTRTL
+        SET
+            TEMPL_NM = #{p.templ_nm}
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+    </update>
+
+
+    <insert id="insertBidTemplateInfo">
+        /* bid.xml insertBidTemplateInfo */
+
+        INSERT INTO ESBTRTL
+        (
+        TEN_ID,
+        TEMPL_ID,
+        TEMPL_CD,
+        TEMPL_NM,
+        REGR_ID,
+        REG_DTTM
+        )
+        VALUES
+        (
+        #{g.tenant},
+        #{g.uuid},
+        #{p.templ_cd},
+        #{p.templ_nm},
+        #{g.username},
+        #{g.now}
+        )
+    </insert>
+
+    <delete id="deleteListBidTemplateMaster">
+        /* bid.xml deleteListBidTemplateMaster */
+
+		DELETE FROM ESBTRTL
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+	</delete>
+
+
+    <select id="findListBidTemplateSheet" resultType="map">
+        /* bid.xml findListBidTemplateSheet */
+
+        SELECT
+        TRTS.TEN_ID,
+        TRTS.TEMPL_SHEET_ID,
+        TRTS.TEMPL_ID,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRTL.TEMPL_CD,
+        TRTL.TEMPL_NM
+        FROM ESBTRTS TRTS
+        INNER JOIN ESBTRTL TRTL
+            ON TRTS.TEN_ID = TRTL.TEN_ID
+            AND TRTS.TEMPL_ID = TRTL.TEMPL_ID
+        WHERE TRTS.TEN_ID = #{g.tenant}
+        AND TRTS.TEMPL_ID = #{p.templ_id}
+        ORDER BY TRTL.REG_DTTM DESC
+    </select>
+
+    <select id="findListBidTemplateSheetForApp" resultType="map">
+        /* bid.xml findListBidTemplateSheetForApp */
+
+        SELECT
+        TRTS.TEN_ID,
+        TRTS.TEMPL_SHEET_ID,
+        TRTS.TEMPL_ID,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRAR.TASK_UUID,
+        TRAR.VENDOR_TEMPL_ID
+        FROM ESBTRTS TRTS
+        INNER JOIN ESBTRTL TRTL
+            ON TRTS.TEN_ID = TRTL.TEN_ID
+            AND TRTS.TEMPL_ID = TRTL.TEMPL_ID
+        INNER JOIN ESBTRAR TRAR
+            ON TRTL.TEN_ID = TRAR.TEN_ID
+            AND TRTL.TEMPL_ID = TRAR.TEMPL_ID
+        WHERE TRTS.TEN_ID = #{g.tenant}
+        AND TRTS.TEMPL_ID = #{p.templ_id}
+        AND TRAR.TASK_UUID = #{p.task_uuid}
+        ORDER BY TRTL.REG_DTTM DESC
+    </select>
+
+    <select id="findListBidTemplateSheetAndScenarioSheet" resultType="map">
+        /* bid.xml findListBidTemplateSheetAndScenarioSheet */
+
+        SELECT
+        TRTS.TEN_ID,
+        TRTS.TEMPL_SHEET_ID,
+        TRTS.TEMPL_ID,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRAR.TASK_UUID,
+        TRAR.VENDOR_TEMPL_ID,
+        TRWS.SCENARIO_SHEET_ID,
+        TRWS.SCENARIO_ID
+        FROM ESBTRTS TRTS
+        INNER JOIN ESBTRTL TRTL
+            ON TRTS.TEN_ID = TRTL.TEN_ID
+            AND TRTS.TEMPL_ID = TRTL.TEMPL_ID
+        INNER JOIN ESBTRAR TRAR
+            ON TRTL.TEN_ID = TRAR.TEN_ID
+            AND TRTL.TEMPL_ID = TRAR.TEMPL_ID
+        INNER JOIN ESBTRWM TRWM
+            ON TRTL.TEN_ID = TRWM.TEN_ID
+            AND TRTL.TEMPL_ID = TRWM.TEMPL_ID
+        INNER JOIN ESBTRWS TRWS
+            ON TRWM.TEN_ID = TRWS.TEN_ID
+            AND TRWM.SCENARIO_ID = TRWS.SCENARIO_ID
+            AND TRTS.TEMPL_SHEET_ID = TRWS.TEMPL_SHEET_ID
+        WHERE TRTS.TEN_ID = #{g.tenant}
+        AND TRTS.TEMPL_ID = #{p.templ_id}
+        AND TRAR.TASK_UUID = #{p.task_uuid}
+        AND TRWM.SCENARIO_ID = #{p.scenario_id}
+        ORDER BY TRTL.REG_DTTM DESC
+    </select>
+
+
+    <select id="findBidTemplateSheetInfo" resultType="map">
+        /* bid.xml findBidTemplateSheetInfo */
+
+        SELECT
+        TEN_ID,
+        TEMPL_SHEET_ID,
+        TEMPL_ID,
+        SHEET_ID,
+        SHEET_NM,
+        SHEET_TYP,
+        CONFIRM_YN
+        FROM ESBTRTS
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </select>
+
+    <select id="findBidTemplateSheetColumnInfo" resultMap="resultMap-calcHeadersColumns">
+        /* bid.xml findBidTemplateSheetColumnInfo */
+
+        SELECT
+        TEN_ID,
+        TEMPL_SHEET_COL_ID,
+        TEMPL_SHEET_ID,
+        COL_CD,
+        COL_NM,
+        DISP_NM,
+        COL_TYP_CD,
+        COL_FMT_TYP,
+        COL_CLS,
+        COL_LEN,
+        POINT_LEN,
+        POINT_CAL_TYP,
+        MAN_YN,
+        GRP_CD,
+        HD_GRP_CD,
+        SORT_ORD,
+        USR_TYP,
+        DISP_YN,
+        FIELD_ALIGN,
+        CALCULATE_VAL,
+        COMMON_CD
+        FROM ESBTRTC
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+    </select>
+
+    <select id="findScenarioSheetCalcInfo" resultMap="resultMap-calcHeadersColumns">
+        /* bid.xml findScenarioSheetCalcInfo */
+
+        SELECT
+        TRWS.TEN_ID,
+        TRWS.SCENARIO_SHEET_ID,
+        TRWS.SCENARIO_ID,
+        TRWS.TEMPL_SHEET_ID,
+        TRWS.CALCULATE_VAL,
+        TRWS.STS,
+        TRWS.REGR_ID,
+        TRWS.REG_DTTM,
+        TRWS.MODR_ID,
+        TRWS.RFX_UUID,
+        TRWS.TASK_UUID,
+        TRTS.SHEET_NM
+        FROM ESBTRWS TRWS
+        INNER JOIN ESBTRTS TRTS
+            ON TRTS.TEN_ID = TRWS.TEN_ID
+            AND TRTS.TEMPL_SHEET_ID = TRWS.TEMPL_SHEET_ID
+            AND TRTS.TEMPL_ID = #{p.templ_id}
+        WHERE TRWS.TEN_ID = #{g.tenant}
+        AND TRWS.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+        AND TRWS.SCENARIO_ID = #{p.scenario_id}
+        AND TRWS.TASK_UUID = #{p.task_uuid}
+        AND TRWS.RFX_UUID = #{p.rfx_uuid}
+    </select>
+
+    <select id="updateCheckFindColumnInfo" resultType="int">
+        /* bid.xml updateCheckFindColumnInfo */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRTC
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+    </select>
+
+
+    <insert id="insertBidTemplateSheetInfo">
+        /* bid.xml insertBidTemplateSheetInfo */
+
+        INSERT INTO ESBTRTS
+        (
+            TEN_ID,
+            TEMPL_SHEET_ID,
+            TEMPL_ID,
+            SHEET_ID,
+            SHEET_NM,
+            SHEET_TYP,
+            CONFIRM_YN,
+            REGR_ID,                /*등록자 아이디*/
+            REG_DTTM,                /*등록 일시*/
+            MODR_ID,                /*수정자 아이디*/
+            MOD_DTTM
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{p.templ_sheet_id},
+            #{p.templ_id},
+            #{p.sheet_id},
+            #{p.sheet_nm},
+            #{p.sheet_typ},
+            #{p.confirm_yn},
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+
+    <update id="updateBidTemplateSheetInfo">
+        /* bid.xml updateBidTemplateSheetInfo */
+
+        UPDATE ESBTRTS
+        <set>
+            <if test="p.sheet_id != null and p.sheet_id != ''">
+                SHEET_TYP = #{p.sheet_typ},
+            </if>
+            SHEET_NM = #{p.sheet_nm},
+            MOD_DTTM = #{g.now},
+            MODR_ID = #{g.username}
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </update>
+
+    <insert id="insertBidTemplateSheetColumns">
+        /* bid.xml insertBidTemplateSheetColumns */
+
+        INSERT INTO ESBTRTC
+        (
+            TEN_ID,
+            TEMPL_SHEET_COL_ID,
+            TEMPL_SHEET_ID,
+            COL_CD,
+            COL_NM,
+            DISP_NM,
+            COL_TYP_CD,
+            COL_FMT_TYP,
+            COL_CLS,
+            COL_LEN,
+            POINT_LEN,
+            POINT_CAL_TYP,
+            MAN_YN,
+            GRP_CD,
+            HD_GRP_CD,
+            SORT_ORD,
+            USR_TYP,
+            DISP_YN,
+            FIELD_ALIGN,
+            COMMON_CD,
+            CALCULATE_VAL,
+            USE_YN
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.templ_sheet_id},
+            #{p.col_cd},
+            #{p.col_nm},
+            #{p.disp_nm},
+            #{p.col_typ_cd},
+            #{p.col_fmt_typ},
+            'B',
+            #{p.col_len},
+            #{p.point_len},
+            #{p.point_cal_typ},
+            #{p.man_yn},
+            #{p.grp_cd},
+            #{p.hd_grp_cd},
+            #{p.sort_ord},
+            #{p.usr_typ},
+            #{p.disp_yn},
+            #{p.field_align},
+            #{p.common_cd},
+            #{p.calculate_val},
+            'Y'
+        )
+    </insert>
+
+
+    <update id="updateBidTemplateSheetColumns">
+        /* bid.xml updateBidTemplateSheetColumns */
+
+        UPDATE ESBTRTC
+        SET
+            COL_CD = #{p.col_cd},
+            COL_NM = #{p.col_nm},
+            DISP_NM = #{p.disp_nm},
+            COL_TYP_CD = #{p.col_typ_cd},
+            COL_FMT_TYP = #{p.col_fmt_typ},
+            COL_CLS = #{p.col_cls},
+            COL_LEN = #{p.col_len},
+            POINT_LEN = #{p.point_len},
+            POINT_CAL_TYP = #{p.point_cal_typ},
+            MAN_YN = #{p.man_yn},
+            GRP_CD = #{p.grp_cd},
+            HD_GRP_CD = #{p.hd_grp_cd},
+            SORT_ORD = #{p.sort_ord},
+            USR_TYP = #{p.usr_typ},
+            FIELD_ALIGN = #{p.field_align},
+            COMMON_CD = #{p.common_cd},
+            CALCULATE_VAL = #{p.calculate_val},
+            USE_YN = #{p.use_yn}
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+    </update>
+
+    <delete id="deleteBidTemplateSheetColumns">
+        /* bid.xml deleteBidTemplateSheetColumns */
+
+        DELETE FROM ESBTRTC
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+    </delete>
+
+    <select id="findBidTemplateSheetColumnHeaders" resultType="map">
+        /* bid.xml findBidTemplateSheetColumnHeaders */
+
+        SELECT
+        TRTC.TEN_ID,
+        TRTC.TEMPL_SHEET_COL_ID,
+        TRTC.TEMPL_SHEET_ID,
+        TRTC.COL_CD,
+        TRTC.COL_NM,
+        TRTC.DISP_NM,
+        TRTC.COL_TYP_CD,
+        TRTC.COL_FMT_TYP,
+        TRTC.COL_CLS,
+        TRTC.COL_LEN,
+        TRTC.POINT_LEN,
+        TRTC.POINT_CAL_TYP,
+        TRTC.MAN_YN,
+        TRTC.GRP_CD,
+        TRTC.HD_GRP_CD,
+        TRTC.SORT_ORD,
+        TRTC.USR_TYP,
+        TRTC.DISP_YN,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRTC.FIELD_ALIGN,
+        TRTC.COMMON_CD,
+        TRTC.USE_YN
+        FROM ESBTRTC TRTC
+        INNER JOIN ESBTRTS TRTS
+        ON TRTC.TEN_ID = TRTS.TEN_ID
+        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTC.TEN_ID = #{g.tenant}
+        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTC.USE_YN = 'Y'
+        ORDER BY SORT_ORD ASC
+    </select>
+
+
+    <select id="findBidTemplateSheetColumnSupplierHeaders" resultType="map">
+        /* bid.xml findBidTemplateSheetColumnSupplierHeaders */
+
+        SELECT
+        TRTC.TEN_ID,
+        TRTC.TEMPL_SHEET_COL_ID,
+        TRTC.TEMPL_SHEET_ID,
+        TRTC.COL_CD,
+        TRTC.COL_NM,
+        TRTC.DISP_NM,
+        TRTC.COL_TYP_CD,
+        TRTC.COL_FMT_TYP,
+        TRTC.COL_CLS,
+        TRTC.COL_LEN,
+        TRTC.POINT_LEN,
+        TRTC.POINT_CAL_TYP,
+        TRTC.MAN_YN,
+        TRTC.GRP_CD,
+        TRTC.HD_GRP_CD,
+        TRTC.SORT_ORD,
+        TRTC.USR_TYP,
+        TRTC.DISP_YN,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRTC.FIELD_ALIGN,
+        TRTC.COMMON_CD,
+        TRTC.USE_YN
+        FROM ESBTRTC TRTC
+        INNER JOIN ESBTRTS TRTS
+        ON TRTC.TEN_ID = TRTS.TEN_ID
+        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTC.TEN_ID = #{g.tenant}
+        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTC.USE_YN = 'Y'
+        AND TRTC.COL_CLS = 'S'
+        OR TRTC.COL_TYP_CD = 'CALC'
+        ORDER BY SORT_ORD ASC
+    </select>
+
+    <select id="findBidTemplateHeadersColumnsForCalc" resultType="map">
+        /* bid.xml findBidTemplateHeadersColumnsForCalc */
+
+        SELECT
+        TRTC.TEN_ID,
+        TRTC.TEMPL_SHEET_COL_ID,
+        TRTC.TEMPL_SHEET_ID,
+        TRTC.COL_CD,
+        TRTC.COL_NM,
+        TRTC.DISP_NM,
+        TRTC.COL_TYP_CD,
+        TRTC.COL_FMT_TYP,
+        TRTC.COL_CLS,
+        TRTC.COL_LEN,
+        TRTC.POINT_LEN,
+        TRTC.POINT_CAL_TYP,
+        TRTC.MAN_YN,
+        TRTC.GRP_CD,
+        TRTC.HD_GRP_CD,
+        TRTC.SORT_ORD,
+        TRTC.USR_TYP,
+        TRTC.DISP_YN,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRTC.FIELD_ALIGN,
+        TRTC.COMMON_CD,
+        TRTC.USE_YN
+        FROM ESBTRTC TRTC
+        INNER JOIN ESBTRTS TRTS
+        ON TRTC.TEN_ID = TRTS.TEN_ID
+        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTC.TEN_ID = #{g.tenant}
+        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTC.USE_YN = 'Y'
+        AND TRTC.COL_TYP_CD = 'INT'
+        ORDER BY SORT_ORD ASC
+    </select>
+
+
+    <resultMap type="map" id="resultMap-calcHeadersColumns">
+        <result property="calculate_val" column="CALCULATE_VAL" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    <select id="findColTypeCalcHeadersColumns" resultMap="resultMap-calcHeadersColumns">
+        /* bid.xml findColTypeCalcHeadersColumns */
+
+        SELECT
+        TRTC.TEN_ID,
+        TRTC.TEMPL_SHEET_COL_ID,
+        TRTC.TEMPL_SHEET_ID,
+        TRTC.COL_CD,
+        TRTC.COL_NM,
+        TRTC.DISP_NM,
+        TRTC.COL_TYP_CD,
+        TRTC.COL_FMT_TYP,
+        TRTC.COL_CLS,
+        TRTC.COL_LEN,
+        TRTC.POINT_LEN,
+        TRTC.POINT_CAL_TYP,
+        TRTC.MAN_YN,
+        TRTC.GRP_CD,
+        TRTC.HD_GRP_CD,
+        TRTC.SORT_ORD,
+        TRTC.USR_TYP,
+        TRTC.DISP_YN,
+        TRTS.SHEET_NM,
+        TRTS.SHEET_ID,
+        TRTS.SHEET_TYP,
+        TRTS.CONFIRM_YN,
+        TRTC.FIELD_ALIGN,
+        TRTC.CALCULATE_VAL,
+        TRTC.COMMON_CD,
+        TRTC.USE_YN
+        FROM ESBTRTC TRTC
+        INNER JOIN ESBTRTS TRTS
+        ON TRTC.TEN_ID = TRTS.TEN_ID
+        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTC.TEN_ID = #{g.tenant}
+        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTC.USE_YN = 'Y'
+        AND TRTC.COL_TYP_CD = 'CALC'
+        ORDER BY SORT_ORD ASC
+    </select>
+
+    <select id="findBidTemplateSheetGroupColumnHeaders" resultType="map">
+        /* bid.xml findBidTemplateSheetGroupColumnHeaders */
+
+        SELECT COL_CD , COL_NM
+        FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_CD IN ( SELECT TRTC.GRP_CD
+                        FROM ESBTRTC TRTC
+                        INNER JOIN ESBTRTS TRTS
+                        ON TRTC.TEN_ID = TRTS.TEN_ID
+                        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+                        WHERE TRTC.TEN_ID = #{g.tenant}
+                        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                        AND ( TRTC.GRP_CD  <![CDATA[<>]]>  '' OR TRTC.GRP_CD IS NOT NULL )
+        AND TRTC.USE_YN = 'Y' GROUP BY TRTC.GRP_CD) GROUP BY COL_CD , COL_NM
+    </select>
+
+    <select id="findBidTemplateSheetHeaderDepthGroupColumnHeaders" resultType="map">
+        /* bid.xml findBidTemplateSheetHeaderDepthGroupColumnHeaders */
+
+        SELECT COL_CD , COL_NM
+        FROM ESBTRCM
+        WHERE TEN_ID = #{g.tenant}
+        AND COL_CD IN ( SELECT TRTC.HD_GRP_CD
+                        FROM ESBTRTC TRTC
+                        INNER JOIN ESBTRTS TRTS
+                        ON TRTC.TEN_ID = TRTS.TEN_ID
+                        AND TRTC.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+                        WHERE TRTC.TEN_ID = #{g.tenant}
+                        AND TRTC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                        AND ( TRTC.HD_GRP_CD  <![CDATA[<>]]>  '' OR TRTC.HD_GRP_CD IS NOT NULL )
+        AND TRTC.USE_YN = 'Y' GROUP BY TRTC.HD_GRP_CD) GROUP BY COL_CD , COL_NM
+    </select>
+
+    <select id="findBidTemplateSheetCnt" resultType="int">
+        /* bid.xml findBidTemplateSheetCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRTS
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </select>
+
+
+    <select id="findTemplateSheetColumnAndDataListForSheet" resultType="map">
+        /* bid.xml findTemplateSheetColumnAndDataListForSheet */
+
+        SELECT
+              TRTS.SHEET_NM,
+            TRTS.SHEET_ID,
+            TRTS.TEMPL_ID,
+            TRTS.SHEET_TYP,
+            TRTD.SHEET_DATA_ID,
+            TRTD.VAL_TYP,
+            TRTD.COLUMN_VAL,
+            TRTD.USE_YN,
+            TRTD.SHEET_DATA_ROW_ID,
+            TRTD.TEMPL_SHEET_ID,
+            TRTD.TASK_UUID,
+            TRTD.TEMPL_SHEET_COL_ID
+        FROM ESBTRTS TRTS
+                 INNER JOIN ESBTRTR TRTR
+                            ON TRTS.TEN_ID = TRTR.TEN_ID
+                                AND TRTS.TEMPL_SHEET_ID = TRTR.TEMPL_SHEET_ID
+                                AND TRTR.TASK_UUID IS NULL
+                 INNER JOIN ESBTRTD TRTD
+                            ON TRTD.TEN_ID = TRTR.TEN_ID
+                                AND TRTD.SHEET_DATA_ROW_ID = TRTR.SHEET_DATA_ROW_ID
+        WHERE TRTD.TEN_ID = #{g.tenant}
+        AND TRTD.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTD.TASK_UUID IS NULL
+    </select>
+
+    <select id="findTemplateSheetColumnAndDataListForPro" resultType="map">
+        /* bid.xml findTemplateSheetColumnAndDataListForPro */
+
+        SELECT
+            TRTS.SHEET_NM,
+            TRTS.SHEET_ID,
+            TRTS.SHEET_TYP,
+            TRTD.SHEET_DATA_ID,
+            TRTD.VAL_TYP,
+            TRTD.COLUMN_VAL,
+            TRTD.USE_YN,
+            TRTD.SHEET_DATA_ROW_ID,
+            TRTD.TEMPL_SHEET_ID,
+            TRTD.TASK_UUID,
+            TRTD.TEMPL_SHEET_COL_ID
+        FROM ESBTRTS TRTS
+                 INNER JOIN ESBTRTR TRTR
+                            ON TRTS.TEN_ID = TRTR.TEN_ID
+                                AND TRTS.TEMPL_SHEET_ID = TRTR.TEMPL_SHEET_ID
+                                AND TRTR.TASK_UUID = #{p.task_uuid}
+                 INNER JOIN ESBTRTD TRTD
+                            ON TRTD.TEN_ID = TRTR.TEN_ID
+                                AND TRTD.SHEET_DATA_ROW_ID = TRTR.SHEET_DATA_ROW_ID
+        WHERE TRTD.TEN_ID = #{g.tenant}
+        AND TRTD.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTD.TASK_UUID = #{p.task_uuid}
+    </select>
+
+    <select id="findScenarioSheetColumnDataList" resultType="map">
+        /* bid.xml findScenarioSheetColumnDataList */
+
+        SELECT
+        TRSD.SCENARIO_COL_ID,
+        TRSD.SCENARIO_VALUE_ID,
+        TRSD.SCENARIO_SHEET_ID,
+        TRSD.SHEET_DATA_ROW_ID,
+        TRSD.VD_CD,
+        TRSD.COLUMN_VAL,
+        TRSD.USE_YN,
+        TRSD.EXCEPTION_YN,
+        TRSD.EXCEPTION_DESC,
+        TRSD.CALCULATE_POINT,
+        TRSD.STL_VD_CD,
+        TRSD.STL_YN,
+        TRSD.STS,
+        TRSD.REGR_ID,
+        TRSD.REG_DTTM,
+        TRSD.MODR_ID,
+        TRSD.MOD_DTTM
+        FROM ESBTRSD TRSD
+        INNER JOIN ESBTRWC TRWC
+            ON TRSD.TEN_ID = TRWC.TEN_ID
+            AND TRSD.SCENARIO_SHEET_ID = TRWC.SCENARIO_SHEET_ID
+            AND TRSD.SCENARIO_COL_ID = TRWC.SCENARIO_COL_ID
+        INNER JOIN ESBTRWS TRWS
+            ON TRSD.TEN_ID = TRWS.TEN_ID
+            AND TRSD.SCENARIO_SHEET_ID = TRWS.SCENARIO_SHEET_ID
+        WHERE TRSD.TEN_ID = #{g.tenant}
+        AND TRSD.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+        AND TRWS.SCENARIO_ID = #{p.scenario_id}
+    </select>
+
+    <select id="findSimulationDataList" resultType="map">
+        /* bid.xml findSimulationDataList */
+
+        SELECT
+           TRWR.TEN_ID,
+           TRWR.SCENARIO_ROW_VENDOR_ID,
+           TRWR.VD_CD,
+           TRWR.TEMPL_SHEET_ID,
+           TRWR.SCENARIO_SHEET_ID,
+           TRWR.CALCULATE_POINT,
+           TRWR.SCENARIO_RANK,
+           TRWR.STL_YN,
+           TRWR.STS,
+           TRWR.REGR_ID,
+           TRWR.REG_DTTM,
+           TRWR.MODR_ID,
+           TRWR.MOD_DTTM,
+           TRWR.SHEET_DATA_ROW_ID,
+           TRWR.SCENARIO_VALUE_ID,
+           TRWR.SCENARIO_COL_ID,
+           TRWR.EXCEPTION_YN,
+           TRWR.EXCEPTION_DESC,
+           TRWR.GROUP_KEY,
+           (SELECT VD_NM FROM VD WHERE TEN_ID = TRWR.TEN_ID AND VD_CD = TRWR.VD_CD) AS VD_NM
+        FROM ESBTRWR TRWR
+        WHERE TRWR.TEN_ID = #{g.tenant}
+        AND TRWR.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+    </select>
+
+    <insert id="insertScenarioDataInfo">
+        /* bid.xml insertScenarioDataInfo */
+
+        INSERT INTO ESBTRSD
+        (
+            TEN_ID,
+            SCENARIO_VALUE_ID,
+            SCENARIO_COL_ID,
+            SCENARIO_SHEET_ID,
+            SHEET_DATA_ROW_ID,
+            VD_CD,
+            COLUMN_VAL,
+            USE_YN,
+            EXCEPTION_YN,
+            EXCEPTION_DESC,
+            CALCULATE_POINT,
+            STL_VD_CD,
+            STL_YN,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.scenario_col_id},
+            #{p.scenario_sheet_id},
+            #{p.sheet_data_row_id},
+            #{p.vd_cd},
+            #{p.column_val},
+            #{p.use_yn},
+            #{p.exception_yn},
+            #{p.exception_desc},
+            #{p.calculate_point},
+            #{p.stl_vd_cd},
+            #{p.stl_yn},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+
+    <update id="updateScenarioDataInfo">
+        /* bid.xml updateScenarioDataInfo */
+
+        UPDATE ESBTRSD SET
+            COLUMN_VAL = #{p.column_val},
+            EXCEPTION_YN = #{p.exception_yn},
+            EXCEPTION_DESC = #{p.exception_desc}
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND SCENARIO_COL_ID = #{p.scenario_col_id}
+            AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND SCENARIO_VALUE_ID = #{p.scenario_value_id}
+    </update>
+
+    <insert id="insertScenarioSheetVendorDataInfo">
+        /* bid.xml insertScenarioSheetVendorDataInfo */
+
+        INSERT INTO ESBTRWR
+        (
+            TEN_ID,
+            SCENARIO_ROW_VENDOR_ID,
+            VD_CD,
+            TEMPL_SHEET_ID,
+            SCENARIO_SHEET_ID,
+            CALCULATE_POINT,
+            SCENARIO_RANK,
+            STL_YN,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM,
+            SHEET_DATA_ROW_ID,
+            SCENARIO_VALUE_ID,
+            SCENARIO_COL_ID,
+            EXCEPTION_YN,
+            EXCEPTION_DESC,
+            GROUP_KEY
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.vd_cd},
+            #{p.templ_sheet_id},
+            #{p.scenario_sheet_id},
+            #{p.calculate_point},
+            #{p.scenario_rank},
+            #{p.stl_yn},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now},
+            #{p.sheet_data_row_id},
+            #{p.scenario_value_id},
+            #{p.scenario_col_id},
+            #{p.exception_yn},
+            #{p.exception_desc},
+            #{p.group_key}
+        )
+    </insert>
+
+    <insert id="insertScenarioVendorInfo">
+        /* bid.xml insertScenarioVendorInfo */
+
+        INSERT INTO ESBTRWV
+        (
+            TEN_ID,
+            SCENARIO_VD_ID,
+            SCENARIO_SHEET_ID,
+            VD_CD,
+            EXCEPTION_YN,
+            EXCEPTION_DESC,
+            CALCULATE_POINT,
+            SCENARIO_RANK,
+            STL_YN,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.scenario_sheet_id},
+            #{p.vd_cd},
+            #{p.exception_yn},
+            #{p.exception_desc},
+            #{p.calculate_point},
+            #{p.scenario_rank},
+            #{p.stl_yn},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+
+
+    <update id="updateScenarioVendorException">
+        /* bid.xml updateScenarioVendorException */
+
+        UPDATE ESBTRWV SET
+            EXCEPTION_YN = #{p.exception_yn},
+            EXCEPTION_DESC = #{p.exception_desc}
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND VD_CD = #{p.vd_cd}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND SCENARIO_VD_ID = #{p.scenario_vd_id}
+    </update>
+
+    <insert id="insertScenarioColumnInfo">
+        /* bid.xml insertScenarioColumnInfo */
+
+        INSERT INTO ESBTRWC
+        (
+            TEN_ID,
+            SCENARIO_COL_ID,
+            SCENARIO_SHEET_ID,
+            TEMPL_SHEET_ID,
+            COL_NM,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.scenario_sheet_id},
+            #{p.templ_sheet_id},
+            #{p.col_nm},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+
+    <insert id="insertScenarioSheetInfo">
+        /* bid.xml insertScenarioSheetInfo */
+
+        INSERT INTO ESBTRWS
+        (
+            TEN_ID,
+            SCENARIO_SHEET_ID,
+            SCENARIO_ID,
+            TEMPL_SHEET_ID,
+            CALCULATE_VAL,
+            STS,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM,
+            TASK_UUID,
+            RFX_UUID
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{p.scenario_sheet_id},
+            #{p.scenario_id},
+            #{p.templ_sheet_id},
+            #{p.calculate_val},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now},
+            #{p.task_uuid},
+            #{p.rfx_uuid}
+        )
+    </insert>
+
+    <update id="updateScenarioSheetCalculate">
+        /* bid.xml updateScenarioSheetCalculate */
+
+        UPDATE ESBTRWS
+        SET
+            CALCULATE_VAL = #{p.calculate_val}
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND SCENARIO_ID = #{p.scenario_id}
+            AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+            AND TASK_UUID = #{p.task_uuid}
+            AND RFX_UUID = #{p.rfx_uuid}
+    </update>
+
+
+
+    <select id="findScenarioSheetColumnList" resultType="map">
+        /* bid.xml findScenarioSheetColumnList */
+
+        SELECT
+            TRWC.SCENARIO_COL_ID,
+            TRWC.SCENARIO_SHEET_ID,
+            TRWC.TEMPL_SHEET_ID,
+            TRWS.SCENARIO_ID,
+            TRWC.COL_NM,
+            TRWC.STS,
+            TRWC.REGR_ID,
+            TRWC.REG_DTTM,
+            TRWC.MODR_ID,
+            TRWC.MOD_DTTM
+        FROM ESBTRWC TRWC
+        INNER JOIN ESBTRWS TRWS
+            ON TRWS.TEN_ID = TRWC.TEN_ID
+            AND TRWS.SCENARIO_SHEET_ID = TRWC.SCENARIO_SHEET_ID
+            AND TRWS.SCENARIO_ID = #{p.scenario_id}
+        WHERE TRWC.TEN_ID = #{g.tenant}
+        AND TRWC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRWC.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+    </select>
+
+
+    <select id="findScenarioSheetColumnListResultString" resultType="string">
+        /* bid.xml findScenarioSheetColumnListResultString */
+
+        SELECT
+            TRWC.SCENARIO_COL_ID
+        FROM ESBTRWC TRWC
+        INNER JOIN ESBTRWS TRWS
+            ON TRWS.TEN_ID = TRWC.TEN_ID
+            AND TRWS.SCENARIO_SHEET_ID = TRWC.SCENARIO_SHEET_ID
+            AND TRWS.SCENARIO_ID = #{p.scenario_id}
+        WHERE TRWC.TEN_ID = #{g.tenant}
+        AND TRWC.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRWC.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+    </select>
+
+    <select id="findTemplateSheetColumnAndDataListForSp" resultType="map">
+        /* bid.xml findTemplateSheetColumnAndDataListForSp */
+
+        SELECT
+            TRTS.SHEET_NM,
+            TRTS.SHEET_ID,
+            TRTS.SHEET_TYP,
+            TRTD.SHEET_DATA_ID,
+            TRTD.VAL_TYP,
+            TRTD.COLUMN_VAL,
+            TRTD.USE_YN,
+            TRTD.SHEET_DATA_ROW_ID,
+            TRTD.TEMPL_SHEET_ID,
+            TRTD.TASK_UUID,
+            TRTD.TEMPL_SHEET_COL_ID
+        FROM ESBTRTS TRTS
+                 INNER JOIN ESBTRTR TRTR
+                            ON TRTS.TEN_ID = TRTR.TEN_ID
+                                AND TRTS.TEMPL_SHEET_ID = TRTR.TEMPL_SHEET_ID
+                                AND TRTR.TASK_UUID = #{p.task_uuid}
+                 INNER JOIN ESBTRTD TRTD
+                            ON TRTD.TEN_ID = TRTR.TEN_ID
+                                AND TRTD.SHEET_DATA_ROW_ID = TRTR.SHEET_DATA_ROW_ID
+        WHERE TRTD.TEN_ID = #{g.tenant}
+        AND TRTD.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTD.TASK_UUID = #{p.task_uuid}
+
+        UNION ALL
+
+        SELECT
+            TRTS.SHEET_NM,
+            TRTS.SHEET_ID,
+            TRTS.SHEET_TYP,
+            TRTV.SHEET_DATA_ID,
+            TRTV.VAL_TYP,
+            TRTV.COLUMN_VAL,
+            TRTV.USE_YN,
+            TRTV.SHEET_DATA_ROW_ID,
+            TRTV.TEMPL_SHEET_ID,
+            TRTV.TASK_UUID,
+            TRTV.TEMPL_SHEET_COL_ID
+        FROM ESBTRTS TRTS
+                 INNER JOIN ESBTRTR TRTR
+                            ON TRTS.TEN_ID = TRTR.TEN_ID
+                                AND TRTS.TEMPL_SHEET_ID = TRTR.TEMPL_SHEET_ID
+                                AND TRTR.TASK_UUID = #{p.task_uuid}
+                 INNER JOIN ESBTRTV TRTV
+                            ON TRTV.TEN_ID = TRTR.TEN_ID
+                                AND TRTV.SHEET_DATA_ROW_ID = TRTR.SHEET_DATA_ROW_ID
+        WHERE TRTV.TEN_ID = #{g.tenant}
+        AND TRTV.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTV.TASK_UUID = #{p.task_uuid}
+        AND TRTV.RFX_UUID = #{p.rfx_uuid}
+        <choose>
+            <when test="p.vd_cd != null and p.vd_cd != ''">
+                AND TRTV.VD_CD = #{p.vd_cd}
+            </when>
+            <otherwise>
+                AND TRTV.VD_CD = #{g.username}
+            </otherwise>
+        </choose>
+
+    </select>
+
+
+    <select id="findTemplateSheetColumnAndDataListForSimulation" resultType="map">
+        /* bid.xml findTemplateSheetColumnAndDataListForSimulation */
+
+        SELECT
+            <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                ${buyer.col_cd}
+            </foreach>
+            <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                ${supplier.col_cd}
+            </foreach>
+            A.SHEET_DATA_ROW_ID
+            , B.VD_CD
+        FROM
+            (
+                -- BUYER INPUT
+                SELECT
+                    <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{buyer.templ_sheet_col_id}, TD.COLUMN_VAL)) AS ${buyer.col_cd}
+                    </foreach>
+                     TD.SHEET_DATA_ROW_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTD TD
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TD.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TD.TEMPL_SHEET_COL_ID
+                GROUP BY TD.SHEET_DATA_ROW_ID
+            ) A,
+            (
+                -- SUPPLIER INPUT DATA
+                SELECT
+
+                    <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{supplier.templ_sheet_col_id}, TV.COLUMN_VAL)) AS ${supplier.col_cd}
+                    </foreach>
+                    TV.SHEET_DATA_ROW_ID
+                    ,TV.VD_CD
+                    ,TV.TEN_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTV TV
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TV.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TV.TEMPL_SHEET_COL_ID
+                  AND TV.TASK_UUID = #{p.task_uuid}
+                  AND TV.RFX_UUID = #{p.rfx_uuid}
+                GROUP BY TV.SHEET_DATA_ROW_ID, TV.VD_CD , TV.TEN_ID
+                ORDER BY TV.VD_CD DESC
+        ) B
+        WHERE A.SHEET_DATA_ROW_ID = B.SHEET_DATA_ROW_ID
+        ORDER BY B.SHEET_DATA_ROW_ID ASC
+    </select>
+
+
+
+    <select id="findSimulationSheetDataForNotException" resultType="map">
+        /* bid.xml findSimulationSheetDataForNotException */
+
+        SELECT
+            <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                ${buyer.col_cd}
+            </foreach>
+            <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                ${supplier.col_cd}
+            </foreach>
+            A.SHEET_DATA_ROW_ID
+            , B.VD_CD
+            , (SELECT VD_NM FROM VD WHERE TEN_ID = B.TEN_ID AND VD_CD = B.VD_CD) AS VD_NM
+        FROM
+            (
+                -- BUYER INPUT
+                SELECT
+                    <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{buyer.templ_sheet_col_id}, TD.COLUMN_VAL)) AS ${buyer.col_cd}
+                    </foreach>
+                     TD.SHEET_DATA_ROW_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTD TD
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TD.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TD.TEMPL_SHEET_COL_ID
+                GROUP BY TD.SHEET_DATA_ROW_ID
+            ) A,
+            (
+                -- SUPPLIER INPUT DATA
+                SELECT
+
+                    <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{supplier.templ_sheet_col_id}, TV.COLUMN_VAL)) AS ${supplier.col_cd}
+                    </foreach>
+                    TV.SHEET_DATA_ROW_ID
+                    ,TV.VD_CD
+                    ,TV.TEN_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTV TV
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TV.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TV.TEMPL_SHEET_COL_ID
+                  AND TV.TASK_UUID = #{p.task_uuid}
+                  AND TV.RFX_UUID = #{p.rfx_uuid}
+                 <if test="p.exception_vendor_list != null and p.exception_vendor_list.size() != 0">
+                    AND TV.VD_CD NOT IN
+                    <foreach collection="p.exception_vendor_list" item="ex_vendor" separator="," open="(" close=")">
+                        #{ex_vendor}
+                    </foreach>
+                 </if>
+                 <if test="p.exception_row_list != null and p.exception_row_list.size() != 0">
+                    AND TV.SHEET_DATA_ROW_ID NOT IN
+                    <foreach collection="p.exception_row_list" item="ex_row" separator="," open="(" close=")">
+                        #{ex_row}
+                    </foreach>
+                 </if>
+                GROUP BY TV.SHEET_DATA_ROW_ID, TV.VD_CD , TV.TEN_ID
+                ORDER BY TV.VD_CD DESC
+        ) B
+        WHERE A.SHEET_DATA_ROW_ID = B.SHEET_DATA_ROW_ID
+    </select>
+
+
+
+    <select id="findSimulationSheetDataForNotExceptionAndNotDataBuyer" resultType="map">
+        /* bid.xml findSimulationSheetDataForNotExceptionAndNotDataBuyer */
+
+        SELECT
+            <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                ${buyer.col_cd}
+            </foreach>
+            <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                ${supplier.col_cd}
+            </foreach>
+            B.SHEET_DATA_ROW_ID
+            , B.VD_CD
+            , (SELECT VD_NM FROM VD WHERE TEN_ID = B.TEN_ID AND VD_CD = B.VD_CD) AS VD_NM
+        FROM
+            (
+                -- SUPPLIER INPUT DATA
+                SELECT
+
+                    <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{supplier.templ_sheet_col_id}, TV.COLUMN_VAL)) AS ${supplier.col_cd}
+                    </foreach>
+                    TV.SHEET_DATA_ROW_ID
+                    ,TV.VD_CD
+                    ,TV.TEN_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTV TV
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TV.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TV.TEMPL_SHEET_COL_ID
+                  AND TV.TASK_UUID = #{p.task_uuid}
+                  AND TV.RFX_UUID = #{p.rfx_uuid}
+                 <if test="p.exception_vendor_list != null and p.exception_vendor_list.size() != 0">
+                    AND TV.VD_CD NOT IN
+                    <foreach collection="p.exception_vendor_list" item="ex_vendor" separator="," open="(" close=")">
+                        #{ex_vendor}
+                    </foreach>
+                 </if>
+                 <if test="p.exception_row_list != null and p.exception_row_list.size() != 0">
+                    AND TV.SHEET_DATA_ROW_ID NOT IN
+                    <foreach collection="p.exception_row_list" item="ex_row" separator="," open="(" close=")">
+                        #{ex_row}
+                    </foreach>
+                 </if>
+                GROUP BY TV.SHEET_DATA_ROW_ID, TV.VD_CD , TV.TEN_ID
+                ORDER BY TV.VD_CD DESC
+        ) B
+    </select>
+
+
+
+
+
+    <select id="findSimulationSheetExceptionData" resultType="map">
+        /* bid.xml findSimulationSheetExceptionData */
+
+        SELECT
+            <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                ${buyer.col_cd}
+            </foreach>
+            <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                ${supplier.col_cd}
+            </foreach>
+            A.SHEET_DATA_ROW_ID
+            , B.VD_CD
+            , (SELECT VD_NM FROM VD WHERE TEN_ID = B.TEN_ID AND VD_CD = B.VD_CD) AS VD_NM
+            , 'Y' AS EXCEPTION_YN
+        FROM
+            (
+                -- BUYER INPUT
+                SELECT
+                    <foreach collection="p.buyer_header_list" item="buyer" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{buyer.templ_sheet_col_id}, TD.COLUMN_VAL)) AS ${buyer.col_cd}
+                    </foreach>
+                     TD.SHEET_DATA_ROW_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTD TD
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TD.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TD.TEMPL_SHEET_COL_ID
+                GROUP BY TD.SHEET_DATA_ROW_ID
+            ) A,
+            (
+                -- SUPPLIER INPUT DATA
+                SELECT
+
+                    <foreach collection="p.supplier_header_list" item="supplier" separator="," close=",">
+                         MIN(DECODE(TC.TEMPL_SHEET_COL_ID, #{supplier.templ_sheet_col_id}, TV.COLUMN_VAL)) AS ${supplier.col_cd}
+                    </foreach>
+                    TV.SHEET_DATA_ROW_ID
+                    ,TV.VD_CD
+                    ,TV.TEN_ID
+                FROM ESBTRTS TS, ESBTRTC TC, ESBTRTV TV
+                WHERE TS.TEN_ID = #{g.tenant}
+                  AND TS.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+                  AND TS.TEN_ID = TC.TEN_ID
+                  AND TS.TEMPL_SHEET_ID = TC.TEMPL_SHEET_ID
+                  AND TC.TEN_ID = TV.TEN_ID
+                  AND TC.TEMPL_SHEET_COL_ID = TV.TEMPL_SHEET_COL_ID
+                  AND TV.TASK_UUID = #{p.task_uuid}
+                  AND TV.RFX_UUID = #{p.rfx_uuid}
+                 <if test="p.exception_vendor_list != null and p.exception_vendor_list.size() != 0">
+                    AND TV.VD_CD IN
+                    <foreach collection="p.exception_vendor_list" item="ex_vendor" separator="," open="(" close=")">
+                        #{ex_vendor}
+                    </foreach>
+                 </if>
+                 <if test="p.exception_row_list != null and p.exception_row_list.size() != 0">
+                    AND TV.SHEET_DATA_ROW_ID IN
+                    <foreach collection="p.exception_row_list" item="ex_row" separator="," open="(" close=")">
+                        #{ex_row}
+                    </foreach>
+                 </if>
+                GROUP BY TV.SHEET_DATA_ROW_ID, TV.VD_CD , TV.TEN_ID
+                ORDER BY TV.VD_CD DESC
+        ) B
+        WHERE A.SHEET_DATA_ROW_ID = B.SHEET_DATA_ROW_ID
+
+
+    </select>
+
+
+    <select id="findBiddingRfxQtaWithVendorList" resultType="map">
+        /* bid.xml findBiddingRfxQtaWithVendorList */
+
+       SELECT RFXHD.RFX_UUID
+        , RFXHD.RFX_NO
+        , RFXHD.RFX_TIT
+        , RFXHD.RFX_RND
+        , RFXHD.OORG_CD
+        , RFXHD.RFX_RES_TYP
+        , RFXHD.BID_TYP
+        , RFXHD.RFX_TYP_CCD
+        , RFXHD.RFX_CRN_DT
+        , RFXHD.RFX_START_DT
+        , RFXHD.RFX_CLOSE_DT
+        , RFXHD.RFX_MOD_CLOSE_DT
+        , RFXHD.CLOSE_NTC
+        , RFXHD.SHIPPER_TYPE
+        , RFXHD.DELAY_RATE
+        , RFXHD.PAY_TERMS_CD
+        , RFXHD.PAY_TERMS_DESC
+        , RFXHD.DELY_TERMS_CD
+        , RFXHD.DELY_TERMS_DESC
+        , RFXHD.COMP_TYP_CCD
+        , RFXHD.VD_STL_TYP
+        , RFXHD.SLCTN_TYP_CCD
+        , RFXHD.VD_STL_CAUSE
+        , RFXHD.AUTO_EXT_YN
+        , RFXHD.AUTO_EXT_TIME
+        , RFXHD.CNTR_SD
+        , RFXHD.CNTR_ED
+        , RFXHD.PURC_TYP_CCD
+        , RFXHD.RFP_DESC_YN
+        , RFXHD.RFP_ANN_YN
+        , RFXHD.PART_BID_YN
+        , RFXHD.PRI_FACT_SET_YN
+        , RFXHD.NON_PRI_SET_YN
+        , RFXHD.PRC_EVAL_TYP
+        , RFXHD.CALC_FORM
+        , RFXHD.CALC_FORM_TXT
+        , RFXHD.NON_PRC_EVAL_RATE
+        , RFXHD.PRC_EVAL_RATE
+        , RFXHD.RFP_DESC_DT
+        , RFXHD.RFP_DESC_LOCAT
+        , RFXHD.RFP_DESC_CHR_ID
+        , RFXHD.RFP_ANN_SD
+        , RFXHD.RFP_ANN_ED
+        , RFXHD.RFP_ANN_CHR_ID
+        , RFXHD.INTN_RFX_REM
+        , RFXHD.EXTN_RFX_REM
+        , RFXHD.INTN_ATT_NO
+        , RFXHD.EXTN_ATT_NO
+        , RFXHD.RFX_STS_CCD
+        , RFXHD.RFX_END_STS
+        , RFXHD.PROG_ELEC_APRV_YN
+        , RFXHD.PROG_APRV_STS
+        , RFXHD.RULT_ELEC_APRV_YN
+        , RFXHD.RULT_APRV_STS
+        , RFXHD.NOTI_DT
+        , RFXHD.ANN_YN
+        , RFXHD.AUTO_EXT_CNT
+        , RFXHD.OPEN_DT
+        , RFXHD.IMDT_START_YN
+        , RFXHD.IMDT_OPEN_YN
+        , RFXHD.EVAL_ORD
+        , RFXQTAHD.RFX_BID_UUID
+        , RFXQTAHD.RFX_BID_NO
+        , RFXQTAHD.RFX_BID_REVNO
+        , RFXQTAHD.RFX_BID_EFCT_YN
+        , OG.OBD_TYP_CCD
+        , VD.VD_CD
+        , VD.VD_NM
+        , VD.ERP_VD_CD
+    FROM RFX_BID	RFXQTAHD
+        INNER JOIN VD VD
+            ON VD.TEN_ID = RFXQTAHD.TEN_ID
+            AND VD.VD_CD  = RFXQTAHD.VD_CD
+            AND VD.STS   != 'D'
+        INNER JOIN RFX RFXHD
+            ON RFXHD.TEN_ID  = RFXQTAHD.TEN_ID
+            AND RFXHD.RFX_NO  = RFXQTAHD.RFX_NO
+            AND RFXHD.RFX_RND = RFXQTAHD.RFX_RND
+            AND RFXHD.STS    != 'D'
+        INNER JOIN OORG_VD OG
+            ON OG.TEN_ID      = VD.TEN_ID
+            AND OG.VD_CD       = VD.VD_CD
+            AND OG.OORG_CD IN (SELECT OOLM.CONNSUBJ_OORG_CD
+            FROM OORG_MAPG OOLM
+            WHERE OOLM.TEN_ID          = RFXHD.TEN_ID
+            AND OOLM.CONNSRC_OORG_CD = RFXHD.OORG_CD
+            AND OOLM.CONN_TYP_CCD        = 'POEO'
+            AND OOLM.CONN_YN         = 'Y')
+            AND OG.STS        != 'D'
+        INNER JOIN ESPRQDT RFXDT
+            ON RFXDT.TEN_ID = RFXHD.TEN_ID
+            AND RFXDT.RFX_UUID = RFXHD.RFX_UUID
+            AND RFXDT.STS   != 'D'
+        LEFT OUTER JOIN ESPQTDT RFXQTADT
+            ON RFXQTADT.TEN_ID      = RFXQTAHD.TEN_ID
+            AND RFXQTADT.RFX_BID_UUID  = RFXQTAHD.RFX_BID_UUID
+            AND RFXQTADT.RFX_ITEM_ID = RFXDT.RFX_ITEM_ID
+        LEFT OUTER JOIN RFX_VD RFXVD
+            ON RFXVD.TEN_ID = RFXHD.TEN_ID
+            AND RFXVD.RFX_UUID = RFXHD.RFX_UUID
+            AND RFXVD.VD_CD  = RFXQTAHD.VD_CD
+            AND RFXVD.STS   != 'D'
+        LEFT OUTER JOIN USR USRINFO
+            ON USR.TEN_ID = #{g.tenant}
+            AND USR.USR_ID = RFXQTAHD.SBMT_ID
+        LEFT OUTER JOIN ESBTRWV TRWV
+            ON RFXVD.TEN_ID = TRWV.TEN_ID
+            AND RFXVD.VD_CD = TRWV.VD_CD
+            AND TRWV.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+    WHERE RFXQTAHD.TEN_ID   = #{g.tenant}
+    AND RFXHD.RFX_UUID   = #{p.rfx_uuid}
+    AND RFXQTAHD.STS     != 'D'
+    AND RFXQTAHD.RFX_BID_EFCT_YN = 'Y'
+    AND RFXQTAHD.RFX_BID_STS_CCD = 'S'
+    ORDER BY RFXVD.VD_CD
+</select>
+
+
+    <select id="findBidTemplateSheetRowIdList" resultType="map">
+        /* bid.xml findBidTemplateSheetRowIdList */
+
+        SELECT
+        TRTS.TEMPL_SHEET_ID,
+        TRTR.SHEET_DATA_ROW_ID,
+        TRTR.ROW_NUM,
+        TRTS.CONFIRM_YN
+        FROM ESBTRTR TRTR
+        INNER JOIN ESBTRTS TRTS
+        ON TRTR.TEN_ID = TRTS.TEN_ID
+        AND TRTR.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTR.TEN_ID = #{g.tenant}
+        AND TRTR.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTR.TASK_UUID IS NULL
+        ORDER BY ROW_NUM ASC
+    </select>
+
+    <select id="findBidTemplateSheetRowIdListForAppId" resultType="map">
+        /* bid.xml findBidTemplateSheetRowIdListForAppId */
+
+        SELECT
+        TRTS.TEMPL_SHEET_ID,
+        TRTR.SHEET_DATA_ROW_ID,
+        TRTR.TASK_UUID,
+        TRTR.ROW_NUM
+        FROM ESBTRTR TRTR
+        INNER JOIN ESBTRTS TRTS
+        ON TRTR.TEN_ID = TRTS.TEN_ID
+        AND TRTR.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTR.TEN_ID = #{g.tenant}
+        AND TRTR.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        <choose>
+            <when test="p.task_uuid != null and p.task_uuid != ''">
+                AND TRTR.TASK_UUID = #{p.task_uuid}
+            </when>
+            <otherwise>
+                AND TRTR.TASK_UUID IS NULL
+            </otherwise>
+        </choose>
+
+        ORDER BY ROW_NUM ASC
+    </select>
+
+
+    <select id="findBidTemplateSheetRowInfo" resultType="map">
+        /* bid.xml findBidTemplateSheetRowInfo */
+
+        SELECT
+        TRTS.TEMPL_SHEET_ID,
+        TRTR.SHEET_DATA_ROW_ID,
+        TRTR.ROW_NUM,
+        TRTR.TASK_UUID
+        FROM ESBTRTR TRTR
+        INNER JOIN ESBTRTS TRTS
+        ON TRTR.TEN_ID = TRTS.TEN_ID
+        AND TRTR.TEMPL_SHEET_ID = TRTS.TEMPL_SHEET_ID
+        WHERE TRTR.TEN_ID = #{g.tenant}
+        AND TRTR.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TRTR.SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        ORDER BY ROW_NUM ASC
+    </select>
+
+    <insert id="insertSheetRowInfo">
+        /* bid.xml insertSheetRowInfo */
+
+        INSERT INTO ESBTRTR
+        (
+            TEN_ID,
+            SHEET_DATA_ROW_ID,
+            TEMPL_SHEET_ID,
+            ROW_NUM,
+            TASK_UUID
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{p.sheet_data_row_id},
+            #{p.templ_sheet_id},
+            #{p.row_num},
+            #{p.task_uuid}
+
+        )
+    </insert>
+
+    <insert id="insertSheetDataInfo">
+        /* bid.xml insertSheetDataInfo */
+
+        INSERT INTO ESBTRTD
+        (
+            TEN_ID,
+            SHEET_DATA_ID,
+            SHEET_DATA_ROW_ID,
+            TEMPL_SHEET_ID,
+            TEMPL_SHEET_COL_ID,
+            VAL_TYP,
+            COLUMN_VAL,
+            USE_YN,
+            TASK_UUID
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.sheet_data_row_id},
+            #{p.templ_sheet_id},
+            #{p.templ_sheet_col_id},
+            #{p.val_typ},
+            #{p.column_val},
+            'Y',
+            #{p.task_uuid}
+        )
+    </insert>
+
+    <insert id="insertSheetVendorDataInfo">
+        /* bid.xml insertSheetVendorDataInfo */
+
+        INSERT INTO ESBTRTV
+        (
+            TEN_ID,
+            SHEET_DATA_ID,
+            SHEET_DATA_ROW_ID,
+            TEMPL_SHEET_ID,
+            TEMPL_SHEET_COL_ID,
+            VAL_TYP,
+            COLUMN_VAL,
+            USE_YN,
+            RFX_UUID,
+            TASK_UUID,
+            VD_CD
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{g.uuid},
+            #{p.sheet_data_row_id},
+            #{p.templ_sheet_id},
+            #{p.templ_sheet_col_id},
+            #{p.val_typ},
+            #{p.column_val},
+            'Y',
+            #{p.rfx_uuid},
+            #{p.task_uuid},
+            #{g.username}
+        )
+    </insert>
+
+    <update id="updateSheetDataInfo">
+        /* bid.xml updateSheetDataInfo */
+
+        UPDATE ESBTRTD
+        <set>
+            <if test="p.use_yn != null and p.use_yn != ''">
+                USE_YN = #{p.use_yn},
+            </if>
+            <if test="p.val_typ != null and p.val_typ != ''">
+                VAL_TYP = #{p.val_typ},
+            </if>
+            COLUMN_VAL = #{p.column_val}
+
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </update>
+
+
+    <update id="updateSheetDataInfoForAppId">
+        /* bid.xml updateSheetDataInfoForAppId */
+
+        UPDATE ESBTRTD
+        <set>
+            <if test="p.use_yn != null and p.use_yn != ''">
+                USE_YN = #{p.use_yn},
+            </if>
+            <if test="p.val_typ != null and p.val_typ != ''">
+                VAL_TYP = #{p.val_typ},
+            </if>
+            COLUMN_VAL = #{p.column_val}
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </update>
+
+    <update id="updateSheetDataInfoForSp">
+        /* bid.xml updateSheetDataInfoForSp */
+
+        UPDATE ESBTRTV
+        <set>
+            <if test="p.use_yn != null and p.use_yn != ''">
+                USE_YN = #{p.use_yn},
+            </if>
+            <if test="p.val_typ != null and p.val_typ != ''">
+                VAL_TYP = #{p.val_typ},
+            </if>
+            COLUMN_VAL = #{p.column_val}
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+        AND RFX_UUID = #{p.rfx_uuid}
+        AND VD_CD = #{g.username}
+    </update>
+
+    <select id="selectColumnDataCnt" resultType="int">
+        /* bid.xml selectColumnDataCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </select>
+
+    <select id="selectVendorTemplateAppCnt" resultType="int">
+        /* bid.xml selectVendorTemplateAppCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRAR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+        AND TASK_UUID = #{p.task_uuid}
+        <if test="p.vd_cd != null and p.vd_cd != ''">
+            AND VD_CD = #{p.vd_cd}
+        </if>
+    </select>
+
+    <select id="selectVendorTemplateAppCntForTemplateId" resultType="int">
+        /* bid.xml selectVendorTemplateAppCntForTemplateId */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRAR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+    </select>
+
+    <select id="selectColumnDataBuyerCnt" resultType="int">
+        /* bid.xml selectColumnDataBuyerCnt */
+        SELECT
+        COUNT(*)
+        FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </select>
+
+    <select id="selectScenarioRowVendorCnt" resultType="int">
+        /* bid.xml selectScenarioRowVendorCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRWR
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND VD_CD = #{p.vd_cd}
+            AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+            AND SCENARIO_ROW_VENDOR_ID = #{p.scenario_row_vendor_id}
+    </select>
+
+    <select id="selectScenarioVendorInfoCnt" resultType="int">
+        /* bid.xml selectScenarioVendorInfoCnt */
+        SELECT
+        COUNT(*)
+        FROM ESBTRWV
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND VD_CD = #{p.vd_cd}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND SCENARIO_VD_ID = #{p.scenario_vd_id}
+    </select>
+
+    <select id="selectScenarioExceptionVendorInfoList" resultType="map">
+        /* bid.xml selectScenarioExceptionVendorInfoList */
+
+        SELECT
+            VD_CD,
+            EXCEPTION_YN,
+            EXCEPTION_DESC
+        FROM ESBTRWV
+        WHERE
+            TEN_ID = #{g.tenant}
+            AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+            AND EXCEPTION_YN = 'Y'
+    </select>
+
+    <select id="selectScenarioExceptionRowInfoList" resultType="map">
+        /* bid.xml selectScenarioExceptionRowInfoList */
+
+         SELECT
+            TRSD.SHEET_DATA_ROW_ID,
+            TRSD.EXCEPTION_YN,
+            TRSD.EXCEPTION_DESC
+        FROM ESBTRSD TRSD
+            INNER JOIN ESBTRWC TRWC
+                ON TRSD.TEN_ID = TRWC.TEN_ID
+                AND TRSD.SCENARIO_SHEET_ID = TRWC.SCENARIO_SHEET_ID
+                AND TRSD.SCENARIO_COL_ID = TRWC.SCENARIO_COL_ID
+            INNER JOIN ESBTRWS TRWS
+                ON TRSD.TEN_ID = TRWS.TEN_ID
+                AND TRSD.SCENARIO_SHEET_ID = TRWS.SCENARIO_SHEET_ID
+        WHERE TRSD.TEN_ID = #{g.tenant}
+        AND TRSD.SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+        AND TRWS.SCENARIO_ID = #{p.scenario_id}
+        AND TRSD.EXCEPTION_YN = 'Y'
+    </select>
+
+    <select id="selectScenarioColumnDataCnt" resultType="int">
+        /* bid.xml selectScenarioColumnDataCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRSD
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND SCENARIO_COL_ID = #{p.scenario_col_id}
+        AND SCENARIO_SHEET_ID = #{p.scenario_sheet_id}
+        AND SCENARIO_VALUE_ID = #{p.scenario_value_id}
+    </select>
+
+    <select id="selectColumnDataSupplierCnt" resultType="int">
+        /* bid.xml selectColumnDataSupplierCnt */
+
+        SELECT
+        COUNT(*)
+        FROM ESBTRTV
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_COL_ID = #{p.templ_sheet_col_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+        AND RFX_UUID = #{p.rfx_uuid}
+        AND VD_CD = #{g.username}
+    </select>
+
+
+    <delete id="deleteBidTemplateSheetDataList">
+        /* bid.xml deleteBidTemplateSheetDataList */
+
+        DELETE FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID IS NULL
+	</delete>
+
+    <delete id="deleteBidTemplateSheetDataListForAppId">
+        /* bid.xml deleteBidTemplateSheetDataListForAppId */
+
+        DELETE FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+	</delete>
+
+    <delete id="deleteBidTemplateSheetDataListForSp">
+        /* bid.xml deleteBidTemplateSheetDataListForSp */
+        DELETE FROM ESBTRTV
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+        AND RFX_UUID = #{p.rfx_uuid}
+	</delete>
+
+
+    <delete id="deleteBidTemplateSheetRowId">
+        /* bid.xml deleteBidTemplateSheetRowId */
+        DELETE FROM ESBTRTR
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID IS NULL
+	</delete>
+
+
+    <delete id="deleteBidTemplateSheetRowIdForAppId">
+        /* bid.xml deleteBidTemplateSheetRowIdForAppId */
+
+        DELETE FROM ESBTRTR
+        WHERE TEN_ID = #{g.tenant}
+        AND SHEET_DATA_ROW_ID = #{p.sheet_data_row_id}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+	</delete>
+
+
+
+    <delete id="deleteBidTemplateSheetDataForTmpSheetId">
+        /* bid.xml deleteBidTemplateSheetDataForTmpSheetId */
+
+		DELETE FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+	</delete>
+
+    <delete id="deleteBidTemplateSheetDataForAppId">
+        /* bid.xml deleteBidTemplateSheetDataForAppId */
+		DELETE FROM ESBTRTD
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+	</delete>
+
+    <delete id="deleteBidTemplateRowIdForTmpSheetId">
+        /* bid.xml deleteBidTemplateRowIdForTmpSheetId */
+		DELETE FROM ESBTRTR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+	</delete>
+
+
+    <delete id="deleteBidTemplateRowIdForAppId">
+        /* bid.xml deleteBidTemplateRowIdForAppId */
+		DELETE FROM ESBTRTR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+        AND TASK_UUID = #{p.task_uuid}
+	</delete>
+
+
+    <delete id="deleteBidTemplateSyncAppInfo">
+        /* bid.xml deleteBidTemplateSyncAppInfo */
+		DELETE FROM ESBTRAR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+        AND TASK_UUID = #{p.task_uuid}
+        AND VENDOR_TEMPL_ID = #{p.vendor_templ_id}
+	</delete>
+
+
+    <delete id="deleteBidTemplateHeaderColumnsForTmpSheetId">
+        /* bid.xml deleteBidTemplateHeaderColumnsForTmpSheetId */
+		DELETE FROM ESBTRTC
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+	</delete>
+
+
+    <delete id="deleteBidTemplateSheetForTmpSheetId">
+        /* bid.xml deleteBidTemplateSheetForTmpSheetId */
+		DELETE FROM ESBTRTS
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+	</delete>
+
+
+    <update id="updateConfirmBidTemplate">
+        /* bid.xml updateConfirmBidTemplate */
+        UPDATE ESBTRTS
+        <set>
+            CONFIRM_YN = 'Y',
+            MOD_DTTM = #{g.now},
+            MODR_ID = #{g.username}
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </update>
+
+    <update id="updateConfirmBidTemplateCancel">
+        /* bid.xml updateConfirmBidTemplateCancel */
+        UPDATE ESBTRTS
+        <set>
+            CONFIRM_YN = 'N',
+            MOD_DTTM = #{g.now},
+            MODR_ID = #{g.username}
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </update>
+
+    <update id="confirmBidTemplateInfo">
+        /* bid.xml confirmBidTemplateInfo */
+        UPDATE ESBTRTL
+        <set>
+            CONFIRM_YN = 'Y'
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+    </update>
+
+    <update id="confirmBidTemplateCancel">
+        /* bid.xml confirmBidTemplateCancel */
+        UPDATE ESBTRTL
+        <set>
+            CONFIRM_YN = 'N'
+        </set>
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+    </update>
+
+
+    <insert id="insertBidTemplateAndAppIdRelation">
+        /* bid.xml insertBidTemplateAndAppIdRelation */
+        INSERT INTO ESBTRAR
+        (
+            TEN_ID,
+            VENDOR_TEMPL_ID,
+            TEMPL_ID,
+            TASK_UUID,
+            VD_CD
+        )
+        VALUES
+        (
+            #{g.tenant},
+            #{p.vendor_templ_id},
+            #{p.templ_id},
+            #{p.task_uuid},
+            #{p.vd_cd}
+        )
+    </insert>
+
+    <update id="updatePrHeaderVendorTemplId">
+        /* bid.xml updatePrHeaderVendorTemplId */
+        UPDATE PR
+        SET VENDOR_TEMPL_ID =  #{p.vendor_templ_id}
+        WHERE TEN_ID = #{g.tenant}
+        AND PR_UUID = #{p.task_uuid}
+    </update>
+
+    <update id="updateRFQItemVendorTemplId">
+        /* bid.xml updateRFQItemVendorTemplId */
+        UPDATE ESPRQDT
+        SET VENDOR_TEMPL_ID =  #{p.vendor_templ_id}
+        WHERE TEN_ID = #{g.tenant}
+        AND RFX_ITEM_ID = #{p.task_uuid}
+    </update>
+
+    <update id="updateVendorTemplIdNull">
+        /* bid.xml updateVendorTemplIdNull */
+        UPDATE ESPRQDT
+        SET VENDOR_TEMPL_ID =  ''
+        WHERE TEN_ID = #{g.tenant}
+        AND RFX_ITEM_ID = #{p.task_uuid}
+    </update>
+
+    <select id="findRFQItemVendorTemplId" resultType="string">
+        /* bid.xml findRFQItemVendorTemplId */
+        SELECT VENDOR_TEMPL_ID
+        FROM ESPRQDT
+        WHERE TEN_ID = #{g.tenant}
+        AND RFX_ITEM_ID = #{p.task_uuid}
+    </select>
+
+
+    <select id="selectVendorTemplateApp" resultType="map">
+        /* bid.xml selectVendorTemplateApp */
+        SELECT
+            TEN_ID,
+            VENDOR_TEMPL_ID,
+            TEMPL_ID,
+            TASK_UUID,
+            VD_CD
+        FROM ESBTRAR
+        WHERE TEN_ID = #{g.tenant}
+        AND TEMPL_ID = #{p.templ_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </select>
+
+
+    <select id="selectVendorTemplateAppByVendorTemplId" resultType="map">
+        /* bid.xml selectVendorTemplateAppByVendorTemplId */
+        SELECT
+            TEN_ID,
+            VENDOR_TEMPL_ID,
+            TEMPL_ID,
+            TASK_UUID,
+            VD_CD
+        FROM ESBTRAR
+        WHERE TEN_ID = #{g.tenant}
+        AND VENDOR_TEMPL_ID = #{p.vendor_templ_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </select>
+
+    <select id="selectScenarioTemplateInfo" resultType="map">
+        /* bid.xml selectScenarioTemplateInfo */
+        SELECT
+        TRAR.TASK_UUID,
+        TRAR.VENDOR_TEMPL_ID,
+        TRWM.SCENARIO_ID,
+        TRWM.TEMPL_ID,
+        TRWM.TASK_UUID,
+        TRWM.RFX_UUID,
+        TRWM.SCENARIO_CD,
+        TRWM.SCENARIO_NM
+        FROM ESBTRAR TRAR
+        INNER JOIN ESBTRWM TRWM
+            ON TRAR.TEN_ID = TRWM.TEN_ID
+            AND TRAR.TEMPL_ID = TRWM.TEMPL_ID
+        WHERE TRAR.TEN_ID = #{g.tenant}
+        AND TRAR.VENDOR_TEMPL_ID = #{p.vendor_templ_id}
+        AND TRAR.TASK_UUID = #{p.task_uuid}
+        AND TRWM.SCENARIO_ID = #{p.scenario_id}
+    </select>
+
+    <select id="selectTemplateInfoForVendorTemplId" resultType="map">
+        /* bid.xml selectTemplateInfoForVendorTemplId */
+        SELECT
+            TRTS.TEN_ID,
+            TRTS.TEMPL_SHEET_ID,
+            TRTS.TEMPL_ID,
+            TRTS.SHEET_ID,
+            TRTS.SHEET_NM,
+            TRTS.SHEET_TYP,
+            TRTS.CONFIRM_YN,
+            TRAR.TASK_UUID,
+            TRAR.VENDOR_TEMPL_ID
+        FROM ESBTRTS TRTS
+        INNER JOIN ESBTRTL TRTL
+            ON TRTS.TEN_ID = TRTL.TEN_ID
+            AND TRTS.TEMPL_ID = TRTL.TEMPL_ID
+        INNER JOIN ESBTRAR TRAR
+            ON TRTL.TEN_ID = TRAR.TEN_ID
+            AND TRTL.TEMPL_ID = TRAR.TEMPL_ID
+        WHERE TRTS.TEN_ID = #{g.tenant}
+        AND TRAR.TASK_UUID = #{p.task_uuid}
+        AND TRAR.VENDOR_TEMPL_ID = #{p.vendor_templ_id}
+    </select>
+
+
+    <select id="findTemplateSheetColumnAndDataListForSupplier" resultType="map">
+        /* bid.xml findTemplateSheetColumnAndDataListForSupplier */
+        SELECT
+            TRTS.SHEET_NM,
+            TRTS.SHEET_ID,
+            TRTS.SHEET_TYP,
+            TRTD.SHEET_DATA_ID,
+            TRTD.VAL_TYP,
+            TRTD.COLUMN_VAL,
+            TRTD.USE_YN,
+            TRTD.SHEET_DATA_ROW_ID,
+            TRTD.TEMPL_SHEET_ID,
+            TRTD.TASK_UUID,
+            TRTD.TEMPL_SHEET_COL_ID
+        FROM ESBTRTS TRTS
+                 INNER JOIN ESBTRTR TRTR
+                            ON TRTS.TEN_ID = TRTR.TEN_ID
+                                AND TRTS.TEMPL_SHEET_ID = TRTR.TEMPL_SHEET_ID
+                                AND TRTR.TASK_UUID = #{p.task_uuid}
+                 INNER JOIN ESBTRTD TRTD
+                            ON TRTD.TEN_ID = TRTR.TEN_ID
+                                AND TRTD.SHEET_DATA_ROW_ID = TRTR.SHEET_DATA_ROW_ID
+                 INNER JOIN ESBTRTC TRTC
+                            ON TRTD.TEN_ID = TRTC.TEN_ID
+                            AND TRTD.TEMPL_SHEET_COL_ID = TRTC.TEMPL_SHEET_COL_ID
+                            AND TRTC.COL_CLS = 'S'
+        WHERE TRTD.TEN_ID = #{g.tenant}
+        AND TRTD.TEMPL_SHEET_ID = #{p.templ_sheet_id}
+    </select>
+
+
+    <select id="findScenarioListForRfx" resultType="map">
+        /* bid.xml findScenarioListForRfx */
+        SELECT
+             TEN_ID,
+             SCENARIO_CD,
+             SCENARIO_ID,
+             TEMPL_ID,
+             TASK_UUID,
+             RFX_UUID,
+             SCENARIO_NM,
+             STL_TYP,
+             STS,
+             REGR_ID,
+             REG_DTTM,
+             MODR_ID,
+             MOD_DTTM
+         FROM ESBTRWM
+         WHERE TEN_ID =#{g.tenant}
+         AND TASK_UUID = #{p.pr_uuid}
+         ORDER BY REG_DTTM DESC
+    </select>
+
+
+    <select id="findScenarioInfo" resultType="map">
+        /* bid.xml findScenarioInfo */
+        SELECT
+             TEN_ID,
+             SCENARIO_CD,
+             SCENARIO_ID,
+             TEMPL_ID,
+             TASK_UUID,
+             SCENARIO_NM,
+             STL_TYP,
+             STS,
+             REGR_ID,
+             REG_DTTM,
+             MODR_ID,
+             MOD_DTTM
+         FROM ESBTRWM
+         WHERE TEN_ID =#{g.tenant}
+         AND TASK_UUID = #{p.pr_uuid}
+         AND SCENARIO_ID = #{p.scenario_id}
+    </select>
+
+    <select id="checkScenarioInfoCnt" resultType="int">
+        /* bid.xml checkScenarioInfoCnt */
+        SELECT
+            COUNT(*)
+         FROM ESBTRWM
+         WHERE TEN_ID =#{g.tenant}
+         AND TASK_UUID = #{p.task_uuid}
+         AND SCENARIO_ID = #{p.scenario_id}
+    </select>
+
+    <insert id="insertScenarioInfo">
+        /* bid.xml insertScenarioInfo */
+        INSERT INTO ESBTRWM
+        (    TEN_ID,
+             SCENARIO_CD,
+             SCENARIO_ID,
+             TEMPL_ID,
+             TASK_UUID,
+             SCENARIO_NM,
+             STL_TYP,
+             STS,
+             REGR_ID,
+             REG_DTTM,
+             MODR_ID,
+             MOD_DTTM
+        )
+        VALUES (
+            #{g.tenant},
+            #{p.scenario_cd},
+            #{p.scenario_id},
+            #{p.templ_id},
+            #{p.task_uuid},
+            #{p.scenario_nm},
+            #{p.stl_typ},
+            'C',
+            #{g.username},
+            #{g.now},
+            #{g.username},
+            #{g.now}
+        )
+    </insert>
+    <update id="updateScenarioInfo">
+        /* bid.xml updateScenarioInfo */
+        UPDATE ESBTRWM
+        SET
+             SCENARIO_NM = #{p.scenario_nm}
+             ,STL_TYP = #{p.stl_typ}
+             <if test="p.sts != null and p.sts != ''">
+                 ,STS = #{p.sts}
+             </if>
+        WHERE TEN_ID = #{g.tenant}
+        AND SCENARIO_ID = #{p.scenario_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </update>
+
+    <update id="updateScenarioSts">
+        /* bid.xml updateScenarioSts */
+        UPDATE ESBTRWM
+        SET
+            STS = #{p.sts}
+        WHERE TEN_ID = #{g.tenant}
+        AND SCENARIO_ID = #{p.scenario_id}
+        AND TASK_UUID = #{p.task_uuid}
+    </update>
+
+    <delete id="deleteListScenarioForRfx">
+        /* bid.xml deleteListScenarioForRfx */
+		DELETE FROM ESBTRWM
+        WHERE TEN_ID = #{g.tenant}
+        AND SCENARIO_ID = #{p.scenario_id}
+        AND TASK_UUID = #{p.task_uuid}
+	</delete>
+
+
+
+    <select id="findRFQTemplateConfirmYn" resultType="map">
+        /* bid.xml findRFQTemplateConfirmYn */
+        SELECT
+            TRAR.TEN_ID,
+            TRAR.VENDOR_TEMPL_ID,
+            TRAR.TEMPL_ID,
+            TRAR.TASK_UUID,
+            TRAR.VD_CD
+        FROM ESPRQDT RQDT
+        INNER JOIN RFX RQHD
+            ON RQDT.TEN_ID = RQHD.TEN_ID
+            AND RQDT.RFX_UUID = RQHD.RFX_UUID
+            AND RQHD.RFX_STS_CCD != 'T'
+        INNER JOIN ESBTRAR TRAR
+            ON TRAR.TEN_ID = RQDT.TEN_ID
+            AND TRAR.TASK_UUID = RQDT.RFX_ITEM_ID
+        WHERE TRAR.TEN_ID =#{g.tenant}
+        AND TRAR.TEMPL_ID = #{p.templ_id}
+    </select>
+
+</mapper>

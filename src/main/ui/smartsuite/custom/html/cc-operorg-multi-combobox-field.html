@@ -1,0 +1,162 @@
+<!-- 
+/**
+ * 운영조직 멀티 콤보박스 필드 커스텀 태그
+ * ajax통신을 사용하는 custom dom으로 promise로 묶어야함으로 id를 부여 하여 구현한다.
+ * service함수를 구현 한다.
+ *
+ *     <cc-operorg-multi-combobox-field id="operorgcombobox" class="w-150" selected-index="0" value="{{searchParam.oorg_cd}}" placeholder="전체" oper-unit-cd="PO"></cc-operorg-multi-combobox-field>
+ *
+ * @element cc-operorg-multi-combobox-field
+ *
+ *
+ * @attribute value 해당 텍스트 필드 input value binding <br>
+ * [string] [optional] 
+ *
+ *
+ * @attribute placeholder placeholder <br>
+ * [string] [optional] 
+ *
+ *
+ * @attribute enable-check-all 전체 선택 체크박스표시 여부 default값 true<br>
+ * [string] [optional]
+ *
+ *	@attribute disabled disabled <br>
+ 
+  * @attribute oper-unit-cd 운영단위코드
+ * [string] [optional]
+ *
+ *	@attribute disabled disabled <br>
+ *
+ */
+-->
+<!-- 
+ author : Yeon-u Kim
+ Since 2016. 4. 26.
+ 변경이력 : [2016. 4. 26.] Yeon-u Kim 최초작성
+-->
+<dom-module id="cc-operorg-multi-combobox-field">
+    <style>
+        :host {
+            display : table;
+            width : 100%;
+        }    
+        :host > * {
+            vertical-align : middle;
+            display: table-cell;
+        }
+    </style>
+    <template>
+        <!-- ajax 선언 부 -->
+        <!-- 사용자 구매 운영조직 조회 -->
+		<sc-ajax id="findListOperationOrganizationByUser"
+			url="findListOperationOrganizationByUser.do"
+            body$="[[operUnitCd]]"
+            content-type="text/plain",
+            on-response="_onResponse"
+            last-response="{{codes.operOrgCd}}">
+		</sc-ajax>
+       	<sc-multi-combobox-field 
+                   class$="[[class]]" 
+                   selected-all="{{selectedAll}}"
+                   enable-check-all="{{enableCheckAll}}"
+                   display-field="logic_org_nm"
+                   value-field="oorg_cd"
+                   items="[[codes.operOrgCd]]" 
+                   value = "{{value}}"
+                   readonly ="{{readonly}}"
+                   disabled ="{{disabled}}"
+                   required$="[[required]]"
+                   placeholder$="[[placeholder]]">
+    	</sc-multi-combobox-field>
+    	<sc-cache id="operorgCache" key="operorg-[[operUnitCd]]" value="{{codes.operOrgCd}}" async></sc-cache>
+    </template>
+    <script>
+        Polymer({
+            is : 'cc-operorg-multi-combobox-field',
+            properties : {
+            	init : {
+            		type : Boolean,
+            		value : true,
+            		reflectToAttribute : true
+            	},
+            	operUnitCd : {
+            		type : Object,
+            		value : function(){
+            			return "";
+            		}
+            	},
+            	readonly : {
+            		type : Object,
+            		value : function(){
+            			return false;
+            		}
+            	},
+            	disabled : {
+            		type : Object,
+            		value : function(){
+            			return false;
+            		}
+            	},
+            	selectedIndexes : {
+            		type : Object,
+            		value : function(){
+            			return [];
+            		}
+            	},
+            	selectedAll : {
+            		type : Object,
+            		value : function(){
+            			return true;
+            		}
+            	},
+            	enableCheckAll : {
+            		type : Object,
+            		value : function(){
+            			return true;
+            		}
+            	},
+                value : {
+                    type : Object,
+                    notify: true            //One-way binding (downward)
+                /*<!-- changes to "{{value}}" propagate downward to "value" on child -->
+                    <!-- changes to "value" are ignored by host due to square-bracket syntax -->*/
+                },
+                codes :  {
+                    type : Object,
+                    value : function(){
+                        return {
+                            operOrgCd : []
+                        };
+                    }
+                }
+            },
+            
+            request : function() {
+            	if(this.$.operorgCache.isCached) {
+            		if(this.$.operorgCache.value) {
+            			this._completed(this.$.operorgCache.value);
+	           		}
+            		else {
+	            		this.listen(this.$.operorgCache, 'value-changed', function() {
+		            		this._completed(this.$.operorgCache.value);
+	            		}.bind(this), {single : true});
+            		}
+            	}
+            	else {
+	            	this.$.findListOperationOrganizationByUser.request();
+            	}
+            },
+            
+            _onResponse : function(event) {
+            	var response = event.target.lastResponse;
+            	this.$.operorgCache.put(response);
+            	this._completed(response);
+            },
+            
+            _completed : function(value) {
+            	this.fire('response', value, {bubbles : false});
+            }
+            
+        });
+    </script>
+</dom-module>

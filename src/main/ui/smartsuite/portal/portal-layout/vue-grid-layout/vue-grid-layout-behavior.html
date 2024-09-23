@@ -1,0 +1,556 @@
+<script>
+	Polymer.VueGridLayoutBehavior = {
+			
+		nonReusable: true,
+		
+		properties: {
+			portletContainerShadowCls : {
+				type: String,
+				value : function() {
+					return '.vue-grid-placeholder';
+				}
+			},
+			portletStateful : {
+				type : Object,
+				value : function() {
+					return {};
+				}
+			},
+			insertFunction: {
+				type: Object
+			},
+			info: {
+				type: Object
+			},
+			colNum: {
+				type: Number,
+				value : 12
+			},
+			rowHeight: {
+				type: Number,
+				value : 30
+			},
+			defaultItemWidth: {
+				type: Number,
+				value : 6
+			},
+			defaultItemHeight: {
+				type: Number,
+				value : 6
+			},
+			portletList:{
+				type: Array,
+				value: []
+			}
+		},
+		
+		listeners: {
+			'click': 'mousedownHandler'
+		},
+	    
+	    mousedownHandler: function(e){
+	    	var manualclose = this.commonConfig.widgetpopup_manualclose;	
+	    	if(!SCUtil.isEmpty(manualclose) && manualclose == 'N'){
+	    		this.closePortalToolbar(e.target);
+	    	}
+	    },
+	    
+	    closePortalToolbar: function(el){
+	    	var portalToolbar = this.$.portalToolbar;
+	    	var widgetManager = this.$.widgetManager;
+	    	var validateElement = function(el){
+	    		var skipElements = [
+		    		'div#managerHandle',
+		    		'sc-button.portal-tool-button.add-button', // 위젯 추가
+		    		'sc-button.portal-tool-button.remove-button', // 모두 제거
+		    		'button.hideBtn.sc-portal-manager'
+		    	], selector;
+	    		for(var i=0; i<skipElements.length; i++){ 
+	    			selector = skipElements[i];
+	    			if(this.querySelector(selector) == el){
+	    				return false;
+	    			}
+	    		}
+	    		return true;
+	    	}.bind(this);
+	    	
+	    	if(!validateElement(el)){
+	    		return;
+	    	}
+	    	
+	    	if(portalToolbar.isVisible()) $(portalToolbar).toggle();
+	    	if(widgetManager.isVisible()) $(widgetManager).toggle();
+	    },
+	    
+		attached: function() {
+           	var me = this;
+           	this.$.widgetManager.setClickFunction(this.clickFunction.bind(this));
+           	this.insertFunction = this.elementMove.bind(this);
+        },			
+			
+		elementMove: function(event) {
+			// blank
+		},
+		
+		dragStartFunction: function(event) {
+			var target = event.detail.target, portal = this.parentNode;
+			this.info = target.info;
+			this.parentNode.style.userSelect = "none";
+		},
+            
+		dragEndFunction: function(event) {
+			var target = event.detail.target, 
+				portal = this.parentNode,
+				info = target.info;
+			this.vue.addItem(info);
+		}, 
+		
+		clickFunction: function(event) {
+			var info = event.currentTarget.info;
+			if(info.height){
+				info.height = Number(info.height);
+			}
+			if(info.width){
+				info.width = Number(info.width);
+			}
+			this.vue.addItem(info);
+		},			
+			
+		getPortlets: function(){
+			return this.getPortletContainerSchemaList();
+		},
+			
+		refreshPortletContainerSchemaList: function(){
+			var portletContainerSchemaList = this.getPortletContainerSchemaList();
+			for(var i=0; i<portletContainerSchemaList.length; i++){
+				portletContainerSchemaList[i].i = ""+i;
+			}
+		},			
+			
+		/**
+		 * vue grid 관련 메서드
+		 */
+		insert: function(arr, vueGridItem, index){
+			arr.splice(index, 0, {
+				"uuid" : vueGridItem.uuid,
+				"title" : vueGridItem.title,
+				"type" : vueGridItem.type,
+				"param": vueGridItem.param,
+				"i" : vueGridItem.i,
+				"x" : vueGridItem.x,
+				"y" : vueGridItem.y,
+				"w" : vueGridItem.w,
+				"h" : vueGridItem.h,
+				"ignore" : "div.box-content"
+			});
+		},
+			
+		onMouseEnterGridApp: function(event) {
+			if(window.dragIntoGridLayout) {
+				window.dragIntoGridLayout = false;
+			}
+		},
+		
+		/** 포틀릿(개인화) 조회 */
+		onFindDefaultLayout: function(){
+			this.$.findDefaultLayout.body = {
+					'lyt_typ' : this.getAttribute('page-id'),
+                    portl_usr_typ_ccd : this.layoutTarget.usr_typ_ccd,
+                    home_scr_typ_ccd : this.layoutTarget.home_scr_typ_ccd,
+			}
+			this.$.findDefaultLayout.generateRequest();
+		},
+			
+		/**
+		 * 모든 위젯 삭제
+		 */
+		removeAllWidget: function(e) {
+			e.stopPropagation();
+			e.preventDefault();
+			
+			var useItems = this.vue.removeAllItem();
+			this.$.widgetManager.setUseWidgets(useItems);
+		},
+
+        deleteUserFormatWidget:function (e) {
+            this.fire('delete-user-layout');
+            this.vue.removeAllItemDestroy();
+        },
+		
+		onShowWidgets: function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			$(this.$.portalToolbar).toggle();
+		},			
+			
+		/** 위젯 매니저를 불러옴 */
+		onShowWidgetManager: function(e) {
+			e.stopPropagation();
+			e.preventDefault();
+			
+			$(this.$.widgetManager).toggle();
+			this.$.widgetManager.style.width = "";
+			this.$.widgetManager.style.height = "100%";
+		},
+		
+		onWidgetClick: function(e){
+			this.vue.addItem(e.detail.widget);
+		},
+		
+		onAfterWidgetLoaded: function(e){
+			this.fire('find-user-layout');
+			var btnHide = this.$.widgetManager.querySelector('.hideBtn');
+			this.listen(btnHide, 'tap', 'closeManager');
+		},
+		
+		closeManager: function (e) {
+			$(this.$.widgetManager).hide(200);
+		},			
+			
+		/** 컨테이너 생성 완료 핸들러 */
+		onPortletContainerCompleted: function(e){
+			this.addPortletAll();	
+		},
+		
+		/** 포틀릿 추가 완료 핸들러 */
+		onPortletLoaded: function(e){
+			
+		},
+		
+		/** 모든 포틀릿을 생성하여, 포틀릿 컨테이너에 삽입. */
+		addPortletAll: function(){
+			var me = this,
+				portletContainerSchemaList = me.getPortletContainerSchemaList(),
+				portletList = this.$.portletManager.createPortletAll(portletContainerSchemaList);
+			
+			for(var i=0; i<portletList.length; i++){
+				me.portletIntoPortletContainer(portletList[i]);	
+			}
+		},			
+			
+		/** 생성된 포틀릿을 포틀릿 컨테이너에 추가 */
+		portletIntoPortletContainer: function(portlet){
+			var me = this,
+				portletContainer = me.getPortletContainer(portlet);
+			portletContainer.appendChild(portlet);
+			portletContainer.classList.add('widget-'+portlet.layoutIdx);
+			
+			me.portletList.push(portlet);
+			me.fire('portlet-loaded');
+		},
+		
+		/** 디폴트 위젯 리스트 */
+		getDefaultWidgets: function(){
+			var defaultWidgets = [], widgets = this.getWidgets();
+			for(var i=0; i<widgets.length; i++){
+				if('Y' === widgets[i]['default']){
+					defaultWidgets.push(widgets[i]);
+				}
+			}
+			return defaultWidgets;
+		},
+			
+		/** 위젯 리스트 */
+		getWidgets: function(){
+			return this.$.widgetManager.widgets;
+		},
+			
+		/** 위젯 단일건 */
+		getWidget: function(type, title){
+			var widgets = this.getWidgets();
+			for(var i=0; i<widgets.length; i++){
+				if(type === widgets[i].type && title === widgets[i].title) {
+					return widgets[i];
+				}
+			}
+			return null;
+		},
+			
+		/** 포틀릿 Close 핸들러 */
+		onPortletClose: function(event){
+			var me = this,
+				portletContainers = me.getPortletContainers();
+				id = event.detail.id;
+				
+			if(me.getContainerIndexById(id) != null){
+				for(var i=0; i<portletContainers.length; i++){
+					if(!portletContainers[i].querySelector('sc-widget')){
+						if(i+1 !== portletContainers.length){
+							portletContainers[i].appendChild(portletContainers[i+1].querySelector('sc-widget'));  
+						}
+					}
+				}
+				this.vue.removeItem(me.getContainerIndexById(id), me.getPortletContainerSchemaList());
+				
+				this.$.widgetManager.addTypeInList(event.detail.type, event.detail.title);
+			}
+		},
+			
+		/** 개인화 포틀릿 정보를 통한, vue-grid 생성 */
+	    createPortletContainerOnVueGrid: function(portletSchemaList){
+	    	var portletSchema;
+            
+	    	this.portletContainerSchemaList = [];    
+			for(var i=0; i<portletSchemaList.length; i++){
+				portletSchema = this.getPortletContainerSchema(portletSchemaList[i], i);
+				if(portletSchema){
+					this.portletContainerSchemaList.push(portletSchema);	
+				}
+			}
+	
+			var GridLayout = VueGridLayout.GridLayout;
+			var GridItem = VueGridLayout.GridItem;
+			
+			var isDraggable = (this.id !== "vueGridLayoutConfig" && this.commonConfig && this.commonConfig.use_userlayout === 'N') ? false : true;
+			var isResizable = (this.id !== "vueGridLayoutConfig" && this.commonConfig && this.commonConfig.use_userlayout === 'N') ? false : true;
+			
+			this.vue = new Vue({
+				
+				el: '#'+this.$.content.parentElement.id/**'#app'*/,
+				
+				components: {
+					"GridLayout": GridLayout,
+					"GridItem": GridItem
+				},
+				
+				data: {
+					layout: this.portletContainerSchemaList,
+					draggable: isDraggable,
+					resizable: isResizable,
+					rowHeight : this.rowHeight,
+					colNum : this.colNum,
+					index: 0
+				},
+				
+				/** 내부 아이템 변경 시 마다 발생 */
+				updated: function(){
+					var me = this;
+					if(!me.vueGridRendered){
+						me.async(function(){
+							/** (최초 1회) vue-grid 생성 이벤트 */
+							me.fire('portlet-container-completed');
+							me.vueGridRendered = true;
+						}, 1);	
+					}
+				}.bind(this),
+				
+				methods: {
+					mouseDown: function(event) {
+						console.log('mousedown');
+					},
+					
+					/** 위젯 추가 후, 포틀릿  */
+					removeItem: function(idx) {
+						var me = this, widget,
+							info = me.portletContainerSchemaList[idx],
+							id = info.uuid;
+						
+						/** 포틀릿 삭제 */
+						info.destroy();
+						me.getPortletContainerSchemaList().splice(idx, 1);
+						
+						var portletList = me.portletList;
+						for(var i=0, len=portletList.length; i<len; i++) {
+							if(portletList[i].id === id) {
+								me.portletList.splice(i, 1);
+								break;
+							}
+						}
+						
+						me.async(function(){
+							me.refreshPortletContainerSchemaList();
+							this.fire('save-user-layout');
+						}, 1);
+					}.bind(this),
+					
+					removeAllItem: function() {
+						var me = this, widget, info;
+						var availableItems = [];
+						
+						for(var i = me.portletContainerSchemaList.length-1; i >= 0; i--) {
+							info = me.portletContainerSchemaList[i];
+							me.getPortletContainerSchemaList().splice(i, 1);
+						}
+						me.portletList = [];
+						
+						me.async(function(){
+							me.refreshPortletContainerSchemaList();
+							this.fire('save-user-layout');
+						}, 1);
+						
+						return availableItems;
+					}.bind(this),
+
+                    removeAllItemDestroy: function() {
+						var me = this, widget, info;
+						
+						for(var i = me.portletContainerSchemaList.length-1; i >= 0; i--) {
+                            info = me.portletContainerSchemaList[i];
+                            me.getPortletContainerSchemaList().splice(i, 1);
+                        }
+						me.portletList = [];
+						
+						me.async(function(){
+							me.refreshPortletContainerSchemaList();
+                            UT.alert("STD.N7008",function () {
+                                me.fire('find-user-layout');
+                            });
+						}, 1);
+					}.bind(this),
+					
+					/** (이미 위젯 삭제된 후) 포틀릿 추가 */
+					addItem: function(widget) {
+						var me = this, widget;
+							portletContainerSchema = me.getPortletContainerSchema(widget, me.portletContainerSchemaList.length);
+							
+						if(portletContainerSchema){
+							portletContainerSchema.layoutIdx = portletContainerSchema.i;
+							me.portletContainerSchemaList.push(portletContainerSchema);
+							
+							me.async(function(){
+								var portlet = me.$.portletManager.addPortlet(portletContainerSchema);
+								me.portletIntoPortletContainer(portlet);
+								me.borderBlink(portletContainerSchema);
+								me.refreshPortletContainerSchemaList();
+								this.fire('save-user-layout');
+							}, 1);
+						}else{
+							console.warn('unauthorized portlet : '+widget.type);
+						}
+					}.bind(this),
+					
+					movedEvent: function(i, newX, newY){
+						this.fire('save-user-layout');
+					}.bind(this),
+					
+					resizedEvent: function(i, newH, newW, newHPx, newWPx){
+						this.fire('save-user-layout');
+						
+						var schema = this.findSchemaUsingIValue(this.getPortletContainerSchemaList(), i);
+						var targetPortletContainer = this.getPortletContainerSchema(schema, i);
+						for(var j = 0; j < this.portletList.length; j++) {
+							if(this.portletList[j].id === targetPortletContainer.uuid) {
+								Polymer.SCContentElementResizeObserverBehavior._doContentElementResize.call(this.portletList[j]);
+								this.portletList[j].fire('interact-resize-end');
+								break;
+							}
+						}
+					}.bind(this)
+				}
+			});
+		},
+		
+		/**  */
+		setPortletSchemaList: function(portletSchemaList) {
+			var portletSchema;
+			var me = this;
+            
+	    	this.portletContainerSchemaList = [];    
+			for(var i=0; i<portletSchemaList.length; i++){
+				portletSchema = this.getPortletContainerSchema(portletSchemaList[i], i);
+				if(portletSchema){
+					this.portletContainerSchemaList.push(portletSchema);	
+				}
+			}
+
+			this.vue.layout = this.portletContainerSchemaList;
+
+			this.async(function(){
+				me.refreshPortletContainerSchemaList();
+				me.fire('portlet-container-completed');
+			}, 1);
+		},
+		
+		/** vue-grid 인스턴스 */
+		getVueGridManager: function() {
+        	return this.vue;
+		},
+		
+		/** i 값을 가지고 현재 포틀릿 컨테이너 스키마 목록중 적합한 것을 찾아 리턴한다. */
+		findSchemaUsingIValue: function(portletContainerSchemaList, i_value) {
+			for(var i = 0; i < portletContainerSchemaList.length; i++) {
+				if(portletContainerSchemaList[i].i === i_value) {
+					return portletContainerSchemaList[i];
+				}
+			}
+		},
+		
+		/** 포틀릿 컨테이너 스키마 생성. vue-grid-portlet-manager에서 작성된 포틀릿 정보를 sc-widget을 만드는데 사용하는 정보로 변환 */
+		getPortletContainerSchema: function(portletSchema, index) {
+			var widget = this.getWidget(portletSchema.type, portletSchema.title);
+			if(!widget){
+				return null;
+			}else{
+				portletSchema.w = (portletSchema.width || portletSchema.width >= 0) ? portletSchema.width : portletSchema.w;
+				portletSchema.h = (portletSchema.height || portletSchema.height >= 0) ? portletSchema.height : portletSchema.h;
+				return {
+	        		"uuid" : portletSchema.uuid ? portletSchema.uuid : Polymer.BehaviorIDGenerator.generateUUID(),
+	        		"title" : portletSchema.title,
+	        		"type" : portletSchema.type,
+	        		"label" : portletSchema.label,
+	        		"param" : portletSchema.param,
+	        		"i" : (portletSchema.i || portletSchema.i >= 0) ? portletSchema.i : ""+index,
+	        		"x" : (portletSchema.x || portletSchema.x >= 0) ? portletSchema.x : 0,
+	        		"y" : (portletSchema.y || portletSchema.y >= 0) ? portletSchema.y : 0,
+	        		"w" : (portletSchema.w || portletSchema.w > 0) ? portletSchema.w : this.defaultItemWidth,
+	        		"h" : (portletSchema.h || portletSchema.h > 0) ? portletSchema.h : this.defaultItemHeight,
+	        		"closeable" : widget.closeable,
+	        		"headable" : widget.headable,
+	        		"refreshable": widget.refreshable,
+	        		"portletLoc" : widget.portlet_loc,
+	        		"displayHeader" : widget.display_header,
+	        		"ignore" : "div.box-content",
+	        		destroy : function(){
+	        			for(var key in this){
+							delete this[key];
+						}
+						this['__ob__'] = null;
+	        		}
+	        	};
+			}
+		},
+		
+        /** 포틀릿 컨테이너 */
+        getPortletContainer: function(portlet) {
+            var portletContainerList = this.getPortletContainers();
+        	return portletContainerList[portlet.layoutIdx];
+		},
+
+		/** 포틀릿 컨테이너 리스트 */
+        getPortletContainers: function() {
+        	return this.querySelectorAll(this.portletContainerCls);
+        },
+        
+        /** 포틀릿 컨테이너 스키마(좌표정보) 리스트 */
+        getPortletContainerSchemaList: function() {
+        	return this.portletContainerSchemaList;
+        },
+
+        /** 포틀릿 컨테이너 인덱스 */
+		getContainerIndexById: function(id) {
+			var portletContainerSchemaList = this.getPortletContainerSchemaList();
+			for(var i=0; i<portletContainerSchemaList.length; i++){
+				if(portletContainerSchemaList[i].uuid === id){
+					return i;
+				}
+			}
+			return null;
+		},
+        
+        /** 보더 반짝임 */
+		borderBlink: function(schema) {
+			var portletContainer = this.getPortletContainer(schema);
+			portletContainer.classList.add('borderBlink');
+		},
+		
+		_destroy: function(){
+			this._propertySetter('portletContainerShadowCls', null);
+			this._propertySetter('portletStateful', null);
+			this._propertySetter('insertFunction', null);
+			this._propertySetter('info', null);
+			this.vue.removeAllItem();
+			this.vue.$destroy();
+		}
+        
+	};
+</script>

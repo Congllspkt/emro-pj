@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="supplier-todo-manager">
+    <select id="findListTodoUserSupplier" resultType="map">
+        /* todo-manager.findListTodoUserSupplier : 할일 항목 별 사용자 목록 조회 */
+        SELECT TUSR.TODOITEM_UUID
+             , TUSR.USR_ID
+             , USR.USR_NM
+             , VDGL.VD_CD
+             , VDGL.ERP_VD_CD
+             , VDGL.VD_NM
+        FROM TODOITEM_USR TUSR
+                 INNER JOIN USR USR
+                            ON USR.TEN_ID = TUSR.TEN_ID
+                                AND USR.USR_ID = TUSR.USR_ID
+                 INNER JOIN VD VDGL
+                            ON VDGL.TEN_ID = USR.TEN_ID
+                                AND VDGL.VD_CD  = USR.VD_CD
+        WHERE TUSR.TEN_ID  = #{g.tenant}
+          AND TUSR.TODOITEM_UUID = #{p.todoitem_uuid}
+    </select>
+</mapper>

@@ -1,0 +1,47 @@
+<sc-link rel="import" href="es-pyramid-chart.html"></sc-link>
+<sc-link rel="import" href="es-3dcolumn-chart.html"></sc-link>
+<sc-link rel="import" href="es-drill-chart.html"></sc-link>
+
+<dom-module id="em-chart2">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+        .row-1 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }
+        .row-2 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }          
+        ${demo.css}
+    </style>
+
+    <template>
+
+        <sc-toolbar class="page-title">
+            <sc-label text="Dashboard" width="300"></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="도움말" class="manual-btn" i18n-disabled></sc-button>
+            <sc-button text="" class="bookmark-btn fa fa-star-o" i18n-disabled></sc-button>
+        </sc-toolbar>	
+		<div class="row-1">            
+			<es-pyramid-chart id="pyramid-chart" title="Pyramid Chart"></es-pyramid-chart>
+			<div class="hspace-5"></div>
+			<es-3dcolumn-chart id="3dcolumn-chart" title="3D Column Chart"></es-3dcolumn-chart>
+		</div>
+		<div class="row-2">            
+			<es-drill-chart id="drill-chart" title="Drilldown Chart"></es-drill-chart>
+		</div>		
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-chart2',    
+        });
+    </script>
+
+</dom-module>

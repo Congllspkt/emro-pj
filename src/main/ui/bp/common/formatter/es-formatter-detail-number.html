@@ -1,0 +1,338 @@
+<sc-link rel="import" href="ep-format-expression-write.html"></sc-link>
+<dom-module id="es-formatter-detail-number">
+<!-- 
+/**
+ *
+ *	@description : displayFormat 관리
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 2. 18.
+ */
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<sc-request-group init>
+			<sc-code-group>
+			<sc-code code="C062" value="{{codes.C062}}"></sc-code>
+			<sc-code code="C999" value="{{codes.C999}}"></sc-code>
+			</sc-code-group>
+			<sc-ajax id="findListPrecisionGroupCode"
+					url="findListPrecisionGroupCode.do"
+					on-response="completePrecGrpCd">
+			</sc-ajax>
+		</sc-request-group>
+		
+		<sc-ajax id="findListDisplayFormatDetail"
+				url="findListDisplayFormatDetail.do"
+				body="{{selectedParam}}"
+				last-response="{{detailList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="saveListDisplayFormatDetail"
+				url="saveListDisplayFormatDetail.do"
+				on-response="completeSaveListDisplayFormatDetail">
+		</sc-ajax>
+		
+		<sc-ajax id="deleteListDisplayFormatDetail"
+				url="deleteListDisplayFormatDetail.do"
+				on-response="completeDeleteListDisplayFormatDetail">
+		</sc-ajax>
+		
+		<!-- 역할 체크 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <div class="vbox flex">
+            <sc-grid id="detailGridPanel" data-provider="{{detailList}}" editable="true" class="flex" validation-group="dispFormatDetailSave"
+            	on-item-edit-end="onItemEditEnd"
+            	on-item-click="onDetailItemClick">
+                <cc-grid-toolbar title-text="{{selectedParam.fmter_cd}}" i18n-disabled>
+                	<sc-button text="추가" on-click="onAddDisplayFormatDetail" hidden="[[!formula('isEditable')]]" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteDisplayFormatDetail" hidden="[[!formula('isEditable')]]" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveDisplayFormatDetail" hidden="[[!formula('isEditable')]]" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+               		<sc-combobox-column	data-field="fmt_typ_ccd"		header-text="유형"		width="120"	text-align="center" editable="true"
+								display-field="label"			value-field="data"		items="{{codes.C062}}"></sc-combobox-column>
+					<sc-data-column	data-field="fmt_expr_1"		header-text="천단위"		width="105" text-align="center" max-length="2"
+									item-editable-function="onIsDirectFmtExpTyp"></sc-data-column>
+					<sc-group-column	header-text="소수점"				width="180"	text-align="center">
+						<sc-data-column		data-field="decpt_str"	header-text="소수점 문자열"	width="100"	text-align="center"
+											item-editable-function="onIsDirectFmtExpTyp"></sc-data-column>
+						<sc-image-column	data-field="button_prec" width="30"	text-align="center"	style-name="link" image-cls="link"></sc-image-column>
+					</sc-group-column>
+					<sc-group-column	header-text="추가 텍스트"	width="200"	text-align="center">
+						<sc-data-column	data-field="fmt_prfx"	header-text="접두사"	width="100"	text-align="center"
+									editable="true"></sc-data-column>
+						<sc-data-column	data-field="fmt_suf"	header-text="접미사"	width="100"	text-align="center"
+									editable="true"></sc-data-column>
+					</sc-group-column>
+                	<sc-radio-column data-field="fmt_use_yn" header-text="사용 여부" width="100" editable="true" check-value="Y" unChecked-value="N"></sc-radio-column>
+                	<sc-data-column data-field="fmt_expln" header-text="설명" width="250" text-align="left" editable="true" max-length="200"></sc-data-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                	<sc-grid-field	data-field="fmter_cd"></sc-grid-field>
+                	<sc-grid-field	data-field="fmt_setup_uuid"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'es-formatter-detail-number',
+			properties : {
+				codes: {
+					type: Object,
+					value: function(){
+						return {
+							C062: [],
+							C999: []
+						};
+					},
+					reset: false
+				},
+				detailList: {
+					type: Array,
+					value: function(){
+						return [];
+					}
+				},
+				selectedParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+				precGrpCds: {
+					type: Array,
+					value: function(){
+						return {};
+					}
+				}
+			},
+			formulas: {
+				isEditable: function(){
+					var me = this;
+					return (UT.isNotEmpty(me.get("selectedParam")));
+				}
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			initialized: function(){
+				var me = this;
+				me.applyFormula();
+			},
+			load: function(param){
+				var me = this;
+				var param = UT.copy(param);
+				me.set("selectedParam",param);
+				me.applyFormula();
+				me.onFindListDisplayFormatDetail();
+			},
+			onResetPrecGrpCd: function(){
+				var me = this;
+				UT.request(me.$.findListPrecisionGroupCode);
+			},
+			onReloadList: function(){
+				var me = this;
+				me.onFindListDisplayFormatDetail();
+			},
+			completePrecGrpCd: function(e,res){
+				var me = this,
+					lastResponse = res.response;
+				var precGrpCds = lastResponse || [];
+				precGrpCds.push({
+					"ccd_nm" : "직접",
+					"decpt_use_ccd" : "DIRECTBLANK"
+				});
+				me.set("precGrpCds",precGrpCds);
+			},
+			/************************************************
+			* Display Format - formatter 상세 관리
+			************************************************/
+			onFindListDisplayFormatDetail: function(){
+				var me = this;
+				
+				if(UT.isEmpty(me.get("selectedParam"))){
+					UT.alert(me.translate("STD.E1012",null,me.translate('그룹포맷터')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+				}
+				me.applyFormula();
+				UT.request(me.$.findListDisplayFormatDetail);
+			},
+			/************************************************
+			* grid editable 처리
+			**********************************************/
+			//표기법이 직접인경우 - 천단위/표현식 editable
+			onIsDirectFmtExpTyp: function(data, item) {
+				var me = this;
+				
+				if(data["fmt_typ_ccd"] === "AUTO_DES") {
+					return true;
+				}
+				return false;
+			},
+			//추가
+			onAddDisplayFormatDetail: function(){
+				var me = this,
+                provider = me.$.detailGridPanel.getDataProvider();
+
+	            // 그리드 신규행 추가
+	            var row = {
+	                fmter_cd: me.get("selectedParam.fmter_cd"),
+	                fmt_typ_ccd: "AUTO_DES",
+	                fmt_expr_1: "",
+	                fmt_expr_2: "",
+	                decpt_use_ccd: "DIRECTBLANK",
+	                decpt_str: "",
+	                decpt_len_lmt: 0,
+	                decpt_trunc_typ_ccd: "",
+	                add_txt_use_yn: "N",
+	                fmt_use_yn: "N",
+	                fmt_expln: ""
+	            };
+	            provider.addItemAt(0,row);
+			},
+			//삭제
+			onDeleteDisplayFormatDetail: function(){
+				var me = this,
+                provider = me.$.detailGridPanel.getDataProvider(),
+                checked = provider.selectionCheckedIndexes();
+
+	            if (checked.length === 0) {
+	                UT.alert("STD.N1600");
+	                return;
+	            }
+
+	            UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?",
+	                var deleted = provider.removeItems();
+	                if(deleted.length > 0){
+	                    me.$.deleteListDisplayFormatDetail.body = {
+	                    	deleteDisplayFormatDetailList: deleted
+	                    };
+	                    UT.request(me.$.deleteListDisplayFormatDetail);
+	                }
+	            });
+			},
+			completeDeleteListDisplayFormatDetail: function(){
+				var me = this,
+            		message = "STD.N2500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onFindListDisplayFormatDetail();
+				});
+			},
+			//저장
+			onSaveDisplayFormatDetail: function(){
+				var me = this,
+					provider = me.$.detailGridPanel.getDataProvider(),
+					inserted = provider.getNewItems(),
+					updated = provider.getUpdateItems();
+			
+				if((inserted.length + updated.length) === 0){
+					UT.alert("STD.N1700");
+					return;
+				}
+				
+				if(!me.validate('dispFormatDetailSave')){
+					UT.alert("STD.E0000");
+					return;
+				}
+					
+				UT.confirm("STD.N1200",function(){
+					me.$.saveListDisplayFormatDetail.body = {
+							insertDisplayFormatDetailList: inserted,
+							updateDisplayFormatDetailList: updated
+					};
+					UT.request(me.$.saveListDisplayFormatDetail);
+				});
+			},
+			completeSaveListDisplayFormatDetail: function(){
+				var me = this,
+	        		message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onFindListDisplayFormatDetail();
+				});
+			},
+			/**************************************************
+			* Display Formatter 관리 - 상세
+			**************************************************/
+			// grid item click 이벤트
+			onDetailItemClick : function(event) {
+				var me = this,
+					data = event.detail.data,
+					item = event.detail.item,
+                	provider = event.detail.provider;
+				
+				me.currentRowIndex = item.rowIndex;
+                
+				if(item.dataField === "button_expression"){
+					if(data["fmt_typ_ccd"] === "USR_LOC"){
+						UT.alert("STD.ADM1086");		//표기법이 사용자인 경우 표현식을 선택할 수 없습니다.
+					}else{
+						me.showExpressionWritePopup("fmt_expr_1",data["fmt_expr_1"]);
+					}
+				}else if(item.dataField === "button_expression2"){
+					me.showExpressionWritePopup("fmt_expr_2",data["fmt_expr_2"]);
+				}else if(item.dataField === "button_prec"){
+					me.fire("selected-prec-detail",data);
+				}
+            },
+         	// 표현식 작성 팝업 생성
+            showExpressionWritePopup : function(fieldName,expression) {
+            	var me = this;
+            	
+            	me.currentRowFieldName = fieldName;
+            	
+           		var expressionWritePopup = UT.popup("ep-format-expression-write", me, 640, 480,{
+           			'apply-expression' :  function(popup, e){
+           				var provider = me.$.detailGridPanel.getDataProvider(),
+           					result = e.detail;
+           				var data = {};
+           				data[me.currentRowFieldName] = result.expression;
+   	   					provider.setItemAt(me.currentRowIndex, data);
+   	   					
+                 		popup.close();
+           			}
+           		});
+            	expressionWritePopup.show();
+            	expressionWritePopup.getWindowContent().load(expression);
+            },
+            //
+            onItemEditEnd: function(e){
+            	var me = this,
+            		data = e.detail.data,
+            		item = e.detail.item,
+            		provider = e.detail.provider,
+            		oldValue = e.detail.oldValut,
+            		newValue = e.detail.newValue,
+            		rowIndex = item.rowIndex,
+            		grid = e.detail.grid;
+            		
+            	
+            	//사용자 표현유형인경우 fmt_expr_1 삭제
+            	if(item.dataField === "fmt_typ_ccd" && newValue === "USR_LOC"){
+            		provider.setItemAt(rowIndex, {"fmt_expr_1": ""});
+            	}
+            },
+            clear: function(){
+            	var me = this;
+            	me.reset();
+            	me.applyFormula();
+            }
+		});
+	</script>
+</dom-module>

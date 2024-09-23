@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd        
+
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd"
+       default-lazy-init="true">
+
+	<mvc:view-controller path="/" view-name="index" />
+
+    <aop:aspectj-autoproxy />
+	<!-- @RequestBody AOP -->
+	<bean class="smartsuite5.spring.aop.annotation.RequestBodyAdviceImpl" />
+	<!-- @RequestBody AOP -->
+	<!-- AOP -->
+	<bean class="smartsuite.mybatis.plugin.page.aop.PageAdvisor" />
+    
+	<context:component-scan base-package="smartsuite.*.web,
+										  smartsuite.web,
+										  smartsuite.app,
+										  smartsuite.security,
+										  smartsuite.config.workplace,
+										  smartsuite5.*.web"
+							use-default-filters="false">
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+		<context:include-filter type="annotation"
+			expression="org.springframework.web.bind.annotation.RestController" />
+	</context:component-scan>
+	 
+	<bean class="org.springframework.web.servlet.view.UrlBasedViewResolver"
+		p:order="1" p:viewClass="org.springframework.web.servlet.view.JstlView"
+		p:prefix="/WEB-INF/jsp/" p:suffix=".jsp" />
+		
+	<mvc:annotation-driven>
+<!-- 	<mvc:annotation-driven conversion-service="conversionService"> -->
+		<mvc:message-converters>
+			<bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter">
+                <property name="supportedMediaTypes">
+                    <list>
+                        <value>image/jpeg</value>
+                        <value>image/png</value>
+                        <value>video/mp4</value>
+                    </list>
+                </property>
+            </bean>
+			<bean class="smartsuite.spring.jackson.FloaterStreamJackson2HttpMessageConverter"
+				p:objectMapper-ref="jacksonObjectMapper" />
+			<bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"
+				p:objectMapper-ref="jacksonObjectMapper" />
+		</mvc:message-converters>
+		<mvc:argument-resolvers>     
+       		<!-- Spring MVC 컨트롤러 메소드 인자로 FileItem 인터페이스를 전달받기 위한 argument resolver -->
+            <bean class="smartsuite.upload.spring.web.servlet.mvc.method.annotation.FileItemArgumentResolver"></bean>    
+            <!-- Spring MVC 컨트롤러 메소드 인자로 파일 아이디를 전달받기 위한 argument resolver -->
+            <bean class="smartsuite.upload.spring.web.servlet.mvc.method.annotation.FileIdArgumentResolver"></bean>
+            <!-- Spring MVC 컨틀롤러 메소드 인자로 Device 구현체를 전달받기 위한 argument resolver 추가 -->
+            <bean class="org.springframework.mobile.device.DeviceWebArgumentResolver" />
+        </mvc:argument-resolvers>      
+	</mvc:annotation-driven>
+
+
+
+<!-- 	<bean id="conversionService" -->
+<!-- 		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"> -->
+<!-- 		<property name="converters"> -->
+<!-- 			<set> -->
+<!-- 			</set> -->
+<!-- 		</property> -->
+<!-- 	</bean> -->
+	
+	<bean id="jacksonObjectMapper" class="smartsuite.security.jackson.ExtendedObjectMapperFactoryBean">
+		<property name="deserializationContext">
+			<bean class="com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.Impl">
+				<constructor-arg>
+					<bean class="smartsuite.spring.jackson.ISO8601CompatibleBeanDeserializerFactory">
+						<constructor-arg>
+							<bean class="com.fasterxml.jackson.databind.cfg.DeserializerFactoryConfig" />
+						</constructor-arg>
+					</bean>
+				</constructor-arg>
+			</bean>
+		</property>
+		<property name="disableSerializationFeatures">
+			<list>
+<!-- 				<value>WRITE_BIGDECIMAL_AS_PLAIN</value> -->
+				<value>WRITE_DATES_AS_TIMESTAMPS</value>
+<!-- 				<value>FLUSH_AFTER_WRITE_VALUE</value> -->
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="themeSource"
+		class="org.springframework.ui.context.support.ResourceBundleThemeSource">
+		<property name="basenamePrefix" value="themes/theme-" />
+	</bean>
+
+	<!-- Theme Change Interceptor and Resolver definition -->	
+	<bean id="themeResolver"
+		class="org.springframework.web.servlet.theme.CookieThemeResolver">
+		<property name="defaultThemeName" value="default" />
+	</bean>
+	
+	<!-- spring web exception handler -->
+	<bean class="smartsuite.exception.SpringWebExceptionHandler">		
+		<property name="exceptionManager" ref="exceptionManager"></property>
+	</bean>	
+	<bean id="exceptionManager" 
+		class="smartsuite.exception.ExceptionManagerImpl">
+		<!-- replaceMessage Message 설정 -->
+<!-- 		<property name="replaceMessage" value="에러가 발생하였습니다" /> -->
+		<property name="debug" value="true" />
+		<property name="recordable" value="true" />		
+	</bean>
+	
+	<!-- 대용량 엑셀 다운로드 jason 파싱(jaskon)설정 -->
+	<bean id="largeExportManager" class="smartsuite.excel.spring.largeexporter.LargeExportUtil" 
+		p:objmapper-ref="jacksonObjectMapper"/>
+	
+	<!-- 지정 형식 엑셀 다운로드 jason 파싱(jaskon)설정 -->
+	<bean id="customDataExportManager" class="smartsuite.excel.core.exporter.CustomDataExportUtil"
+	    p:objmapper-ref="jacksonObjectMapper"/>
+	<mvc:interceptors>
+		<!--<bean id="localeChangeInterceptor"
+			class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor" />
+		<bean id="themeChangeInterceptor"
+			class="org.springframework.web.servlet.theme.ThemeChangeInterceptor">
+			<property name="paramName" value="theme" />
+		</bean>-->
+		<bean id="authCheckInterceptor"
+			  class="smartsuite.security.interceptor.AuthCheckInterceptor" />
+
+		<!-- access log / attachment log -->
+		<!-- TODO: 10.0.0   @Deprecated
+					public abstract class HandlerInterceptorAdapter
+
+		<bean id="accessLogInterceptor"
+			class="smartsuite.log.spring.accesslog.AccessLogInterceptor" />
+			-->
+		<!-- dext upload 용 다운로드 로그 주석처리
+            <mvc:interceptor>
+                <mvc:mapping path="/**/upload/download.do"/>
+                <bean id="attachmentLogInterceptor"
+                    class="smartsuite.log.spring.accesslog.AttachmentLogInterceptor"/>
+            </mvc:interceptor>	 -->
+		<!-- DeviceResolver 추가 -->
+
+		<!-- TODO: 10.0.0   @Deprecated
+                    public abstract class HandlerInterceptorAdapter
+
+        <bean class="org.springframework.mobile.device.DeviceResolverHandlerInterceptor" />
+
+        <mvc:interceptor>
+            <mvc:mapping path="/**/largeexport.do"/>
+            <bean id="exportLogInterceptor"
+                class="smartsuite.log.spring.accesslog.ExcelExportLogInterceptor"
+                p:mapper-ref="jacksonObjectMapper"/>
+        </mvc:interceptor>	 -->
+	</mvc:interceptors>
+</beans>

@@ -1,0 +1,538 @@
+<dom-module id="ep-approval-code-list">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+
+        <!-- 코드 데이터 조회 -->
+        <sc-code-group>
+            <sc-code code="C002" value="{{codes.langCd}}" ></sc-code> <!-- 언어코드 -->
+        </sc-code-group>
+
+        <!-- 그룹코드 속성 및 상세 조회 -->
+        <sc-ajax id="findListGroupCodeAttribute"
+                 url="findListGroupCodeAttribute.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindListGroupCodeAttribute">
+        </sc-ajax>
+
+        <!-- 그룹코드 속성 : 저장 -->
+        <sc-ajax id="saveListGroupCodeAttribute"
+                 url="saveListGroupCodeAttribute.do"
+                 on-response="completesaveListGroupCodeAttribute">
+        </sc-ajax>
+
+        <!-- 그룹코드 속성 : 삭제 -->
+        <sc-ajax id="deleteListGroupCodeAttribute"
+                 url="deleteListGroupCodeAttribute.do"
+                 on-response="completeDeleteGroupCodeAttribute">
+        </sc-ajax>
+
+        <!-- 상세코드 : 조회 -->
+        <sc-ajax id="findListDetailCode"
+                 url="findListDetailCode.do"
+                 body="{{searchParam}}"
+                 on-response="completefindListDetailCode">
+        </sc-ajax>
+
+        <!-- 상세코드 : 삭제 -->
+        <sc-ajax id="deleteListDetailCode"
+                 url="deleteListDetailCode.do"
+                 on-response="completedeleteListDetailCode">
+        </sc-ajax>
+
+        <!-- 상세코드 : 저장 -->
+        <sc-ajax id="saveListDetailCode"
+                 url="saveListDetailCode.do"
+                 on-response="completesaveListDetailCode">
+        </sc-ajax>
+
+        <!-- 역할 체크 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <!-- 그룹코드 속성 -->
+        <div class="vbox flex-3">
+            <!-- 그룹코드 속성 그리드 -->
+            <sc-grid id="gridPanelGroupCodeAttribute" editable="true" class="flex"
+                     validation-group="saveAttrCode">
+                <cc-grid-toolbar title-text="[[translate('그룹코드속성')]] ([[searchParam.grp_cd]])" i18n-disabled>
+                    <sc-button text="추가" on-click="onAddGroupCodeAttribute" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteGroupCodeAttribute" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveGroupCodeAttribute" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="cstr_cnd_cd" header-text="속성 코드" width="100" text-align="center" item-editable-function="onAttrCdEditable" required="true" max-length="36"></sc-data-column>
+                    <sc-data-column data-field="cstr_cnd_nm" header-text="속성 명" width="200" text-align="left" editable="true" required="true" max-length="60"></sc-data-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="grp_cd"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+
+        <sc-splitter split-type="horizontal"></sc-splitter>
+
+        <!-- 상세코드 -->
+        <div class="vbox flex-7">
+        	<cc-sub-title-bar title-text="[[translate('상세코드')]] ([[searchParam.grp_cd]])" i18n-disabled></cc-sub-title-bar>
+            <cc-search-container search-button-hidden="true" auth-r>
+                <table>
+                    <colgroup>
+                        <col style="width:100px">
+                        <col>
+                    </colgroup>
+                    <tr>
+                        <th><sc-label text="다국어" ></sc-label></th>
+                        <td>
+                            <sc-combobox-field value="{{searchParam.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data" readonly="[[!formula('isEditable')]]"
+                                               required="true" placeholder="필수" on-change="onChangeLangCd">
+                            </sc-combobox-field>
+                        </td>
+                    </tr>
+                </table>
+            </cc-search-container>
+
+            <!-- 상세코드 그리드 -->
+            <sc-grid id="gridPanelDetailCode" editable="true" class="flex"
+                     validation-group="saveDetailCode">
+                <cc-grid-toolbar>
+                    <sc-button text="추가" on-click="onAddDtlCode" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteDtlCode" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveDtlCode" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="grp_cd"></sc-grid-field>
+                    <sc-grid-field data-field="isAdded"></sc-grid-field>
+                    <sc-grid-field data-field="lang_ccd"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+
+        <template id="defaultColumnsTemplate">
+            <sc-grid-columns id="defaultColumns">
+                <sc-data-column data-field="dtlcd" header-text="상세 코드" width="150" text-align="center" item-editable-function="onDtlCdEditable" required="true" max-length="36"></sc-data-column>
+                <sc-data-column data-field="dtlcd_nm" header-text="코드 명" width="150" text-align="left" editable="true" max-length="60"></sc-data-column>
+                <sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="100" text-align="center" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                <sc-data-column data-field="sort_ord" header-text="정렬" width="60" text-align="right" editable="true" data-type="number" format-type="integer" validator-type="integer" max-length="6"></sc-data-column>
+            </sc-grid-columns>
+        </template>
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "ep-approval-code-list",
+            properties: {
+
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            langCd : []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {
+                            lang_ccd : SCLocaleManager.getLocale()
+                        };
+                    }
+                }
+
+            },
+
+            behaviors : [
+                Polymer.Templatizer
+            ],
+
+            formulas : {
+                // 수정 가능 상태 : 그룹코드가 선택 되었을 경우
+                isEditable: function() {
+                    return (!UT.isEmpty(this.searchParam.ccd));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            load: function() {
+                var me = this;
+                me.set("searchParam.ccd", "G003");
+                me.onFindListGroupCodeAttribute();
+
+                me.applyFormula();
+            },
+
+            clear: function() {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그룹코드 속성 : 속성코드 editable 제어
+            onAttrCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanelGroupCodeAttribute.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+
+            // 상세코드 : 상세코드 editable 제어
+            onDtlCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanelDetailCode.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created" && data["isAdded"] === "Y");
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 그룹 코드 속성 및 상세 조회
+            onFindListGroupCodeAttribute: function() {
+                var me = this;
+                UT.request(me.$.findListGroupCodeAttribute);
+            },
+
+            // 그룹 코드 속성 및 상세 조회 완료
+            completeFindListGroupCodeAttribute: function(e, res){
+                var me = this,
+                    result = res.response;
+
+                // 그룹코드 속성 데이터 바인딩
+                me.$.gridPanelGroupCodeAttribute.setDataProvider(result.GroupCodeAttributeList);
+
+                // 그룹코드 속성에 따른 상세코드 그리드 동적 컬럼 생성
+                me.addColumns(result.GroupCodeAttributeList);
+
+                // 상세코드 데이터 바인딩
+                me.$.gridPanelDetailCode.setDataProvider(result.detailCodeList);
+                me.setDtlCodeState();
+            },
+
+            // 그룹코드 속성 : 추가
+            onAddGroupCodeAttribute : function(){
+                var me = this,
+                    provider = me.$.gridPanelGroupCodeAttribute.getDataProvider();
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('그룹코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 그리드 신규행 추가
+                provider.addItem({
+                    ccd: me.searchParam.ccd
+                });
+            },
+
+            // 그룹코드 속성 : 저장
+            onSaveGroupCodeAttribute : function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('그룹코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 그룹코드 속성 저장 유효성 체크
+                if(!me.attrCodeValidation()) {
+                    return;
+                }
+
+                var provider = me.$.gridPanelGroupCodeAttribute.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveListGroupCodeAttribute.body = {
+                        insertList: created,
+                        updateList: updated
+                    };
+                    UT.request(me.$.saveListGroupCodeAttribute);
+                });
+            },
+
+            // 그룹코드 속성 저장 유효성 체크
+            attrCodeValidation: function() {
+                var me = this;
+
+                // 기본 validate
+                if(!me.validate('saveAttrCode')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                //  속성 코드 중복 체크
+                var provider = me.$.gridPanelGroupCodeAttribute.getDataProvider(),
+                    rows = provider.getItems();
+                var unique_check = {};
+                for (var i=0, len = rows.length; i<len; i++) {
+                    if(typeof unique_check[rows[i].cstr_cnd_cd] == "undefined"){
+                        unique_check[rows[i].cstr_cnd_cd] = 0;
+                    } else {
+                        UT.alert(me.translate("STD.E1000",null, me.translate('속성코드')),null,true); // "'{0}'에 동일한 값이 존재합니다"
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+
+            // 그룹코드 속성 : 저장 완료
+            completesaveListGroupCodeAttribute: function(){
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+                UT.alert(message, function(){
+                    // 그룹코드 속성 조회
+                    me.onFindListGroupCodeAttribute();
+                });
+            },
+
+            // 그룹코드 속성 : 삭제
+            onDeleteGroupCodeAttribute: function(){
+                var me = this,
+                    provider = me.$.gridPanelGroupCodeAttribute.getDataProvider(),
+                    checked = provider.selectionCheckedItems();
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm("STD.ADM1010", function() { // "상세코드 속성값도 함께 삭제됩니다.<br/>삭제 하시겠습니까?"
+                    var deleted = provider.removeItems();
+                    if(checked.length > 0){
+                        me.$.deleteListGroupCodeAttribute.body = {
+                            deleteList: checked
+                        };
+                        UT.request(me.$.deleteListGroupCodeAttribute);
+                    }
+                });
+            },
+
+            // 그룹코드 속성 : 삭제 완료
+            completeDeleteGroupCodeAttribute: function(){
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+                UT.alert(message, function(){
+                    // 그룹코드 속성 조회
+                    me.onFindListGroupCodeAttribute();
+                });
+            },
+
+            // 상세 코드 : 조회
+            onSearchDtlCode : function() {
+                var me = this;
+                UT.request(me.$.findListDetailCode)
+            },
+
+            // 상세 코드 : 조회 완료
+            completefindListDetailCode: function(e, res){
+                var me = this,
+                    result = res.response;
+                
+                me.$.gridPanelDetailCode.setDataProvider(result);
+                me.setDtlCodeState();
+            },
+            
+            setDtlCodeState: function() {
+            	var me = this,
+                    provider = me.$.gridPanelDetailCode.getDataProvider();
+
+            	// setItemStateAtBatch : 콜백함수에서 리턴 되는 상태값으로 로우 상태를 변경한다.
+                provider.setItemStateAtBatch(true, function(index, data){
+                    if(data.cddl_save_yn === "N") { // ESACDDL 테이블에 참조 정보가 없을 경우 (DTLCD 테이블에만 데이터 존재 시)
+                        return "created"; // 신규 상태로 리턴
+                    }
+                })
+            },
+
+            // 상세 코드 : 추가
+            onAddDtlCode : function(){
+                var me = this,
+                    provider = me.$.gridPanelDetailCode.getDataProvider();
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('그룹코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                provider.addItem({
+                    ccd: me.searchParam.ccd,		// 그룹코드
+                    lang_ccd: me.searchParam.lang_ccd,	// 다국어
+                    use_yn: "Y",						// 사용여부
+                    isAdded:"Y"							// 신규추가시 넣어준다.
+                });
+            },
+
+            // 상세 코드 : 저장
+            onSaveDtlCode : function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('그룹코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 상세 코드 저장 유효성 체크
+                if(!me.detailCodeValidation()) {
+                    return;
+                }
+
+                var provider = me.$.gridPanelDetailCode.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveListDetailCode.body = {
+                        ccd : me.searchParam.ccd,
+                        insertList: created,
+                        updateList: updated
+                    };
+                    UT.request(me.$.saveListDetailCode);
+                });
+            },
+
+            // 상세 코드 저장 유효성 체크
+            detailCodeValidation: function() {
+                var me = this;
+
+                // 기본 validate
+                if(!me.validate('saveDetailCode')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                //  상세 코드 중복 체크
+                var provider = me.$.gridPanelDetailCode.getDataProvider(),
+                    rows = provider.getItems();
+                var unique_check = {};
+                for (var i=0, len = rows.length; i<len; i++) {
+                    if(typeof unique_check[rows[i].dtlcd] == "undefined"){
+                        unique_check[rows[i].dtlcd] = 0;
+                    } else {
+                        UT.alert(me.translate("STD.E1000",null, me.translate('상세코드')),null,true); // "'{0}'에 동일한 값이 존재합니다"
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+
+            // 상세 코드 : 저장 완료
+            completesaveListDetailCode: function(){
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+                me.fire("close");
+            },
+
+            // 상세 코드 : 삭제
+            onDeleteDtlCode : function(){
+                var me = this,
+                    provider = me.$.gridPanelDetailCode.getDataProvider(),
+                    checked = provider.selectionCheckedItems(),
+                    message = "STD.N1300"; // "삭제 하시겠습니까?"
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    /*
+                    var deleted = provider.removeItems();
+                    DTLCD는 존재하지만 ESACDDL이 존재하지 않는 경우, 그리드에 created 상태로 보이도록 처리해 놓았으므로 (setDtlCodeState)
+                	실제 DB에서 물리적으로 삭제해주어야 함
+                	*/
+                    if(checked.length > 0){
+                        me.$.deleteListDetailCode.body = {
+                            ccd : me.searchParam.ccd,
+                            deleteList: checked
+                        };
+                        UT.request(me.$.deleteListDetailCode);
+                    }
+                });
+            },
+
+            // 상세 코드 : 삭제 완료
+            completedeleteListDetailCode: function(){
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+                me.fire("close");
+            },
+
+            // 다국어 변경 시 호출
+            onChangeLangCd : function(e){
+                if(e.detail.selectedItem){
+                    this.onSearchDtlCode();
+                }
+            },
+
+            // 그룹코드 속성에 따른 상세코드 그리드 동적 컬럼 생성
+            addColumns: function(items) {
+                var me = this,
+                    grid = me.$.gridPanelDetailCode;
+
+                //기본 컬럼
+                var columns = UT.templateColumns(this, '#defaultColumnsTemplate', '#defaultColumns');
+
+                // 동적 컬럼
+                for(var j = 0, len = items.length;  j < len; j++){
+                    var col = document.createElement('sc-data-column');
+                    col.dataField = "cstr_cnd_val" +j;
+                    col.headerText = items[j].cstr_cnd_nm;
+                    col.width = 200;
+                    col.editable = true;
+                    col.textAlign ="left";
+                    col.maxLength ="60";
+
+                    columns.push(col);
+                }
+
+                grid.setColumns(columns);
+
+            }
+        });
+    </script>
+
+</dom-module>

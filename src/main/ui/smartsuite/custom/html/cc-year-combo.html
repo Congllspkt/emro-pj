@@ -1,0 +1,79 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-year-combo
+    ** Author          : choijh
+    ** Create Date     : 2016.10.27
+    ** History         : 2016.10.27 choijh 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="cc-year-combo">
+    <style>
+        :host {
+            display : table;
+        }
+        :host > * {
+            display: table-cell;
+            vertical-align : middle;
+        }
+        
+        sc-combobox-field {
+        	min-width: 80px;
+        }    
+
+    </style>
+    <template>
+		<sc-combobox-field items="[[years]]" value="{{value}}" display-field="value" placeholder="년도" required="[[required]]" disabled="[[disabled]]" readonly$="[[readonly]]"></sc-combobox-field>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-year-combo",
+			properties : {
+				years : {
+					type : Array
+				},
+				value : {
+					type : Number,
+					notify: true
+				},
+				
+				currentYear: {
+					type: Number,
+					value: new Date().getFullYear()
+				},
+				
+				max: {
+					type: Number,
+					value: 20
+				},
+				min: {
+					type: Number,
+					value: 20
+				},
+				sort: {
+					type: String,
+					value: "asc" // "asc" or "desc"
+				}
+			},
+			
+			attached: function() {
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            
+		            var me = this;
+					var items = [];
+					var minYear = me.currentYear - me.min,
+						maxYear = me.currentYear + me.max;
+					
+					for (var i = 0; i <= me.min + me.max; i++) {
+						items.push({
+							value : me.sort === "desc" ? maxYear-- : minYear++
+						});
+					}
+					
+					me.set("years", items);
+		        }
+			}
+		});
+	</script>
+</dom-module>

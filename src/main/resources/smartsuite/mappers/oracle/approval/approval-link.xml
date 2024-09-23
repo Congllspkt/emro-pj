@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+APVL: 결재마스터
+APVL_BODY: 결재본문
+ESGAMLK: 업무결재연동
+APVLLN_APVR_PRGS_STS: 결재선
+ -->
+
+<mapper namespace="approval-link">
+
+    <insert id="insertTaskAndApprovalLink">
+    /* approval-link.insertTaskAndApprovalLink: 업무 결재 연동 등록 */
+    INSERT 
+      INTO TASK_APVL (
+           TEN_ID
+         , TASK_UUID
+         , APVL_UUID
+         , APVL_TYP_CCD
+         , USE_YN
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.task_uuid}
+         , #{p.apvl_uuid}
+         , #{p.apvl_typ_ccd}
+         , 'Y'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <update id="updateApprovalLinkNotUsed">
+    /* approval-link.updateApprovalLinkNotUsed: 업무 결재 연동 수정(사용안함)*/
+    UPDATE TASK_APVL
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , USE_YN = 'N'
+     WHERE TEN_ID     = #{g.tenant}
+       AND TASK_UUID     = #{p.task_uuid}
+       AND APVL_TYP_CCD = #{p.apvl_typ_ccd}
+    </update>
+
+    <delete id="deleteApprovalLink">
+    /* approval-link.deleteApprovalLink: 업무 결재 연동 삭제 */
+    DELETE 
+      FROM TASK_APVL
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+       AND TASK_UUID = #{p.task_uuid}
+    </delete>
+
+    <select id="findTaskApprovalInfoUsingForApprovalUuid" resultType="string">
+    /* approval-link.findTaskApprovalInfoUsingForApprovalUuid: 사용중인 결재 아이디 */
+    SELECT APVL_UUID
+      FROM TASK_APVL
+     WHERE TEN_ID = #{g.tenant}
+       AND TASK_UUID = #{p.task_uuid}
+       AND APVL_TYP_CCD = #{p.apvl_typ_ccd}
+       AND USE_YN = 'Y'
+    </select>
+    
+</mapper>

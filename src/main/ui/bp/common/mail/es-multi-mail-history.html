@@ -1,0 +1,196 @@
+<sc-link rel="import" href="ep-multi-mail-history-detail.html"></sc-link>
+
+<dom-module id="es-multi-mail-history">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<!-- 조회 -->
+		<sc-ajax id="findListMailSendHistory"
+				 url="findMultiMailSendHistory.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="sendByMailHistrec"
+				 url="sendByMailHistrec.do">
+		</sc-ajax>
+		
+		<!-- 공통코드 조회( C009 : 사용여부, C015: 메일전송구분 ) -->
+		<sc-code-group>
+			<sc-code code="C009" value="{{codes.snd_yn}}"></sc-code>
+			<sc-code code="C015" value="{{codes.eml_snd_typ_ccd}}"></sc-code>
+		</sc-code-group>
+		
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		
+		<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+			<cc-fieldset>
+				<sc-label text="전송 일자"></sc-label>
+				<sc-period-date-field from-value="{{searchParam.from_date}}" to-value="{{searchParam.to_date}}"
+									  default-from-value="-1M" string-date="false" on-enter="onSearch"></sc-period-date-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex" use-selection="true" use-state="false" on-item-click="onItemClick">
+			<cc-grid-toolbar>
+				<sc-button text="전송" on-click="send"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="eml_tit" header-text="제목" width="400" text-align="left" style-name="link"></sc-data-column>
+				<sc-data-column data-field="sndr_eml" header-text="발신자 이메일" width="150" text-align="center"></sc-data-column>
+				<sc-date-column data-field="snd_dttm" header-text="발신 일시" width="100" text-align="center"></sc-date-column>
+				<sc-combobox-column data-field="snd_yn" header-text="발신 여부" width="80" text-align="center" items="{{codes.snd_yn}}" display-field="label" value-field="data"></sc-combobox-column>
+				<sc-combobox-column data-field="eml_snd_typ_ccd" header-text="발신 유형" width="80" text-align="center" items="{{codes.eml_snd_typ_ccd}}" display-field="label" value-field="data"></sc-combobox-column>
+				<sc-image-column	data-field="img_snd_err_msg"	header-text="발신 에러 메시지"		width="100"	text-align="center"	image-change-function="onImageChangeFn"	></sc-image-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="eml_snd_uuid"></sc-grid-field>
+				<sc-grid-field data-field="snd_err_msg"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+
+
+		<sc-dialog id="dialog_snd_err_msg" title-text="발신 에러 메세지" title-align="left" style="width:400px;height:350px" modal="true">
+			<sc-textarea-field id="snd_err_msg" class="fit" readonly></sc-textarea-field>
+		</sc-dialog>
+	</template>
+	
+	<script>
+		Polymer({
+			is: "es-multi-mail-history",
+			
+			properties: {
+				
+				codes: {
+					type: Object,
+					reset: false,
+					value: function() {
+						return {
+							snd_yn: [],
+							eml_snd_typ_ccd: []
+						};
+					}
+				},
+				
+				// 조회 조건
+				searchParam: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+				
+				// 조회 결과
+				resultList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				}
+			},
+			
+			formulas: {
+				// 신규 상태
+				isNew: function() {
+					return this.mailInfo.isNew === true;
+				},
+				
+				// 수정 가능 상태
+				isEditable: function() {
+					return !UT.isEmpty(this.searchParam.eml_tmpl_cd);
+				}
+			},
+			
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			load: function(data) {
+				var me = this;
+				me.set("searchParam.eml_tmpl_cd", data.eml_tmpl_cd);
+				me.onSearch();
+			},
+			
+			/******************************
+			 * 버튼 이벤트
+			 ******************************/
+			// 조회
+			onSearch: function() {
+				var me = this;
+				
+				if(!me.formula('isEditable')) {
+					UT.alert(me.translate("STD.E1012", null, me.translate('메일아이디')), null, true); //"'{0}'을(를) 선택하십시오"
+					return;
+				}
+				
+				UT.request(me.$.findListMailSendHistory);
+			},
+			
+			onItemClick: function(event) {
+				var me   = this,
+					data = event.detail.data,
+					item = event.detail.item;
+				
+				if(item.dataField === 'eml_tit') {
+					me.openHistoryDetailPopup(data);
+				}else if(item.dataField === 'img_snd_err_msg' && UT.isNotEmpty(data["snd_err_msg"])) {
+					me.openSendMailErrorMassage(data);
+				}
+			},
+			openSendMailErrorMassage: function(data) {
+				var me = this;
+				me.$.snd_err_msg.value = data["snd_err_msg"];
+				me.$.dialog_snd_err_msg.show();
+			},
+
+
+			openHistoryDetailPopup: function(data) {
+				var me = this;
+				var popup = UT.popup("ep-multi-mail-history-detail", me, "90%", "90%", {
+				
+				}, {
+					titleText: "상세 정보",
+					destroyOnHided: true
+				});
+				popup.show();
+				popup.getWindowContent().load(data.eml_snd_uuid);
+			},
+
+			onImageChangeFn: function(data, item) {
+				if(item.dataField === "img_snd_err_msg" && UT.isNotEmpty(data["snd_err_msg"])) {
+					return "link";
+				}
+				return null;
+			},
+
+			send: function() {
+				var me = this;
+				var provider = me.$.gridPanel.getDataProvider();
+				var selected = provider.selectionCheckedItems();
+				
+				if(UT.isEmpty(selected)) {
+					UT.alert("STD.N1600");
+					return;
+				}
+				
+				me.$.sendByMailHistrec.body = {
+					selected: selected
+				};
+				UT.request(me.$.sendByMailHistrec, function(e, res) {
+					var response = res.response;
+					if(response.success) {
+						UT.alert("STD.N7003");		//처리 완료하였습니다
+						me.onSearch();
+					}else{
+						UT.alert(response.resultMessage);
+					}
+				});
+			}
+		});
+	</script>
+
+
+</dom-module>

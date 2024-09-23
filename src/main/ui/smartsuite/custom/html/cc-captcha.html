@@ -1,0 +1,87 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-captcha
+    ** Author          : choijh
+    ** Create Date     : 2017.02.10
+    ** History         : 2017.02.10 choijh 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="cc-captcha">
+    <style>
+        :host {
+            display: inline-block;
+            background-color: #f9f9f9;
+            padding: 10px 5px;
+            border: 1px solid #d7d7d7;
+        }
+        .content-box {
+            padding-top: 5px;
+        }
+
+    </style>
+    <template>
+        <sc-ajax id="captchaValidation"
+                 url="captchaValidation.do"
+                 last-response="{{result}}"
+                 on-response="completeGetCapcha">
+        </sc-ajax>
+        <div>
+            <sc-label text="[[translate('아래의 이미지를 보이는 대로 입력해주세요.')]]"></sc-label> <!--아래의 이미지를 보이는 대로 입력해주세요.-->
+        </div>
+        <div class="content-box">
+            <img id="captchaImage" src="data:image/gif;base64,[[result.captchaImage]]" hidden="true">
+            <sc-text-field class="w-120" value="{{value}}" required="true" trigger-cls="refresh" on-trigger-click="load"></sc-text-field>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-captcha",
+            properties: {
+                //Captcha 이미지 넓이
+                imgWidth: {
+                    type: Number,
+                    value: 150
+                },
+
+                //Captcha 이미지 높이
+                imgHeight: {
+                    type: Number,
+                    value: 50
+                },
+
+                //Captcha 사용자 입력 값
+                value: {
+                    type: String,
+                    notify: true
+                }
+            },
+
+            attached: function () {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this.load();
+                }
+            },
+
+            //Captcha 이미지 전송 받기
+            load: function () {
+                var me = this;
+
+                me.$.captchaValidation.body = {
+                    imgWidth: me.imgWidth,
+                    imgHeight: me.imgHeight
+                }
+
+                me.$.captchaValidation.request();
+            },
+
+            //초기 이미지 깨짐 현상을 방지.
+            completeGetCapcha: function () {
+                this.$.captchaImage.hidden = false;
+            }
+        });
+    </script>
+
+</dom-module>

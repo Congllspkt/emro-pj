@@ -1,0 +1,340 @@
+<dom-module id="cc-matrix-chart-data">
+    <template>
+        <sc-request-group id="group" on-response="_onResponse">
+            <sc-code-group>
+                <sc-code code="R101" value="{{codes.matAreaSRS}}" ></sc-code>  <!-- Matrix영역명 : 관계유형분석 -->
+                <sc-code code="R102" value="{{codes.matAreaSI}}" ></sc-code>   <!-- Matrix영역명 : 전략적중요도 -->
+                <sc-code code="R103" value="{{codes.matAreaRA}}" ></sc-code>   <!-- Matrix영역명 : 관계매력도 -->
+                <sc-code code="R104" value="{{codes.matAreaDIFF}}" ></sc-code> <!-- Matrix영역명 : 차별화 -->
+                <sc-code code="R105" value="{{codes.matTypCd}}" ></sc-code>    <!-- Matrix유형 -->
+            </sc-code-group>
+            <sc-ajax url="findListOperationOrganizationByUser.do" body="SO" content-type="text/plain" last-response="{{codes.operOrgCd}}"> </sc-ajax>
+        </sc-request-group>
+        <sc-panel id="chartPanel" title-text="{{chartTitles.panelTitle}}" class$="[[class]]" i18n-disabled>
+            <div class="flex">
+            <cc-matrix-chart id="matrixChart" 
+                titles="{{chartTitles.xyTitle}}" chart-title="{{chartTitles.chartTitle}}" 
+                x-axis-ranges="{{axisRanges.x}}" y-axis-ranges="{{axisRanges.y}}" rectangle-areas="{{rectangleAreas}}" chart-labels="{{chartLabels}}"
+                points="{{chartPoints}}" point-id="{{pointId}}" point-name="{{pointName}}" point-draggable="{{pointDraggable}}" series-styles="{{seriesStyles}}">
+            </cc-matrix-chart>
+            </div>
+        </sc-panel>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-matrix-chart-data",
+            properties: {
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            operOrgCd: [],
+                            matAreaSRS: [],
+                            matAreaSI: [],
+                            matAreaRA: [],
+                            matAreaDIFF: [],
+                            matTypCd: [],
+                            matAreaAll: [],
+                            mapMatAreaCd: {},
+                            mapMatTypCd: {},
+                            mapOperationOrganizationCode: {}
+                        };
+                    }
+                },
+                chartPoints: {
+                    type: Object,
+                    value: function() {
+                        return [];
+                    }
+                },
+                axisRanges: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            x: [],
+                            y: []
+                        }
+                    }
+                },
+                rectangleAreas: {
+                    type: Object,
+                    value: function() {
+                        return [];
+                    }
+                },
+                chartLabels: {
+                    type: Object,
+                    value: function() {
+                        return [];
+                    }
+                },
+                chartTitles: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            panelTitle: "",
+                            chartTitle: "",
+                            xyTitle: {
+                                x_title: "",
+                                y_title: ""
+                            }
+                        };
+                    }
+                },
+                chartData: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            operOrgCd: "",
+                            matTypCd: "",
+                            pointId : "",
+                            pointName : "",
+                            matrixTx: [],
+                            matrixLb: [], 
+                            matrixTa: [],
+                            points: []
+                        }
+                    }
+                },
+                pointId : {
+                    type: String
+                },
+                pointName : {
+                    type: String
+                },
+                pointDraggable : {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                seriesStyles:{
+    				type: Object
+    			}
+            },
+            observers: [
+                        "changedChartData(chartData.*)"
+                    ],
+            _onResponse: function(){
+                var me = this;
+                for (var i = 0, len = me.codes.matTypCd.length; i < len; i++) {
+                    me.codes.mapMatTypCd[me.codes.matTypCd[i].data] = me.codes.matTypCd[i].label; // key, value 형태로 만든다.
+                    me.codes.mapMatAreaCd[me.codes.matTypCd[i].data] = {};
+                }
+                for (var i = 0, len = me.codes.matAreaSRS.length; i < len; i++) {
+                    me.codes.mapMatAreaCd["SRS"][me.codes.matAreaSRS[i].data] = me.codes.matAreaSRS[i].label; // key, value 형태로 만든다.
+                }
+                for (var i = 0, len = me.codes.matAreaSI.length; i < len; i++) {
+                    me.codes.mapMatAreaCd["SI"][me.codes.matAreaSI[i].data] = me.codes.matAreaSI[i].label; // key, value 형태로 만든다.
+                }
+                for (var i = 0, len = me.codes.matAreaRA.length; i < len; i++) {
+                    me.codes.mapMatAreaCd["RA"][me.codes.matAreaRA[i].data] = me.codes.matAreaRA[i].label; // key, value 형태로 만든다.
+                }
+                for (var i = 0, len = me.codes.matAreaDIFF.length; i < len; i++) {
+                    me.codes.mapMatAreaCd["DIFF"][me.codes.matAreaDIFF[i].data] = me.codes.matAreaDIFF[i].label; // key, value 형태로 만든다.
+                }
+                for (var i = 0, len = me.codes.matAreaDIFF.length; i < len; i++) {
+                    me.codes.mapMatAreaCd["DIFZ"][me.codes.matAreaDIFF[i].data] = me.codes.matAreaDIFF[i].label; // key, value 형태로 만든다.
+                }
+                for (var i = 0, len = me.codes.operOrgCd.length; i < len; i++) {
+                    me.codes.mapOperationOrganizationCode[me.codes.operOrgCd[i].oorg_cd] = me.codes.operOrgCd[i].logic_org_nm; // key, value 형태로 만든다.
+                }
+                me.isCodeSearch = true;
+            },
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    var me = this;
+                    me.isCodeSearch = false;
+                    me.$.group.request();
+                }
+            },
+            
+            changedChartTitle: function() {
+                var me = this;
+                var operOrgCd = me.get("chartData.operOrgCd");
+                var matTypCd = me.get("chartData.matTypCd");
+
+                if (UT.isObject(me.codes)) {
+                    me.set("chartTitles.panelTitle", me.codes.mapOperationOrganizationCode[operOrgCd] || "");
+                    me.set("chartTitles.chartTitle", me.codes.mapMatTypCd[matTypCd] || "");
+                }
+                var xTitle = "", yTitle = "";
+                // Matirix X/Y 축 제목
+                switch(matTypCd) {
+                case "SRS":
+                    xTitle = me.translate("관계매력도"), yTitle = me.translate("전략적중요도");
+                    break;
+                case "SI":
+                    xTitle = me.translate("공급시장복잡성"), yTitle = me.translate("사업영향도");
+                    break;
+                case "RA":
+                    xTitle = me.translate("협력사매력도"), yTitle = me.translate("구매사매력도");
+                    break;
+                case "DIFF":
+                    xTitle = me.translate("협력사평가등급"), yTitle = me.translate("관계유형세분화");
+                    break;
+                case "DIFZ":
+                    xTitle = me.translate("협력사평가등급"), yTitle = me.translate("협력사구매비중");
+                    break;
+                }
+                me.set("chartTitles.xyTitle", {x_title : xTitle, y_title : yTitle});
+            },
+            
+            // chart raw data
+            changedChartData: function() {
+                var me = this;
+                var xAxis = [], yAxis = [], rectangles = [], labels = [], pos = {X: {}, Y: {}};
+                var chartData = me.chartData;
+                var matrixTx = me.get("chartData.matrixTx") || [];
+                var matrixLb = me.get("chartData.matrixLb") || [];
+                var matrixTa = me.get("chartData.matrixTa") || [];
+                var points = me.get("chartData.points") || [];
+                
+                me.set("pointId", chartData.pointId);
+                me.set("pointName", chartData.pointName);
+                
+                if(matrixTx.length > 0 && matrixLb.length > 0 && me.isCodeSearch){
+                    for (var i = 0, len = matrixTx.length; i < len; i++) {
+                        var row = {
+                            xy_cls: matrixTx[i].xy_cls,
+                            rng_cls: matrixTx[i].rng_cls,
+                            title: matrixTx[i].rng_cls_nm,
+                            min_sco: matrixTx[i].min_sco,
+                            max_sco: matrixTx[i].max_sco,
+                            min_pos: matrixTx[i].min_pos,
+                            max_pos: matrixTx[i].max_pos
+                        };
+                        if (row.xy_cls === "X") {
+                            xAxis.push(row);
+                        } else if (row.xy_cls === "Y") {
+                            yAxis.push(row);
+                        }
+    
+                        pos[matrixTx[i].xy_cls][matrixTx[i].rng_cls] = {
+                            min_pos: matrixTx[i].min_pos,
+                            max_pos: matrixTx[i].max_pos,
+                            min_sco: matrixTx[i].min_sco,
+                            max_sco: matrixTx[i].max_sco
+                        }
+                    }
+    
+                    for (var i = 0, len = matrixTa.length; i < len; i++) {
+                        var xPos = pos.X[matrixTa[i].x_axis_rng_cls] || {min_pos: 0, max_pos: 0, min_sco: 0, max_sco: 0};
+                        var yPos = pos.Y[matrixTa[i].y_axis_rng_cls] || {min_pos: 0, max_pos: 0, min_sco: 0, max_sco: 0};
+                        rectangles.push({
+                            color: matrixTa[i].bg_col,
+                            area_nm: me.getMatrixAreaNm(matrixTa[i].mat_typ_cd, matrixTa[i].mat_area_cd),
+                            mat_area: matrixTa[i].x_axis_rng_cls + matrixTa[i].y_axis_rng_cls,
+                            mat_area_cd: matrixTa[i].mat_area_cd,
+                            x: Math.max(xPos.min_pos, 0),
+                            y: Math.max(100 - yPos.max_pos, 0),
+                            width: Math.max(xPos.max_pos - xPos.min_pos, 0),
+                            height: Math.max(yPos.max_pos - yPos.min_pos, 0),
+                            x_min_sco: xPos.min_sco,
+                            x_max_sco: xPos.max_sco,
+                            y_min_sco: yPos.min_sco,
+                            y_max_sco: yPos.max_sco
+                        });
+                    }
+    
+                    for (var i = 0, len = matrixLb.length; i < len; i++) {
+                        labels.push({
+                            label_nm: me.getMatrixAreaNm(matrixLb[i].mat_typ_cd, matrixLb[i].label_cd),
+                            x_crd: matrixLb[i].x_crd,
+                            y_crd: matrixLb[i].y_crd
+                        });
+                    }
+                    if(xAxis.length > 0 && yAxis.length > 0 && UT.isNotEmpty(rectangles) &&
+                            UT.isNotEmpty(rectangles)
+                    ){
+                        me.set("axisRanges", { x: xAxis, y: yAxis });
+                        me.set("rectangleAreas", rectangles);
+                        me.set("chartLabels", labels);
+                        me.set("chartPoints", points);
+                        me.changedChartTitle();
+                        me.displayChart();
+                    }else{
+                        me.set("axisRanges", { x: [], y: [] });
+                        me.displayChart();
+                    }
+                
+                }
+            },
+            
+            // Matrix 영역명 
+            getMatrixAreaNm: function(matTypCd, matAreaCd) {
+                var me = this;
+                return UT.isObject(me.codes.mapMatAreaCd[matTypCd]) ? me.codes.mapMatAreaCd[matTypCd][matAreaCd] || "" : "";
+            },
+            
+            // 차트 그리기
+            displayChart: function() {
+                var me = this;
+               
+                me.closeTooltip();
+                
+                if (UT.isObject(me.axisRanges)&& UT.isNotEmpty(me.axisRanges.x) && UT.isNotEmpty(me.axisRanges.y)) {
+                    me.$.chartPanel.doContentElementResize();
+                    me.$.matrixChart.createMatrixChart();
+                } else {
+                    if(me.$.matrixChart.initialized){
+                        me.$.matrixChart.removeChart();
+                    }
+                }
+            },
+            
+            // 차트 리사이징
+            onResize: function() {
+                var me = this;
+                //me.$.matrixChart.chart.reflow();
+            },
+            
+            // point에 focus 주기 
+            focusPoint: function(pointId) {
+            	var me = this, chartView = me.$.matrixChart.chartMain;
+                if(chartView){
+                    var series = chartView.bodyView().plotAreaView().getSeriesViews()[0]._itemViews;
+                    var focused = false;
+                    
+                    for (var i = 0, len = series.length; i < len; i++) {
+                        var pointElt = series[i], pointData = pointElt._model._data.data;
+                        if(pointData && pointData.id == pointId){
+		                    if(me._oldFocusPoint){
+		                        me._oldFocusPoint.setHovered(false);
+		                    }
+                    		me._oldFocusPoint = pointElt;
+                    		pointElt.setHovered(true);
+                    		window.requestAnimationFrame(function(){
+                    			pointElt.$_svgElt.parentNode.appendChild(pointElt.$_svgElt);
+                    		});
+                            chartView._tipManager._force = true;
+                            chartView._tipManager.setTarget(pointElt);
+                            chartView._container._defaultTool.setHoveredView(pointElt,true);
+                            focused = true;
+                            break;
+                        }
+                    }
+                    if (!focused) {
+                    	me.closeTooltip();
+                    }
+                } 
+            },
+            closeTooltip: function(){
+            	var me = this, 
+            		chartView = me.$.matrixChart.chartMain;
+            	
+            	if(me._oldFocusPoint && me._oldFocusPoint._hovered){
+            		me._oldFocusPoint.setHovered(false);
+            	}
+            	
+            	if (chartView && chartView._container && chartView._container._defaultTool) {
+            		//chartView._tipManager.close();
+            		chartView._container._defaultTool._hideTooltip();
+            	}
+            }
+
+        });
+    </script> 
+</dom-module>

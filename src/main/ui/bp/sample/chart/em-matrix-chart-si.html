@@ -1,0 +1,119 @@
+<dom-module id="em-chart-si">
+
+<style>
+ :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+        .row-1 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }
+        .row-2 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }  
+</style>
+
+<template>
+	<sc-panel title-text="SRM(matrix) - SI차트">
+			<cc-matrix-chart id="matrixChart" 
+							 titles="{{titles}}" 
+							 x-axis-ranges="{{xAxisRanges}}" 
+							 y-axis-ranges="{{yAxisRanges}}"
+							 points="{{points}}"
+							 rectangle-areas="{{rectangleAreas}}"
+							 chart-labels="{{chartLabels}}"
+							 on-point-click="onPointClick"
+							 on-area-click="onAreaClick">
+			
+			</cc-matrix-chart>
+		</sc-panel>
+</template>
+
+<script>
+Polymer({
+	is: 'em-chart-si',
+	properties : {
+	titles : {
+				type:Object,
+				value :{
+					x_title :"공급시장복잡성", 
+					y_title :"사업영향도"
+				}
+			},
+			xAxisRanges:{
+				type:Array,
+			 	value : [
+   			 	 {co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"SI",max_pos :"30",max_sco :"50",min_pos :"0",min_sco :"0",oper_org_sn :"10010",rng_cls :"L",sys_id :"EMRO",title :"공급시장복잡성 낮음",xy_cls :"X"},
+		 	   	 {co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"SI",max_pos :"100",max_sco :"100",min_pos :"30",min_sco :"50",oper_org_sn :"10010",rng_cls :"H",sys_id :"EMRO",title :"공급시장복잡성 높음",xy_cls :"X"}
+ 				]
+			},
+			
+			yAxisRanges:{
+				type:Array,
+			 	value : [
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"SI",max_pos :"50",max_sco :"50",min_pos :"0",min_sco :"0",oper_org_sn :"10010",rng_cls :"L",sys_id :"EMRO",title :"사업영향도 낮음",xy_cls :"Y"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"SI",max_pos :"100",max_sco :"100",min_pos :"50",min_sco :"50",oper_org_sn :"10010",rng_cls :"H",sys_id :"EMRO",title :"사업영향도 높음",xy_cls :"Y"}
+ 				]
+			},
+			points:{
+				type : Array,
+				value : [
+				         { color :"RED",    co_cd :"C4100",    editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",
+				         oper_org_sn :"10010",    ra_area_cd :"A",    ra_bg_col :"#9370db",    rsx :"90.6",    rsy :"89",    sg_cd :"SG0004",    sg_nm :"수공구",    si_area_cd :"A",    si_bg_col :"#9370db",    sys_id :"EMRO",    x :"76.3",    x_position :"76.3",    y :"90.6",    y_position :"90.6"},  
+				         { color :"RED",    co_cd :"C4100",    editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",
+				         oper_org_sn :"10010",    ra_area_cd :"D",    ra_bg_col :"#7093db",    rsx :"34",    rsy :"37.2",    sg_cd :"SG0008",    sg_nm :"연마공구",    si_area_cd :"D",    si_bg_col :"#7093db",    sys_id :"EMRO",    x :"36.6",    x_position :"36.6",    y :"16.65",    y_position :"16.65"},
+				         { color :"RED",    co_cd :"C4100",    editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",
+				         oper_org_sn :"10010",    ra_area_cd :"A",    ra_bg_col :"#9370db",    rsx :"74.6",    rsy :"68",    sg_cd :"SG0005",    sg_nm :"전동공구",    si_area_cd :"A",    si_bg_col :"#9370db",    sys_id :"EMRO",    x :"57.7",    x_position :"57.7",    y :"64.75",    y_position :"64.75"},
+				         {color :"RED",    co_cd :"C4100",    editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",
+				         oper_org_sn :"10010",    ra_area_cd :"A",    ra_bg_col :"#9370db",    rsx :"58.25",    rsy :"58.35",    sg_cd :"SG0006",    sg_nm :"체결재",    si_area_cd :"A",    si_bg_col :"#9370db",    sys_id :"EMRO",    x :"58.25",    x_position :"58.25",    y :"53.4",    y_position :"53.4"},
+				         {color :"RED",    co_cd :"C4100",    editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",
+				         oper_org_sn :"10010",    ra_area_cd :"B",    ra_bg_col :"#4682b4",    rsx :"41.75",    rsy :"51.7",    sg_cd :"SG0007",    sg_nm :"측정공구",    si_area_cd :"B",    si_bg_col :"#4682b4",    sys_id :"EMRO",    x :"52.3",    x_position :"52.3",    y :"44.05",    y_position :"44.05"}
+				]
+			},
+			rectangleAreas :{
+				type:Array,
+				value:[
+				       {area_nm :"경쟁(Leverage)",   color :"#f789a5",    height :"50",    mat_area :"LH",    mat_area_cd :"C",    width :"30",    x :"0",    x_max_sco :"50",    x_min_sco :"0",    y :"0",    y_max_sco :"100",    y_min_sco :"50"},  
+				       {area_nm :"일반(Loutine)",    color :"#c2d4e6",    height :"50",    mat_area :"LL",    mat_area_cd :"D",    width :"30",    x :"0",    x_max_sco :"50",    x_min_sco :"0",    y :"50",    y_max_sco :"50",    y_min_sco :"0"}, 
+				       {area_nm :"안전(Bottleneck)", color :"#7085eb",    height :"50",    mat_area :"HL",    mat_area_cd :"B",    width :"70",    x :"30",    x_max_sco :"100",    x_min_sco :"50",    y :"50",    y_max_sco :"50",    y_min_sco :"0"},
+				       {area_nm :"전략(Critical)",   color :"#977cf1",    height :"50",    mat_area :"HH",    mat_area_cd :"A",    width :"70",    x :"30",    x_max_sco :"100",    x_min_sco :"50",    y :"0",    y_max_sco :"100",    y_min_sco :"50" }
+				   
+		  		 ]
+			},
+			chartLabels :  {
+				type:Array,
+				value:[
+				       {label_nm :"Critical",   x_crd :"65",    y_crd :"25"},  
+				       {label_nm :"Leverage",   x_crd :"15",    y_crd :"25"},  
+				       {label_nm :"Bottleneck", x_crd :"65",    y_crd :"75"},
+				       {label_nm :"Routine",    x_crd :"15",    y_crd :"75"}       
+		        ]
+			}
+	},
+	attached: function() {
+		var chart = this.$.matrixChart;
+		/** (차트생성시 유의할점)
+		*   1. chart는 생성될 div를 지정하여 해당 div안에 그려지기때문에 attached 시점 이후에  생성해야합니다.
+		*   2. titles, xAxisRanges, yAxisRanges, points, rectangleAreas,chartLabels 의 데이터를 셋팅(조회)한 후에 생성해야합니다.
+		*
+		*/
+	   		chart.createMatrixChart();
+	},
+	
+	//포인트 클릭시 이벤트 처리
+	onPointClick : function(event,data){
+		console.log('event : ' ,event);
+		console.log('data  : ' ,data);
+	},
+	
+	//영역 클릭시 이벤트 처리
+	onAreaClick :  function(event,data){
+		console.log('event : ' ,event);
+		console.log('data  : ' ,data);
+	},
+	});
+</script>
+
+</dom-module>

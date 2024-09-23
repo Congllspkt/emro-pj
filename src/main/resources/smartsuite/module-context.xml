@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd"
+	   default-lazy-init="false">
+	
+	<import resource="classpath:smartsuite/attachment/attachment-context.xml"/>
+    
+    <!-- Smartsuite Modules Bean Scanner -->    
+    
+    <!-- Configuration Bean Scanner -->
+	<context:component-scan base-package="smartsuite5.config">
+		<context:include-filter type="annotation"
+			expression="org.springframework.context.annotation.Configuration" />
+	</context:component-scan>
+	<!-- Configuration Bean Scanner -->
+	
+	<!-- JPA Persist Bean Scanner -->
+	<context:component-scan base-package="smartsuite5.*.persist.jpa.core">
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Repository" />
+<!-- 		<context:exclude-filter type="regex" expression="smartsuite5\.memo\.persist\.jpa\.core.*"/> -->
+	</context:component-scan>
+	
+<!-- 	<bean class="smartsuite5.memo.persist.mybatis.core.MemoMapperPersist"></bean> -->
+	<!-- JPAPersist Bean Scanner -->
+	
+</beans>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="error">
+    <insert id="insertErrorInfo">
+    	INSERT INTO ERR_LOG (
+    		TEN_ID,
+    		USR_ID,
+    		ERR_UUID,
+    		EXEC_UUID,
+    		SESS_ID,
+    		ERR_OCCR_TYP,
+    		ERR_OCCR_SRC_PATH,
+    		ERR_COL_NO,
+    		ERR_LN_NO,
+    		SYS_ERR_MSG,
+    		USR_ERR_MSG,
+    		STK_TRCE_CONT,
+    		IMG_ATH_UUID,
+    		ERR_OCCR_DTTM,
+    	    CLASS_NM,
+    		METH_NM,
+    		USR_EXEC_HISTREC,
+    		USR_WEBBR_KIND,
+    		MENU_CD,
+    		SVR_IP,
+    		REG_DTTM
+    	) VALUES (
+    		#{g.tenant},
+    		#{g.username},
+    		#{p.err_uuid},
+    		#{p.exec_uuid},
+    		#{p.sess_id},
+    		#{p.err_occr_typ},
+    		#{p.err_occr_src_path},
+    		#{p.err_col_no},
+    		#{p.err_ln_no},
+    		#{p.sys_err_msg},
+    		#{p.usr_err_msg},
+    		#{p.stk_trce_cont},
+    		#{p.img_ath_uuid},
+    		#{p.err_occr_dttm},
+    		#{p.class_nm},
+    		#{p.meth_nm},
+    		#{p.usr_exec_histrec},
+    		#{p.usr_webbr_kind},
+    		#{p.menu_cd},
+    		#{p.svr_ip},
+    		#{g.now}
+    	)
+    </insert>
+
+    <update id="updateError">
+    	UPDATE ERR_LOG
+		    SET
+		    USR_ERR_MSG = #{p.usr_err_msg},
+		    IMG_ATH_UUID = #{p.img_ath_uuid}
+    		WHERE ERR_UUID = #{p.err_uuid}
+    </update>
+
+    <resultMap type="map" id="resultMap_error">
+        <result property="stk_trce_cont" column="STK_TRCE_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    <select id="findListError" resultMap="resultMap_error">
+    	SELECT ERR_LOG.TEN_ID
+   			 , ERR_LOG.USR_ID
+			 , USR.USR_NM
+    	     , USR.USR_TYP_CCD
+			 , ERR_LOG.USR_WEBBR_KIND
+			 , ERR_LOG.USR_EXEC_HISTREC
+			 , ERR_LOG.STK_TRCE_CONT
+			 , ERR_LOG.ERR_OCCR_SRC_PATH
+			 , ERR_LOG.ERR_LN_NO
+			 , ERR_LOG.REG_DTTM
+			 , ERR_LOG.MENU_CD
+			 , MENU_MULTLANG.MENU_NM
+			 , ERR_LOG.ERR_UUID
+			 , ERR_LOG.IMG_ATH_UUID
+			 , ERR_LOG.EXEC_UUID
+			 , ERR_LOG.SESS_ID
+			 , ERR_LOG.CLASS_NM
+			 , ERR_LOG.METH_NM
+			 , ERR_LOG.ERR_OCCR_DTTM
+			 , ERR_LOG.SYS_ERR_MSG
+			 , ERR_LOG.USR_ERR_MSG
+			 , ERR_LOG.ERR_OCCR_TYP
+			 , ERR_LOG.ERR_COL_NO
+			 , ERR_LOG.SVR_IP
+		 FROM ERR_LOG ERR_LOG
+		LEFT OUTER JOIN MENU_MULTLANG MENU_MULTLANG
+		ON ERR_LOG.TEN_ID = MENU_MULTLANG.TEN_ID
+		AND ERR_LOG.MENU_CD = MENU_MULTLANG.MENU_CD
+		AND MENU_MULTLANG.LANG_CCD = #{g.locale}
+		LEFT OUTER JOIN USR USR
+		ON 	ERR_LOG.TEN_ID = USR.TEN_ID
+			AND ERR_LOG.USR_ID = USR.USR_ID
+	    WHERE 1=1
+	    <if test='p.usr_id != null and p.usr_id != ""'>
+	      AND ERR_LOG.USR_ID = #{p.usr_id}
+        </if>
+        <if test='p.exec_uuid != null and p.exec_uuid != ""'>
+	      AND ERR_LOG.EXEC_UUID = #{p.exec_uuid}
+        </if>
+        <if test='p.sess_id != null and p.sess_id != ""'>
+	      AND ERR_LOG.SESS_ID = #{p.sess_id}
+        </if>
+        <if test='p.err_uuid != null and p.err_uuid != ""'>
+	      AND ERR_LOG.ERR_UUID = #{p.err_uuid}
+        </if>
+        <if test='p.err_occr_typ != null and p.err_occr_typ != ""'>
+	      AND ERR_LOG.ERR_OCCR_TYP = #{p.err_occr_typ}
+        </if>
+        <if test='p.sys_err_msg != null and p.sys_err_msg != ""'>
+          <bind name="errMsgPattern" value="'%' + p.sys_err_msg + '%'" />
+	      AND UPPER(ERR_LOG.SYS_ERR_MSG) LIKE UPPER(#{errMsgPattern})
+        </if>
+        <if test='p.menu_cd != null and p.menu_cd != ""'>
+          <bind name="menuCdPattern" value="'%' + p.menu_cd + '%'" />
+	      AND ERR_LOG.MENU_CD LIKE #{menuCdPattern}
+        </if>
+        <if test='p.svr_ip != null and p.svr_ip != ""'>
+          <bind name="serverIpPattern" value="'%' + p.svr_ip + '%'" />
+	      AND ERR_LOG.SVR_IP LIKE #{serverIpPattern}
+        </if>
+        <if test='p.usr_webbr_kind != null and p.usr_webbr_kind != ""'>
+          <bind name="usrAgentPattern" value="'%' + p.usr_webbr_kind + '%'" />
+	      AND UPPER(ERR_LOG.USR_WEBBR_KIND) LIKE UPPER(#{usrAgentPattern})
+        </if>
+   		<if test="p.from_err_occr_dttm != null">
+	      AND ERR_LOG.ERR_OCCR_DTTM >= #{p.from_err_occr_dttm}
+	    </if>
+	    <if test="p.to_err_occr_dttm != null">
+	      <bind name="toDatePattern" value="g.getPlusDays(p.to_err_occr_dttm,1)"/>
+	      AND ERR_LOG.ERR_OCCR_DTTM <![CDATA[<=]]> #{toDatePattern}
+ 	    </if>
+		 ORDER BY ERR_LOG.ERR_OCCR_DTTM DESC
+    </select>
+    
+    <delete id="deleteError">
+	  	DELETE
+	  	  FROM ERR_LOG
+	  	 WHERE ERR_UUID = #{p.err_uuid}
+    </delete>
+  
+  	<select id="occurError">
+  		SELECT * FROM NONE
+  	</select>
+</mapper>

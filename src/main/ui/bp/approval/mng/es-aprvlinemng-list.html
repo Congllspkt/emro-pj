@@ -1,0 +1,459 @@
+<sc-link rel="import" href="../../shared/ep-user-list.html"></sc-link>
+<dom-module id="es-aprvlinemng-list">
+	<!--
+	/**
+	 *
+	 *	@description : 결재선 관리 리스트
+	 *  <pre>
+	 * </pre>
+	 * @author : Yeon-u Kim
+	 * @FileName :
+	 * @Since 2017. 2. 1.
+	 * @변경이력 : [2017. 2. 1.] Yeon-u Kim 최초작성
+	 */
+	-->
+	<style>
+		:host {
+			@apply(--hbox-layout);
+		}
+	</style>
+	
+	<template>
+		<!-- ajax 선언 부 -->
+		
+		<!-- 결재선 master 조회 -->
+		<sc-ajax id="findApprovalLineMasterList"
+				 url="findApprovalLineMasterList.do"
+				 on-response="completeFindList">
+		</sc-ajax>
+		<!-- 결재선 상세 조회 -->
+		<sc-ajax id="findApprovalLineMasterDetailList"
+				 body="{{aprvLineMaster}}"
+				 url="findApprovalLineMasterDetailList.do"
+				 on-response="completeFindAprvLineDetailList">
+		</sc-ajax>
+		<!-- 결재선 master 저장 -->
+		<sc-ajax id="saveApprovalLineMaster"
+				 url="saveApprovalLineMaster.do"
+				 on-response="completeSaveHendler">
+		</sc-ajax>
+		<!-- 결재선 master 삭제 -->
+		<sc-ajax id="deleteApprovalLineMaster"
+				 url="deleteApprovalLineMaster.do"
+				 on-response="completeDeleteMaster">
+		</sc-ajax>
+		<!-- 결재선 상세 삭제 -->
+		<sc-ajax id="deleteListApprovalLineMasterDetail"
+				 url="deleteListApprovalLineMasterDetail.do"
+				 on-response="completeDeleteMasterDetail">
+		</sc-ajax>
+		<!-- 결재선 상세 저장 -->
+		<sc-ajax id="saveAprvLineMasterDetail"
+				 url="saveAprvLineMasterDetail.do"
+				 on-response="completeSaveDetailHendler">
+		</sc-ajax>
+		
+		<!--  코드 조회 service group-->
+		<sc-code-group>
+			<!-- 결재선결재자 종류코드 -->
+			<sc-code code="G005" value="{{codes.G005}}"></sc-code>
+			<sc-code code="G013" value="{{codes.G013}}"></sc-code>
+			<sc-code code="G011" value="{{codes.G011}}"></sc-code> <!-- 순차/병렬그룹코드 -->
+		</sc-code-group>
+		
+		<!-- 화면 -->
+		
+		<!-- 그리드 -->
+		<sc-grid id="gridPanel" class="flex-2" on-item-click="onDataCellClicked" editable="true">
+			<!--  그리드 toolbar -->
+			<cc-grid-toolbar title-text="결재선 목록">
+				<sc-button text="추가" on-click="onAddMaster"></sc-button>
+				<sc-button text="삭제" on-click="onDeleteMaster"></sc-button>
+				<sc-button text="저장" on-click="onSaveMaster"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="usr_apvlln_tit" header-text="결재선 명" width="300" text-align="left" editable="true" required="true" max-length="500"></sc-data-column>
+				<sc-image-column data-field="button_aprvln" header-text="상세" width="60" image-change-function="onImageVisible"></sc-image-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="usr_apvlln_uuid"></sc-grid-field>
+				<sc-grid-field data-field="usr_id"></sc-grid-field>
+				<sc-grid-field data-field="apvlln_typ_ccd"></sc-grid-field>
+				<sc-grid-field data-field="usr_apvlln_tit"></sc-grid-field>
+				<sc-grid-field data-field="apvlln_sort"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+		<div class="hspace-10"></div>
+		
+		<sc-grid id="detailGridPanel" class="flex-3" editable="true" on-item-edit-end="onItemEditEnd">
+			<!--  그리드 toolbar -->
+			<cc-grid-toolbar title-text="결재자 목록">
+				<sc-button text="추가" on-click="onShowUserPopup" hidden="[[!uiBind.editable]]"></sc-button>
+				<sc-button text="삭제" on-click="onDeleteDetail" hidden="[[!uiBind.editable]]"></sc-button>
+				<sc-button text="저장" on-click="onSaveDetailList" hidden="[[!uiBind.editable]]"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="aprvemp_dept_nm" header-text="부서 명" width="150"></sc-data-column>
+				<sc-data-column data-field="apvr_id" header-text="결재자 아이디" width="150"></sc-data-column>
+				<sc-data-column data-field="aprvemp_usr_nm" header-text="결재자 명" width="150"></sc-data-column>
+				<sc-combobox-column data-field="apvr_typ_ccd" header-text="구분" width="150" editable="true"
+									display-field="label" value-field="data" items="{{codes.filterApvllnTypCcd}}"></sc-combobox-column>
+				<sc-combobox-column data-field="seq_parll_typ_ccd" header-text="순차/병렬" width="80" items="{{codes.G011}}" editable="false"
+									display-field="label" value-field="data"></sc-combobox-column>
+				<sc-data-column data-field="apvr_sort" header-text="순서" width="60" text-align="right" editable="true" required="true" max-length="5"
+								data-type="number" format-type="integer" validator-type="integer"></sc-data-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="usr_apvlln_uuid"></sc-grid-field>
+				<sc-grid-field data-field="aprvemp_dept_nm"></sc-grid-field>
+				<sc-grid-field data-field="apvr_id"></sc-grid-field>
+				<sc-grid-field data-field="aprvemp_usr_nm"></sc-grid-field>
+				<sc-grid-field data-field="apvr_typ_ccd"></sc-grid-field>
+				<sc-grid-field data-field="apvr_sort" data-type="number"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'es-aprvlinemng-list',
+			properties: {
+				aprvLineMaster: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+				codes: {
+					type: Object,
+					value: function() {
+						return {
+							G005: [],
+							G013: [],
+							filterApvllnTypCcd: [],
+							G011: []
+						};
+					}
+				},
+				uiBind: {
+					type: Object,
+					value: function() {
+						return {
+							editable: false
+						};
+					}
+				}
+			},
+			//최초 호출
+			initialized: function() {
+				var me = this;
+				//기안 구분 삭제
+				var apvllnFilter = me.get("codes.G005").filter(function(item) {
+					if(item.data == "DFT") {
+						return false;
+					} else if(item.data == "REF") {
+						return false;
+					} else {
+						return true;
+					}
+				});
+				var rdg = me.get("codes.G013");
+				
+				for(var i in rdg) {
+					apvllnFilter.push(rdg[i]);
+				}
+				
+				me.set("codes.filterApvllnTypCcd", apvllnFilter);
+				//바로조회
+				me.onFindList();
+			},
+			//그리드 이미지 설정
+			onImageVisible: function(data, item) {
+				if(UT.isEmpty(data["usr_apvlln_uuid"])) {
+					return "";
+				} else {
+					return "link";
+				}
+			},
+			//그리드 셀 클릭 이벤트
+			onDataCellClicked: function(event) {
+				var me = this, detail = event.detail,
+					data              = detail.data,
+					item              = detail.item,
+					fieldName         = item.dataField,
+					itemIndex         = item.rowIndex;
+				
+				//상세 버튼 클릭
+				if(fieldName === 'button_aprvln') {
+					var provider = me.$.gridPanel.getDataProvider();
+					if(provider.getItemState(itemIndex) !== "created") {
+						me.findDetailList(data);
+					}
+				}
+			},
+			//병합,순차 정렬
+			onItemEditEnd: function(event) {
+				var me       = this,
+					data     = event.detail.data,
+					item     = event.detail.item,
+					provider = event.detail.provider,
+					oldValue = event.detail.oldValue,
+					newValue = event.detail.newValue,
+					grid     = event.detail.grid,
+					index    = item.rowIndex;
+				
+				if(newValue === "P") {
+					UT.alert("STD.ADM1055"); //병렬 처리시 병렬 순서를 같게 변경해주세요.
+					provider.setItemAt(index, {seq_parll_typ_ccd: "PARLL"});
+				} else {
+					provider.setItemAt(index, {seq_parll_typ_ccd: "SEQ"});
+				}
+			},
+			//결재선 목록 조회
+			onFindList: function() {
+				var me = this, provider = me.$.detailGridPanel.getDataProvider();
+				if(UT.isNotEmpty(provider)) {
+					provider.removeAll();
+				}
+				me.set("uiBind.editable", false);
+				UT.request(me.$.findApprovalLineMasterList);
+			},
+			//결재선 목록 조회 완료
+			completeFindList: function(e, res) {
+				var me = this;
+				//조회리스트 결과 처리 ()
+				me.$.gridPanel.setDataProvider(res.response);
+			},
+			//결재선 내용 조회
+			findDetailList: function(param) {
+				var me = this;
+				param = param || {usr_apvlln_uuid: me.get("aprvLineMaster.usr_apvlln_uuid")};
+				me.set("uiBind.editable", true);
+				me.set("aprvLineMaster", {usr_apvlln_uuid: param.usr_apvlln_uuid});
+				UT.request(me.$.findApprovalLineMasterDetailList);
+			},
+			//결재선 내용 조회처리
+			completeFindAprvLineDetailList: function(e, res) {
+				var me = this;
+				//조회리스트 결과 처리 ()
+				me.$.detailGridPanel.setDataProvider(res.response);
+			},
+			
+			//////////////////////////그리드 toolbar 이벤트/////////////////////////////
+			//결재선 목록 추가
+			onAddMaster: function() {
+				var me = this, provider = me.$.gridPanel.getDataProvider();
+				me.set("uiBind.editable", false);
+				//결재선 구분코드 결재선으로 고정
+				provider.addItemAt(0, {'apvlln_typ_ccd': 'AL'});
+			},
+			//결재선 목록 저장
+			onSaveMaster: function() {
+				var me = this, provider = me.$.gridPanel.getDataProvider();
+				
+				if(!me.validate()) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				var created = provider.getNewItems();
+				var updated = provider.getUpdateItems();
+				
+				if(created.length === 0 && updated.length === 0) {
+					UT.alert("STD.N1700");
+					return;
+				}
+				UT.confirm("STD.N1200", function() {
+					me.$.saveApprovalLineMaster.body = {
+						insertAprvLineMasters: created,
+						updateAprvLineMasters: updated
+					};
+					UT.request(me.$.saveApprovalLineMaster);
+				});
+			},
+			completeSaveHendler: function() {
+				var me = this;
+				UT.completeAlert("", function() {
+					me.onFindList();
+				});
+			},
+			//결재선 목록 삭제
+			onDeleteMaster: function() {
+				var me = this;
+				var provider = me.$.gridPanel.getDataProvider();
+				var checked = provider.selectionCheckedItems();
+				if(checked.length > 0) {
+					UT.confirm("STD.N1300", function() {// "삭제 하시겠습니까?"
+						var deleted = provider.removeItems();    // 그리드에서 체크된 데이터를 지워주고, db에서 삭제해야 할 데이터 목록울 리턴한다.
+						if(deleted.length > 0) {
+							me.$.deleteApprovalLineMaster.body = {deleteds: deleted};
+							UT.request(me.$.deleteApprovalLineMaster);
+						} else {
+							me.completeDeleteMaster();
+						}
+					});
+				} else {
+					UT.alert("STD.N1600");    //선택된 항목이 없습니다
+				}
+			},
+			//결재선 목록 삭제
+			completeDeleteMaster: function() {
+				var me = this;
+				UT.completeAlert("", function() {
+					me.onFindList();
+				});
+			},
+			/////////////////////////////결재선 목록 그리드 toolbar////////////////////////////////////////
+			//사용자검색 팝업 호출
+			onShowUserPopup: function() {
+				var me = this;
+				//팝업 호출
+				var userPopup = UT.popup("ep-user-list", me, '50%', '70%', {
+					'selected-items': function(popup, e) {
+						//선택  처리
+						me.onAddDetailList(e.detail);
+						popup.close();
+					}
+				}, {maximizable: true, titleText: this.translate("사용자 검색")});
+				userPopup.show();
+				userPopup.getWindowContent().load({autoComplete: false});
+			},
+			//결재 정보 아이템 리스트 Grid에 추가
+			onAddDetailList: function(selected) {
+				var me = this, provider = me.$.detailGridPanel.getDataProvider();
+				var rows = provider.getItems(); // 전체 데이터
+				
+				var dupCnt      = 0,
+					ccCnt       = 0,
+					exceptItems = [];
+				
+				if(selected.length > 0) {
+					for(var i = 0; i < selected.length; i++) {
+						
+						var exist           = false,
+							currentUsrExist = false;
+						
+						for(var j = 0; j < rows.length; j++) {
+							
+							var aprvEmpId = rows[j].apvr_id;
+							
+							// 코드 비교해서 데이터 중복 확인
+							if(aprvEmpId === selected[i].usr_id) {
+								exist = true;
+								dupCnt++;
+								exceptItems.push({apvr_id: selected[i].usr_id, cause: '중복'});
+								break;
+							}
+							
+							if(selected[i].usr_id === SCSessionManager.currentUser.usr_id) {
+								currentUsrExist = true;
+								break;
+							}
+						}//:~ end rows for
+						
+						//기존에 존재한 item이 아니면 신규 행 추가
+						if(!exist && !currentUsrExist) {
+							var sortord = 1;
+							var allRows = provider.getItems(); // 전체 데이터
+							if(allRows.length > 0) {
+								maxRow = allRows.reduce(function(a, b) {
+									if(!a.apvr_sort) a.apvr_sort = 0;
+									if(!b.apvr_sort) b.apvr_sort = 0;
+									return (a.apvr_sort > b.apvr_sort) ? a : b;
+								});
+								
+								sortord = parseInt(maxRow.apvr_sort, 10) + 1;
+							}
+							
+							var aprvlnMasterId = me.get("aprvLineMaster.usr_apvlln_uuid");
+							var row = {
+								usr_apvlln_uuid: aprvlnMasterId,
+								apvr_id: selected[i].usr_id,
+								aprvemp_usr_nm: selected[i].usr_nm,
+								aprvemp_dept_cd: selected[i].dept_cd,
+								aprvemp_dept_nm: selected[i].dept_nm,
+								apvr_typ_ccd: 'APVL',
+								seq_parll_typ_ccd: 'SEQ',
+								apvr_sort: sortord
+							};
+							provider.addItem(row);
+						}
+					}//~ end : selected for
+					
+					if(exceptItems.length > 0) {
+						UT.alert(me.translate("STD.N2010", null, dupCnt), null, true); // 중복 데이터 {0}건 제외 후 추가하였습니다
+					} else {
+						if(currentUsrExist) {
+							UT.alert("STD.APR1000");
+						}
+					}
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				}
+			},
+			//결재선 내용 삭제
+			onDeleteDetail: function() {
+				var me = this;
+				var provider = me.$.detailGridPanel.getDataProvider();
+				var checked = provider.selectionCheckedItems();
+				var newItems = provider.getNewItems();
+				if(newItems.length > 0) {
+					UT.alert("STD.ADM1009");
+					return;
+				}
+				if(checked.length > 0) {
+					UT.confirm("STD.N1300", function() {// "삭제 하시겠습니까?"
+						var deleted = provider.removeItems();    // 그리드에서 체크된 데이터를 지워주고, db에서 삭제해야 할 데이터 목록울 리턴한다.
+						if(deleted.length > 0) {
+							me.$.deleteListApprovalLineMasterDetail.body = {
+								usr_apvlln_uuid: deleted[0].usr_apvlln_uuid,
+								deleteds: deleted
+							};
+							UT.request(me.$.deleteListApprovalLineMasterDetail);
+						} else {
+							me.completeDeleteMasterDetail();
+						}
+					});
+				} else {
+					UT.alert("STD.N1600");    //선택된 항목이 없습니다
+				}
+			},
+			//결재선 내용 삭제
+			completeDeleteMasterDetail: function() {
+				var me = this;
+				UT.completeAlert("", function() {
+					//상세조회
+					me.findDetailList();
+				});
+			},
+			//결재선 내용 저장
+			onSaveDetailList: function() {
+				var me = this, provider = me.$.detailGridPanel.getDataProvider();
+				if(!me.validate()) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				
+				var created = provider.getNewItems();
+				var updated = provider.getUpdateItems();
+				
+				if(created.length === 0 && updated.length === 0) {
+					UT.alert("STD.N1700");
+					return;
+				}
+				UT.confirm("STD.N1200", function() {
+					me.$.saveAprvLineMasterDetail.body = {
+						insertAprvLineDetails: created,
+						updateAprvLineDetails: updated
+					};
+					UT.request(me.$.saveAprvLineMasterDetail);
+				});
+			},
+			completeSaveDetailHendler: function() {
+				var me = this;
+				UT.completeAlert("", function() {
+					me.findDetailList();
+				});
+			}
+		});
+	</script>
+</dom-module>

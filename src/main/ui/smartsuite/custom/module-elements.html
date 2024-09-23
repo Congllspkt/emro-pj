@@ -1,0 +1,21 @@
+<script src="./html/cc-module-behavior.js"></script>
+<script src="./html/cc-tab-validate-behavior.js"></script>
+<script src="./html/cc-autocomplete-behavior.js"></script>
+<script src="./html/cc-search-field-behavior.js"></script>
+<script src="./html/cc-title-bar/cc-title-bar-behavior.js"></script>
+<script src="./html/cc-panel/cc-fieldset-mediator-behavior.js"></script>
+
+<script>
+	var headEl = document.querySelector('head');
+	var ccModules = SCModuleManager.getCcModules();
+	console.log("loading " + ccModules.join(',') + " module elements");
+	
+	for(var i = 0; i < ccModules.length; i++) {
+		
+		var ccModule = ccModules[i].toLowerCase();
+		var link = document.createElement('link');
+		link.rel = "import";
+		link.href = "/ui/smartsuite/custom/" + ccModule + "-elements.html";
+		headEl.appendChild(link);
+	}
+</script>

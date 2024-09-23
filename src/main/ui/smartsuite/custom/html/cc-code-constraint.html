@@ -1,0 +1,112 @@
+<dom-module id="cc-code-constraint">
+    <!--
+/**
+ *
+ *	@description : 
+ *  <pre>
+ * </pre>
+ * @author : user
+ * @FileName : cc-code-constraint
+ * @Since 오후 5:01
+ * @변경이력 : [오후 5:01] user 최초작성
+ */
+-->
+    <style>
+    </style>
+
+    <template>
+        <!-- ajax 선언 부 -->
+        <sc-service-group id="codes">
+            <sc-ajax
+	            id="findListCommonCodeConstraintCode"
+	            url="findListCommonCodeConstraintCode.do"
+	            body$="[[codeParam]]"
+	            on-response="_onResponse"
+				last-response="{{codeList}}">
+	           </sc-ajax>
+            </sc-service-group>
+<sc-cache id="codeConstraintCache" key="code-[[codeParam.ccd]]-[[codeParam.dtl_ccd]]" value="{{value}}" async></sc-cache>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'cc-code-constraint',
+
+            properties: {
+				/*init : {
+            		type : Boolean,
+            		value : true,
+            		reflectToAttribute : true
+            	},*/
+                required: {
+            	    type: Boolean,
+                    value: function(){
+                        return false;
+                    }
+                },
+                readonly : {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                disabled : {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+            	codeParam : {
+            		type : Object,
+            		value : function(){
+            			return "";
+            		}
+            	},
+                selectedIndex : {
+                    type : Number
+                },
+				codeList: {
+					type: Object
+				},
+                value : {
+					type: Object,
+					 notify: true
+				}
+			},
+            attached : function() {
+            	if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            if(this.$.codeConstraintCache.isCached) {
+	            		if(this.$.codeConstraintCache.value) {
+	            			this._completed(this.$.codeConstraintCache.value);
+		           		}
+	            		else {
+		            		this.listen(this.$.codeConstraintCache, 'value-changed', function() {
+			            		this._completed(this.$.codeConstraintCache.value);
+		            		}.bind(this), {single : true});
+	            		}
+	            	}
+	            	else {
+		            	this.$.findListCommonCodeConstraintCode.request();
+	            	}
+            	}
+            },
+
+            _onResponse : function(event) {
+            	var response = event.target.lastResponse;
+				var setupCd = response;
+				var data = {};
+				setupCd.forEach(function(setup) {
+					data[setup["cstr_cnd_cd"].toLowerCase()] = setup["cstr_cnd_val"];
+				});
+            	this.$.codeConstraintCache.put(data);
+            	this._completed(response);
+            },
+
+            _completed : function(value) {
+            	this.fire('response', value, {bubbles : false});
+            }
+        });
+    </script>
+</dom-module>

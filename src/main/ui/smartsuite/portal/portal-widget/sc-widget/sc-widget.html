@@ -1,0 +1,381 @@
+<!--
+ * @Desc 위젯 엘리먼트
+ * @Author patrick.sung
+ * @Created 2016-03-28
+ -->
+<dom-module id="sc-widget">
+    <template>
+        <style>
+            :host {
+                -webkit-box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                box-sizing: border-box;
+                overflow: hidden;
+                display: -ms-flexbox;
+			    display: -webkit-flex;
+			    display: flex;
+                flex-direction: column;
+				position: relative;
+				box-sizing:border-box;
+            }
+        </style>
+		
+		<!-- 헤더 부분 -->
+		<div id="hoverArea">
+        	<div id="titleBar" class="titleBar">
+	        	<span>{{translate(title)}}</span>
+            	
+            	<div class="refreshBtn fa fa-refresh" aria-hidden="true"></div>
+            	<div id="closeBtn" class="close"></div>
+        	</div>  
+        </div>
+        
+        <!-- 내용 부분 -->
+        <div class="fit box-content">
+        	<content></content>
+        </div>
+        
+        <!-- 하단 리사이즈 바 부분 -->
+        <div>
+			<div class="interact-resizable-south" style="position: absolute;height:12px;z-index:2"></div>
+		</div>
+        
+        
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-widget',
+            
+            nonReusable: true,
+
+            behaviors: [
+				Polymer.SCInteractResizableBehavior,
+				Polymer.SCResizableBehavior
+			],
+
+            properties: {
+            	/** 헤더 타이틀 */
+                title: {
+                	type: String
+                },
+                
+                /** 헤더 숨김 여부 */
+                hideHeader : {
+                	type: Boolean,
+                	value: function() {
+                		return false;
+                	},
+                	observer: 'determineHideHeaderAvailability'
+                },
+                
+                /** 마우스 오버 헤더 여부 */
+                mouseoverHead: {
+                    type: Boolean,
+                    value: function() {
+                    	return false;
+                    },
+                    observer: 'determinemouseoverHeadAvailability'
+                },
+                
+                /** 종료 가능 여부 */
+                disableClose: {
+                    type: Boolean,
+                    value: function() {
+                    	return false;
+                    },
+                    observer: 'determineCloseAvailability'
+                },
+                
+                /** 새로고침 가능 여부 */
+                refreshable: {
+                	type: Object,
+                	value: function() {
+                		return false;
+                	},
+                	observer: 'determineRefreshAvailability'
+                },
+                
+                /** 리사이즈 허용 */
+                allowResize: {
+                    type: Boolean,
+                    value: function() {
+                    	return true;
+                    },
+                    observer: 'determineResizeAvailability'
+                },
+                
+                contentWidget: Object,
+                
+                contentWidgetProperty: Object,
+
+                _showingProperty: {
+                    type: Boolean,
+                    value: function() {
+                    	return false;
+                    }
+                },
+                
+                interactResizableEdges : {
+    				type : Object,
+    				value : function() {
+    					return {
+    						bottom : '.interact-resizable-south'
+    					};
+    				}
+    			},
+    			
+    			type : {
+    				type : Object
+    			},
+    			
+    			interactResizable : {
+    				type : Object,
+    				value : function() {
+                    	return true;
+    				}
+    			},
+    			
+    			isMouseDown: {
+    				type : Object,
+    				value: function() {
+    					return false;
+    				}
+    			}
+            },
+            
+            listeners : {
+    			'interact-resize-end' : '_onWidgetResized'
+    		},            
+
+            ready: function () {
+                this.lockMouseCoordinate = true;
+                this.noRightBottomBound = true;
+            },
+            
+            attached: function () {
+                this.dragAreaID = 'titleBar';
+                this.setSettings();
+            },
+            
+            onMouseEnterHandler: function(e){
+            	if(!window.preventMouseOver && !this.isMouseDown) {
+            		this.$.hoverArea.classList.remove('hoverArea');
+            		this.showHead();
+            	}
+            },
+            
+            onMouseDownHandler: function(e){
+            	this.isMouseDown = true;
+            	var mouseUp = function(e) {
+            		this.isMouseDown = false;
+            		document.removeEventListener('mouseup', mouseUp);
+            	}.bind(this);
+            	document.addEventListener('mouseup', mouseUp);
+            },
+            
+            onMouseLeaveHandler: function(e){
+            	if(!window.preventMouseOver && !this.isMouseDown) {
+                	this.$.hoverArea.classList.add('hoverArea');
+                	this.hideHead();
+            	}
+            },
+            	
+			_onWidgetResized: function(event){
+				event.stopPropagation();
+				event.preventDefault();
+				
+				var contentWidget = this.getContent();
+            	if(contentWidget && contentWidget.doContentResize){
+            		contentWidget.doContentResize(event)
+            	};
+            },
+            
+            /** */
+            determineHideHeaderAvailability: function() {
+            	if(this.hideHeader) {
+            		this.$.titleBar.parentElement.style.display = 'none';
+            	}
+            },
+            
+            /**
+             * 리사이즈 가능 여부
+             */
+            determineResizeAvailability: function(newValue) {
+				var resizeBar = this.querySelector('.interact-resizable-south');
+				if(this.allowResize === false) {
+					this.interactResizable = false;
+					resizeBar.style.display = 'none';
+				}
+			},
+			
+            /**
+             * 종료 가능 여부에 대한 observer
+             */
+            determineCloseAvailability: function() {
+                if (!this.disableClose) {
+                    this.toggleClose(true);
+                } else {
+                    this.$.closeBtn.style.display = 'none';
+                }
+            },
+            
+            /**
+             * 새로고침 가능 여부에 대한 observer
+             */
+            determineRefreshAvailability: function() {
+            	var refreshBtn = this.querySelector('.refreshBtn');
+            	if(this.refreshable && this.refreshable === 'Y') {
+            		refreshBtn.style.display = 'inline-block';
+            		this.listen(refreshBtn, 'tap', '_onRefreshBtnTap');
+            	} else {
+            		refreshBtn.style.display = 'none';
+            		this.unlisten(refreshBtn, 'tap', '_onRefreshBtnTap');
+            	}
+            },
+            
+            /**
+             * 마우스 오버 헤더표시 여부에 대한 observer
+             */
+            determinemouseoverHeadAvailability: function () {
+                if (!this.mouseoverHead) {
+                	this.$.titleBar.style.display = 'flex';
+                } else {
+                    this.$.titleBar.style.display = 'none';
+                    
+                    // mouseover를 이용한 타이틀 보여주기
+                    this.$.hoverArea.classList.add('hoverArea');
+                    
+                    // 영역에 마우스가 들어왔을때 
+                    this.$.hoverArea.addEventListener('mouseenter', this.onMouseEnterHandler.bind(this));
+                    this.$.hoverArea.addEventListener('mousedown', this.onMouseDownHandler.bind(this));
+                    
+                    // 영역에 마우스가 나갔을때
+                    this.$.hoverArea.addEventListener('mouseleave', this.onMouseLeaveHandler.bind(this));
+                }
+            },
+            
+            showHead: function(){
+            	this.$.titleBar.style.display = 'flex';
+            },
+            
+			hideHead: function(){
+				this.$.titleBar.style.display = 'none';
+            },
+            
+            toggleHead: function(display){
+            	if(display == 'none'){
+            		this.showHead();
+            	}else{
+            		this.hideHead();
+            	}
+            },
+
+            toggleClose: function (show) {
+                if (show) {
+                    if (!this.disableClose) {
+                        this.listen(this.$.closeBtn, 'tap', '_onCloseBtnTap');
+                        this.$.closeBtn.style.display = 'inline-block';
+                    }
+                } else {
+                    this.unlisten(this.$.closeBtn, 'tap', '_onCloseBtnTap');
+                    this.$.closeBtn.style.display = 'none';
+                }
+            },
+
+            setSettings: function () {
+                this.boundRect = {
+                    left: 0,
+                    top: 0,
+                    right: this.parentNode.width,
+                    bottom: this.parentNode.height
+                }
+
+                this._snapValueWidth = this.parentNode.gridSize;
+                this._snapValueHeight = this.parentNode.gridSize;
+            },
+            
+            getContent: function(){
+            	return this.querySelector(this.type);
+            },
+            
+            setContent : function(content) {
+            	var boxContent = this.querySelector('.box-content');
+            	//기존컨텐츠 삭제
+            	while(boxContent.hasChildNodes()) {
+            		var child = boxContent.lastChild;
+            		if(child.__isPolymerInstance__) {
+            			child.destroy();	
+            		}
+            		else {
+            			boxContent.removeChild(child);
+            		}
+            	}
+            	boxContent.appendChild(content);
+            },
+			
+            /**
+             * 종료버튼 이벤트 리스너
+             */
+            _onCloseBtnTap: function (e) {
+                this.parentNode.removeChild(this);
+                this.fire('onClose', {id:this.id});
+                this.destroy();
+            },
+            
+            /**
+             * 새로고침버튼 이벤트 리스너
+             */
+            _onRefreshBtnTap: function(e) {
+            	this.getContent().fire('refresh-widget');
+            },
+
+            showWidgetContent: function () {
+                this.contentWidgetProperty.fire('toggleWidget');
+                this._showingProperty = false;
+            },
+
+            showWidgetProperty: function () {
+                this.contentWidget.fire('toggleWidget');
+                this._showingProperty = true;
+            },
+            
+            _toggleEditMode: function (value) {
+                if (!value && this._showingProperty)
+                    this.showWidgetContent();
+                return value;
+            },
+            
+            _destroy: function(){
+            	var closeMethod = undefined;
+            	var portletManager = this.domHost && this.domHost.querySelector('vue-grid-portlet-manager');
+            	if(!portletManager) {
+            		closeMethod = this.domHost && this.domHost.onWidgetClose;
+            	} else {
+            		closeMethod = portletManager.onPortletClose;
+            	}
+            	this.removeEventListener('onClose', closeMethod);
+            	this.unlisten(this.$.closeBtn, 'tap', '_onCloseBtnTap');
+            	this.$.hoverArea.removeEventListener('mouseenter', this.onMouseEnterHandler.bind(this));
+                this.$.hoverArea.removeEventListener('mousedown', this.onMouseDownHandler.bind(this));
+                this.$.hoverArea.removeEventListener('mouseleave', this.onMouseLeaveHandler.bind(this));
+                
+                this._propertySetter('title', null);
+                this._propertySetter('hideHeader', null);
+                this._propertySetter('mouseoverHead', null);
+                this._propertySetter('disableClose', null);
+                this._propertySetter('disableSettings', null);
+                this._propertySetter('allowResize', null);
+                this._propertySetter('contentWidget', null);
+                this._propertySetter('contentWidgetProperty', null);
+                this._propertySetter('_showingProperty', null);
+                this._propertySetter('interactResizableEdges', null);
+                this._propertySetter('type', null);
+                this._propertySetter('interactResizable', null);
+                this._propertySetter('isMouseDown', null);
+            }
+
+
+        })
+    </script>
+</dom-module>

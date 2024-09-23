@@ -1,0 +1,207 @@
+<style>
+
+    sc-panel#titlePanel>sc-toolbar.header {
+        margin-top: 20px;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #2b579a;
+    }
+    sc-panel.contentPanel>sc-toolbar.header>sc-button {
+        order:1;
+        margin-right: 10px;
+    }
+
+    sc-panel.contentPanel>sc-toolbar.header {
+        border-bottom: 1px solid #bbb;
+    }
+    sc-panel.contentPanel>sc-toolbar.header .title {
+        order:2;
+        font-size:13px;
+        font-weight: 600;
+        padding: 0 5px 5px 0;
+    }
+
+    sc-panel.contentPanel>sc-toolbar.header .panel_lower_div {
+        order:3;
+        text-align : right;
+        margin-right:30px;
+    }
+
+    sc-panel.contentPanel>sc-toolbar.header .panel_lower_div>sc-button.modify-btn {
+        font-size: 12px;
+        line-height: 20px;
+        height: 20px;
+        padding: 0 10px;
+        margin-right: 10px;
+    }
+
+    sc-panel.contentPanel .no_content {
+        border: 1px solid #2b579a;
+        background: #F2F2F2;
+        padding: 20px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+</style>
+<sc-link rel="import" href="ep-csr-hndl.html"></sc-link>
+<dom-module id="es-csr-process-detail">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+    </template>
+    <script>
+        Polymer({
+            is: "es-csr-process-detail",
+            properties: {
+                processHistoryList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                csrProgStsCodes: {
+                    type: Array,
+                    value: function() {
+                        return Polymer.SCCodeStorage.load("C055");
+                    }
+                }
+            },
+
+            get _parentEl() {
+                return this._parentElement;
+            },
+
+            initialized: function() {
+                var me = this;
+                me._processHistoryConfiguration(me.processHistoryList);
+            },
+
+            // 처리 이력 구성
+            _processHistoryConfiguration: function() {
+                var me = this, i = 0, len = me.processHistoryList.length;
+
+                // 1. 처리 이력 panel
+                var titlePanel = document.createElement('sc-panel');
+                titlePanel.id = "titlePanel";
+                titlePanel.titleText = "처리 이력";
+                titlePanel.collapsible = true;
+                Polymer.dom(me.root).appendChild(titlePanel);
+                Polymer.dom.flush();
+
+                // 2. 처리 이력 목록 구성
+                while(i<len) {
+                    me._processHistoryGenerate(titlePanel, me.processHistoryList[i]);
+                    i++;
+                }
+                // 첫번째 panel 만 열기
+                me.querySelector('.contentPanel').collapsed = false;
+                me.style.height = getComputedStyle(titlePanel).height;
+            },
+
+            // 2. 처리 이력 목록 구성
+            _processHistoryGenerate: function(targetEl, item) {
+                // 2-1. 처리이력 현황 panel
+                var contentPanel = document.createElement('sc-panel'),
+                    prevSts = UT.findCodeName(this.csrProgStsCodes, item.csr_pre_sts_ccd),
+                    sts = UT.findCodeName(this.csrProgStsCodes, item.csr_sts_ccd);
+                // 상태 변화 텍스트
+                contentPanel.titleText = this.translate("STD.COM1005", "", "["+prevSts+"]", "["+sts+"]");
+                contentPanel.i18nDisabled = true;
+                // 처리 일시 및 사용자 명
+                var panelLowerDiv = document.createElement('div');
+                panelLowerDiv.classList.add('title');
+                panelLowerDiv.classList.add('panel_lower_div');
+
+                // 본인 작성일 경우, 내용수정 버튼 추가
+                if(item.modr_id === SCSessionManager.getCurrentUser().usr_id){
+                    var modifyBtn = document.createElement('sc-button');
+                    modifyBtn.text = "내용 수정";
+                    modifyBtn.classList.add('modify-btn');
+                    modifyBtn.data = item;
+                    this.listen(modifyBtn,"click", "onContentModify");
+                    panelLowerDiv.appendChild(modifyBtn);
+                }
+
+                var textNode = document.createTextNode(SCFormatter.format("datetime", item.reg_dttm) +"ㅤㅤ"+ item.modr_nm);
+                panelLowerDiv.appendChild(textNode);
+
+                contentPanel.querySelector("sc-toolbar.header").appendChild(panelLowerDiv);
+                contentPanel.classList.add('contentPanel');
+                contentPanel.i18nDisabled = true;
+                contentPanel.collapsible = true;
+                contentPanel.collapsed = true;
+
+
+                // 2-2. 처리이력 내용 에디터 생성-> 처리 이력 현황 panel 에 추가
+                if(item.csr_prcsg_cont){
+                    contentPanel.querySelector("div.content").appendChild(this._generateEditor(item));
+                } else {
+                    var el = document.createElement('div');
+                    el.classList.add('no_content')
+                    el.innerHTML = this.translate("STD.ADM1085");
+                    contentPanel.querySelector("div.content").appendChild(el);
+
+                }
+
+                // 2-3. 처리 이력 현황 panel -> 처리 이력 panel 에 추가
+                targetEl.querySelector("div.content").appendChild(contentPanel);
+                Polymer.dom.flush();
+            },
+
+            // 처리 이력 에디터 생성
+            _generateEditor: function(item) {
+                var editor = document.createElement('sc-editor');
+                editor.value = item.csr_prcsg_cont;
+                editor.className  = "h-150";
+                editor.editable = false;
+                editor.readonlyColor = "#F2F2F2";
+
+                editor._initialized = function() {
+                    if(this._isInitialized) {
+                        console.error('this element[' + this.id + '] is initialized');
+                        return;
+                    }
+                    this._isInitialized = true;
+                    this.doContentElementResize();
+                    this._changedEditableOrValue();
+                    this.fire('editor-initialized', this.instance, {bubbles : false});
+                    this.contentElement.querySelector('.cke_bottom').style.display = 'none';
+                };
+                return editor;
+            },
+
+            onContentModify: function(e) {
+                var me = this, data = e.target.data;
+                var hndlPopup = UT.popup("ep-csr-hndl", me,  910, 600, {
+                    "submit": function() {
+                        // 처리 이력 초기화
+                        me._parentEl.resetProcessHistory();
+                        me._parentEl._onFindCSRInfo(me._parentEl.csrInfo.csr_uuid);
+                        hndlPopup.close();
+                    }
+                }, {titleText: "내용 수정", destroyOnHided:true}); // sc-editor 사용으로 닫기 시 소멸
+                hndlPopup.show();
+                hndlPopup.getWindowContent().load(data, "MODIFY");
+            },
+
+            _destroy: function() {
+                var buttons = this.querySelectorAll('sc-button.modify-btn');
+                for (var b=0,len=buttons.length; b<len; b++) {
+                    this.unlisten(buttons[b], "click", "onContentModify");
+                    buttons[b].destroy();
+                }
+                var editors = this.querySelectorAll('sc-editor');
+                for (var e=0,len=editors.length; e<len; e++) {
+                    editors[e].destroy();
+                }
+                var panels = this.querySelectorAll('sc-panel');
+                for (var p=0,len=panels.length; p<len; p++){
+                    panels[p].destroy();
+                }
+            }
+        });
+    </script>
+</dom-module>

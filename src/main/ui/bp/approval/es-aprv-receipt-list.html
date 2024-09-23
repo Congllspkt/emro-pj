@@ -1,0 +1,133 @@
+<dom-module id="es-aprv-receipt-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	<template>
+		<!-- 공통코드 -->
+		<sc-code-group id="codes">
+			<sc-code code="G002" value="{{codes.aprvStsCd}}" ></sc-code> <!-- 결재상태코드 -->
+			<sc-code code="G003" value="{{codes.aprvTypCd}}" ></sc-code> <!-- 결재 유형 코드 -->
+			<sc-code code="G013" value="{{codes.rdgTypCcd}}"></sc-code> <!-- 결재 열람 유형 -->
+		</sc-code-group>
+		
+		<sc-ajax id="findList" url="findListApprovalReceipt.do" body="{{searchParam}}"></sc-ajax>
+		
+		<cc-auth-checker check-list="auth-r"></cc-auth-checker>
+		
+		<cc-page-title-bar></cc-page-title-bar>
+		
+		<cc-search-condition-panel on-search="onFindList" validation-group="search" auth-r>
+			<cc-fieldset>
+				<sc-label text="결재 유형"></sc-label>
+				<sc-combobox-field value="{{searchParam.apvl_typ_ccd}}" items="{{codes.aprvTypCd}}" display-field="label" value-field="data"
+								   placeholder="전체">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 상신 일시"></sc-label>
+				<sc-period-date-field from-value="{{searchParam.from_rpt_dt}}" to-value={{searchParam.to_rpt_dt}}
+									  default-from-value="-1M" string-date="false"></sc-period-date-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="최종 결재 일시"></sc-label>
+				<sc-period-date-field from-value="{{searchParam.from_last_aprv_dt}}" to-value="{{searchParam.to_last_aprv_dt}}" string-date="false"></sc-period-date-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 제목"></sc-label>
+				<sc-text-field value="{{searchParam.apvl_tit}}" on-enter="onFindList"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 번호"></sc-label>
+				<cc-multi-text-field value="{{searchParam.apvl_docno}}" multi-value="{{searchParam.aprv_docnos}}" title="결재 번호" on-enter="onFindList"></cc-multi-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="열람 유형"></sc-label>
+				<sc-combobox-field value="{{searchParam.rdg_typ_ccd}}" items="{{codes.rdgTypCcd}}" display-field="label" value-field="data"
+								   placeholder="전체">
+				</sc-combobox-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel" class="flex" editable="false" on-item-click="onDataCellClicked" use-state="false"
+				 use-selection="false">
+			<cc-grid-toolbar>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-combobox-column	data-field="apvl_sts_ccd"		header-text="결재 상태"		width="100"	items="{{codes.aprvStsCd}}"
+									   display-field="label"		value-field="data"	></sc-combobox-column>
+				<sc-combobox-column	data-field="apvl_typ_ccd"		header-text="결재 유형"		width="120"	items="{{codes.aprvTypCd}}"
+									   display-field="label"		value-field="data"	></sc-combobox-column>
+				<sc-combobox-column	data-field="rdg_typ_ccd"		header-text="열람 유형"		width="120"	items="{{codes.rdgTypCcd}}"
+									   display-field="label"		value-field="data"	></sc-combobox-column>
+				<sc-data-column		data-field="apvl_docno"		header-text="결재 번호"		width="120" style-name="link"	></sc-data-column>
+				<sc-data-column		data-field="apvl_revno"		header-text="차수"			width="50"	></sc-data-column>
+				<sc-data-column		data-field="apvl_tit"		header-text="결재 제목"		width="450"	text-align="left"	></sc-data-column>
+				<sc-data-column		data-field="disp_dft_usr_nm"			header-text="상신자"		width="100"	></sc-data-column>
+				<sc-date-column		data-field="apvl_rptg_dttm"			header-text="결재 상신 일시"		width="110"	></sc-date-column>
+				<sc-date-column		data-field="fnl_apvl_dttm"	header-text="최종 결재 일시"	width="110"	></sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field	data-field="apvl_uuid"			data-type="text"></sc-grid-field>
+				<sc-grid-field	data-field="curr_apvr_yn"	data-type="text"></sc-grid-field>
+				<sc-grid-field	data-field="dpty_aprv_yn"	data-type="text"></sc-grid-field>
+				<sc-grid-field	data-field="apvr_id"	data-type="text"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+	</template>
+	<script>
+		Polymer({
+			is: "es-aprv-receipt-list",
+			properties: {
+				codes: {
+					type: Object,
+					value: function() {
+						return {
+							aprvStsCd: [],
+							aprvTypCd: [],
+							rdgTypCcd: []
+						};
+					},
+					reset: false
+				},
+				searchParam: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				}
+			},
+			
+			onFindList: function() {
+				var me = this;
+				
+				if(!me.validate('search')) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				
+				UT.request(me.$.findList, function(e, res) {
+					var result = res.response;
+					
+					me.$.gridPanel.setDataProvider(result);
+				});
+			},
+			
+			onDataCellClicked: function(e){
+				var me = this,
+					item = e.detail.item,
+					data = e.detail.data;
+				
+				if(item.dataField === "apvl_docno") {
+					UT.popupApproval(me, {
+						apvl_uuid: data.apvl_uuid,
+						apvl_sts_ccd: data.apvl_sts_ccd,
+						dpty_aprv_yn: data.dpty_aprv_yn,
+						apvr_id: data.apvr_id
+					}, null, true);
+				}
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="favorite">
+    
+	<select id="findListMyFavoriteMenu" resultType="map">
+	/* favorite.findListMyFavoriteMenu */
+		SELECT FF.FAV_FLR_UUID                      AS FAV_ID
+		     , FF.FAV_FLR_NM                      AS FAV_NM
+		     , NULL                            AS UP_FAV_ID
+		     , FF.FAV_FLR_SORT				   AS SORT_ORD
+		     , 'FOLDER'                        AS FAV_CLS
+		     , NULL                            AS MENU_CD
+		     , NULL                            AS MENU_NM
+		  FROM FAV_FLR FF
+		 WHERE FF.TEN_ID = #{g.tenant}
+		   AND FF.USR_ID = #{g.username}
+		 
+		 UNION ALL
+	
+		SELECT FV.MENU_CD                      AS FAV_ID
+		     , ML.MENU_NM                      AS FAV_NM
+		     , FV.FAV_FLR_UUID                      AS UP_FAV_ID
+		     , FV.MENU_SORT					    AS SORT_ORD
+		     , 'MENU'                          AS FAV_CLS
+		     , FV.MENU_CD                      AS MENU_CD
+		     , ML.MENU_NM                      AS MENU_NM
+		  FROM FAV_FLR_MENU FV
+		 INNER JOIN MENU MM
+		    ON MM.TEN_ID = FV.TEN_ID
+		   AND MM.MENU_CD = FV.MENU_CD
+		  LEFT OUTER JOIN MENU_MULTLANG ML
+		    ON MM.TEN_ID = ML.TEN_ID
+		   AND MM.MENU_CD = ML.MENU_CD
+		   AND ML.LANG_CCD = #{g.locale}
+		 WHERE FV.TEN_ID = #{g.tenant}
+		   AND FV.USR_ID = #{g.username}
+		   
+		 ORDER BY SORT_ORD
+	</select>
+	
+	<select id="findMyFavoriteMenuInfo" resultType="map">
+	/* favorite.findMyFavoriteMenuInfo */
+		SELECT M.MENU_CD
+		     , M.FAV_FLR_UUID
+		     , M.MENU_SORT
+		     , 'MENU'    AS FAV_CLS
+		  FROM FAV_FLR_MENU M
+		 WHERE M.TEN_ID  = #{g.tenant}
+		   AND M.MENU_CD = #{p.menu_cd}
+		   AND M.USR_ID  = #{g.username}
+	</select>
+	
+	<insert id="insertMyFavoriteMenuInfo">
+	/* favorite.insertMyFavoriteMenuInfo */
+		INSERT INTO FAV_FLR_MENU
+		(
+		    TEN_ID
+		  , MENU_CD
+		  , USR_ID
+		  , MENU_SORT
+		  , REGR_ID
+		  , REG_DTTM
+		)
+		VALUES
+		(
+		    #{g.tenant}
+		  , #{p.menu_cd}
+		  , #{g.username}
+		  , COALESCE(( SELECT MAX(T.FAV_FLR_SORT)
+		                 FROM ( SELECT F.FAV_FLR_SORT
+		                          FROM FAV_FLR F
+		                         WHERE F.TEN_ID = #{g.tenant}
+		                           AND F.USR_ID = #{g.username}
+		                        
+		                         UNION ALL
+		                        
+		                        SELECT M.MENU_SORT
+		                          FROM FAV_FLR_MENU M
+		                         WHERE M.TEN_ID   = #{g.tenant}
+		                           AND M.USR_ID   = #{g.username}
+		                           AND M.FAV_FLR_UUID IS NULL
+		                      ) T
+		    ), 0) + 1
+		  , #{g.username}
+		  , #{g.now}
+		)
+	</insert>
+	
+	<insert id="insertMyFavoriteFolder">
+	/* favorite.insertMyFavoriteFolder */
+		INSERT INTO FAV_FLR
+		(
+		    TEN_ID
+		  , FAV_FLR_UUID
+		  , USR_ID
+		  , FAV_FLR_SORT
+		  , FAV_FLR_NM
+		  , REGR_ID
+		  , REG_DTTM
+		)
+		VALUES
+		(
+		    #{g.tenant}
+		  , #{p.fav_flr_uuid}
+		  , #{g.username}
+		  , COALESCE(( SELECT MAX(T.FAV_FLR_SORT)
+		                 FROM ( SELECT F.FAV_FLR_SORT
+		                          FROM FAV_FLR F
+		                         WHERE F.TEN_ID = #{g.tenant}
+		                           AND F.USR_ID = #{g.username}
+		                        
+		                         UNION ALL
+		                        
+		                        SELECT M.MENU_SORT
+		                          FROM FAV_FLR_MENU M
+		                         WHERE M.TEN_ID   = #{g.tenant}
+		                           AND M.USR_ID   = #{g.username}
+		                           AND M.FAV_FLR_UUID IS NULL
+		                      ) T
+		    ), 0) + 1
+		  , #{p.fold_nm}
+		  , #{g.username}
+		  , #{g.now}
+		)
+	</insert>
+	
+	<update id="updateMyFavoriteFolderName">
+	/* favorite.updateMyFavoriteFolderName */
+		UPDATE FAV_FLR
+		   SET FAV_FLR_NM = #{p.fold_nm}
+		 WHERE TEN_ID  = #{g.tenant}
+		   AND FAV_FLR_UUID = #{p.fav_flr_uuid}
+		   AND USR_ID  = #{g.username}
+	</update>
+	
+	<update id="deleteMyFavoriteFolderAndUpdateFolderSortByEqualsFolderAndNotFolder">
+	/* favorite.deleteMyFavoriteFolderAndUpdateFolderSortByEqualsFolderAndNotFolder */
+		UPDATE FAV_FLR_MENU
+		   SET MENU_SORT = MENU_SORT - 1
+		 WHERE TEN_ID    = #{g.tenant}
+		   AND USR_ID    = #{g.username}
+		   <choose>
+		     <when test="p.fav_cls == 'MENU' and g.isNotEmpty(p.fav_flr_uuid)">
+		   AND FAV_FLR_UUID   = #{p.fav_flr_uuid}  -- 동일 폴더 내 메뉴
+		     </when>
+		     <otherwise>
+		   AND FAV_FLR_UUID  IS NULL  -- 폴더에 속하지 않은 메뉴
+		     </otherwise>
+		   </choose>
+		   AND MENU_SORT <![CDATA[>]]> (
+		                                <choose>
+		                                  <when test="p.fav_cls == 'FOLDER'">
+											  SELECT D.FAV_FLR_SORT
+												  FROM FAV_FLR D
+												 WHERE D.TEN_ID  = #{g.tenant}
+												   AND D.FAV_FLR_UUID = #{p.fav_flr_uuid}
+												   AND D.USR_ID  = #{g.username}
+		                                  </when>
+		                                  <otherwise>
+											  SELECT D.MENU_SORT
+												  FROM FAV_FLR_MENU D
+												 WHERE D.TEN_ID  = #{g.tenant}
+												   AND D.MENU_CD = #{p.menu_cd}
+												   AND D.USR_ID  = #{g.username}
+		                                  </otherwise>
+		                                </choose>
+		                              )
+	</update>
+	
+	<update id="deleteMyFavoriteFolderAndUpdateFolderSort">
+	/* favorite.deleteMyFavoriteFolderAndUpdateFolderSort */
+		UPDATE FAV_FLR
+		   SET FAV_FLR_SORT = FAV_FLR_SORT - 1
+		 WHERE TEN_ID    = #{g.tenant}
+		   AND USR_ID    = #{g.username}
+		   AND FAV_FLR_SORT <![CDATA[>]]> ( SELECT
+		                                <choose>
+		                                  <when test="p.fav_cls == 'FOLDER'">
+											  D.FAV_FLR_SORT
+		                                  FROM FAV_FLR D
+		                                 WHERE D.TEN_ID  = #{g.tenant}
+		                                   AND D.FAV_FLR_UUID = #{p.fav_flr_uuid}
+		                                   AND D.USR_ID  = #{g.username}
+		                                  </when>
+		                                  <otherwise>
+											  D.MENU_SORT
+		                                  FROM FAV_FLR_MENU D
+		                                 WHERE D.TEN_ID  = #{g.tenant}
+		                                   AND D.MENU_CD = #{p.menu_cd}
+		                                   AND D.USR_ID  = #{g.username}
+		                                  </otherwise>
+		                                </choose>
+		                              )
+	</update>
+	
+	<delete id="deleteMyFavoriteMenuByUserId">
+	/* favorite.deleteMyFavoriteMenuByUserId */
+		DELETE
+		  FROM FAV_FLR_MENU
+		 WHERE TEN_ID  = #{g.tenant}
+		   AND MENU_CD = #{p.menu_cd}
+		   AND USR_ID  = #{g.username}
+	</delete>
+	
+	<delete id="deleteMyFavoriteMenuByFolderUuid">
+	/* favorite.deleteMyFavoriteMenuByFolderUuid */
+		DELETE
+		  FROM FAV_FLR_MENU
+		 WHERE TEN_ID  = #{g.tenant}
+		   AND USR_ID  = #{g.username}
+		   AND FAV_FLR_UUID = #{p.fav_flr_uuid}
+	</delete>
+	
+	<delete id="deleteListMyFavoriteFolderByUserId">
+	/* favorite.deleteListMyFavoriteFolderByUserId */
+		DELETE
+		  FROM FAV_FLR
+		 WHERE TEN_ID  = #{g.tenant}
+		   AND FAV_FLR_UUID = #{p.fav_flr_uuid}
+		   AND USR_ID  = #{g.username}
+	</delete>
+	
+	<update id="updateMyFavoriteFolderSortOrdByMovingWithInSameParent">
+	/* favorite.updateMyFavoriteFolderSortOrdByMovingWithInSameParent */
+		 MERGE INTO FAV_FLR A
+		 USING (
+		           <if test="p.fav_cls == 'FOLDER'">
+		           SELECT C.TEN_ID
+		                , C.FAV_FLR_UUID
+		                , C.USR_ID
+		                , #{p.targ_sort_ord}  AS FAV_FLR_SORT
+		             FROM FAV_FLR C
+		            WHERE C.TEN_ID  = #{g.tenant}
+		              AND C.FAV_FLR_UUID = #{p.fav_flr_uuid}
+		              AND C.USR_ID  = #{g.username}
+		            
+		            UNION ALL
+		            
+		           </if>
+		           SELECT F.TEN_ID
+		                , F.FAV_FLR_UUID
+		                , F.USR_ID
+		                <choose>
+		                  <when test="p.move_type == 'DOWN'">
+		                , F.FAV_FLR_SORT - 1  AS FAV_FLR_SORT
+		                  </when>
+		                  <otherwise>
+		                , F.FAV_FLR_SORT + 1  AS FAV_FLR_SORT
+		                  </otherwise>
+		                </choose>
+		             FROM FAV_FLR F
+		            WHERE F.TEN_ID = #{g.tenant}
+		              AND F.USR_ID = #{g.username}
+		            <choose>
+		              <when test="p.move_type == 'DOWN'">
+		              AND F.FAV_FLR_SORT <![CDATA[>]]> #{p.src_sort_ord}
+		              AND F.FAV_FLR_SORT <![CDATA[<=]]> #{p.targ_sort_ord}
+		              </when>
+		              <otherwise>
+		              AND F.FAV_FLR_SORT <![CDATA[>=]]> #{p.targ_sort_ord}
+		              AND F.FAV_FLR_SORT <![CDATA[<]]> #{p.src_sort_ord}
+		              </otherwise>
+		            </choose>
+		       ) B
+		    ON (
+		           A.TEN_ID  = B.TEN_ID
+		       AND A.FAV_FLR_UUID = B.FAV_FLR_UUID
+		       AND A.USR_ID  = B.USR_ID
+		       )
+		  WHEN MATCHED THEN
+		       UPDATE
+		          SET A.FAV_FLR_SORT = B.FAV_FLR_SORT
+	</update>
+	
+	<update id="updateMyFavoriteMenuSortOrdByMovingWithInSameParent">
+	/* favorite.updateMyFavoriteMenuSortOrdByMovingWithInSameParent */
+		 MERGE INTO FAV_FLR_MENU A
+		 USING (
+		           <if test="p.fav_cls == 'MENU'">
+		           SELECT C.TEN_ID
+		                , C.MENU_CD
+		                , C.USR_ID
+		                , #{p.targ_sort_ord}  AS MENU_SORT
+		             FROM FAV_FLR_MENU C
+		            WHERE C.TEN_ID  = #{g.tenant}
+		              AND C.MENU_CD = #{p.menu_cd}
+		              AND C.USR_ID  = #{g.username}
+		           
+		            UNION ALL
+		           
+		           </if>
+		           SELECT M.TEN_ID
+		                , M.MENU_CD
+		                , M.USR_ID
+		                <choose>
+		                  <when test="p.move_type == 'DOWN'">
+		                , M.MENU_SORT - 1  AS MENU_SORT
+		                  </when>
+		                  <otherwise>
+		                , M.MENU_SORT + 1  AS MENU_SORT
+		                  </otherwise>
+		                </choose>
+		             FROM FAV_FLR_MENU M
+		            WHERE M.TEN_ID = #{g.tenant}
+		              AND M.USR_ID = #{g.username}
+		            <choose>
+		              <when test="p.fav_cls == 'MENU' and g.isNotEmpty(p.targ_fold_id)">
+		              AND M.FAV_FLR_UUID = #{p.targ_fold_id}  /* 이동하는 곳과 동일한 폴더 내의 메뉴들을 대상으로 함 */
+		              </when>
+		              <otherwise>
+		              AND M.FAV_FLR_UUID IS NULL  /* 이동하는 곳이 1레벨이므로 1레벨의(폴더 없는) 메뉴들을 대상으로 함 */
+		              </otherwise>
+		            </choose>
+		            <choose>
+		              <when test="p.move_type == 'DOWN'">
+		              AND M.MENU_SORT <![CDATA[>]]> #{p.src_sort_ord}
+		              AND M.MENU_SORT <![CDATA[<=]]> #{p.targ_sort_ord}
+		              </when>
+		              <otherwise>
+		              AND M.MENU_SORT <![CDATA[>=]]> #{p.targ_sort_ord}
+		              AND M.MENU_SORT <![CDATA[<]]> #{p.src_sort_ord}
+		              </otherwise>
+		            </choose>
+		       ) B
+		    ON (
+		           A.TEN_ID  = B.TEN_ID
+		       AND A.MENU_CD = B.MENU_CD
+		       AND A.USR_ID  = B.USR_ID
+		       )
+		  WHEN MATCHED THEN
+		       UPDATE
+		          SET A.MENU_SORT = B.MENU_SORT
+	</update>
+	
+	<update id="updateMyFavoriteFolderSortOrdByMovingToOtherParent">
+	/* favorite.updateMyFavoriteFolderSortOrdByMovingToOtherParent */
+		 MERGE INTO FAV_FLR A
+		 USING (
+		           SELECT F.TEN_ID
+		                , F.FAV_FLR_UUID
+		                , F.USR_ID
+		                <choose>
+		                  <when test="g.isEmpty(p.src_fold_id) and g.isNotEmpty(p.targ_fold_id)">
+		                , F.FAV_FLR_SORT - 1  AS SORT_ORD  /* 1레벨에서 2레벨로 이동한 경우, src_sort_ord 뒤의 순서 앞당김 */
+		                  </when>
+		                  <otherwise>
+		                , F.FAV_FLR_SORT + 1  AS SORT_ORD  /* 2레벨에서 1레벨로 이동한 경우, targ_sort_ord 부터 순서 뒤로 미룸*/
+		                  </otherwise>
+		                </choose>
+		             FROM FAV_FLR F
+		            WHERE F.TEN_ID = #{g.tenant}
+		              AND F.USR_ID = #{g.username}
+		            <choose>
+		              <when test="g.isEmpty(p.src_fold_id) and g.isNotEmpty(p.targ_fold_id)">
+		              AND F.FAV_FLR_SORT <![CDATA[>]]> #{p.src_sort_ord}
+		              </when>
+		              <otherwise>
+		              AND F.FAV_FLR_SORT <![CDATA[>=]]> #{p.targ_sort_ord}
+		              </otherwise>
+		            </choose>
+		       ) B
+		    ON (
+		           A.TEN_ID  = B.TEN_ID
+		       AND A.FAV_FLR_UUID = B.FAV_FLR_UUID
+		       AND A.USR_ID  = B.USR_ID
+		       )
+		  WHEN MATCHED THEN
+		       UPDATE
+		          SET A.FAV_FLR_SORT = B.SORT_ORD
+	</update>
+	
+	<update id="updateMyFavoriteMenuSortOrdByMovingToOtherParent">
+	/* favorite.updateMyFavoriteMenuSortOrdByMovingToOtherParent */
+	     MERGE INTO FAV_FLR_MENU A
+		 USING (
+		           SELECT C.TEN_ID
+		                , C.MENU_CD
+		                , C.USR_ID
+		                , #{p.targ_fold_id}   AS FAV_FLR_UUID
+		                , #{p.targ_sort_ord}  AS MENU_SORT
+		             FROM FAV_FLR_MENU C
+		            WHERE C.TEN_ID  = #{g.tenant}
+		              AND C.MENU_CD = #{p.menu_cd}
+		              AND C.USR_ID  = #{g.username}
+		           
+		            UNION ALL
+		           
+		           SELECT S.TEN_ID
+		                , S.MENU_CD
+		                , S.USR_ID
+		                , S.FAV_FLR_UUID
+		                , S.MENU_SORT - 1  AS MENU_SORT  /* 기존 폴더 내에서 src_sort_ord 뒤의 순서 앞으로 당김 */
+		             FROM FAV_FLR_MENU S
+		            WHERE S.TEN_ID   = #{g.tenant}
+		              AND S.USR_ID   = #{g.username}
+		            <choose>
+		              <when test="g.isNotEmpty(p.src_fold_id)">
+		              AND S.FAV_FLR_UUID  = #{p.src_fold_id}
+		              </when>
+		              <otherwise>
+		              AND S.FAV_FLR_UUID IS NULL
+		              </otherwise>
+		            </choose>
+		              AND S.MENU_SORT <![CDATA[>]]> #{p.src_sort_ord}
+		           
+		            UNION ALL
+		           
+		           SELECT T.TEN_ID
+		                , T.MENU_CD
+		                , T.USR_ID
+		                , T.FAV_FLR_UUID
+		                , T.MENU_SORT + 1  AS MENU_SORT  /* 이동할 폴더 내에서 targ_sort_ord 부터 순서 뒤로 미룸 */
+		             FROM FAV_FLR_MENU T
+		            WHERE T.TEN_ID   = #{g.tenant}
+		              AND T.USR_ID   = #{g.username}
+		            <choose>
+		              <when test="g.isNotEmpty(p.targ_fold_id)">
+		              AND T.FAV_FLR_UUID  = #{p.targ_fold_id}
+		              </when>
+		              <otherwise>
+		              AND T.FAV_FLR_UUID IS NULL
+		              </otherwise>
+		            </choose>
+		              AND T.MENU_SORT <![CDATA[>=]]> #{p.targ_sort_ord}
+		       ) B
+		    ON (
+		           A.TEN_ID  = B.TEN_ID
+		       AND A.MENU_CD = B.MENU_CD
+		       AND A.USR_ID  = B.USR_ID
+		       )
+		  WHEN MATCHED THEN
+		       UPDATE
+		          SET A.MENU_SORT = B.MENU_SORT
+		            , A.FAV_FLR_UUID  = B.FAV_FLR_UUID
+	</update>
+</mapper>

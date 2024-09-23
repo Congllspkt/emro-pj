@@ -1,0 +1,111 @@
+<script src="../../../bower_components/smartsuite/excel/smartsuite-excel-export.min.js"></script>
+<script src="./cc-excel-export-util.js"></script>
+
+<script>
+(function(){
+	/*
+	 * 엑셀 다운로드 CSRF 로직
+	 */
+	var csrf = document.querySelector('meta[name=_csrf]');
+	
+	if(window.Export_Downloader && csrf){
+		
+		//$download 함수가 있을 경우 csrf가 적용되었다고 판단한다. 
+		if(Export_Downloader.prototype.$download){
+			return;
+		}
+		
+		Export_Downloader.prototype.$download = Export_Downloader.prototype.download;
+		
+		Export_Downloader.prototype.download = function(params){
+			
+			
+			var csrfHeader = document.querySelector('meta[name=_csrf_parameter]').content;
+			var value = csrf.content;
+			
+			params[csrfHeader] = value;
+			
+			Export_Downloader.prototype.$download.apply(this,[params]);
+		}
+	}
+}());
+
+Polymer.CCLargeExportBehaviorImpl = {
+    properties: {
+		params: {
+			type: Object,
+			value: function() {
+			  return {};
+			}
+		},
+		serviceFn: {
+			type: String
+		},
+		exportColumns:{
+			type : Array,
+			value : null
+		},
+		fileName:{
+			type : String,
+			value : null
+		},
+		excludeHiddenColumns:{
+			type : Boolean,
+			value : false
+		}
+    },
+    
+    _getExporter : function(){
+		var exporter;
+    	if(window.RealGridJS){
+    		exporter = new RealGridExporter();
+    	}else if(window.DataLudi){
+    		exporter = new DataGridExporter();
+    	}
+    	exporter.excludeHiddenColumns = this.excludeHiddenColumns;
+    	return exporter;
+    },
+    
+    _getDefaultOptions : function(){
+    	var menucode = '';
+		try{
+			 menucode = UT.getMenuId(this);
+		}catch(e){console.error(e);}
+		
+    	return {
+    		serviceFn : this.serviceFn,
+			params : this.params,
+			exportColumns : this.exportColumns,
+			fileName : this.fileName,
+			menucode : menucode
+    	};
+    },
+    
+    doExport : function (grid, additionalOptions){
+    	if(grid && grid.tagName && grid.tagName.toLowerCase && grid.tagName.toLowerCase() === 'sc-grid'){
+			grid = grid._gridView;
+		}
+    	
+    	var exporter = this._getExporter();
+    	
+    	options = this._getDefaultOptions();
+    	
+    	if(additionalOptions){
+    		for(var key in additionalOptions){
+    			options[key] = additionalOptions[key];
+    		}
+    	}
+    	
+    	exporter.doExport(grid, options);
+    }
+};
+
+Polymer.CCLargeExportBehavior = [
+	Polymer.CCLargeExportBehaviorImpl
+];
+
+window.CCLargeExporter = Polymer({
+    is: 'cc-excel-export',
+    behaviors : [ Polymer.CCLargeExportBehavior ]
+});
+</script>

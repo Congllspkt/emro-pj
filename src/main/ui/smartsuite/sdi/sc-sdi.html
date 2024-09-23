@@ -1,0 +1,61 @@
+<script src="sc-sdi-manager.js"></script>
+<dom-module id="sc-sdi">
+	<template>
+	
+		<style>
+			:host {
+				display: block;
+			}
+      	</style>
+	
+	</template>
+	<script>
+
+	SCPreloader.onReady(function() {
+		
+		Polymer({
+
+            is: 'sc-sdi',
+
+            properties: {
+            	menuUrl: function(){
+            		type: String
+                },
+                parameter: function(){
+                    type: String
+                }
+            },
+
+            get parameters(){
+                return JSON.parse(this.parameter);
+            },
+
+            ready: function(){
+				this._preReady();
+				if(this.menuUrl){
+						Polymer.Base.importLink(this.menuUrl, function(moduleId) {
+						var module = document.createElement(moduleId);
+						Polymer.dom(document.body).appendChild(module);
+						Polymer.dom.flush();
+						module.load && module.load(this.parameters);
+
+						setTimeout(function(){
+							this.removeBodyCls();
+						}.bind(this), 10);
+					}.bind(this));
+				}
+            },
+
+			_preReady: function(){
+				this.fire('mdi-initialized', this, {bubbles : true});
+				this.fire('mdi-manager-initialized', this, {bubbles : false});
+			},
+
+            removeBodyCls: function(){
+            	document.body.classList.remove('body-ready');
+            }
+
+        });
+	});
+	</script>
+</dom-module>

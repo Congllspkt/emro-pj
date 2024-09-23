@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="supplier-user">
+	<!-- 협력사 사용자 목록 조회 -->
+	<select id="findListVendorUser" resultType="map">
+    /* supplier-user.findListVendorUser : 협력사 사용자 목록 조회 */
+           SELECT USR.TEN_ID				/* 시스템 아이디 */
+                 ,USR.CO_CD				/* 회사 코드 */
+                 ,USR.USR_ID				/* 사용자 아이디 */
+                 ,USR.USR_NM				/* 사용자 명 */
+                 ,USR.USR_NM_EN			/* 사용자 영문 명 */
+                 ,USR.EML				/* 이메일 */
+                 ,USR.MOB			/* 휴대폰 번호 */
+                 ,USR.TEL			/* 전화 번호 */
+                 ,USR.FAX				/* 팩스 번호 */
+                 ,USR.EML_RCPT_YN	/* 메일 수신 여부 */
+                 ,USR.SMS_RCPT_YN		/* SMS 수신 여부 */
+                 ,USR.ACCT_LCKD_YN
+                 ,USR.PWD_CHG_DTTM			/* 암호 변경 일시 */
+                 ,USR.LAST_LOGIN_DTTM		/* 최종 로그인 일시 */
+                 ,VDGL.VD_CD  				/* 협력사 코드 */
+                 ,VDGL.ERP_VD_CD           /* ERP 코드 */
+                 ,VDGL.VD_NM				/* 협력사 명 */
+                 ,VDGL.VD_NM_EN			/* 협력사 영문 명 */
+                 ,USR.USE_YN
+              FROM USR USR
+        INNER JOIN VD VDGL
+                ON VDGL.TEN_ID = USR.TEN_ID
+               AND VDGL.VD_CD  = USR.VD_CD
+             WHERE 1=1
+               AND USR.USR_TYP_CCD = 'VD' /* 협력사 */
+               AND USR.STS	!= 'D' /* 상태 */
+               AND USR.TEN_ID = #{g.tenant}
+		<if test="p.vd_cd != null and p.vd_cd != ''">
+			<bind name="vdCdPattern" value="'%' + p.vd_cd + '%'" />
+               AND UPPER(VDGL.VD_CD) LIKE UPPER(#{vdCdPattern})
+		</if>
+		<if test="p.vd_nm != null and p.vd_nm != ''">
+			<bind name="vdNmPattern" value="'%' + p.vd_nm + '%'" />
+			   AND    (UPPER(VDGL.VD_NM) LIKE UPPER(#{vdNmPattern}) OR UPPER(VDGL.VD_NM_EN) LIKE UPPER(#{vdNmPattern}))      /* 협력사명 검색조건*/
+		</if>
+		<if test="p.usr_id != null and p.usr_id != ''">
+       		<bind name="userIdPattern" value="'%' + p.usr_id + '%'" />
+               AND UPPER(USR.USR_ID) LIKE UPPER(#{userIdPattern})
+		</if>
+		<if test="p.usr_nm != null and p.usr_nm != ''">
+			<bind name="usernamePattern" value="'%' + p.usr_nm + '%'" />
+	 	       AND (UPPER(USR.USR_NM) LIKE UPPER(#{usernamePattern}) OR UPPER(USR.USR_NM_EN) LIKE UPPER(#{usernamePattern}) )
+		</if>
+          ORDER BY USR.USR_ID, USR.USR_NM DESC
+    </select>
+    
+    <!-- 협력사 사용자 조회 -->
+    <select id="findVendorUserInfo" resultType="map">
+    /* supplier-user.findVendorUserInfo : 협력사 사용자 조회 */
+           SELECT a.TEN_ID				/* 시스템 아이디 */
+                 ,a.CO_CD				/* 회사 코드 */
+                 ,a.USR_ID				/* 사용자 아이디 */ 
+                 ,a.USR_NM				/* 사용자 명 */
+                 ,a.USR_NM_EN			/* 사용자 영문 명 */
+                 ,a.USE_YN				/* 사용 여부 */
+                 ,a.EML				/* 이메일 */
+                 ,a.MOB			/* 휴대폰 번호 */
+                 ,a.TEL			/* 전화 번호 */
+                 ,a.FAX				/* 팩스 번호 */
+                 ,a.EML_RCPT_YN	/* 메일 수신 여부 */
+                 ,a.SMS_RCPT_YN		/* SMS 수신 여부 */
+                 ,a.ACCT_LCKD_YN
+                 ,a.LBL_SORT_TYP_CCD
+                 ,a.PWD_CHG_DTTM			/* 암호 변경 일시 */
+                 ,a.LAST_LOGIN_DTTM		/* 최종 로그인 일시 */
+                 ,b.VD_CD  				/* 협력사 코드 */
+                 ,b.ERP_VD_CD    		/* ERP 코드 */
+                 ,b.VD_NM				/* 협력사 명 */
+                 ,b.VD_NM_EN			/* 협력사 영문 명 */
+                 , CASE WHEN 'en_US' = #{g.locale} THEN (CASE WHEN b.VD_NM_EN IS NULL THEN ''
+                                                              ELSE b.VD_NM_EN END ) ELSE (CASE WHEN b.VD_NM IS NULL THEN ''
+                                                                                                  ELSE b.VD_NM END )  END AS DISPLAY_VD_NM
+                 ,'N' AS PW_EXPIRED_YN  /* 비밀번호 만료 여부 */
+                 ,a.TMZ_CCD
+                 ,a.PWD_INPERR_CNT
+              FROM USR a
+        INNER JOIN VD b
+                ON b.TEN_ID = a.TEN_ID
+               AND b.VD_CD  = a.VD_CD
+             WHERE 1=1
+               AND a.USR_TYP_CCD = 'VD' /* 협력사 */
+               AND a.STS	!= 'D' /* 상태 */
+               AND a.TEN_ID = #{g.tenant}
+               AND a.USR_ID = #{p.usr_id}
+          ORDER BY a.USR_ID
+    </select>
+    
+    <!-- 계정잠김 해제 -->
+    <update id="saveInfoAccLockYn">
+    /* supplier-user.saveInfoAccLockYn : 계정잠김해제 */
+    	UPDATE USR
+    	   SET ACCT_LCKD_YN = 'N'
+    	      ,PWD_INPERR_CNT = 0
+    	      ,MODR_ID = #{g.username}
+			  ,MOD_DTTM = #{g.now}
+    	 WHERE TEN_ID = #{g.tenant}
+    	   AND USR_ID = #{p.usr_id}
+    </update>
+    
+    <select id="checkBizRegNo" resultType="string">
+   	/* supplier-user.checkBizRegNo 사업자번호 가져오기 */
+   	SELECT VDGL.BIZREGNO
+   	  FROM USR USR
+   	 INNER JOIN VD VDGL
+   	    ON VDGL.TEN_ID = USR.TEN_ID
+   	   AND VDGL.VD_CD = USR.VD_CD
+   	 WHERE USR.TEN_ID = #{p.tenant}
+   	   AND USR.USR_ID = #{p.username}
+    </select>
+    
+    <select id="getCertLoginSignValue" resultType="map">
+   	/* supplier-user.getCertLoginSignValue 공인인증서 로그인에 서명할 데이터 조회 */
+	SELECT VDGL.BIZREGNO	AS BIZREGNO
+   		  ,VDGL.VD_CD		AS SIGN_SOURCE /* 서명할 데이터 */
+	  FROM USR USR
+	 INNER JOIN VD VDGL
+	    ON VDGL.TEN_ID = USR.TEN_ID
+	   AND VDGL.VD_CD = USR.VD_CD
+     WHERE USR.TEN_ID = #{p.tenant}
+   	   AND USR.USR_ID = #{p.username}
+   	   AND ROWNUM = 1
+    </select>
+    
+    <update id="updateVendorSignValue">
+ 	/* supplier-user.updateVendorSignValue 공인인증서 로그인 전자서명 이후 업체 유저 정보에 업데이트 */
+ 	UPDATE USR
+ 	   SET LOGIN_CERT_SGN_VAL = #{p.sign_value}
+ 	 WHERE TEN_ID = #{p.tenant}
+ 	   AND USR_ID = #{p.usr_id}
+ 	   AND USR_TYP_CCD = 'VD'
+ 	   AND USE_YN = 'Y'
+    </update>
+    
+    <select id="findVendorHashValue" resultType="string">
+	/* supplier-user.findVendorHashValue 공인인증서 로그인에 서명할 데이터 조회 */
+	SELECT LOGIN_CERT_SGN_VAL
+	  FROM USR
+	 WHERE TEN_ID = #{g.tenant}
+	   AND USR_ID = #{p.usr_id}
+	   AND USR_TYP_CCD = 'VD'
+	   AND USE_YN = 'Y'
+    </select>
+    
+    <update id="removeVendorHashValue">
+	/* supplier-user.removeVendorHashValue 공인인증서 로그인 전자서명 이후 서명값 초기화 */
+	UPDATE USR
+       SET LOGIN_CERT_SGN_VAL = NULL
+     WHERE TEN_ID = #{g.tenant}
+       AND USR_ID = #{p.usr_id}
+       AND USR_TYP_CCD = 'VD'
+       AND USE_YN = 'Y'
+    </update>
+    
+</mapper>

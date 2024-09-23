@@ -1,0 +1,63 @@
+<sc-link rel="import" href="es-item-req-list.html"></sc-link>
+<sc-link rel="import" href="es-item-req-detail.html"></sc-link>
+<sc-link rel="import" href="es-item-req-modify-detail.html"></sc-link>
+
+<dom-module id="em-item-req">
+	
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<sc-pages id="pages" selected="0" class="fit">
+			<es-item-req-list id="list" title-text="품목등록 요청" on-add-req="onAddReq" on-show-detail="onShowDetail" on-show-modify-detail="onShowModifyDetail"></es-item-req-list>
+			<template>
+				<es-item-req-detail id="detail" on-close="onClose"></es-item-req-detail>
+			</template>
+			<template>
+				<es-item-req-modify-detail id="modReqDetail" on-close="onClose"></es-item-req-modify-detail>
+			</template>
+		</sc-pages>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'em-item-req',
+			
+			//신규품목등록 화면 호출
+			onAddReq: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.detail);
+				data.is_add = true;
+				me.$.detail.load(data);
+			},
+			
+			//품목등록요청 목록 조회
+			onClose: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.list);
+				
+				if(data) {
+					me.$.list.load();
+				}
+			},
+			
+			//품목정보 상세화면
+			onShowDetail: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.detail);
+				data.is_find = true;
+				me.$.detail.load(data);
+			},
+			
+			//품목변경요청 화면 호출
+			onShowModifyDetail: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.modReqDetail);
+				me.$.modReqDetail.load(data);
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,23 @@
+<sc-link rel="import" href="es-module-attach-list.html"></sc-link>
+<sc-link rel="import" href="es-module-attach-detail.html"></sc-link>
+
+<dom-module id="em-module-attach">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<es-module-attach-list></es-module-attach-list>
+	</template>
+
+	<script>
+        Polymer({
+            is : 'em-module-attach',
+        });
+	</script>
+
+
+</dom-module>

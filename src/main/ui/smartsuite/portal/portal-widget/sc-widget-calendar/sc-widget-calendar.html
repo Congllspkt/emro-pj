@@ -1,0 +1,130 @@
+<link rel="import" href="sc-widget-calendar-item.html">
+<!-- 
+ -->
+<dom-module id="sc-widget-calendar">
+	<style>
+		:host {
+			@apply(--layout-vertical);
+			height: 100%;
+			/*margin: 5px 15px 15px 15px;*/
+			/*border: 1px solid #d6d6d6;*/
+			box-sizing: border-box;
+			position: relative;
+			/*border-color: #e7eaec;
+			border-image: none;
+			border-style: solid solid none;
+			border-width: 1px 0; */	     
+			margin-bottom: 6px;
+			min-width: 300px;	
+		}
+		
+		.wrap_process ul{width:100%; margin:20px;}
+		.wrap_process li {float:left; height:120px; text-align:center;}
+		.wrap_process li:nth-child(odd) {width:15%;}
+		.wrap_process li:nth-child(even) {width:5%; float:left; background:url(../img/gly_arw_gray.png) no-repeat center;}
+		.wrap_process li:last-child {background:none}
+		.wrap_process li span {display:inline-block; width:120px; height:120px; font-size:14px; line-height:18px; border-radius:150px; color:#fff; padding:20px; text-align:center; box-sizing:border-box;}
+		.wrap_process li span b {display:block; margin:0 0 10px; font-size:24px;}
+		.wrap_process li:nth-child(1) span {background:#7ef1ff;}
+		.wrap_process li:nth-child(3) span {background:#66d3f2;}
+		.wrap_process li:nth-child(5) span {background:#48aadd;}
+		.wrap_process li:nth-child(7) span {background:#318ed5;}
+		.wrap_process li:nth-child(9) span {background:#1a6ead;}
+	</style>
+
+    <template>
+    	<sc-ajax id="getTodaySchedule"
+    		url="../../ui/bp/common/calendar/getTodaySchedule.do"
+    		on-response="onResponseTodaySchedule">
+    	</sc-ajax>
+    	<!--
+    		리프레시 버튼
+    		<i class="fa fa-refresh" aria-hidden="true" on-click="onClickRefresh"></i> 
+    	 -->
+    	
+    	<div class="box-content">
+            <!-- <div id="feedWrapper" class="feed-list">
+            </div> -->
+            <div class="wrap_process">
+            	<ul>
+            	<li><span><b>1</b>Resister New Vendor</span></li>
+            	<li></li>
+            	<li><span><b>2</b>Review by PO</span></li>
+            	<li></li>
+            	<li><span><b>3</b>Inspection Procedure</span></li>
+            	<li></li>
+            	<li><span><b>4</b>Validation</span></li>
+            	<li></li>
+            	<li><span><b>5</b>Confirm</span></li>
+            	</ul>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "sc-widget-calendar",
+            
+            /**
+             *
+             */
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                	me.getTodaySchedule();
+                }
+            },
+            
+            /**
+             * 금일의 일정을 서버로 요청
+             */
+            getTodaySchedule : function() {
+            	var me = this;
+            	var today = new Date();
+            	var month = today.getMonth() + 1;
+            	month = month / 10 >= 1 ? month : '0' + month;
+            	var date = today.getDate();
+            	date = date / 10 >= 1 ? date : '0' + date;
+            	var todayStr = today.getFullYear() + '-' + month + '-' + date;
+            	me.$.getTodaySchedule.body = { 
+            		usr_id : SCSessionManager.currentUser.usr_id,
+            		today : todayStr
+            	};
+            	//me.$.getTodaySchedule.generateRequest();
+            },
+            
+            /**
+             * 갱신 버튼 리스너
+             */
+            onClickRefresh : function() {
+            	var me = this;
+            	me.getTodaySchedule();
+            },
+            
+            /**
+             * 당일 일정을 받아왔을 경우
+             */
+            onResponseTodaySchedule : function(response) {
+            	var me = this;
+            	var result = response.detail.response;
+            	
+            	// 반복 
+            	for(var i = 0; i < result.length; i++) {
+            		var item = document.createElement('sc-widget-calendar-item');
+            		
+            		var hour = result[i].start_date.getHours();
+            		hour = hour / 10 >= 1 ? hour : '0' + hour;
+            		var minute = result[i].start_date.getMinutes();
+            		minute = minute / 10 >= 1 ? minute : '0' + minute;
+            		
+            		item.date =  hour + ':' + minute;
+            		item.scheduleName = result[i].sched_nm;
+            		me.$.feedWrapper.appendChild(item);
+            	}
+            }
+        });
+    </script>
+</dom-module>

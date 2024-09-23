@@ -1,0 +1,411 @@
+<dom-module id="sc-mdi-tabbar">
+	<template>
+		<div class="mdiTabsDiv">
+			<div id="tabContainer" class="tabContainer">
+				<sc-tabbar id="mdiTabs" class="mdiTabs" interact-draggable="true" on-item-select="_onTabSelect"></sc-tabbar>
+			</div>
+			<div id="mdiTabToolbar" class="mdiTabToolbar">
+				<sc-toolbar>
+					<li id="leftScroller" class="scroller left-scroller"></li>
+					<li id="rightScroller" class="scroller right-scroller"></li>
+					<li id="toolTabList" class="mdi-tools mdi-tools-tabList"></li>
+					<li id="toolCloseAll" class="mdi-tools mdi-tools-closeall"></li>
+				</sc-toolbar>
+			</div>
+		</div>
+		<div id="tabListDiv" class="tabListDiv" on-click="activateWindow" style=""></div>
+		<div id="tooltip" class="tooltip" style="display:none"></div>
+	</template>
+	<script>
+        Polymer({
+
+            is: 'sc-mdi-tabbar',
+
+            properties: {
+                activateTab : {
+                    type : String,
+                    observer : '_activateTabChanged'
+                },
+
+                _boundOnCaptureClick: {
+                    type: Function,
+                    value: function() {
+                        return this._onCaptureClick.bind(this);
+                    }
+                },
+
+                currentEl:{
+                    type:Object
+                },
+
+                //마우스 누르고 있을 때 True
+                _mouseStillDown: {
+                    type: Boolean,
+                    value: false
+                },
+                
+                mdiManager: {
+                	type: Object
+                }
+            },
+
+            listeners: {
+                "mdiTabs.click": "mdiTabClickHandler",
+                "toolCloseAll.click": "_onToolCloseAllClickHandler",
+                "toolTabList.click": "toolTabListClickHandler",
+				"leftScroller.down": "_onTabbarLeftScroll",
+                "rightScroller.down": "_onTabbarRightScroll",
+                "leftScroller.up": "_onTabbarScrollUpHandler",
+                "rightScroller.up": "_onTabbarScrollUpHandler",
+            },
+
+
+            get mdiToolWidth() {
+                this._mdiToolWidth = this.$.mdiTabToolbar.clientWidth;
+                return this._mdiToolWidth;
+            },
+
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this.$.mdiTabs._scrollerRender =  this._scrollerRender;
+                    this.$.mdiTabs._disableScroller = this._disableScroller;
+                }
+            },
+
+            // 닫기 버튼 클릭 시
+            mdiTabClickHandler: function(event) {
+                if(event.target.tagName == "IMG") {
+                    var tab = UT.closest(event.target, 'sc-tab');
+                    event.stopPropagation();
+                    this.unlisten(tab, 'mouseenter', 'show');
+                    this.unlisten(tab, 'mouseleave', 'hide');
+                    Polymer.dom.flush();
+                    this.$.mdiTabs._doTabbarResize();
+                    this.fire('mdi-tab-closed', {
+                        tab : event.detail.item,
+                        windowId : tab.dataset.windowId
+                    }, {bubbles : false});
+                    tab.destroy();
+                }
+            },
+
+            _onMdiTabbarIronResize : function(mdiTabbarWidth) {
+            	this.$.mdiTabs.style.width = (mdiTabbarWidth - this.mdiToolWidth) + 'px';
+                if(this.$.mdiTabs.doContentElementResize) {
+	                this.$.mdiTabs.doContentElementResize();
+                }
+            },
+
+            _activateTabChanged : function(windowId) {
+                var tab = this.$.mdiTabs.querySelector('sc-tab[data-window-id='+windowId+']');
+                if(tab) {
+                    this.$.mdiTabs.selectItem(tab);
+                }
+                else {
+                    this.$.mdiTabs.selectedIndex = -1;
+                }
+            },
+
+			// 탭 선택
+            _onTabSelect : function(event) {
+                event.stopPropagation();
+                this.fire('mdi-tab-selected', {
+                    tab : event.detail.item,
+                    windowId : event.detail.item.dataset.windowId
+                }, {bubbles : false});
+            },
+
+
+			// 전체 닫기
+            _onToolCloseAllClickHandler: function() {
+                this.fire('mdi-tab-close-all', null, {bubbles : false});
+            },
+
+			// 탭 추가
+            addTab: function(newWindow) {
+                var newTab = document.createElement('sc-tab');
+                newTab.i18nDisabled = true;
+                newTab.text = newWindow.windowName;
+                newTab.closable = true;
+                newTab.setAttribute('data-window-id', newWindow.windowId);
+                newTab.setAttribute('data-window-url', newWindow.windowUrl);
+
+                // 닫기 버튼 이미지
+                var closeImgUrl = "img/btn_tabclose.png";
+                closeImgUrl = Polymer.ResolveUrl.resolveUrl(closeImgUrl, this._template.ownerDocument.baseURI);
+                if(newWindow.windowId === this.mdiManager.getStartPage().menu_id){
+                    newTab.innerHTML = newWindow.windowName;
+                }else{
+                    newTab.innerHTML = newWindow.windowName + '<div style="width:20px;display:inline-block;"><img src="'+closeImgUrl+'" alt="tabClose" window-id="'+newWindow.windowId+'"/></div>';
+                }
+
+
+                Polymer.dom(this.$.mdiTabs).appendChild(newTab);
+                Polymer.dom.flush();
+                this.$.mdiTabs._doTabbarResize();
+                this.listen(newTab, 'mouseenter', 'show');
+                this.listen(newTab, 'mouseleave', 'hide');
+                this.fire('add-tab-completed');
+            },
+
+			// 탭 삭제
+            removeTab : function(windowId) {
+            	var tab = this.$.mdiTabs.querySelector('sc-tab[data-window-id='+windowId+']');
+                if(tab) {
+                	var imgEl = tab.querySelector('img'),
+            		divEl = imgEl.parentElement;
+                	this.mdiTabPurge(imgEl);
+                	this.mdiTabPurge(divEl);
+                    this.unlisten(tab, 'mouseenter', 'show');
+                    this.unlisten(tab, 'mouseleave', 'hide');
+                    this.mdiTabPurge(tab);
+                    tab.destroy();
+                }
+                this.fire('remove-tab-completed');
+            },
+            
+            mdiTabPurge : function(d){
+            	var a = d.attributes, i, l, n;
+                if (a) {
+                    for (i = a.length - 1; i >= 0; i -= 1) { 
+                        n = a[i].name;
+                        if (typeof d[n] === 'function') {
+                            d[n] = null;
+                        }
+                        d.removeAttribute(n);
+                    } 
+                }
+                a = d.childNodes;
+                if (a) {
+                    l = a.length;
+                    for (i = 0; i < l; i += 1) { 
+                    	this.mdiTabPurge(d.childNodes[i]);
+                    }
+                }
+            },
+
+            show: function(event){
+                if (event.ctrlKey) {
+                    this.$.tooltip.style["display"] = "";
+                    this.$.tooltip.innerText = event.target.dataset.windowId +" [ "+event.target.dataset.windowUrl+" ]";
+                    this.updatePosition(event.target);
+                }
+            },
+
+            hide: function(){
+                this.$.tooltip.style["display"] = "none";
+            },
+
+            updatePosition: function(el) {
+                if (!this.$.tooltip && !el )
+                    return;
+
+                var tooltip = this.$.tooltip;
+                var offset = tooltip.offset ? tooltip.offset : 0;
+
+                if (tooltip.marginTop != 14 && this.$.tooltip.offset == 14)
+                    offset = tooltip.marginTop;
+
+                var parentRect = tooltip.offsetParent.getBoundingClientRect();
+                var targetRect = el.getBoundingClientRect();
+                var thisRect = tooltip.getBoundingClientRect();
+                var horizontalCenterOffset = (targetRect.width - thisRect.width) / 2;
+                // var verticalCenterOffset = (targetRect.height - thisRect.height) / 2;
+                var targetLeft = targetRect.left - parentRect.left;
+                var targetTop = targetRect.top - parentRect.top;
+                var tooltipLeft, tooltipTop;
+
+                tooltipLeft = targetLeft + horizontalCenterOffset;
+                tooltipTop = targetTop + targetRect.height + offset;
+
+
+                // Clip the left/right side.
+                if (tooltipLeft + thisRect.width > window.innerWidth) {
+                    tooltip.style.right = '0px';
+                    tooltip.style.left = 'auto';
+                } else {
+                    tooltip.style.left = Math.max(0, tooltipLeft) + 'px';
+                    tooltip.style.right = 'auto';
+                }
+                // Clip the top/bottom side.
+                if (tooltipTop + thisRect.height > window.innerHeight) {
+                    tooltip.style.bottom = '0px';
+                    tooltip.style.top = 'auto';
+                } else {
+                    tooltip.style.top = Math.max(0, tooltipTop) + 'px';
+                    tooltip.style.bottom = 'auto';
+                }
+            },
+
+            /******************************
+             * 메뉴 리스트
+             ******************************/
+            toolTabListClickHandler: function(event) {
+                // var container = Polymer.dom(this.$.container);
+
+                var target = event.target;
+                this.currentEl = target;
+
+
+				/* var maxWidth = this.getMaxWidth(li.id); */
+                menuSubListHtml = this.generateTabList();
+                Polymer.dom(Polymer.dom(this.root).querySelector("#tabListDiv")).innerHTML = '<ul id="tabList">'+ menuSubListHtml +'</ul>';
+                Polymer.dom(this.root).querySelector("#tabList").style['display'] = "";
+                document.addEventListener('tap', this.documentTapHandler, true);
+
+                this._toggleListeners(true);
+
+            },
+
+            generateTabList: function() {
+                var me = this;
+
+                var tabs = mdiTabs.items;
+                var tabListHtml = "";
+
+                for(var i=0,len=tabs.length,width; i<len; i++) {
+                    tabListHtml += '<li id="'+tabs[i].dataset.windowId+'" is-menu-item="Y" ><a on-tap="activateWindow"><span style="width:150px;">' + tabs[i].innerText + '</span></li>' ;
+                }
+                return tabListHtml;
+
+            },
+
+            activateWindow: function(e){
+                var li = this.closest(e.target, 'li');
+
+                if(li){
+                    this.fire('mdi-tab-selected', {
+                        windowId : li.id
+                    }, {bubbles : false});
+                }
+            },
+
+            closest: function(el, selector) {
+
+                while(el) {
+                    if(el.nodeName == '#document-fragment'){
+                        return null;
+                    }
+                    if(Polymer.DomApi.matchesSelector.call(el, selector)) {
+                        return el;
+                    } else {
+                        el = Polymer.dom(el).parentNode;
+                    }
+                }
+            },
+
+            _onCaptureClick: function(event) {
+
+                var target = event.target;
+
+                if(this.currentEl == target){
+                    return;
+                }
+
+                this._toggleListeners(false);
+                this.currentEl = null;
+                var tabListDiv = Polymer.dom(this.root).querySelector("#tabListDiv");
+                for(var i=0; i < tabListDiv.childNodes.length; ++i) {
+                    tabListDiv.removeChild(tabListDiv.childNodes[i]);
+                }
+            },
+
+            _toggleListeners: function(opened) {
+                this._toggleListener(opened, document, 'tap', this._boundOnCaptureClick, true);
+            },
+
+            _toggleListener: function(enable, node, event, boundListener, capture) {
+                if (enable) {
+                    if (event === 'tap') {
+                        Polymer.Gestures.add(document, 'tap', null);
+                    }
+                    node.addEventListener(event, boundListener, capture);
+                } else {
+                    if (event === 'tap') {
+                        Polymer.Gestures.remove(document, 'tap', null);
+                    }
+                    node.removeEventListener(event, boundListener, capture);
+                }
+            },
+
+            /******************************
+             * 스크롤 이벤트
+             ******************************/
+            _scrollerRender : function() {
+                var overflow = (this._tabsWidth > this._contentElement.getBoundingClientRect().width);
+                if(overflow) {
+                    leftScroller.classList.remove("scroller-disabled");
+                    rightScroller.classList.remove("scroller-disabled");
+                }else{
+                    leftScroller.classList.add("scroller-disabled");
+                    rightScroller.classList.add("scroller-disabled");
+                }
+            },
+
+            _disableScroller : function() {
+            	
+                /* var contentElementWidth = this._contentElement.getBoundingClientRect().width,
+                    tabsWidth = this._tabsWidth,
+                    scrollLeft = this._contentElement.scrollLeft;
+
+                if(scrollLeft == 0) {
+                    leftScroller.classList.add("scroller-disabled");
+                }
+                else if((tabsWidth - contentElementWidth) == scrollLeft-1) {
+                    rightScroller.classList.add("scroller-disabled");
+                }
+                else {
+                    leftScroller.classList.remove("scroller-disabled");
+                    rightScroller.classList.remove("scroller-disabled");
+                } */
+            },
+
+            /**
+             * Left scroll 마우스 누를 때
+             * */
+            _onTabbarLeftScroll: function () {
+                this._mouseStillDown = true;
+                this._onTabbarScroll("left");
+            },
+
+            /**
+             * Right scroll 마우스 누를 때
+             * */
+            _onTabbarRightScroll: function () {
+                this._mouseStillDown = true;
+                this._onTabbarScroll("right");
+            },
+
+            /**
+             * 마우스를 눌렀다가 떼었을 때
+             * */
+            _onTabbarScrollUpHandler: function (event) {
+                this._mouseStillDown = false;
+            },
+
+            /**
+             * MDI Tabbar 스크롤 이동
+             * */
+            _onTabbarScroll: function (direction) {
+                clearInterval(this.interval);	//기존 interval 초기화
+
+                if(this._mouseStillDown) {
+                    (direction === "right") ? this.$.mdiTabs._onTabbarRightScroll() : this.$.mdiTabs._onTabbarLeftScroll();
+                    this.interval = setInterval(this._onTabbarScroll.bind(this, direction), 100);	//재실행
+                }
+            },
+            
+            _destroy: function(){
+				menuSubListHtml = null;
+				this.activateTab = null;
+				this._boundOnCaptureClick = null;
+				this.currentEl = null;
+				this._mouseStillDown = null;
+			}
+        });
+	</script>
+
+</dom-module>

@@ -1,0 +1,50 @@
+<sc-link rel="import" href="es-terms-list.html"></sc-link>
+<sc-link rel="import" href="es-terms-detail.html"></sc-link>
+
+<dom-module id="em-terms">
+	<style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+
+    	<div class="hbox flex">
+	   		<es-terms-list id="termsList" class="flex-4" on-selected-terms="onSelectedTerms" on-selected-terms-cls="onSelectedTerms" on-rev-inc-terms="onRevIncTerms" on-delete-terms="onDeleteTerms"></es-terms-list>
+	   		<div class="hspace-10"></div>
+	   		<es-terms-detail id="termsDetail" class="flex-6" on-save-terms="onSaveTerms"></es-terms-detail>
+    	</div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-terms',
+            
+            // 약관구분/약관명 Item Click Event
+			onSelectedTerms: function(e, data){
+                var me = this;
+                me.$.termsDetail.load(data);
+            },
+
+			// 차수증가 버튼 Click Event
+			onRevIncTerms : function(e, data){
+				var me = this;
+				me.$.termsDetail.onRevIncTerms(data);
+			},
+
+            // 삭제 버튼 Click Event
+			onDeleteTerms: function(){
+            	var me = this;
+                me.$.termsDetail.onClear();
+            },
+
+            // 약관상세정보 : 저장 완료
+			onSaveTerms: function(){
+                var me = this;
+                me.$.termsList.onSaveAfterFindTermsList();
+            }
+        });
+    </script>
+</dom-module>

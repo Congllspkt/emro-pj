@@ -1,0 +1,44 @@
+<sc-link rel="import" href="cc-hatio-dashboard.html"></sc-link>
+<dom-module id="es-dashboard3">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+ 
+    </style>
+
+    <template>
+        <cc-hatio-dashboard id="borad" name="SCENE-62" class="fit" style="overflow: hidden;"></cc-hatio-dashboard>
+    </template>
+          
+    <script>
+        Polymer({
+            is: 'es-dashboard3',
+            
+            properties : {
+                fit : {
+                	type : String,
+                	value : 'both'
+                },
+                
+                integrator : {
+                	type : Object,
+                	value : function() {
+                		return{};
+                	}
+                },
+                
+                sceneInstance : {
+                	type : Object,
+                	value : function(){
+                		return {};
+                	}
+                }
+                
+            },
+			
+
+        });
+    </script>
+
+</dom-module>

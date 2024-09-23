@@ -1,0 +1,1130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="shared">
+    
+    <select id="findCommonCode" parameterType="String" resultType="map">
+    /* shared.findCommonCode */
+     SELECT DTL.TEN_ID
+          , DTLMULT.LANG_CCD
+          , DTL.CCD
+          , DTL.DTLCD AS DATA
+          , DTLMULT.DTLCD_NM
+          , DTLMULT.DTLCD_NM AS LABEL
+          , DTL.DTLCD_SORT
+          , DTL.RMK
+          , DTL.USE_YN
+          , DTL.MODR_ID
+       FROM DTLCD DTL
+          , DTLCD_MULTLANG DTLMULT
+      WHERE DTL.TEN_ID = DTLMULT.TEN_ID
+        AND DTL.CCD = DTLMULT.CCD
+        AND DTL.DTLCD = DTLMULT.DTLCD
+        AND DTL.USE_YN = 'Y'
+        AND DTL.STS &lt;&gt; 'D'
+        AND DTL.TEN_ID = #{g.tenant}
+        AND DTL.CCD = #{p}
+        AND DTLMULT.LANG_CCD = #{g.locale}
+      ORDER BY DTL.DTLCD_SORT
+    </select>
+    
+    <select id="findListCommonCodeAttributeCode" resultType="map">
+    	 SELECT DTL.TEN_ID
+          , DTLMULT.LANG_CCD
+          , DTL.CCD
+          , DTL.DTLCD AS DATA
+          , DTLMULT.DTLCD_NM
+          , DTLMULT.DTLCD_NM AS LABEL
+          , DTL.DTLCD_SORT
+          , DTL.RMK
+          , DTL.USE_YN
+          , DTL.MODR_ID
+          , CCCV.CSTR_CND_CD
+          , CCCV.CSTR_CND_VAL
+       FROM DTLCD DTL
+       INNER JOIN DTLCD_MULTLANG DTLMULT
+       ON  DTL.TEN_ID = DTLMULT.TEN_ID
+        AND DTL.CCD = DTLMULT.CCD
+        AND DTL.DTLCD = DTLMULT.DTLCD
+        INNER JOIN  CCD_CSTR_CND_VAL CCCV
+         ON CCCV.TEN_ID = DTL.TEN_ID
+        AND CCCV.CCD = DTL.CCD
+        AND CCCV.DTLCD = DTL.DTLCD
+        AND CCCV.CSTR_CND_CD = #{p.cstr_cnd_cd}
+      WHERE
+         DTL.USE_YN = 'Y'
+         AND DTL.STS &lt;&gt; 'D'
+        AND DTL.TEN_ID = #{g.tenant}
+        AND DTL.CCD = #{p.ccd}
+        AND DTLMULT.LANG_CCD = #{g.locale}
+        <if test="p.cstr_cnd_val != null and p.cstr_cnd_val != ''">
+        AND CCCV.CSTR_CND_VAL = #{p.cstr_cnd_val}
+        </if>
+      ORDER BY DTL.DTLCD_SORT
+    </select>
+    	
+	<select id="findListCommonCodeAttributeValue" resultType="map">
+		/* shared.findListCommonCodeAttributeValue : 그룹코드와 속성코드를 조합하여 코드성데이터를 조회한다.*/
+		SELECT DTL.TEN_ID
+			, DTLMULT.LANG_CCD
+			, DTL.CCD
+			, DTL.DTLCD AS DATA
+			, DTLMULT.DTLCD_NM
+			, DTLMULT.DTLCD_NM AS LABEL
+			, DTL.DTLCD_SORT
+			, DTL.RMK
+			, DTL.USE_YN
+			, DTL.MODR_ID
+		FROM DTLCD DTL
+		INNER JOIN CCD_CSTR_CND_VAL CCCV
+		ON CCCV.TEN_ID = DTL.TEN_ID
+		AND CCCV.CCD = DTL.CCD
+		AND CCCV.DTLCD = DTL.DTLCD
+		AND CCCV.CSTR_CND_VAL = #{p.cstr_cnd_val}
+		LEFT OUTER JOIN DTLCD_MULTLANG DTLMULT
+		ON DTLMULT.TEN_ID = DTL.TEN_ID
+		AND DTLMULT.CCD = DTL.CCD
+		AND DTLMULT.DTLCD = DTL.DTLCD
+		AND DTLMULT.LANG_CCD = #{g.locale}
+		WHERE DTL.TEN_ID = #{g.tenant}
+		AND DTL.CCD = #{p.ccd}
+		AND DTL.USE_YN = 'Y'
+		AND DTL.STS != 'D'
+		ORDER BY DTL.DTLCD_SORT
+	</select>
+
+
+    <select id="findListCommonCodeConstraintCode" resultType="map">
+        SELECT DTL.TEN_ID
+        , DTLMULT.LANG_CCD
+        , DTL.CCD
+        , DTL.DTLCD AS DATA
+        , DTLMULT.DTLCD_NM
+        , DTLMULT.DTLCD_NM AS LABEL
+        , DTL.DTLCD_SORT
+        , DTL.RMK
+        , DTL.USE_YN
+        , DTL.MODR_ID
+        , CCCV.CSTR_CND_CD
+        , CCCV.CSTR_CND_VAL
+        FROM DTLCD DTL
+        INNER JOIN DTLCD_MULTLANG DTLMULT
+        ON  DTL.TEN_ID = DTLMULT.TEN_ID
+        AND DTL.CCD = DTLMULT.CCD
+        AND DTL.DTLCD = DTLMULT.DTLCD
+        INNER JOIN  CCD_CSTR_CND_VAL CCCV
+        ON CCCV.TEN_ID = DTL.TEN_ID
+        AND CCCV.CCD = DTL.CCD
+        AND CCCV.DTLCD = DTL.DTLCD
+        WHERE
+        DTL.USE_YN = 'Y'
+        AND DTL.STS &lt;&gt; 'D'
+        AND DTL.TEN_ID = #{g.tenant}
+        AND DTL.CCD = #{p.ccd}
+        AND DTL.DTLCD = #{p.dtl_cd}
+        AND DTLMULT.LANG_CCD = #{g.locale}
+        <if test="p.cstr_cnd_val != null and p.cstr_cnd_val != ''">
+            AND CCCV.CSTR_CND_VAL = #{p.cstr_cnd_val}
+        </if>
+        ORDER BY DTL.DTLCD_SORT
+    </select>
+    
+    <select id="findListModifiedCode" resultType="map">
+    /* shared.findListModifiedCode */
+    SELECT DTL.TEN_ID
+         , DTLMULT.LANG_CCD
+         , DTL.CCD
+         , DTL.DTLCD AS DATA
+         , DTLMULT.DTLCD_NM
+         , DTLMULT.DTLCD_NM AS LABEL
+         , DTL.DTLCD_SORT
+         , DTL.RMK
+         , DTL.USE_YN
+         , DTL.MODR_ID
+      FROM DTLCD DTL
+         , DTLCD_MULTLANG DTLMULT
+     WHERE DTL.TEN_ID = DTLMULT.TEN_ID
+       AND DTL.CCD = DTLMULT.CCD
+       AND DTL.DTLCD = DTLMULT.DTLCD
+       AND DTL.USE_YN = 'Y'
+       AND DTL.STS    &lt;&gt; 'D'
+       AND DTL.TEN_ID = #{g.tenant}
+       AND DTL.MODR_ID &gt; #{p,javaType=date}
+    </select>
+
+    <select id="findListCompanyCodeForCombobox" resultType="map">
+    /* shared.findListCompanyCodeForCombobox */
+    SELECT LOGIC_ORG_CD AS CO_CD
+         , CASE WHEN 'en_US' = #{g.locale} THEN LOGIC_ORG_NM_EN
+                ELSE LOGIC_ORG_NM END AS COMP_NM
+      FROM LOGIC_ORG
+     WHERE TEN_ID = #{g.tenant}
+       AND LOGIC_ORG_TYP_CCD = 'COMPANY'
+       AND USE_YN = 'Y'
+       AND STS != 'D'
+     ORDER BY LOGIC_ORG_CD
+    </select>
+
+    <select id="findListFormatterForCombobox" resultType="map">
+    /* shared.findListFormatterForCombobox 포맷터 리스트 */
+     SELECT
+        FMTER_CD AS DATA
+        , FMTER_EXPLN AS LABEL
+        FROM FMTER
+        WHERE TEN_ID = #{g.tenant}
+        AND DAT_TYP_CCD = 'Number'
+    </select>
+
+    <select id="findDocumentInfo" parameterType="String" resultType="map">
+    /* shared.findDocumentInfo */
+    SELECT ST_SEQNO
+         , ED_SEQNO
+         , CURR_SEQNO
+         , PRE_SEQNO
+         , DOC_NO_RULE
+         , REN_CY_CCD
+         , FNL_CRN_DT
+      FROM DOC_NO
+     WHERE TEN_ID = #{g.tenant}
+       AND DOC_NO_CD = #{p}
+       FOR UPDATE
+    </select>    
+    
+    <update id="updateDocumentNumber">
+    /* shared.updateDocumentNumber */
+    UPDATE DOC_NO
+       SET CURR_SEQNO = #{p.curr_seqno}
+         , PRE_SEQNO = #{p.pre_seqno}
+         , FNL_CRN_DT = #{p.fnl_crn_dt}
+         , STS = 'U'
+     WHERE TEN_ID = #{g.tenant}
+       AND DOC_NO_CD = #{p.doc_no_cd}
+    </update>    
+	
+	<select id="findDocumentInfoByTenant" resultType="map">
+    /* shared.findDocumentInfoByTenant */
+    SELECT ST_SEQNO
+         , ED_SEQNO
+         , CURR_SEQNO
+         , PRE_SEQNO
+         , DOC_NO_RULE
+         , REN_CY_CCD
+         , FNL_CRN_DT
+      FROM DOC_NO
+     WHERE TEN_ID = #{p.tenant}
+       AND DOC_NO_CD = #{p.doc_no_cd}
+       FOR UPDATE
+    </select>    
+    
+    <update id="updateDocNumberByTenant">
+    /* shared.updateDocNumberByTenant */
+    UPDATE DOC_NO
+       SET CURR_SEQNO = #{p.curr_seqno}
+         , FNL_CRN_DT = #{p.fnl_crn_dt}
+         , STS = 'U'
+     WHERE TEN_ID = #{p.tenant}
+       AND DOC_NO_CD = #{p.doc_no_cd}
+    </update>
+	
+    <select id="findListOperationOrganizationByUser" parameterType="String" resultType="map">
+    /* shared.findListOperationOrganizationByUser */
+    /* 로그인한 사용자의 운영단위 유형 별 운영조직 목록 조회 */
+    /* 콤보박스 or 그리드 콤보박스에 사용 */
+        SELECT OGUSER.OORG_CD
+             , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), OG.LOGIC_ORG_NM_EN)
+                    ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), OG.LOGIC_ORG_NM)
+               END AS LOGIC_ORG_NM
+          FROM OORG_USR OGUSER
+         INNER JOIN OORG OPOG
+            ON OPOG.TEN_ID       = OGUSER.TEN_ID
+           AND OPOG.OORG_CD  = OGUSER.OORG_CD
+         INNER JOIN LOGIC_ORG OG
+            ON OG.TEN_ID     = OPOG.TEN_ID
+           AND OG.LOGIC_ORG_TYP_CCD = OPOG.LOGIC_ORG_TYP_CCD
+           AND OG.LOGIC_ORG_CD     = OPOG.LOGIC_ORG_CD
+        INNER JOIN OUNIT OUNIT
+        ON OPOG.TEN_ID = OUNIT.TEN_ID
+        AND OPOG.OUNIT_CD = OUNIT.OUNIT_CD
+         WHERE OGUSER.TEN_ID       = #{g.tenant}
+           AND OGUSER.USR_ID       = #{g.username}
+         --AND A.USE_YN       = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+         <if test="p != null and p !=''">
+           AND OPOG.OUNIT_CD = #{p}
+         </if>
+           AND OPOG.USE_YN       = 'Y'
+           AND OPOG.STS         != 'D'
+           AND OG.USE_YN       = 'Y'
+           AND OG.STS         != 'D'
+
+    UNION
+
+        SELECT OORG_DEPT.OORG_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), OG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), OG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+            FROM OORG_DEPT OORG_DEPT
+            INNER JOIN OORG OPOG
+            ON OPOG.TEN_ID       = OORG_DEPT.TEN_ID
+            AND OPOG.OORG_CD  = OORG_DEPT.OORG_CD
+            INNER JOIN LOGIC_ORG OG
+            ON OG.TEN_ID     = OPOG.TEN_ID
+            AND OG.LOGIC_ORG_TYP_CCD = OPOG.LOGIC_ORG_TYP_CCD
+            AND OG.LOGIC_ORG_CD     = OPOG.LOGIC_ORG_CD
+            INNER JOIN OUNIT OUNIT
+            ON OPOG.TEN_ID = OUNIT.TEN_ID
+            AND OPOG.OUNIT_CD = OUNIT.OUNIT_CD
+         WHERE OORG_DEPT.TEN_ID       = #{g.tenant}
+           AND OORG_DEPT.DEPT_CD       = #{g.dept_cd}
+         --AND A.USE_YN       = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+         <if test="p != null and p !=''">
+           AND OPOG.OUNIT_CD = #{p}
+         </if>
+           AND OPOG.USE_YN       = 'Y'
+           AND OPOG.STS         != 'D'
+           AND OG.USE_YN       = 'Y'
+           AND OG.STS         != 'D'
+    <if test="p != null and p !='' and !(p eq 'PO'.toString())">
+    
+    UNION    /* 구매운영단위 기준 조회가 아닌 경우 사용자의 구매운영조직에 연결된 운영조직을 조회 */
+    
+        SELECT OPOGMP.CONNSUBJ_OORG_CD AS OORG_CD
+
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), OG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), OG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+          FROM OORG_MAPG OPOGMP
+         INNER JOIN OORG OPOG
+            ON OPOG.TEN_ID      = OPOGMP.TEN_ID
+           AND OPOG.OORG_CD = OPOGMP.CONNSUBJ_OORG_CD
+         INNER JOIN LOGIC_ORG OG
+            ON OG.TEN_ID     = OPOG.TEN_ID
+           AND OG.LOGIC_ORG_TYP_CCD = OPOG.LOGIC_ORG_TYP_CCD
+           AND OG.LOGIC_ORG_CD     = OPOG.LOGIC_ORG_CD
+         INNER JOIN OORG_USR OGUSER
+            ON OGUSER.TEN_ID      = OPOGMP.TEN_ID
+           AND OGUSER.OORG_CD = OPOGMP.CONNSRC_OORG_CD
+        INNER JOIN OUNIT OUNIT
+        ON OPOG.TEN_ID = OUNIT.TEN_ID
+        AND OPOG.OUNIT_CD = OUNIT.OUNIT_CD
+         WHERE OPOGMP.TEN_ID   = #{g.tenant}
+         <bind name="linkTyp" value="'PO' + p"/>
+           AND OPOGMP.CONN_TYP_CCD = #{linkTyp}
+           AND OPOGMP.CONN_YN  = 'Y'
+         --AND D.USE_YN   = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+           AND OPOG.USE_YN   = 'Y'
+           AND OPOG.STS     != 'D'
+           AND OG.USE_YN   = 'Y'
+           AND OG.STS     != 'D'
+           AND OGUSER.USR_ID   = #{g.username}
+    </if>
+     ORDER BY OORG_CD
+    </select>
+    
+    <select id="findListOperationOrganizationByOperationOrganizationLink" resultType="map">
+    /* shared.findListOperationOrganizationByOperationOrganizationLink */
+    /* 운영조직 연결 정보를 기반으로 타 운영단위 운영조직 목록 조회 */
+    /* 예) 구매운영조직에서 사용가능한 품목운영조직 (LinkType : POIO) */
+    SELECT OPOGMP.CONNSUBJ_OORG_CD AS OORG_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), OG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), OG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+      FROM OORG_MAPG OPOGMP
+         , OORG OPOG
+         , LOGIC_ORG OG
+         ,  OUNIT OUNIT
+     WHERE OPOGMP.TEN_ID = #{g.tenant}
+       AND OPOGMP.CONN_TYP_CCD = #{p.conn_typ_ccd}
+       --AND A.USE_YN = 'Y' /* 운영조직-사용자 use_yn 사용안함. insert/delete */
+       <choose>
+		     <when test='p.oorg_cds != null and p.oorg_cds.size() != 0'>
+					AND UPPER(OPOGMP.CONNSRC_OORG_CD) IN
+					<foreach collection="p.oorg_cds" item="cd" separator="," open="(" close=")">
+						#{cd}
+					</foreach>
+		     </when>
+		     <otherwise>
+		     		AND OPOGMP.CONNSRC_OORG_CD = #{p.oorg_cd}
+		     </otherwise>
+     </choose>
+       AND OPOGMP.TEN_ID = OPOG.TEN_ID
+       AND OPOGMP.CONNSUBJ_OORG_CD = OPOG.OORG_CD
+       AND OPOG.USE_YN = 'Y'
+       AND OPOG.STS != 'D'
+        AND OPOG.OUNIT_CD = OUNIT.OUNIT_CD
+        AND OPOG.TEN_ID = OUNIT.TEN_ID
+       AND OPOG.TEN_ID = OG.TEN_ID
+       AND OPOG.LOGIC_ORG_TYP_CCD = OG.LOGIC_ORG_TYP_CCD
+       AND OPOG.LOGIC_ORG_CD = OG.LOGIC_ORG_CD
+       AND OG.USE_YN = 'Y'
+       AND OG.STS != 'D'
+     ORDER BY OPOGMP.CONNSUBJ_OORG_CD
+    </select>
+	
+    <select id="findListUserFunction" resultType="map">
+	    /* shared.findListUserFunction : 사용자기능 목록 */
+		SELECT DISTINCT ROLEACT.MENU_CD, ROLEACT.ACT_CD
+		  FROM ROLE_USR ROLEUSER, ROLE_ACT ROLEACT
+		 WHERE     ROLEUSER.TEN_ID = #{g.tenant}
+		       AND ROLEUSER.TEN_ID = ROLEACT.TEN_ID
+		       AND ROLEUSER.USR_ID = #{p}
+		       AND ROLEUSER.ROLE_CD = ROLEACT.ROLE_CD
+		 ORDER BY ROLEACT.MENU_CD, ROLEACT.ACT_CD
+    </select>	    
+    
+    <select id="findListUserMenu" resultType="map">
+    /*findListUserMenu */
+        SELECT MN.PAR_MENU_CD        AS PARENT_MENU_ID
+             , MN.TEN_ID
+             , MN.MENU_CD           AS MENU_ID
+             , MN.USR_TYP_CCD
+             , MN.MENU_SORT
+             , MNML.MENU_NM
+             , MNML.LANG_CCD
+             , MNML.MENU_CD           AS ML_MENU_CD
+             /*,    0                 AS "LEVEL" */
+             , MN.MENU_CD           AS TREE
+             , MNML.MENU_NM           AS TREE_NM
+             , MN.MENU_URL          AS MENU_URL
+          FROM MENU MN
+          LEFT OUTER JOIN 
+               MENU_MULTLANG MNML
+            ON (    MN.TEN_ID   = MNML.TEN_ID
+                AND MN.MENU_CD  = MNML.MENU_CD
+                AND MNML.LANG_CCD  = #{g.locale}
+               )
+         WHERE MN.TEN_ID    = #{g.tenant}
+           AND MN.USE_YN    = 'Y'
+           AND MN.STS       != 'D'
+        <choose>
+            <when test="g.roles != null and g.roles.size() > 0">
+           AND EXISTS ( SELECT 1
+                          FROM ROLE_MENU RM
+                         WHERE RM.TEN_ID  = MN.TEN_ID
+                           AND RM.MENU_CD = MN.MENU_CD
+                           AND RM.ROLE_CD IN
+                        <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                        #{role}
+                        </foreach>
+                      )
+            </when>
+            <otherwise>
+           AND 0 = 1
+            </otherwise>
+        </choose>
+        <if test="p.USR_TYP_CCD != null and p.USR_TYP_CCD != ''">
+           AND MN.USR_TYP_CCD   = #{p.USR_TYP_CCD}
+        </if>
+         GROUP BY MN.PAR_MENU_CD, MN.TEN_ID, MN.MENU_CD, MN.USR_TYP_CCD, MN.MENU_SORT, MNML.MENU_NM, MNML.LANG_CCD, MNML.MENU_CD, MN.MENU_URL
+         ORDER BY CAST(MENU_SORT AS INT) ASC
+    </select>
+	
+	<select id="findListDefaultMenu" resultType="map">
+		/*findListDefaultMenu */
+			SELECT 
+				MM.PAR_MENU_CD AS PARENT_MENU_ID,
+				MM.TEN_ID,
+				MM.MENU_CD AS MENU_ID,
+				MM.USR_TYP_CCD,
+				MM.MENU_SORT,
+				ML.MENU_NM,
+				ML.LANG_CCD,
+				ML.MENU_CD AS ML_MENU_CD,
+				MM.MENU_CD AS TREE,
+				ML.MENU_NM AS TREE_NM,
+				MM.MENU_URL AS MENU_URL
+			FROM MENU MM
+			LEFT OUTER JOIN MENU_MULTLANG ML
+			ON (
+				MM.TEN_ID = ML.TEN_ID
+				AND MM.MENU_CD = ML.MENU_CD
+				AND ML.LANG_CCD = #{g.locale}
+			)
+			WHERE MM.TEN_ID = #{g.tenant}
+			AND MM.STS != 'D'
+			AND MM.USR_TYP_CCD = #{p.USR_TYP_CCD}
+			AND MM.USE_YN = 'Y'
+		GROUP BY MM.PAR_MENU_CD, MM.TEN_ID, MM.MENU_CD, MM.USR_TYP_CCD, MM.MENU_SORT, ML.MENU_NM, ML.LANG_CCD, ML.MENU_CD, MM.MENU_URL
+		ORDER BY CAST(MENU_SORT AS INT) ASC
+	</select>
+	
+	
+	<select id="findListMajorCategory" resultType="map">
+	/* shared.findListMajorCategory */
+           SELECT ITEMCAT_CD    AS DATA
+                 ,CASE WHEN 'en_US' = #{g.locale} THEN ITEMCAT_NM_EN ELSE ITEMCAT_NM END AS LABEL
+                 ,ITEMCAT_LVL
+                 ,PAR_ITEMCAT_CD
+             FROM ITEMCAT
+            WHERE TEN_ID = #{g.tenant}
+              AND ITEMCAT_LVL = 1
+              AND STS != 'D'
+              AND USE_YN = 'Y'
+         ORDER BY ITEMCAT_CD
+	</select>
+	
+	
+	<select id="findListCategoryByParentCategoryCode" resultType="map">
+	/* shared.findListCategoryByParentCategoryCode */
+           SELECT ITEMCAT_CD    AS DATA
+                 ,CASE WHEN 'en_US' = #{g.locale} THEN ITEMCAT_NM_EN ELSE ITEMCAT_NM END AS LABEL
+                 ,ITEMCAT_LVL
+                 ,PAR_ITEMCAT_CD
+             FROM ITEMCAT
+            WHERE TEN_ID     = #{g.tenant}
+              AND PAR_ITEMCAT_CD = #{p.par_itemcat_cd}
+              AND ITEMCAT_LVL   = CAST(#{p.itemcat_lvl} AS INT)
+              AND USE_YN = 'Y'
+              AND STS != 'D'
+         ORDER BY ITEMCAT_CD
+	</select>
+	
+	<!-- 수량 단위 팝업 -->
+	<select id="findListAmountUnitCode" resultType="map">
+	/* shared.findListAmountUnitCode */
+           SELECT DTL.DTLCD
+                 ,DTLMULT.DTLCD_NM
+             FROM DTLCD DTL
+       INNER JOIN DTLCD_MULTLANG DTLMULT
+               ON DTL.TEN_ID   = DTLMULT.TEN_ID
+              AND DTL.CCD   = DTLMULT.CCD
+              AND DTL.DTLCD   = DTLMULT.DTLCD
+              AND DTLMULT.LANG_CCD = #{g.locale}
+            WHERE DTL.TEN_ID   = #{g.tenant}
+              AND DTL.CCD   = 'C007'
+              AND DTL.USE_YN   = 'Y'
+		<if test='p.dtl_cd != null and p.dtl_cd != ""'>
+			<bind name="dtlCdPattern" value="'%' + p.dtl_cd + '%'"/>
+              AND UPPER(DTL.DTLCD) LIKE UPPER(#{dtlCdPattern})
+		</if>
+		<if test='p.dtlcd_nm != null and p.dtlcd_nm != ""'>
+			<bind name="dtlCdNmPattern" value="'%' + p.dtlcd_nm + '%'"/>
+              AND UPPER(DTLMULT.DTLCD_NM) LIKE UPPER(#{dtlCdNmPattern})
+		</if>
+         ORDER BY DTL.DTLCD
+    </select>
+
+    <!-- 
+    	* 로그인한 사용자의 운영단위 유형 별 운영조직 목록 조회
+    	* 콤보박스 or 그리드 콤보박스에 사용 
+    -->
+    <select id="findListOperationOrganizationBySupplier" parameterType="String" resultType="map">
+    /* shared.findListOperationOrganizationBySupplier */
+       SELECT OORG.OORG_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), LOGIC_ORG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), LOGIC_ORG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+                 ,OORG.LOGIC_ORG_TYP_CCD
+                 ,OORG.LOGIC_ORG_CD
+             FROM OORG OORG
+       INNER JOIN LOGIC_ORG LOGIC_ORG
+               ON LOGIC_ORG.TEN_ID = OORG.TEN_ID
+              AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = OORG.LOGIC_ORG_TYP_CCD
+              AND LOGIC_ORG.LOGIC_ORG_CD = OORG.LOGIC_ORG_CD
+        INNER JOIN OUNIT OUNIT
+        ON OORG.TEN_ID = OUNIT.TEN_ID
+        AND OORG.OUNIT_CD = OUNIT.OUNIT_CD
+            WHERE OORG.OORG_CD IN (
+                    SELECT DISTINCT CONNSRC_OORG_CD FROM OORG_MAPG
+                    <bind name="linkTyp" value="p + 'EO'"></bind>
+                    WHERE CONN_TYP_CCD = #{linkTyp}
+                    AND CONNSUBJ_OORG_CD IN (
+                        SELECT OORG_CD FROM OORG_VD
+                        WHERE VD_CD = #{g.vd_cd}
+                    )         
+              ) 
+			  AND OORG.TEN_ID = #{g.tenant}
+              AND OORG.CHDNODE_YN = 'Y'
+              AND OORG.USE_YN = 'Y'
+              AND OORG.STS != 'D'
+              AND LOGIC_ORG.USE_YN = 'Y'
+              AND LOGIC_ORG.STS != 'D'
+         ORDER BY OORG.OORG_CD
+    </select>
+    
+    <select id="findHelpManualType" resultType="map">
+	/* manual.findHelpManualType */
+           SELECT A.TEN_ID	    /*시스템 아이디 */
+                 ,A.MNL_TYP_CCD	    /*매뉴얼 유형 */
+                 ,C.ATHF_UUID
+             FROM MNL A
+       INNER JOIN (
+                    SELECT S1.TEN_ID
+                          ,S1.MENU_CD
+                          ,S1.MNL_REVNO
+                          ,S1.MNL_PSTG_REVNO
+                          ,S1.LANG_CCD
+                      FROM MNL S1
+                     WHERE S1.TEN_ID  = #{g.tenant}
+                       AND S1.MENU_CD = #{p.menu_cd}
+			           AND S1.MNL_REVNO = ( SELECT MAX(MNL_REVNO)
+			                               FROM MNL
+			                              WHERE TEN_ID  = #{g.tenant}
+			                                AND MENU_CD = #{p.menu_cd}
+			                                AND LANG_CCD = #{g.locale}
+			                            )
+			           AND S1.LANG_CCD = #{g.locale}
+                  ) B
+               ON B.TEN_ID  = A.TEN_ID
+              AND B.MENU_CD = A.MENU_CD
+              AND B.MNL_PSTG_REVNO = A.MNL_REVNO
+              AND B.LANG_CCD = A.LANG_CCD
+  LEFT OUTER JOIN ATHF C
+               ON C.TEN_ID = A.TEN_ID
+              AND C.ATHG_UUID = A.MNL_ATHG_UUID
+              AND C.STS != 'D'
+	</select>
+    
+    <!-- MNL(메뉴얼 관리) 조회 -->
+	<resultMap type="map" id="resultMap-findHelpManualInfo">
+        <result property="mnl_cont" column="MNL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findHelpManualInfo" resultMap="resultMap-findHelpManualInfo">
+	/* manual.findHelpManualInfo */
+           SELECT MNL.TEN_ID	    /*시스템 아이디 */
+                 ,MNL.MENU_CD	    /*메뉴 코드 */
+                 ,MNL.MNL_REVNO	    /*매뉴얼 차수 */
+                 ,MNL.LANG_CCD     /*언어 코드*/
+                 ,MNL.MNL_TYP_CCD	    /*매뉴얼 유형 */
+                 ,MNL.MNL_PSTG_REVNO	    /*게시 차수 */
+                 ,MNL.MNL_ATHG_UUID  /*매뉴얼 첨부 번호 */
+                 ,MNL.MNL_CONT	/*매뉴얼 내용 */
+                 ,ATHF.ATHF_ORIG_NM
+                 ,ATHF.ATHF_UUID
+                 ,ATHF.ATHF_PATH
+             FROM MNL MNL
+       INNER JOIN (
+                    SELECT MNL_IN_SLT.TEN_ID
+                          ,MNL_IN_SLT.MENU_CD
+                          ,MNL_IN_SLT.MNL_REVNO
+                          ,MNL_IN_SLT.MNL_PSTG_REVNO
+                          ,MNL_IN_SLT.LANG_CCD
+                      FROM MNL MNL_IN_SLT
+                     WHERE MNL_IN_SLT.TEN_ID  = #{g.tenant}
+                       AND MNL_IN_SLT.MENU_CD = #{p.menu_cd}
+			           AND MNL_IN_SLT.MNL_REVNO = ( SELECT MAX(MNL_REVNO)
+			                               FROM MNL
+			                              WHERE TEN_ID  = #{g.tenant}
+			                                AND MENU_CD = #{p.menu_cd}
+			                                AND LANG_CCD = #{p.lang_ccd}
+			                            )
+			           AND MNL_IN_SLT.LANG_CCD = #{p.lang_ccd}
+                  ) B
+               ON B.TEN_ID  = MNL.TEN_ID
+              AND B.MENU_CD = MNL.MENU_CD
+              AND B.MNL_PSTG_REVNO = MNL.MNL_REVNO
+              AND B.LANG_CCD = MNL.LANG_CCD
+  LEFT OUTER JOIN ATHF ATHF
+               ON ATHF.TEN_ID = MNL.TEN_ID
+              AND ATHF.ATHG_UUID = MNL.MNL_ATHG_UUID
+              AND ATHF.STS != 'D'
+	</select>
+	
+
+<!-- 2019.03.14 변경 : url로 menu/auth를 가져와서 세션 역할의 menu/auth를 체크하므로 url정보 제거.
+    <select id="findListMenuFunctionAndUrlByUserRoleList" resultType="map">
+    /* shared.findListMenuFunctionAndUrlByUserRoleList : 사용자기능,url 목록 */
+        SELECT DISTINCT A.MENU_CD, A.ACT_CD, A.URL
+          FROM ( /* menuCode-functionCode     union all   menuCode-callPattern */ 
+                 SELECT AURF.MENU_CD
+                      , AURF.ACT_CD
+                      , '' AS URL
+                   FROM ROLE_ACT AURF
+                  WHERE AURF.TEN_ID = #{g.tenant}
+                <choose>
+                    <when test="g.roles != null and g.roles.size() > 0">
+                    AND AURF.ROLE_CD IN
+                        <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                        #{role}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                    AND 0 = 1
+                    </otherwise>
+                </choose>
+                  GROUP BY AURF.MENU_CD, AURF.ACT_CD
+                
+                  UNION ALL
+                        
+                 SELECT AURF.MENU_CD
+                      , AURF.ACT_CD
+                      , AURS.MENU_ACT_URL AS URL
+                   FROM ROLE_ACT AURF
+                  INNER JOIN
+                        MENU_ACT_URL AURS
+                     ON (    AURS.TEN_ID    = AURF.TEN_ID
+                         AND AURS.MENU_CD   = AURF.MENU_CD
+                         AND AURS.ACT_CD   = AURF.ACT_CD
+                        )
+                  WHERE AURF.TEN_ID = #{g.tenant}
+                <choose>
+                    <when test="g.roles != null and g.roles.size() > 0">
+                    AND AURF.ROLE_CD IN
+                        <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                        #{role}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                    AND 0 = 1
+                    </otherwise>
+                </choose>
+                  GROUP BY AURF.MENU_CD, AURF.ACT_CD, AURS.MENU_ACT_URL
+               ) A
+         ORDER BY A.MENU_CD, A.ACT_CD, A.URL
+    </select>
+ -->
+ 
+     <select id="findListMenuFunctionAndUrlByUserRoleList" resultType="map">
+    	/* shared.findListMenuFunctionAndUrlByUserRoleList : 사용자기능,url 목록 */
+		 SELECT AURF.MENU_CD
+		      , AURF.ACT_CD
+		      , '' AS URL
+		   FROM ROLE_ACT AURF
+		  WHERE AURF.TEN_ID = #{g.tenant}
+		<choose>
+		    <when test="g.roles != null and g.roles.size() > 0">
+		    AND AURF.ROLE_CD IN
+		        <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+		        #{role}
+		        </foreach>
+		    </when>
+		    <otherwise>
+		    AND 0 = 1
+		    </otherwise>
+		</choose>
+		  GROUP BY AURF.MENU_CD, AURF.ACT_CD
+    </select>
+    
+    <insert id="insertLoginLogInfo">
+    	/* shared.insertLoginLogInfo */
+    	INSERT INTO LOGIN_HISTREC (
+    		TEN_ID,
+    		LOGIN_HISTREC_UUID,
+    		USR_ID,
+    		USR_TYP_CCD,
+    		LOGIN_IP,
+            LOGIN_DTTM
+    	) VALUES (
+    		#{g.tenant},
+    		#{p.log_id},
+    		#{g.username},
+    		#{p.usr_typ_ccd},
+    		#{p.login_ip},
+    		#{g.now}
+    	)
+    </insert>
+    
+    <update id="updateUserInfoByLoginSession">
+    /* shared.saveUser: 내부 사용자 정보 수정 */	
+		UPDATE USR
+		SET
+				USR_NM = #{p.usr_nm}
+				<if test='p.pw != null'>
+				,PWD = #{p.pw}
+				</if>
+				,USR_NM_EN = #{p.usr_nm_en}
+				<if test="p.dept_cd != null and p.dept_cd != ''">
+				,DEPT_CD = #{p.dept_cd}
+				</if>
+				,USE_YN = #{p.use_yn}
+				,MOB = #{p.mob}
+				,TEL = #{p.tel}
+				,FAX = #{p.fax}
+				,EML = #{p.eml}
+				,EML_RCPT_YN = #{p.eml_rcpt_yn}
+				,SMS_RCPT_YN = #{p.sms_rcpt_yn}
+				,TMZ_CCD = #{p.tmz_ccd}
+				,JOBTIT_CCD = #{p.jobtit_ccd}
+				,HOME_SCR_TYP_CCD = #{p.home_scr_typ_ccd}
+				,LBL_SORT_TYP_CCD = #{p.lbl_sort_typ_ccd}
+				,POSI_CCD = #{p.posi_ccd}
+				,STS = 'U'
+				,MODR_ID = #{g.username}
+				,MOD_DTTM = #{g.now}
+		WHERE TEN_ID = #{g.tenant}
+		AND USR_ID = #{g.username}
+	</update>
+	
+	<select id="findDisabledAccountInfo" resultType="Map">
+	/* shared.findDisabledAccountInfo: 미사용 계정 설정 기준 정보 조회 */
+		SELECT UNUD_ACCT_SUBJ_CD AS ACCOUNTDISABLECODE
+		FROM USR_ACCT_SEC_RULE
+		WHERE TEN_ID = #{g.tenant}
+	</select>
+	
+	<select id="findCodeName" resultType="String">
+	/* shared.findCodeName: 서식 내용조회시 사용, 코드 값을 코드명으로 변환하기 위해 */
+            SELECT DTLCD_NM   /* 상세 코드 명 */
+              FROM DTLCD_MULTLANG
+             WHERE TEN_ID  = #{g.tenant}
+               AND CCD  = #{p.ccd}
+               AND DTLCD  = #{p.dtlcd}
+               AND LANG_CCD = #{g.locale}
+               AND STS    != 'D'
+	</select>
+	
+
+	
+	<select id="findListOperationOrganizationForCombobox" parameterType="String" resultType="map">
+        /* shared.findListOperationOrganizationForCombobox */
+        /* 운영단위 유형 별 운영조직 목록 조회 */
+        /* 콤보박스 or 그리드 콤보박스에 사용 */
+        SELECT OORG.OORG_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), LOGIC_ORG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), LOGIC_ORG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+             , OORG.LOGIC_ORG_TYP_CCD
+             , OORG.LOGIC_ORG_CD
+             , OORG.OUNIT_CD
+          FROM OORG OORG
+             , LOGIC_ORG LOGIC_ORG
+             ,OUNIT OUNIT
+
+         WHERE OORG.TEN_ID = #{g.tenant}
+           <if test="p != null and p != ''">
+           AND OORG.OUNIT_CD = #{p}
+           </if>
+           AND OORG.STS != 'D'
+           AND OORG.CHDNODE_YN = 'Y'
+           AND OORG.USE_YN = 'Y'
+            AND OORG.TEN_ID = OUNIT.TEN_ID
+            AND OORG.OUNIT_CD = OUNIT.OUNIT_CD
+           AND LOGIC_ORG.TEN_ID = OORG.TEN_ID
+           AND LOGIC_ORG.LOGIC_ORG_TYP_CCD = OORG.LOGIC_ORG_TYP_CCD
+           AND LOGIC_ORG.LOGIC_ORG_CD = OORG.LOGIC_ORG_CD
+           AND LOGIC_ORG.USE_YN = 'Y'
+           AND LOGIC_ORG.STS != 'D'
+         ORDER BY OORG.OORG_CD
+    </select>
+    
+    <select id="findListZipCodeByDatabase" resultType="map">
+    	<if test='p.srch_word != null and p.srch_word != ""'>
+            <bind name="wordPattern" value='"%" + p.srch_word + "%"' />
+    	</if>
+    	SELECT d.*
+	         FROM (
+                   SELECT ROW_NUMBER() OVER(ORDER BY c.zipNo DESC) AS RNUM
+                         ,c.*
+                     FROM
+                         (
+                         	SELECT DISTINCT
+                         	    ZIP_CD  AS zipNo
+			                   , SIDO_NM || ' ' || SIGUNGU_NM || ' '
+			                   || EYUP_NM || ' '
+			                   || DORO_NM || (CASE WHEN (JIHA_FG = 0) THEN ' ' WHEN (JIHA_FG = 1) THEN ' 지하' WHEN (JIHA_FG = 2) THEN ' 공중' ELSE '' END)
+			                   || BUILD_MST || (CASE WHEN (BUILD_DTL = 0) THEN '' ELSE '-'||BUILD_DTL END)
+			                   || CASE WHEN (EYUPDONG_NO = '00') THEN (CASE SIGUNGU_BUILD_NM WHEN '' THEN '' ELSE ' (' || SIGUNGU_BUILD_NM || ')' END )
+			                                WHEN (EYUPDONG_NO = '01') THEN ' ('||RI_NM || (CASE SIGUNGU_BUILD_NM WHEN  '' THEN '' ELSE ',' || SIGUNGU_BUILD_NM END) ||')' 
+			                    ELSE '' END AS lnmAdres
+			                    , SIDO_NM || ' ' || SIGUNGU_NM || ' '
+			                   || EYUP_NM || ' '
+			                   || RI_NM || ' '
+			                   || BJD_NM || (CASE WHEN (JIHA_FG = 0 ) THEN ' ' WHEN (JIHA_FG = 1 ) THEN ' 지하' WHEN (JIHA_FG = 2 ) THEN ' 공중' ELSE '' END)
+			                   || JIBUN_MST || '-' || JIBUN_DTL
+			                   AS rnAdres
+			                   , SIDO_NM_ENG || ' ' || SIGUNGU_NM_ENG || ' ' || EYUP_NM_ENG || ' ' || DORO_NM_ENG AS enAdres
+						    FROM RD_NM_ADDR
+						    WHERE DORO_NM LIKE #{wordPattern}
+						    OR BJD_NM LIKE #{wordPattern}
+						    OR EYUP_NM LIKE #{wordPattern}
+						    OR RI_NM LIKE #{wordPattern}
+						    OR DELIVERY_NM LIKE #{wordPattern}
+						    OR SIGUNGU_BUILD_NM LIKE #{wordPattern}
+					    ) c
+                 ) d
+            WHERE rnum <![CDATA[ >= ]]> #{p.start_row}
+              AND rnum <![CDATA[ <= ]]> #{p.end_row}
+            ORDER BY d.zipNo DESC
+    </select>
+    
+    <select id="findListOperationOrganizationByTenant" resultType="map">
+    /* shard.findListOperationOrganizationByTenant : 테넌트 별 운영조직 목록 조회 */
+       SELECT OOMG.OORG_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), OGMG.LOGIC_ORG_NM_EN)
+        ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), OGMG.LOGIC_ORG_NM)
+        END AS LOGIC_ORG_NM
+            , OOMG.LOGIC_ORG_TYP_CCD
+            , OOMG.LOGIC_ORG_CD
+            , OOMG.OUNIT_CD
+         FROM OORG OOMG
+        INNER JOIN
+              LOGIC_ORG OGMG
+           ON OGMG.TEN_ID       = OOMG.TEN_ID
+          AND OGMG.LOGIC_ORG_TYP_CCD   = OOMG.LOGIC_ORG_TYP_CCD
+          AND OGMG.LOGIC_ORG_CD       = OOMG.LOGIC_ORG_CD
+        INNER JOIN OUNIT OUNIT
+        ON OOMG.TEN_ID = OUNIT.TEN_ID
+        AND OOMG.OUNIT_CD = OUNIT.OUNIT_CD
+    <trim prefix="WHERE" prefixOverrides="AND">
+          AND OOMG.TEN_ID   = #{p.tenant} /* tenant parameter */
+         <if test="p.OUNIT_CD != null and p.OUNIT_CD != ''">
+          AND OOMG.OUNIT_CD = #{p.OUNIT_CD}
+         </if>
+          AND OOMG.STS     != 'D'
+          AND OOMG.CHDNODE_YN  = 'Y'
+          AND OOMG.USE_YN   = 'Y'
+          AND OGMG.USE_YN   = 'Y'
+          AND OGMG.STS     != 'D'
+        </trim>
+        ORDER BY OOMG.OORG_CD
+    </select>
+    
+    <update id="saveUserHomeType">
+		UPDATE USR
+		SET HOME_SCR_TYP_CCD = #{p.home_scr_typ_ccd}
+		,   MODR_ID = #{g.username}
+		,   MOD_DTTM = #{g.now}
+		WHERE TEN_ID = #{g.tenant}
+		  AND USR_ID = #{g.username}
+	</update>
+	
+	<select id="findInfoAutoManual" resultType="map">
+	/* shared.findInfoAutoManual */
+		SELECT MENUAL.MENU_CD                      AS MENU_CD
+		     , ML.MENU_NM                      AS MENU_NM
+		     , MENUAL.MNL_AUTO_PSTG_YN
+		     , MENUAL.MNL_AUTO_PSTG_ST_DTTM
+		     , MENUAL.MNL_AUTO_PSTG_EXP_DTTM
+		  FROM MNL MENUAL
+		 INNER JOIN MENU MM
+		    ON MM.TEN_ID = MENUAL.TEN_ID
+		   AND MM.MENU_CD = MENUAL.MENU_CD
+		   AND MENUAL.LANG_CCD = #{g.locale}
+		  LEFT OUTER JOIN MENU_MULTLANG ML
+		    ON MM.TEN_ID = ML.TEN_ID
+		   AND MM.MENU_CD = ML.MENU_CD
+		   AND ML.LANG_CCD = #{g.locale}
+		 WHERE MENUAL.TEN_ID = #{g.tenant}
+		   AND MENUAL.MNL_REVNO = (SELECT MAX(MNL_REVNO)
+			                   FROM MNL
+			                  WHERE TEN_ID = #{g.tenant}
+			                    AND MENU_CD = MENUAL.MENU_CD
+			                    AND LANG_CCD = #{g.locale}
+			                )
+			AND MENUAL.MENU_CD = #{p.menu_cd}
+		 ORDER BY MM.MENU_CD , MM.MENU_SORT
+	</select>
+	
+	<select id="findListLatelyExchange"	resultType="map">
+    /* shared.findListLatelyExchange */
+    SELECT * FROM (
+    	SELECT  A.TEN_ID 		/*시스템 아이디*/
+                 ,A.BAS_DT 	/*기준 일자*/
+                 ,A.BAS_CUR_CCD 	/*기준 통화*/
+                 ,A.CONV_CUR_CCD 	/*환산 통화*/
+                 ,A.BAS_RATE 	/*기준 율*/
+                 ,RANK() OVER (PARTITION BY CONV_CUR_CCD ORDER BY BAS_DT DESC) AS RNK
+    	 FROM EXCHRATE A
+  		LEFT OUTER JOIN DTLCD DTL
+               ON DTL.TEN_ID = A.TEN_ID
+              AND DTL.CCD = 'C004'
+              AND DTL.DTLCD = A.CONV_CUR_CCD
+            WHERE A.TEN_ID = #{g.tenant}
+              AND A.BAS_CUR_CCD 	= #{p}  /* 통화 */
+         ) T
+         WHERE RNK = '1'
+    </select>
+
+    <select id="findOperationOrganizationName" resultType="String">
+        /* shared.findOperationOrganizationName: 구매운영조직코드를 이용해 운영조직명을 조회 */
+        SELECT  CASE WHEN 'en_US' = #{g.locale} THEN CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM_EN), '] '), LOGIC_ORG.LOGIC_ORG_NM_EN)
+            ELSE CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), LOGIC_ORG.LOGIC_ORG_NM)
+            END AS LOGIC_ORG_NM
+        FROM OORG_USR OGUSER
+           , OORG OORG
+           , LOGIC_ORG LOGIC_ORG
+           , OUNIT OUNIT
+        WHERE OGUSER.TEN_ID       = #{g.tenant}
+          AND OGUSER.USR_ID       = #{g.username}
+          --AND A.USE_YN = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+          AND OGUSER.OORG_CD  = #{p.oorg_cd}
+          AND OORG.TEN_ID       = OGUSER.TEN_ID
+          AND OORG.OUNIT_CD = #{p.ounit_cd}
+          AND OORG.OORG_CD  = OGUSER.OORG_CD
+            AND OORG.TEN_ID = OUNIT.TEN_ID
+            AND OORG.OUNIT_CD = OUNIT.OUNIT_CD
+          AND OORG.USE_YN       = 'Y'
+          AND OORG.STS         != 'D'
+          AND LOGIC_ORG.TEN_ID       = OORG.TEN_ID
+          AND LOGIC_ORG.LOGIC_ORG_TYP_CCD   = OORG.LOGIC_ORG_TYP_CCD
+          AND LOGIC_ORG.LOGIC_ORG_CD       = OORG.LOGIC_ORG_CD
+          AND LOGIC_ORG.USE_YN       = 'Y'
+          AND LOGIC_ORG.STS         != 'D'
+    </select>
+
+    <insert id="insertTempQueryId">
+	INSERT INTO TEMP_TBL (TEN_ID,USR_ID,TASK_ID,REG_DTTM) VALUES (#{g.tenant},#{g.username},#{p.task_id},#{g.now})
+	</insert>
+
+	<delete id="deleteTempQueryId">
+	DELETE FROM TEMP_TBL WHERE TEN_ID = #{g.tenant} AND USR_ID = #{g.username}
+	</delete>
+    
+    <select id="getCommonCodeConstraintConditionValue" resultType="string">
+    /*shared.getCommonCodeConstraintConditionValue : 공통코드 제약 조건 값 조회*/
+	SELECT DTAT.CSTR_CND_VAL
+      FROM DTLCD CDDT
+     INNER JOIN CCD_CSTR_CND_VAL DTAT
+        ON CDDT.TEN_ID = DTAT.TEN_ID
+       AND CDDT.CCD = DTAT.CCD
+       AND CDDT.DTLCD = DTAT.DTLCD
+     WHERE CDDT.TEN_ID = #{g.tenant}
+       AND CDDT.CCD = #{p.ccd}
+       AND DTAT.CSTR_CND_CD = #{p.cstr_cnd_cd}
+       AND DTAT.DTLCD = #{p.dtlcd}
+       AND CDDT.USE_YN = 'Y'
+       AND CDDT.STS   != 'D'
+	</select>
+	
+	<select id="findTimezoneByOorgCd" resultType="map">
+		WITH T(TEN_ID, OORG_CD, PAR_OORG_CD, ORD, TMZ_CCD) AS (
+			SELECT A.TEN_ID
+			     , A.OORG_CD
+			     , A.PAR_OORG_CD
+			     , 1 AS ORD
+			     , B.TMZ_CCD
+			  FROM OORG A
+			 INNER JOIN LOGIC_ORG B
+			    ON B.TEN_ID = A.TEN_ID
+			   AND B.LOGIC_ORG_CD = A.LOGIC_ORG_CD
+			 WHERE A.TEN_ID = #{g.tenant}
+			   AND A.OORG_CD = #{p}
+			
+			 UNION ALL
+			
+			SELECT A.TEN_ID
+			     , A.OORG_CD
+			     , A.PAR_OORG_CD
+			     , T.ORD + 1
+			     , B.TMZ_CCD
+			  FROM T
+			 INNER JOIN OORG A
+			    ON A.TEN_ID = T.TEN_ID
+			   AND A.OORG_CD = T.PAR_OORG_CD
+			 INNER JOIN LOGIC_ORG B
+			    ON B.TEN_ID = A.TEN_ID
+			   AND B.LOGIC_ORG_CD = A.LOGIC_ORG_CD
+		)
+		SELECT TB.TMZ_CCD
+		  FROM (
+		        SELECT T.TMZ_CCD
+		             , RANK() OVER(ORDER BY ORD DESC) AS IS_RANK
+		          FROM T
+		         WHERE T.TMZ_CCD IS NOT NULL
+		       ) TB
+		 WHERE TB.IS_RANK = 1
+	</select>
+
+    <select id="findListModuleAttach" resultType="map">
+        /*shared.findListModuleAttach :  모듈 첨부파일 리스트 조회*/
+        SELECT MDAT.MODL_ATHF_CD,
+        MDAT.MODL_ATHF_NM,
+        MDAT.MODL_ATHF_TASKTYP,
+        MDAT.MODL_ATHF_EXPLN,
+        MDAT.MODL_ATHF_GRP_CD,
+        MDAT.ATHG_UUID
+        , (SELECT COUNT(1)
+        FROM ATHF
+        WHERE TEN_ID = MDAT.TEN_ID
+        AND ATHG_UUID = MDAT.ATHG_UUID
+        AND STS != 'D'
+        )  AS ATT_COUNT
+        FROM MODL_ATHF_MGR MDAT
+        WHERE 1=1
+        <if test='p.modl_athf_tasktyp != null and p.modl_athf_tasktyp != ""'>
+            <bind name="worktypPattern" value='"%" + p.modl_athf_tasktyp + "%"' />
+            AND  UPPER(MDAT.MODL_ATHF_TASKTYP) LIKE UPPER(#{worktypPattern})
+        </if>
+        <if test='p.modl_athf_cd != null and p.modl_athf_cd != ""'>
+            <bind name="cdPattern" value='"%" + p.modl_athf_cd + "%"' />
+            AND  UPPER(MDAT.MODL_ATHF_CD) LIKE UPPER(#{cdPattern})
+        </if>
+        <if test='p.modl_athf_nm != null and p.modl_athf_nm != ""'>
+            <bind name="nmPattern" value='"%" + p.modl_athf_nm + "%"' />
+            AND  UPPER(MODL_ATHF_NM) LIKE UPPER(#{nmPattern})
+        </if>
+        ORDER BY MDAT.REG_DTTM DESC
+    </select>
+
+    <insert id="insertModuleAttachCode">
+        INSERT INTO MODL_ATHF_MGR
+        (
+            TEN_ID,
+            MODL_ATHF_CD,
+            MODL_ATHF_NM,
+            MODL_ATHF_TASKTYP,
+            MODL_ATHF_EXPLN,
+            MODL_ATHF_GRP_CD,
+            ATHG_UUID,
+            REGR_ID,
+            REG_DTTM,
+            MODR_ID,
+            MOD_DTTM
+        )
+        VALUES (
+                   #{g.tenant},
+                   #{p.modl_athf_cd},
+                   #{p.modl_athf_nm},
+                   #{p.modl_athf_tasktyp},
+                   #{p.modl_athf_expln},
+                   #{p.modl_athf_grp_cd},
+                   #{g.uuid},
+                   #{g.username},
+                   #{g.now},
+                   #{g.username},
+                   #{g.now}
+               )
+    </insert>
+
+    <update id="updateModuleAttachCode">
+        UPDATE MODL_ATHF_MGR
+        SET
+            MODL_ATHF_NM = #{p.modl_athf_nm},
+            MODL_ATHF_EXPLN = #{p.modl_athf_expln},
+            MODL_ATHF_TASKTYP = #{p.modl_athf_tasktyp},
+            MODL_ATHF_GRP_CD = #{p.modl_athf_grp_cd}
+        WHERE TEN_ID = #{g.tenant}
+          AND MODL_ATHF_CD = #{p.modl_athf_cd}
+    </update>
+
+    <select id="getModuleAttachCode" resultType="int">
+        SELECT COUNT(*) FROM MODL_ATHF_MGR WHERE  TEN_ID = #{g.tenant} AND MODL_ATHF_CD = #{p.modl_athf_cd}
+    </select>
+
+    <delete id="deleteModuleAttachCode">
+        DELETE FROM MODL_ATHF_MGR WHERE TEN_ID = #{g.tenant} AND MODL_ATHF_CD = #{p.modl_athf_cd}
+    </delete>
+
+
+    <select id="findModuleAttach" resultType="map">
+        /*shared.findModuleAttach :  모듈 첨부파일 조회*/
+        SELECT MDAT.MODL_ATHF_CD,
+               MDAT.MODL_ATHF_NM,
+               MDAT.MODL_ATHF_TASKTYP,
+               MDAT.MODL_ATHF_EXPLN,
+               MDAT.MODL_ATHF_GRP_CD,
+               MDAT.ATHG_UUID
+        FROM MODL_ATHF_MGR MDAT
+        WHERE MDAT.TEN_ID = #{g.tenant}
+          AND MDAT.MODL_ATHF_CD = #{p.modl_athf_cd}
+    </select>
+
+    <select id="findListGroupModuleAttach" resultType="map">
+        /*shared.findListGroupModuleAttach :  모듈 그룹 별 첨부파일 조회*/
+        SELECT MDAT.MODL_ATHF_CD,
+               MDAT.MODL_ATHF_NM,
+               MDAT.MODL_ATHF_TASKTYP,
+               MDAT.MODL_ATHF_EXPLN,
+               MDAT.MODL_ATHF_GRP_CD,
+               MDAT.ATHG_UUID,
+               (SELECT COUNT(1)
+                FROM ATHF
+                WHERE TEN_ID = MDAT.TEN_ID
+                  AND ATHG_UUID = MDAT.ATHG_UUID
+                  AND STS != 'D'
+               )  AS ATT_COUNT
+        FROM MODL_ATHF_MGR MDAT
+        WHERE MDAT.TEN_ID = #{g.tenant}
+          AND MDAT.MODL_ATHF_GRP_CD = #{p.modl_athf_grp_cd}
+    </select>
+</mapper>

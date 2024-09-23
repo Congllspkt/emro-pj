@@ -1,0 +1,206 @@
+<dom-module id="es-csr-receipt-list">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+
+        .filterBar {
+            margin: 5px 0 -22px 0;
+            width: max-content;
+            z-index: 1;
+        }
+        .filter_type {
+            font-size: 12px;
+            line-height: 17px;
+            display: inline-block;
+            height: 30px;
+            padding : 6px 13px;
+            border: 1px solid rgba(0,0,0,0.12);
+            border-radius: 30px;
+            cursor: pointer;
+            background-color: transparent;
+        }
+
+        .filter_type:not(:first-of-type) {
+            margin-left: 6px;
+        }
+
+        .filter_type[aria-pressed='true'] {
+            padding-left: 11px;
+            padding-right: 12px;
+            color: #358cf3;
+            border-color: rgba(82,163,223,0.02);
+            background-color: rgba(82,163,223,0.13);
+            font : normal normal bold 12px FontAwesome;
+        }
+
+        .filter_type[aria-pressed='true']::before {
+            content : "\f00c";
+            margin-right: 4px;
+        }
+
+
+    </style>
+
+    <template>
+        <sc-code-group id="codes" init>
+            <sc-code code="C057" value="{{codes.csrTyp}}"></sc-code> <!--csr 요청유형 -->
+            <sc-code code="C055" value="{{codes.csrProgSts}}"></sc-code> <!--csr 진행상태 -->
+        </sc-code-group>
+
+        <sc-ajax id="findListCSRReceipt"
+                 url="findListCSRReceipt.do"
+                 body="{{searchParam}}"
+                 last-response="{{csrList}}">
+        </sc-ajax>
+
+        <cc-page-title-bar></cc-page-title-bar>
+
+        <cc-search-condition-panel on-search="onFindListCSRReceipt"  validation-group="search" search-condition-cls="label-row" auth-r>
+            <cc-fieldset>
+                <sc-label text="요청 일자"></sc-label>
+                <sc-period-date-field from-value="{{searchParam.req_fdate}}" to-value="{{searchParam.req_tdate}}"
+                                      default-from-value="-1M" default-to-value="0d">
+                </sc-period-date-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="진행 상태"></sc-label>
+                <sc-multi-combobox-field display-field="label" value-field="data" items="{{codes.csrProgSts}}" value="{{searchParam.csr_sts_ccd}}" placeholder="선택"></sc-multi-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="CSR 유형"></sc-label>
+                <sc-multi-combobox-field display-field="label" value-field="data" items="{{codes.csrTyp}}" value="{{searchParam.csr_typ_ccd}}" placeholder="선택"></sc-multi-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="CSR 제목"></sc-label>
+                <sc-text-field value="{{searchParam.csr_tit}}" max-length="100" on-enter="onFindListCSRReceipt"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="CSR 번호"></sc-label>
+                <sc-text-field value="{{searchParam.csr_no}}"  max-length="100" on-enter="onFindListCSRReceipt" ></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="요청자"></sc-label>
+                <cc-user-search value="{{searchParam.req_nm}}" result-field="usr_id" result-value="{{searchParam.reqr_id}}" ></cc-user-search>
+            </cc-fieldset>
+        </cc-search-condition-panel>
+
+        <div class="filterBar">
+            <button type="button" class="filter_type" aria-pressed="false" on-click="handleFilterClick" data-type="standbyForReception">[[translate('접수 대기')]]</button>
+            <button type="button" class="filter_type" aria-pressed="false" on-click="handleFilterClick" data-type="myReception">[[translate('나의 CSR')]]</button>
+        </div>
+
+
+        <sc-grid id="gridPanel" class="flex" use-selection="false" data-provider="{{csrList}}" on-item-click="onItemClick" >
+            <cc-grid-toolbar></cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="csr_no" header-text="CSR 번호" width="120" text-align="center" style-name="link"></sc-data-column>
+                <sc-combobox-column data-field="csr_sts_ccd" header-text="상태" width="140" text-align="center" items="{{codes.csrProgSts}}" display-field="label" value-field="data"></sc-combobox-column>
+                <sc-combobox-column data-field="csr_typ_ccd" header-text="CSR 유형" width="100" text-align="center" items="{{codes.csrTyp}}" display-field="label" value-field="data"></sc-combobox-column>
+                <sc-data-column data-field="csr_tit" header-text="CSR 제목" width="250" text-align="left"></sc-data-column>
+                <sc-data-column data-field="disp_req_nm" header-text="요청자" width="120" text-align="center"></sc-data-column>
+                <sc-date-column data-field="req_dttm" header-text="요청 일자" width="120" text-align="center" ></sc-date-column>
+                <sc-date-column data-field="csr_prcsg_dsd_dttm" header-text="처리 희망 일자" width="120" text-align="center" ></sc-date-column>
+                <sc-data-column data-field="disp_chr_nm" header-text="처리 담당자" width="120" text-align="center"></sc-data-column>
+                <sc-date-column data-field="csr_prcsg_dttm" header-text="최종 처리 일자" width="120" text-align="center" ></sc-date-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="req_nm"></sc-grid-field>
+                <sc-grid-field data-field="chr_nm"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-csr-receipt-list',
+            properties:{
+                codes : {
+                    type : Object,
+                    reset: false,
+                    value : function(){
+                        return{
+                            csrTyp : [],
+                            csrProgSts : []
+                        };
+                    }
+                },
+
+                //조회 조건
+                searchParam : {
+                    type : Object,
+                    value : function(){
+                        return {
+                        };
+                    }
+                },
+
+                // csr 목록
+                csrList: {
+                    type: Array,
+                    value : function() {
+                        return[];
+                    }
+                }
+            },
+
+            // 접수 목록 조회
+            onFindListCSRReceipt: function(){
+                var me = this;
+
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.request(me.$.findListCSRReceipt);
+            },
+
+            get filterButtons() {
+                if(!this._filterButtons){
+                    this._filterButtons = this.querySelectorAll('button.filter_type');
+                }
+                return this._filterButtons;
+            },
+
+            handleFilterClick: function(e) {
+                var me = this, el = e.target,
+                    pressed = el.getAttribute("aria-pressed") == "true";
+                e.target.setAttribute("aria-pressed", pressed ? "false" : "true");
+
+                var pressedButton = Array.prototype.slice.call(this.filterButtons).filter(function(item) {
+                    return item.getAttribute("aria-pressed") == "true";
+                });
+
+                var csrProgSts = [],
+                    chrId = "";
+
+                for(var i=0, len=pressedButton.length; i<len; i++){
+                    if(pressedButton[i].dataset.type === "standbyForReception"){
+                        csrProgSts.push('RCPT_WTG','PRCSG_CMPLD');
+                        continue;
+                    }
+                    if(pressedButton[i].dataset.type === "myReception"){
+                        chrId = SCSessionManager.getCurrentUser().usr_id;
+                        continue;
+                    }
+                }
+                me.set("searchParam.csr_sts_ccd", csrProgSts);
+                me.set("searchParam.pic_id", chrId);
+
+                me.onFindListCSRReceipt();
+            },
+
+            onItemClick: function(e) {
+                var me = this,
+                    detail = e.detail,
+                    data = detail.data,
+                    item = detail.item;
+
+                if (item.dataField == "csr_no") {
+                    me.fire("show-detail", data);
+                }
+            }
+        });
+    </script>
+</dom-module>

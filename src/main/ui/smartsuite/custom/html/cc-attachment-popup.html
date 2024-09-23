@@ -1,0 +1,152 @@
+<dom-module id="cc-attachment-popup">
+    <style>
+    	:host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+		 <cc-sub-title-bar>
+	            <sc-button text="저장" on-click="onSave" hidden$="[[!options.editable]]"></sc-button>
+	            <sc-button text="닫기" on-click="onClose"></sc-button>
+	        </cc-sub-title-bar>
+			<sc-upload
+				id="upload"
+				style="height:224px;"
+				value="{{grpCd}}"
+                editable="[[options.editable]]"
+                max-total-file-count="{{options.maxTotalFileCount}}"
+                max-total-file-size="{{options.maxTotalFileSize}}"
+                extension="{{options.allowExtension}}"
+				on-upload-completed="_onUploadCompleted" 
+				on-upload-error="_onUploadError">
+			</sc-upload>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-attachment-popup",
+            properties: {
+                grpCd: {
+                    type: String,
+                    value: ""
+                },
+                itemIndex : {
+                    type : Number
+                },
+                fieldName : {
+                    type: String,
+                    value: ""
+                },
+                options: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            editable: true,
+                            maxTotalFileCount: 100,
+                            maxTotalFileSize: "100MB",
+                            //현재 모든파일첨부가능하도록 설정됨.
+                            //allowExtension: 'png, jpg, gif',
+                            showMoveButtons: false,
+                            imageOnly: false
+                        }
+                    }
+                },
+                titleText: {
+                	type: String,
+                	value: function() {
+                		return this.translate("첨부파일");
+                	}
+                }
+            },
+            
+            // 화면 생성 완료
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                    this.$.upload.headable = false;
+                }
+            },
+
+            // 기본 파라미터 설정
+            setParam: function(param, first) {
+                var me = this;
+                param = param || {};
+                if(me.options && UT.isBoolean(me.options.editable)) {
+                	param.editable = me.editable;	
+                }
+                
+                if(!first) {
+                	me.resetProperties();
+                    me.$.upload.reset();	
+                }
+                
+
+                if(!this.isAttached) {
+                	this.async(this.setParam.bind(this, param, true), 100);
+                	return;
+                }
+                
+                me.set("grpCd", param.grpCd);
+                me.set("itemIndex", param.itemIndex);
+                me.set("fieldName", param.fieldName);
+                me.set("options.editable", param.editable);
+            },
+            
+            // 업로더 옵션 설정
+            setUploadOptions: function(options) {
+                var me = this;
+                options = options || {};
+                if (UT.isBoolean(options.editable)) {
+                    me.set("options.editable", options.editable);
+                    me.editable = options.editable;
+                }
+                if (UT.isNumber(options.maxTotalFileCount)) {
+                    me.set("options.maxTotalFileCount", options.maxTotalFileCount);
+                }
+                if (UT.isString(options.maxTotalFileSize)) {
+                    me.set("options.maxTotalFileSize", options.maxTotalFileSize);
+                }
+                if (UT.isBoolean(options.showMoveButtons)) {
+                    me.set("options.showMoveButtons", options.showMoveButtons);
+                }
+                if (UT.isString(options.allowExtension)) {
+                    me.set("options.allowExtension", options.allowExtension);
+                }
+                if (UT.isBoolean(options.imageOnly)) {
+                    me.set("options.imageOnly", options.imageOnly);
+                }
+            },
+            
+            // 저장
+            onSave: function() {
+				var me = this;
+                me.$.upload.upload();
+            },
+
+            // 닫기
+            onClose: function() {
+                var me = this;
+                me.fire("close");
+            },
+            
+            _onUploadCompleted : function(e) {        
+                var me = this;
+                me.fire("saved-attach", { 
+                     file_count: this.$.upload.totalFileCount,
+                     itemIndex : this.itemIndex,
+                     fieldName : this.fieldName,
+                     grpCd: this.grpCd
+                });
+             },
+             
+             _onUploadError : function(e) {
+            	 
+             }
+             
+            
+        });
+    </script>
+
+</dom-module>

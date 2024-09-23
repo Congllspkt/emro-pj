@@ -1,0 +1,1982 @@
+<sc-link rel="import" href="ep-aprvline.html"></sc-link>
+<sc-link rel="import" href="../approval/arbitrary/es-arbitrary-apply.html"></sc-link>
+<sc-link rel="import" href="ep-approver-selector.html"></sc-link>
+
+<dom-module id="ep-approval">
+	
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		
+		<!-- 상세정보 조회 -->
+		<sc-ajax id="findInfo" url="findApprovalInfo.do" on-response="completeFindInfo"></sc-ajax>
+		<!-- 임시 저장 -->
+		<sc-ajax id="saveDraft" url="saveDraftApproval.do" on-response="completeSaveInfo"></sc-ajax>
+		<!-- 결재 상신 -->
+		<sc-ajax id="saveSubmit" url="saveSubmitApproval.do" on-response="completeSaveInfo"></sc-ajax>
+		<!-- 결재 재상신 -->
+		<sc-ajax id="resubmit" url="reSubmitApproval.do" on-response="completeReSubmit"></sc-ajax>
+		<!-- 상신 취소 -->
+		<sc-ajax id="saveCancel" url="saveCancelApproval.do" on-response="completeCancelInfo"></sc-ajax>
+		<!-- 승인, 반려 -->
+		<sc-ajax id="saveResult" url="saveResultApproval.do" on-response="completeSaveInfo"></sc-ajax>
+		<!-- 결재 삭제 -->
+		<sc-ajax id="deleteInfo" url="deleteApproval.do" on-response="completeDeleteInfo"></sc-ajax>
+		<!-- 결재선 변경 저장 -->
+		<sc-ajax id="saveApprovalLine" url="saveApprovalLine.do" on-response="completeSaveAprvLine"></sc-ajax>
+		<!-- 결재선 조회 -->
+		<sc-ajax id="findListApprovalLineProcess" url="findListApprovalLineProcess.do" body="{{findInfo.param}}" last-response="{{aprvLineList}}"></sc-ajax>
+		<!-- 의견저장(수신자전용) -->
+		<sc-ajax id="saveOpinion" url="saveOpinionApproval.do" on-response="completeSaveInfo"></sc-ajax>
+		<!-- 결재자 정보 디스플레이 용 변경 -->
+		<sc-ajax id="convertDisplayApprover" url="convertDisplayApprover.do" on-response="completeConvertDisplayApprover"></sc-ajax>
+		
+		<sc-request-group init>
+			<sc-ajax url="findListCommonCodeAttributeCode.do" body="{{codes.twoStepAprvTypCd.param}}" last-response="{{codes.twoStepAprvTypCd.result}}">
+			</sc-ajax>
+			<!-- 코드 -->
+			<sc-code-group id="codes">
+				<sc-code code="G001" value="{{codes.aprvRstCd}}"></sc-code> <!-- 결재결과코드 -->
+				<sc-code code="G002" value="{{codes.aprvStsCd}}"></sc-code> <!-- 결재상태코드 -->
+				<sc-code code="G003" value="{{codes.aprvTypCd}}"></sc-code> <!-- 결재 유형 코드 -->
+				<sc-code code="G005" value="{{codes.aprvEmpTypeCd}}"></sc-code> <!-- 결재자종류코드 -->
+				<sc-code code="C005" value="{{codes.posCd}}"></sc-code> <!-- 직위코드 -->
+				<sc-code code="G011" value="{{codes.seqParlTyps}}"></sc-code> <!-- 순차/병렬그룹코드 -->
+			</sc-code-group>
+		</sc-request-group>
+		
+		<cc-auth-checker check-list="auth-a"></cc-auth-checker>
+		
+		<cc-page-title-bar>
+			<sc-button text="출력" on-click="onPrint" auth-r hidden="[[formula('saveDraftBtn')]]"></sc-button>
+			<sc-button text="결재선" on-click="onShowAppoverSelector" auth-a hidden="[[!formula('approverSelectBtn')]]"></sc-button>
+			<sc-button text="저장" on-click="onSaveDraft" auth-a hidden="[[!formula('saveDraftBtn')]]"></sc-button>
+			<sc-button text="결재 상신" on-click="onSaveSubmit" auth-a hidden="[[!formula('saveSubmitBtn')]]"></sc-button>
+			<sc-button text="상신 취소" on-click="onSaveCancel" auth-a hidden="[[!formula('saveCancelBtn')]]"></sc-button>
+			<sc-button text="결재 수정" on-click="onRetry" auth-a hidden="[[!formula('retryBtn')]]"></sc-button>
+			<sc-button text="삭제" on-click="onDelete" auth-a hidden="[[!formula('deleteBtn')]]"></sc-button>
+			<sc-button text="[[formula('approveBtnLabel')]]" on-click="onApprove" auth-a hidden="[[!formula('approveBtn')]]"></sc-button>
+			<sc-button text="반려" on-click="onReject" auth-a hidden="[[!formula('rejectBtn')]]"></sc-button>
+			<sc-button text="의견 저장" on-click="onOpinion" auth-a hidden="[[!formula('opinionBtn')]]"></sc-button>
+		</cc-page-title-bar>
+		
+		<div class="flex">
+			
+			<!--<table class="tb-form" hidden="[[!formula('editable')]]">
+				<colgroup>
+					<col style="width:250px"></col>
+					<col></col>
+					<col style="width:150px"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>
+						<sc-radio-group-field class="w-250" name="aprvEmpTypeItems" display-field="label" value-field="data"
+											  items="{{codes.aprvEmpTypeItemsRadio}}" value="{{checkedAprvEmpTypeItem}}">
+						</sc-radio-group-field>
+					</th>
+					<td colspan="3">
+						<cc-user-search class="w-200" id="userSearch" placeholder="결재자명" on-result="onFindListUser" label-disabled="true" no-close="true" result-hidden="true"></cc-user-search>
+					</td>
+				</tr>
+			</table>
+
+			<sc-grid id="gridPanel" class="h-200"
+					 editable="[[formula('editable')]]"
+					 use-state="false" sortable="false" use-context-menu="false" show-tooltip="true"
+					 use-selection="[[formula('editable')]]" selection-able-function="gridSelectionAble"
+					 data-provider="{{aprvLineList}}"
+					 row-resizable="true"
+					 fit-row-height="true">
+				<cc-grid-toolbar title-text="결재자">
+					<sc-button text="삭제"   on-click="onDeleteListUser" hidden="[[!formula('editable')]]" auth-a></sc-button>
+					<sc-button text="위로"   on-click="onUpListUser"     hidden="[[!formula('editable')]]" auth-a></sc-button>
+					<sc-button text="아래로" on-click="onDownListUser"   hidden="[[!formula('editable')]]" auth-a></sc-button>
+					<sc-button text="결재선" on-click="onShowAppoverSelector" hidden="[[!formula('editable')]]" auth-a></sc-button>
+					<sc-button text="결재선선택" on-click="onShowAprvLineMasterPopup"  hidden="[[!formula('isEditableAprvLineSelect')]]" auth-a></sc-button>
+					<sc-button text="결재선저장" on-click="onSaveAprvLine"  hidden="[[!formula('isEditableAprvLine')]]" auth-a></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-combobox-column data-field="aprvemp_base"   visible="false" items="{{codes.aprvEmpTypeItemsMaster}}" converter="onAprvTypeCdConverter"
+										display-field="label" value-field="data"></sc-combobox-column>
+					<sc-combobox-column data-field="apvr_typ_ccd" header-text="결재자종류" width="80"  items="{{codes.aprvEmpTypeItemsSub}}" editable="false" mergeable="true" merge-callback="onMerge"
+										display-field="label" value-field="data" relation-field="aprvemp_base"></sc-combobox-column>
+					<sc-combobox-column data-field="seq_parll_typ_ccd" header-text="순차/병렬" width="80"  items="{{codes.seqParlTyps}}" editable="false"
+										display-field="label" value-field="data"></sc-combobox-column>
+										
+					<sc-group-column orientation="vertical" display-header="false"  width="670" >
+						<sc-group-column display-header="false" text-align="center" width="670" >
+							<sc-data-column data-field="aprv_nm" header-text="결재자 정보"   width="400" text-align="left"></sc-data-column>
+&lt;!&ndash;                             <sc-data-column data-field="apvr_jobtit_nm"  header-text="직위"    width="100" ></sc-data-column> &ndash;&gt;
+&lt;!&ndash;                             <sc-data-column data-field="apvr_dept_nm" header-text="부서"    width="200" ></sc-data-column> &ndash;&gt;
+							<sc-combobox-column data-field="apvlln_apvl_res_ccd" header-text="결재상태"  width="100" items="{{codes.aprvRstCd}}" visible="[[formula('visible')]]"
+												display-field="label" value-field="data"></sc-combobox-column>
+							<sc-date-column data-field="apvl_dttm"    header-text="결재일자"  width="100" visible="[[formula('visible')]]"></sc-date-column>
+							<sc-data-column data-field="apvlln_sort"   header-text="순서"    width="50"  ></sc-data-column>
+						</sc-group-column>
+						<sc-data-column data-field="apvl_opn"   header-text="결재자의견" width="670" text-align="left" visible="[[formula('visible')]]"
+										use-multi-line="true"></sc-data-column>
+					</sc-group-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field  data-field="apvl_uuid"        ></sc-grid-field>
+					<sc-grid-field  data-field="apvlln_uuid"      ></sc-grid-field>
+					<sc-grid-field  data-field="usr_id"         ></sc-grid-field>
+					<sc-grid-field  data-field="apvlln_typ_ccd"   ></sc-grid-field>
+					<sc-grid-field  data-field="last_apvr_yn"        ></sc-grid-field>
+					<sc-grid-field  data-field="curr_apvr_yn"></sc-grid-field>
+					<sc-grid-field  data-field="arbitrary_yn"></sc-grid-field>
+					<sc-grid-field  data-field="apvlln_mod_poss_yn"></sc-grid-field>
+					<sc-grid-field  data-field="jobtit_ccd"></sc-grid-field>
+					<sc-grid-field  data-field="dpty_aprv_yn"></sc-grid-field>
+					<sc-grid-field  data-field="apvr_id"></sc-grid-field>
+					<sc-grid-field  data-field="dpty_apvr_id"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>-->
+			
+			<!--<sc-splitter split-type="horizontal"></sc-splitter>-->
+			
+			<table class="tb-form" style="margin-bottom: 5px;">
+				<colgroup>
+					<col style="width:120px"></col>
+					<col></col>
+					<col style="width:120px"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>
+						<sc-label text="부서"></sc-label>
+					</th>
+					<td colspan="3">
+						<sc-text-field value="{{dispApprover.drafter.apvr_dept_nm}}" readonly="true"></sc-text-field>
+					</td>
+				</tr>
+			</table>
+			
+			<table class="tb-form">
+				<colgroup>
+					<col></col>
+					<col></col>
+					<col></col>
+					<col></col>
+					<col></col>
+					<col></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th style="text-align: center;">
+						<sc-label text="기안"></sc-label>
+					</th>
+					<th colspan="5" style="text-align: center;">
+						<sc-label text="중간결재"></sc-label>
+					</th>
+					<th style="text-align: center;">
+						<sc-label text="최종 결재"></sc-label>
+					</th>
+				</tr>
+				<tr>
+					<td style="text-align: center;">[[dispApprover.drafter.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver1.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver2.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver3.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver4.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver5.apvr_jobtit_nm]]</td>
+					<td style="text-align: center;">[[dispApprover.lastApprover.apvr_jobtit_nm]]</td>
+				</tr>
+				<tr style="height: 60px;">
+					<td style="text-align: center;">[[dispApprover.drafter.usr_nm]]
+						<div>[[dispApprover.drafter.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.drafter.apvl_opn)]]" data-args="drafter" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver1.usr_nm]]
+						<div>[[dispApprover.approver.approver1.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.approver.approver1.apvl_opn)]]" data-args="approver.approver1" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver2.usr_nm]]
+						<div>[[dispApprover.approver.approver2.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.approver.approver2.apvl_opn)]]" data-args="approver.approver2" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver3.usr_nm]]
+						<div>[[dispApprover.approver.approver3.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.approver.approver3.apvl_opn)]]" data-args="approver.approver3" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver4.usr_nm]]
+						<div>[[dispApprover.approver.approver4.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.approver.approver4.apvl_opn)]]" data-args="approver.approver4" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.approver.approver5.usr_nm]]
+						<div>[[dispApprover.approver.approver5.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.approver.approver5.apvl_opn)]]" data-args="approver.approver5" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+					<td style="text-align: center;">[[dispApprover.lastApprover.usr_nm]]
+						<div>[[dispApprover.lastApprover.apvlln_apvl_res_ccd_nm]]</div>
+						<sc-button hidden="[[!existOpn(dispApprover.lastApprover.apvl_opn)]]" data-args="lastApprover" on-click="showApprovalOpinion" text="의견 보기"></sc-button>
+					</td>
+				</tr>
+				<tr>
+					<td style="text-align: center;">[[parseDate(dispApprover.drafter.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.approver.approver1.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.approver.approver2.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.approver.approver3.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.approver.approver4.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.approver.approver5.apvl_dttm)]]</td>
+					<td style="text-align: center;">[[parseDate(dispApprover.lastApprover.apvl_dttm)]]</td>
+				</tr>
+			</table>
+			
+			<table class="tb-form" style="margin-top: 5px;" hidden="[[!formula('isExistAgreement')]]">
+				<colgroup>
+					<col style="width: 200px;"></col>
+					<col style="width: 350px;"></col>
+					<col style="width: 150px;"></col>
+					<col></col>
+				</colgroup>
+				<template is="dom-repeat" items="{{dispApprover.agreementer}}" as="agreement">
+					<tr>
+						<th>[[[agreement.up_usr_nm]]] [[agreement.description]]</th>
+						<td>[[agreement.apvr_dept_nm]] [[agreement.usr_nm]]</td>
+						<td>[[parseDate(agreement.apvl_dttm)]]</td>
+						<td>[[agreement.apvl_opn]]</td>
+					</tr>
+				</template>
+			</table>
+			
+			<table class="tb-form" style="margin-top: 5px;" hidden="[[!formula('isExistAprvLineCcList')]]">
+				<colgroup>
+					<col style="width: 200px;"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>[[translate('열람')]]</th>
+					<td>[[translate('하단 참조')]]</td>
+				</tr>
+			</table>
+			
+			<sc-panel title-text="결재 내용" collapsible="true">
+				<table class="tb-form">
+					<colgroup>
+						<col style="width:120px"></col>
+						<col></col>
+						<col style="width:120px"></col>
+						<col></col>
+					</colgroup>
+					<tr>
+						<th>
+							<sc-label text="결재 유형"></sc-label>
+						</th>
+						<td>
+							<sc-combobox-field value="{{approvalMaster.apvl_typ_ccd}}" items="{{codes.aprvTypCd}}" display-field="label" value-field="data"
+											   readonly="true">
+							</sc-combobox-field>
+						</td>
+						<th>
+							<sc-label text="결재 상태"></sc-label>
+						</th>
+						<td>
+							<sc-combobox-field value="{{approvalMaster.apvl_sts_ccd}}" items="{{codes.aprvStsCd}}" display-field="label" value-field="data"
+											   readonly="true">
+							</sc-combobox-field>
+						</td>
+					</tr>
+					<tr>
+						<th>
+							<sc-label text="결재 번호/차수"></sc-label>
+						</th>
+						<td colspan="3">
+							<sc-text-field value="{{approvalMaster.apvl_docno}}" class="w-150" readonly="true"></sc-text-field>
+							/
+							<sc-text-field value="{{approvalMaster.apvl_revno}}" class="w-50" readonly="true"></sc-text-field>
+						</td>
+					</tr>
+					<tr>
+						<th>
+							<sc-label text="결재 제목"></sc-label>
+						</th>
+						<td colspan="3">
+							<sc-text-field value="{{approvalMaster.apvl_tit}}" readonly="[[!formula('editable')]]" required="true" max-length="200" validation-group="approvalMaster"></sc-text-field>
+						</td>
+					</tr>
+					<tr hidden="[[!formula('currentOpn')]]">
+						<th>
+							<sc-label text="{{opinionTitle}}" i18n-disabled></sc-label>
+						</th>
+						<td colspan="3">
+							<sc-textarea-field id="aprvOpn" value="{{approvalMaster.apvl_opn}}" max-length="200" validation-group="aprvOpn" validator-type="required_whitespace"></sc-textarea-field>
+						</td>
+					</tr>
+					<tr>
+						<th colspan="4">
+							<sc-label text="결재 내용"></sc-label>
+						</th>
+					</tr>
+					<tr>
+						<td colspan="4">
+							<!-- <sc-textarea-field value="{{approvalDoc.apvl_body_cont}}" readonly="[[!formula('editable')]]" style="height:200px;"></sc-textarea-field> -->
+							<sc-editor id="appDoc" value="{{approvalDoc.apvl_body_cont}}" editable="false" auto-grow="true"></sc-editor>
+						</td>
+					</tr>
+				</table>
+			</sc-panel>
+			
+			<sc-panel title-text="결재 추가 내용" collapsible="true" class="flex">
+				<sc-editor id="editor" class="h-400" value="{{approvalDoc.usr_add_cont}}" editable="[[formula('saveSubmitBtn')]]"></sc-editor>
+			</sc-panel>
+			
+			<sc-panel title-text="첨부파일" collapsible="true" class="flex">
+				<sc-upload id="upload" class="h-200" value="{{approvalMaster.athg_uuid}}" editable="[[formula('saveSubmitBtn')]]"></sc-upload>
+			</sc-panel>
+			
+			<table class="tb-form" style="margin-top: 5px;" hidden="[[!formula('isExistReceiptList')]]">
+				<colgroup>
+					<col style="width: 200px;"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>[[translate('결재 후 열람')]]</th>
+					<td>
+						<template is="dom-repeat" items="{{dispApprover.receiptList}}" as="cc">
+							{{cc.usr_dept_nm}} {{cc.usr_nm}}{{cc.separator}}
+						</template>
+					</td>
+				</tr>
+			</table>
+			
+			<table class="tb-form" style="margin-top: 5px;" hidden="[[!formula('isExistReferenceList')]]">
+				<colgroup>
+					<col style="width: 200px;"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>[[translate('즉시 열람')]]</th>
+					<td>
+						<template is="dom-repeat" items="{{dispApprover.referenceList}}" as="cc">
+							{{cc.usr_dept_nm}} {{cc.usr_nm}}{{cc.separator}}
+						</template>
+					</td>
+				</tr>
+			</table>
+		</div>
+		
+		 <es-arbitrary-apply id="arbitrary" on-arbitrary-started="arbitraryStarted">
+		 </es-arbitrary-apply>
+		
+		<sc-dialog id="dialog_opinion" title-text="의견" title-align="left" style="width:500px;height:250px" modal="true">
+			<sc-textarea-field id="dialog_opinion_text" style="height: 100%;" value="" readonly="true"></sc-textarea-field>
+		</sc-dialog>
+	
+	</template>
+	
+	<script>
+		Polymer({
+			is: "ep-approval",
+			properties: {
+				approvalMaster: {
+					type: Object,
+					value: function() {
+						return {}
+					}
+				},
+				approvalDoc: {
+					type: Object,
+					value: function() {
+						return {}
+					}
+				},
+				deleteApprovalLines: {
+					type: Array,
+					value: function() {
+						return []
+					}
+				},
+				findInfo: {
+					type: Object,
+					value: function() {
+						return {
+							param: {}
+						}
+					}
+				},
+				codes: {
+					type: Object,
+					value: function() {
+						return {
+							aprvRstCd: [],
+							aprvStsCd: [],
+							aprvTypCd: [],
+							twoStepAprvTypCd: {
+								param: {
+									ccd: "G003",
+									cstr_cnd_cd: "TWOSTEP_YN",
+									cstr_cnd_val: "Y"
+								},
+								result: []
+							},
+							aprvEmpTypeCd: [],
+							posCd: [],
+							seqParlTyps: [],
+							aprvEmpTypeItemsRadio: [],
+							aprvEmpTypeItemsSub: [],
+							aprvEmpTypeItemsMaster: []
+						};
+					},
+					reset: false
+				},
+				checkedAprvEmpTypeItem: {
+					type: String,
+					value: function() {
+						return "APVL"; // 결재
+					}
+				},
+				aprvLineProperties: {
+					type: Object,
+					value: function() {
+						return {
+							limitApprover: {
+								oneStep: 5, // 일반 결재인 경우 결재자 5명 제한
+								twoStep: 2, // 2단계 결재인 경우 결재자, 2단계 결재자 라인 2명씩 제한
+							}
+						};
+					}
+				},
+				aprvLineList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+				isChangeAprvLine: {
+					type: Boolean,
+					value: function() {
+						return false;
+					}
+				},
+				originAprvLineCcList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+				changeAprvLineCcInfo: {
+					type: Object,
+					value: function() {
+						return {
+							insertAprvLineCcList: [],
+							updateAprvLineCcList: [],
+							removeAprvLineCcList: []
+						}
+					}
+				},
+				aprvLineCcList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+				dispApprover: {
+					type: Object,
+					value: function() {
+						return {
+							drafter: {},
+							approver: {},
+							lastApprover: {},
+							agreementer: [],
+							receiptList: [],
+							referenceList: []
+						};
+					}
+				},
+				isViewMode: {
+					type: Boolean,
+					value: false
+				},
+				opinionTitle: {
+					type: String,
+					value: ""
+				},
+				requestType: {
+					type: String,
+					value: function() {
+						return "";
+					}
+				},
+				
+				// 결재선 변경 가능 여부 ( 사용 : true )
+				editableAprvLine: {
+					type: Object,
+					value: function() {
+						return true;
+					}
+				},
+				currentUsrInfo: {
+					type: Object,
+					value: function() {
+						return SCSessionManager.currentUser;
+					}
+				}
+			},
+			
+			formulas: {
+				// 기안자 여부
+				aprvempTypeS: function() {
+					var me           = this,
+						aprvLineList = me.aprvLineList;
+					
+					for(var i = 0; i < aprvLineList.length; i++) {
+						if(aprvLineList[i].apvr_typ_ccd === "DFT") { // 기안자
+							return (aprvLineList[i].usr_id === me.currentUsrInfo.usr_id);
+						}
+					}
+				},
+				// 현재 결재자
+				crntAprvempInfo: function() {
+					var me           = this,
+						aprvLineList = me.aprvLineList;
+					
+					var currLineList = aprvLineList.filter(function(item) {
+						if(item.curr_apvr_yn === "Y" &&
+								(item.usr_id === me.currentUsrInfo.usr_id ||
+										item.dpty_apvr_id === me.currentUsrInfo.usr_id)) {
+							return true;
+						}
+					});
+					
+					return currLineList.length === 1 ? currLineList[0] : null;
+				},
+				// 현재 결재자
+				crntAprvemp: function() {
+					return this.formula('crntAprvempInfo') !== null;
+				},
+				// 합의자인지 판단
+				isCrntAgreeemp: function() {
+					var crntAprvempInfo = this.formula('crntAprvempInfo');
+					var agreementCds = ["AG", "PARLL_AG"];
+					return crntAprvempInfo !== null && agreementCds.indexOf(crntAprvempInfo.apvr_typ_ccd) > 0;
+				},
+				// 승인안한 병렬합의자
+				aprvempTypeP: function() {
+					var me                   = this,
+						isCurrentAprvEmpTypP = false,
+						aprvLineList         = me.aprvLineList;
+					
+					for(var i = 0; i < aprvLineList.length; i++) {
+						if(aprvLineList[i].apvr_typ_ccd === "PARLL_AG" && aprvLineList[i].apvlln_apvl_res_ccd === "WTG") {
+							isCurrentAprvEmpTypP = (aprvLineList[i].usr_id === me.currentUsrInfo.usr_id);
+						}
+					}
+					return isCurrentAprvEmpTypP;
+				},
+				// 수신자 여부
+				aprvempTypeR: function() {
+					var me           = this,
+						aprvLineList = me.aprvLineList;
+					
+					for(var i = 0; i < aprvLineList.length; i++) {
+						if(aprvLineList[i].apvr_typ_ccd === "REF") {
+							return (aprvLineList[i].usr_id === me.currentUsrInfo.usr_id);
+						}
+					}
+					return false;
+				},
+				// 기안자를 제외한 결재(승인/반려 등)가 진행되었는지.
+				started: function() {
+					var me           = this,
+						aprvLineList = me.aprvLineList;
+					for(var i = 0; i < aprvLineList.length; i++) {
+						if(aprvLineList[i].apvr_typ_ccd !== "DFT" && aprvLineList[i].apvlln_apvl_res_ccd !== "WTG") { //기안자가 아니면서 결재상태가 미처리가 아닌 경우 -> 결재 진행됨
+							return true;
+						}
+					}
+					
+					return false;
+				},
+				visible: function() {
+					return (this.approvalMaster.apvl_sts_ccd !== "CRNG");
+				},
+				editable: function() {
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "CRNG" && this.formula('aprvempTypeS') === true || this.formula('isEditableAprvLine'));
+				},
+				//결재선 선택, 결재선 선택시 결재 라인 전체가 변경됨으로 기안자만 결재선 선택가능
+				isEditableAprvLineSelect: function() {
+					return (this.formula('editable') && this.formula('aprvempTypeS') === true);
+				},
+				// 결재선 변경 가능 여부 ( 결재 상태 : 진행 중  and 현재 결재자 )
+				isEditableAprvLine: function() {
+					return this.editableAprvLine && (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "PRGSG" && this.formula('crntAprvemp') === true && !this.formula('subAprvYn'));
+				},
+				// 결재 의견
+				currentOpn: function() {
+					var aprvStsCd    = this.approvalMaster.apvl_sts_ccd,
+						aprvempTypeS = this.formula('aprvempTypeS'),
+						aprvempTypeR = this.formula('aprvempTypeR'),
+						aprvempTypeP = this.formula('aprvempTypeP'),
+						crntAprvemp  = this.formula('crntAprvemp');
+					// 작성중(T), 기안자 or 진행중(P), 현재결재자
+					return ((aprvStsCd === "CRNG" && aprvempTypeS === true) || (aprvStsCd === "PRGSG" && (crntAprvemp === true || aprvempTypeP === true)) || ((aprvStsCd === "PRGSG" && aprvempTypeR === true)));
+				},
+				// 결재선 변경의 경우 상신자 및 결재자만 가능 (합의자 제외)
+				approverSelectBtn: function() {
+					return (this.formula('saveDraftBtn') || this.formula('approveBtn')) && !this.formula('isCrntAgreeemp');
+				},
+				// 결재선 관련 툴바, 임시저장버튼, 결재상신 버튼, 입력항목, 그리드
+				saveDraftBtn: function() {
+					// 조회모드아님, 작성중(T), 기안자
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "CRNG" && this.formula('aprvempTypeS') === true);
+				},
+				// 결재선 관련 툴바, 임시저장버튼, 결재상신 버튼, 입력항목, 그리드
+				saveSubmitBtn: function() {
+					// 조회모드아님, 작성중(T), 기안자
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "CRNG" && this.formula('aprvempTypeS') === true);
+				},
+				// 상신취소 버튼
+				saveCancelBtn: function() {
+					// 진행중(P), 기안자, 결재가 진행되지않았음.
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "PRGSG" && this.formula('aprvempTypeS') === true && this.formula('started') === false);
+				},
+				// 재상신 버튼
+				retryBtn: function() {
+					var aprvRev    = this.approvalMaster.apvl_revno, // 차수
+						maxAprvRev = this.approvalMaster.max_aprv_rev; // 마지막차수
+					// 반려(RET), 업무 화면에서 띄운 경우, 기안자, 마지막차수
+					return (this.isViewMode === false && UT.isNotEmpty(this.get("findInfo.param.task_uuid")) && this.approvalMaster.apvl_sts_ccd === "RET" && this.formula('aprvempTypeS') === true && parseInt(maxAprvRev, 10) === parseInt(aprvRev, 10));
+				},
+				// 삭제버튼
+				deleteBtn: function() {
+					// 작성중(T), 기안자, 결재아이디가 있음.
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "CRNG" && this.formula('aprvempTypeS') === true && !UT.isEmpty(this.approvalMaster.apvl_uuid));
+				},
+				// 승인버튼, 반려버튼
+				approveBtn: function() {
+					// 진행중(P), 결과처리중(P)아님, 현재결재자
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "PRGSG" && this.approvalMaster.apvl_res_ccd !== "APVL_RES_PRCSG_PRGSG" && this.formula('crntAprvemp') === true);
+				},
+				approveBtnLabel: function() {
+					return !this.formula('isCrntAgreeemp') ? this.translate("승인") : this.translate("합의");
+				},
+				rejectBtn: function() {
+					// 승인버튼, 반려버튼
+					// 진행중(P), 결과처리중(P)아님, 현재결재자
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "PRGSG" && this.approvalMaster.apvl_res_ccd !== "APVL_RES_PRCSG_PRGSG" && this.formula('crntAprvemp') === true);
+				},
+				opinionBtn: function() {
+					// 승인버튼, 반려버튼
+					// 진행중(P), 결과처리중(P)아님, 현재결재자
+					return (this.isViewMode === false && this.approvalMaster.apvl_sts_ccd === "PRGSG" && this.approvalMaster.apvl_res_ccd !== "APVL_RES_PRCSG_PRGSG" && this.formula('aprvempTypeR') === true);
+				},
+				//대리결재 여부
+				subAprvYn: function() {
+					var me           = this,
+						aprvLineList = me.aprvLineList;
+					
+					for(var i in aprvLineList) {
+						if((UT.isNotEmpty(aprvLineList[i].dpty_aprv_yn)) && (aprvLineList[i].dpty_aprv_yn === "Y") && (aprvLineList[i].dpty_apvr_id === me.currentUsrInfo.usr_id)) {
+							return true;
+						}
+					}
+					return false;
+				},
+				
+				isExistAgreement: function() {
+					var me = this;
+					var agreementer = me.get("dispApprover.agreementer") || [];
+					return UT.isNotEmpty(agreementer);
+				},
+				isExistAprvLineCcList: function() {
+					var me = this;
+					var aprvLineCcList = me.get("aprvLineCcList");
+					return UT.isNotEmpty(aprvLineCcList);
+				},
+				isExistReceiptList: function() {
+					var me = this;
+					var receiptList = me.get("dispApprover.receiptList") || [];
+					return UT.isNotEmpty(receiptList);
+				},
+				isExistReferenceList: function() {
+					var me = this;
+					var referenceList = me.get("dispApprover.referenceList") || [];
+					return UT.isNotEmpty(referenceList);
+				},
+				isTwoStepApproval: function() {
+					var me = this;
+					var twoStepAprvTypCd = me.get("codes.twoStepAprvTypCd.result");
+					var approvalMaster = me.get("approvalMaster");
+					
+					var filter = twoStepAprvTypCd.filter(function(item) {
+						if(item.data === approvalMaster.apvl_typ_ccd) {
+							return true;
+						} else {
+							return false;
+						}
+					});
+					return filter.length > 0;
+				}
+			},
+			
+			// 화면 생성 완료
+			initialized: function() {
+				var me = this;
+				
+				// 코드 생성, 에디터 생성, 업로더 생성
+				var itemMaster = [];
+				var itemSub = [];
+				var itemRadio = [];
+				itemMaster.push({data: 1, label: 1});
+				itemMaster.push({data: 2, label: 2});
+				
+				var aprvEmpTypeCd = me.get("codes.aprvEmpTypeCd");
+				for(var i = 0, len = aprvEmpTypeCd.length; i < len; i++) {
+					if(aprvEmpTypeCd[i].data === "DFT") { // 기안
+						aprvEmpTypeCd[i].relation = "1";
+						itemSub.push({data: aprvEmpTypeCd[i].data, label: aprvEmpTypeCd[i].label, relation: 1});
+					} else { // 기안 제외.
+						itemSub.push({data: aprvEmpTypeCd[i].data, label: aprvEmpTypeCd[i].label, relation: 2});
+						itemRadio.push({data: aprvEmpTypeCd[i].data, label: aprvEmpTypeCd[i].label});
+					}
+				}
+				me.set("codes.aprvEmpTypeItemsMaster", itemMaster); // 기안자와 결재자(결재,합의,수신) 구분을 위함
+				me.set("codes.aprvEmpTypeItemsSub", itemSub); // itemMaster와 관련된 sub 콤보(결재 상신 일시 경우는 기안만 나오고, 나머지의 경우에는 결재,합의,수신이 나오게 함)
+				me.set("codes.aprvEmpTypeItemsRadio", itemRadio); // 결재,합의,수신
+			},
+			//그리드 데이타 컨버터
+			onAprvTypeCdConverter: function(rowIndex, fieldName, data) {
+				var me = this;
+				var type = data["apvr_typ_ccd"];
+				return type === "DFT" ? 1 : 2;
+			},
+			
+			//병렬합의자 merge
+			onMerge: function(data, item) {
+				return data["apvlln_sort"];
+			},
+			// 결재선 순서 변경 가능 여부 (기안자 x, 현재결재자 x, 승인된 건 x)
+			gridSelectionAble: function(data) {
+				var me = this;
+				
+				if(data.apvr_typ_ccd === "DFT") { // 기안자
+					return false;
+				} else if(data.curr_apvr_yn === 'Y' && data.usr_id === me.currentUsrInfo.usr_id) { // 현재 결재자
+					return false;
+				} else if(data.apvlln_apvl_res_ccd === "APVD") { // 승인
+					return false;
+				} else if(data.apvlln_mod_poss_yn !== "Y") { // 수정가능여부
+					return false;
+				}
+				return true;
+			},
+			
+			// 기본 파라미터 설정
+			load: function(param) {
+				var me = this;
+				me.set("isViewMode", param.is_view_mode === true); // 조회 모드
+				me.set("findInfo.param", UT.copy(param));
+				
+				 if (me.arbitraryReady()) {
+					 me.$.arbitrary.start(param);
+					 // arbitraryStarted 에서 onFindInfo 가 호출됨
+				 } else {
+					me.onFindInfo();
+				}
+			},
+			
+			// 상세정보 조회
+			onFindInfo: function() {
+				var me = this;
+				me.$.findInfo.body = me.get("findInfo.param");
+				UT.request(me.$.findInfo);
+			},
+			
+			// 상세정보 조회 완료
+			completeFindInfo: function(e, res) {
+				var me = this;
+				var data = res.response;
+				
+				if(data && data.approvalMaster) {
+					
+					// [SNINEQA-7]
+					// 그리드에 조회된 결재상태와 현재결재상태가 다를 경우 팝업을 종료한다.
+					var sourceSts = me.findInfo.param.apvl_sts_ccd,
+						targetSts = data.approvalMaster.apvl_sts_ccd;
+					if(sourceSts && (sourceSts !== targetSts)) {
+						SCAlert.show("알림", "STD.APR1001", function(btn) {
+							if(btn === "ok") {
+								me.onPopupClose();
+							}
+						});
+						return;
+					}
+					
+					me.set("approvalMaster", data.approvalMaster || {});
+					me.set("approvalDoc", data.approvalDoc || {});
+
+//                     me.set("aprvLineList", data.approvalLines || []);
+					var aprvLineList = data.approvalLines || [];
+					var approvalCcLines = data.approvalCcLines || [];
+					/*for(var i in aprvLineList) {
+						if(aprvLineList[i].dpty_aprv_yn == "Y" && aprvLineList[i].apvlln_apvl_res_ccd == "WTG" && aprvLineList[i].dpty_apvr_id == me.get("currentUsrInfo.usr_id")) {
+							var positionName = me.getPosNm(me.get("currentUsrInfo.posi_nm")) == null ? "" : me.getPosNm(me.get("currentUsrInfo.posi_nm"));
+							var departmentName = me.get("currentUsrInfo.dept_nm") == null ? "" : '(' + me.get("currentUsrInfo.dept_nm") + ')';
+							var approvalSubName = ' ' + positionName + departmentName;
+							
+							aprvLineList[i].aprv_nm += " > " + me.get("currentUsrInfo.usr_nm") + " " + approvalSubName;
+						}
+					}*/
+					me.set("aprvLineList", aprvLineList);
+					me.set("aprvLineCcList", approvalCcLines);
+					// 결재선 수신/참조 변경 시 원본과 비교하여 신규/수정/삭제 찾기 위해 보관
+					me.set("originAprvLineCcList", approvalCcLines);
+					
+					//대리결재인 사람에게 포커스로 표시
+					/*if(!UT.isEmpty(rowIdx)) {
+						me.$.gridPanel.setCurrentCell({dataField: 'aprv_nm', rowIndex: rowIdx});
+					}*/
+				} else { // 신규작성
+					var approvalMaster = UT.copy(me.get("findInfo.param"));
+					if(UT.isNotEmpty(approvalMaster.apvl_tit)) {
+						var aprvTypFilter = me.get("codes.aprvTypCd").filter(function(item) {
+							if(item.data === approvalMaster.apvl_typ_ccd) {
+								return true;
+							}
+						});
+						if(aprvTypFilter.length > 0) {
+							approvalMaster.apvl_tit = "[" + aprvTypFilter[0].label + "] " + approvalMaster.apvl_tit;
+						}
+					}
+					me.set("approvalMaster", approvalMaster);
+					me.set("approvalMaster.apvl_sts_ccd", "CRNG"); // 작성중
+					//결재 템플릿 조회
+					if(data) {
+						var templateResult = data["templateParamCheckResult"] || {resultStatus: false};
+						if(templateResult["result_status"] === "S") {
+							me.set("approvalDoc", data.approvalDoc || {});
+						}
+					}
+					
+					var aprvLineList = [];
+					var positionName = me.getPosNm(me.currentUsrInfo.posi_ccd) == null ? "" : me.getPosNm(me.currentUsrInfo.posi_ccd);
+					var departmentName = me.currentUsrInfo.dept_nm == null ? ' (' + me.currentUsrInfo.dept_nm + ')' : "";
+					var approvalSubName = ' ' + positionName + departmentName;
+					
+					aprvLineList.push({
+						apvr_typ_ccd: "DFT", // 기안
+						usr_id: me.currentUsrInfo.usr_id,
+						usr_nm: me.currentUsrInfo.disp_usr_nm,
+						apvr_jobtit_nm: me.currentUsrInfo.disp_jobtit_nm, // 직책
+						posi_nm: me.getPosNm(me.currentUsrInfo.posi_ccd), // 직위
+						apvr_dept_nm: me.currentUsrInfo.dept_nm, // 부서명
+						aprv_nm: me.currentUsrInfo.usr_nm + approvalSubName, //결재자 정보
+						apvlln_typ_ccd: "AL",
+						last_apvr_yn: "N",
+						apvlln_sort: 1,
+						apvlln_mod_poss_yn: "N"
+					});
+					
+					 if (me.arbitraryEnabled()) {
+						 var lines = me.$.arbitrary.getMatchLines();
+						 if (UT.isNotEmpty(lines)) {
+							 var sortOrd = 1;
+							 for (var i = 0, len = lines.length; i < len; i++) {
+								 aprvLineList.push({
+									 apvr_typ_ccd: lines[i].apvr_typ_ccd,
+									 usr_id: lines[i].usr_id,
+									 usr_nm: lines[i].usr_nm,
+									 apvr_jobtit_nm: me.getPosNm(lines[i].posi_ccd), // 직위
+									 apvr_dept_nm: lines[i].dept_nm, // 부서명
+									 aprv_nm : lines[i].usr_nm + ' ' + me.getPosNm(lines[i].posi_ccd) + ' (' + lines[i].dept_nm + ')', // 결재자 정보
+									 apvlln_typ_ccd: (lines[i].apvr_typ_ccd === "REF" ? "RL" : "AL"), // 결재선구분 코드 : R(수신) - 참조선, 나머지는 결재선
+									 last_apvr_yn: (UT.isNotEmpty(lines[i].last_apvr_yn) && lines[i].last_apvr_yn === "Y")  ?  "Y" :"N" , // 마지막 결재자가 최종결재자로 처리되도록 수정
+									 apvlln_sort: ++sortOrd,
+									 arbitrary_yn: "Y",
+									 apvlln_mod_poss_yn: lines[i].apvlln_mod_poss_yn,
+									 jobtit_ccd: lines[i].jobtit_ccd,
+									 seq_parll_typ_ccd: "SEQ"
+								 });
+							 }
+						 }
+					 }
+					
+					me.set("aprvLineList", aprvLineList);
+					// 결재선에 기안자 신규 추가
+					/*var provider = me.$.gridPanel.getDataProvider();
+					for (var i = 0, len = aprvLineList.length; i < len; i++) {
+						provider.setItemState(i, 'created');
+					}*/
+					
+					
+				}
+				/*me.parseUserToAprvLineList();
+				me.parseUserToCcList();*/
+				me.convertDisplayApprover();
+				me.applyFormula();
+				
+				var aprvStsCd = me.get("approvalMaster.apvl_sts_ccd");
+				var aprvempTypeS = me.formula('aprvempTypeS');
+				
+				if(aprvStsCd === "CRNG" && aprvempTypeS === true) {
+					me.set("opinionTitle", me.translate("상신자 의견"));
+					if(me.aprvLineList.length > 0) {
+						me.set("approvalMaster.apvl_opn", me.aprvLineList[0].apvl_opn); // 기안자 의견
+					}
+				} else {
+					me.set("opinionTitle", me.translate("결재자 의견"));
+				}
+				
+			},
+			//결재 템플릿 조회
+			onFindTemplate: function() {
+				var me = this;
+				me.$.findApprovalTemplateDoc.body = me.get("findInfo.param");
+				UT.request(me.$.findApprovalTemplateDoc);
+			},
+			//결재 템플릿 조회 결과
+			completeFindTemplateDoc: function(el, res) {
+				var me = this;
+				var data = res.response;
+				me.set("approvalDoc", data.approvalDoc || {});
+			},
+			
+			// 임시저장
+			onSaveDraft: function() {
+				var me = this;
+				
+				me.onSaveInfo(me.$.saveDraft, "CRNG"); // 작성중
+			},
+			
+			// 결재상신
+			onSaveSubmit: function() {
+				var me = this;
+				
+				me.onSaveInfo(me.$.saveSubmit, "PRGSG", "STD.N2300"); // 진행중
+			},
+			
+			// 재상신
+			onRetry: function() {
+				var me = this;
+				
+				UT.confirm("STD.APR1010", function() {
+					me.$.resubmit.body = {
+						apvl_uuid: me.get("approvalMaster.apvl_uuid")
+					};
+					UT.request(me.$.resubmit);
+				});
+			},
+			
+			// 재상신을 위한 데이터 생성 완료
+			completeReSubmit: function(e, res) {
+				var me = this;
+				me.set("findInfo.param.apvl_uuid", res.response.apvl_uuid);
+				me.onFindInfo();
+			},
+			
+			// 상신취소
+			onSaveCancel: function() {
+				var me = this;
+				
+				UT.confirm("STD.APR1003", function() {
+					me.$.saveCancel.body = {
+						cancelApproval: {
+							apvl_uuid: me.get("approvalMaster.apvl_uuid"),
+							apvl_typ_ccd: me.get("approvalMaster.apvl_typ_ccd"),
+							task_uuid: me.get("approvalMaster.task_uuid")
+						}
+					};
+					UT.request(me.$.saveCancel);
+				});
+			},
+			
+			// 상신취소 완료
+			completeCancelInfo: function(e, res) {
+				var me = this;
+				me.fire("saved-approval", "D");
+				UT.alert("STD.APR1004");
+				me.onClose();
+			},
+			
+			// 삭제
+			onDelete: function() {
+				var me = this;
+				
+				UT.confirm("STD.N1300", function() { // 삭제하시겠습니까?
+					me.$.deleteInfo.body = {
+						deleteApproval: {
+							apvl_uuid: me.get("approvalMaster.apvl_uuid"),
+							apvl_typ_ccd: me.get("approvalMaster.apvl_typ_ccd"),
+							prev_apvl_sts_ccd: me.get("approvalMaster.apvl_sts_ccd"),
+							task_uuid: me.get("approvalMaster.task_uuid")
+						}
+					};
+					UT.request(me.$.deleteInfo);
+				});
+			},
+			
+			// 삭제 완료
+			completeDeleteInfo: function(e, res) {
+				var me = this;
+				me.fire("saved-approval", "D");
+				UT.alert("STD.N2500"); // 삭제하였습니다.
+				me.onClose();
+			},
+			
+			// 저장
+			onSaveInfo: function(ajax, stsCd, message) {
+				var me = this;
+				
+				if(!me.validate('approvalMaster')) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				
+				/*if(me._isModPosNAprvLines()) {
+					UT.alert("STD.APR1020");
+					return;
+				}*/
+				/*if(me._isDuplicateAprvLines()) {
+					UT.alert("STD.APR1014"); // 중복 데이터가 있습니다
+					return;
+				}*/
+				
+				var param = {};
+				
+				var prevStsCd = me.get("approvalMaster.apvl_sts_ccd");
+				var prevRequestType = me.get("requestType");
+				me.set("approvalMaster.apvl_sts_ccd", stsCd);
+				me.set("approvalMaster.prev_apvl_sts_ccd", prevStsCd);
+				me.set("requestType", stsCd);
+				
+				me.$.editor.syncValue();
+				
+				var laprYn = "N"; // 전결여부
+				
+				/*var provider = me.$.gridPanel.getDataProvider();
+				var allItems = provider.getItems();*/
+				var allItems = me.get("aprvLineList");
+				
+				if(stsCd != "CRNG") {
+					if(allItems.length === 1 && stsCd === "PRGSG") {
+						message = "STD.APR1005";
+						me.set("requestType", "APVD");
+						laprYn = "Y";
+					} else {
+						var rCount = 0;
+						for(var i = 0, len = allItems.length; i < len; i++) {
+							if(allItems[i].apvr_typ_ccd === "REF") {
+								rCount++;
+							}
+						}
+						if(rCount === (allItems.length - 1)) {
+							message = "STD.APR1005";
+							me.set("requestType", "APVD");
+							laprYn = "Y";
+						}
+					}
+				}
+				
+				for(var i in allItems) {
+					var data = allItems[i];
+					if(data.apvr_typ_ccd === "DFT") { // 기안자
+						data.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+						if(stsCd === "PRGSG") {
+							data.apvlln_apvl_res_ccd = "APVD"; // 기안자는 승인(C)
+						} else {
+							data.apvlln_apvl_res_ccd = "WTG";
+						}
+						data.last_apvr_yn = "N";
+					} else {
+						data.apvlln_apvl_res_ccd = "WTG"; // 나머지는 미처리(N)
+						data.apvl_opn = ""; // 의견
+						//data.last_apvr_yn = "N";
+					}
+					data.apvlln_typ_ccd = (data.apvr_typ_ccd === "REF") ? "RL" : "AL"; // 결재선구분 코드 : R(수신) - 참조선, 나머지는 결재선
+				}
+				/*provider.setItemAtBatch(true, function(index, data) {
+					if(data.apvr_typ_ccd === "DFT") { // 기안자
+						data.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+						data.apvlln_apvl_res_ccd = "APVD"; // 기안자는 승인(C)
+						data.last_apvr_yn = laprYn; // 전결여부 - 결재선이 기안자만 있고 상신 되었을때 전결.
+					} else {
+						data.apvlln_apvl_res_ccd = "WTG"; // 나머지는 미처리(N)
+						data.apvl_opn = ""; // 의견
+						data.last_apvr_yn = "N";
+					}
+					data.apvlln_typ_ccd = (data.apvr_typ_ccd === "REF") ? "RL" : "AL"; // 결재선구분 코드 : R(수신) - 참조선, 나머지는 결재선
+					return data;
+				});*/
+				
+				ajax.body = {
+					approvalMaster: me.get("approvalMaster"),
+					approvalDoc: me.get("approvalDoc"),
+					approvalLines: allItems,
+					approvalCcLines: me.get("aprvLineCcList")
+					
+					/*insertApprovalLines: provider.getNewItems(),
+					updateApprovalLines: provider.getUpdateItems(),
+					deleteApprovalLines: me.get("deleteApprovalLines")*/
+				};
+				UT.confirm(message || "STD.N1200", function() {
+					me.$.upload.upload().then(function() {
+						UT.request(ajax);
+					});
+				}, function() {
+					me.set("requestType", prevRequestType);
+					me.set("approvalMaster.apvl_sts_ccd", prevStsCd);
+				});
+			},
+			
+			// 승인
+			onApprove: function() {
+				var me = this;
+				
+				// 현재 결재 승인 시 결재자의견은 필수 아님
+				me.$.aprvOpn.clearInvalid();
+				
+				me.onSaveApproval("APVD", me.formula('isCrntAgreeemp') ? "STD.APR1022" : "STD.N1106");
+			},
+			
+			// 반려
+			onReject: function() {
+				var me = this;
+				
+				if(!me.validate("aprvOpn")) {
+					UT.alert("STD.APR1018");    // 결재 반려시 결재자의견은 필수입력 사항입니다.
+				} else {
+					me.onSaveApproval("RET", "STD.N3000");
+				}
+			},
+			onOpinion: function() {
+				var me = this;
+				
+				if(!me.validate("aprvOpn")) {
+					UT.alert("STD.APR1020");    // 결재 반려시 결재자의견은 필수입력 사항입니다.
+				} else {
+					UT.confirm("STD.APR1021", function() {
+						var approvalInfo = {};
+						// {"approvalInfo"} - apvl_uuid(결재 아이디), aprvnl_id(결재선 아이디), usr_id(사용자 아이디), apvlln_apvl_res_ccd(결재 결과코드), apvl_opn(결재 의견)
+						
+						var provider = me.$.gridPanel.getDataProvider();
+						var allItems = provider.getItems();
+						
+						for(var i = 0, len = allItems.length; i < len; i++) {
+							var item = allItems[i];
+							
+							// 결재선에서 현재 결재자 정보를 가져온다.
+							if(item.apvr_typ_ccd === "REF" && item.usr_id === me.currentUsrInfo.usr_id) {
+								item.apvlln_apvl_res_ccd = "APVD";
+								item.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+								approvalInfo = item;
+								break;
+							}
+						}
+						me.$.saveOpinion.body = {
+							approvalInfo: approvalInfo
+						};
+						UT.request(me.$.saveOpinion);
+					});
+				}
+			},
+			
+			// 저장
+			onSaveApproval: function(rstCd, message) {
+				var me = this;
+				
+				UT.confirm(message, function() {
+					var approvalInfo = {};
+					// {"approvalInfo"} - apvl_uuid(결재 아이디), aprvnl_id(결재선 아이디), usr_id(사용자 아이디), apvlln_apvl_res_ccd(결재 결과코드), apvl_opn(결재 의견)
+					
+					//var provider = me.$.gridPanel.getDataProvider();
+					//var allItems = provider.getItems();
+					var allItems = me.get("aprvLineList");
+					
+					for(var i = 0, len = allItems.length; i < len; i++) {
+						var item = allItems[i];
+						
+						// 결재선에서 현재 결재자 정보를 가져온다.
+//                         if(item.curr_apvr_yn === "Y" && item.usr_id === me.currentUsrInfo.usr_id) {
+						if(item.curr_apvr_yn === "Y" && item.usr_id === me.currentUsrInfo.usr_id) {
+							item.apvlln_apvl_res_ccd = rstCd;
+							item.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+							
+							approvalInfo = item;
+							break;
+						} else if(item.curr_apvr_yn === "Y" && item.dpty_aprv_yn === "Y" && item.dpty_apvr_id === me.currentUsrInfo.usr_id) {
+							
+							item.apvlln_apvl_res_ccd = rstCd;
+							item.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+							
+							approvalInfo = item;
+							break;
+//                         }else if (item.apvr_typ_ccd === "PARLL_AG" && item.usr_id === me.currentUsrInfo.usr_id){
+						} else if(item.apvr_typ_ccd === "PARLL_AG" && item.usr_id === me.currentUsrInfo.usr_id) {
+							
+							item.apvlln_apvl_res_ccd = rstCd;
+							item.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+							
+							approvalInfo = item;
+							break;
+						} else if(item.apvr_typ_ccd === "PARLL_AG" && item.dpty_aprv_yn === "Y" && item.dpty_apvr_id === me.currentUsrInfo.usr_id) {
+							item.apvlln_apvl_res_ccd = rstCd;
+							item.apvl_opn = me.get("approvalMaster.apvl_opn") || "";
+							
+							approvalInfo = item;
+							break;
+						}
+					}
+					
+					me.$.saveResult.body = {
+						approvalInfo: approvalInfo,
+						aprvLineList: me.get("isChangeAprvLine") ? me.get("aprvLineList") : [],
+						insertAprvLineCcList: me.get("changeAprvLineCcInfo.insertAprvLineCcList"),
+						updateAprvLineCcList: me.get("changeAprvLineCcInfo.updateAprvLineCcList"),
+						removeAprvLineCcList: me.get("changeAprvLineCcInfo.removeAprvLineCcList")
+					};
+					
+					me.set("requestType", rstCd);
+					UT.request(me.$.saveResult);
+				});
+			},
+			
+			// 저장 완료
+			completeSaveInfo: function(e, res) {
+				var me          = this,
+					requestType = me.get("requestType");
+				
+				me.set("approvalMaster.apvl_sts_ccd", requestType);
+				
+				if(requestType === "CRNG") {
+					me.set("findInfo.param.apvl_uuid", res.response.resultData.apvl_uuid);
+					UT.completeAlert();
+					me.onFindInfo();
+				} else {
+					if(requestType === "PRGSG") {
+						UT.alert("STD.APR1011");
+					} else if(requestType === "APVD") {
+						UT.alert("STD.APR1012");
+					} else if(requestType === "RET") {
+						UT.alert("STD.APR1013");
+					}
+					me.fire("saved-approval", requestType);
+					me.onClose();
+				}
+			},
+			
+			// 결재자 검색
+			onFindListUser: function(e) {
+				var me = this;
+				if(UT.isString(e.detail.usr_id)) {
+					if(me.get("checkedAprvEmpTypeItem") === "PARLL_AG") {
+						//병렬 결재자 추가
+						me.onAddAprvEmpTypByP(e.detail);
+					} else {
+						//일반 결재자 추가
+						me.onAddList(e.detail);
+					}
+				}
+			},
+			//병렬 결재자 추가
+			onAddAprvEmpTypByP: function(selected) {
+				var me                     = this,
+					provider               = me.$.gridPanel.getDataProvider(),
+					allItems               = provider.getItems(),
+					chechedAprvEmpTypeItem = me.get("checkedAprvEmpTypeItem");
+				
+				//병렬합의 validation
+				var indexArr = provider.selectionCheckedIndexes();
+				var selectSize = indexArr.length;
+				//병렬합의일 경우 합의자 선택 필수,
+				if(selectSize != 1) {
+					UT.alert("STD.APR2012"); // 병렬합의시 합의자를 먼저 선택하셔야합니다.
+					return;
+				}
+				//선택한 사람을 합의자 에서 병렬합의자로 변경
+				provider.setItemAtBatch(indexArr, function(index, data) {
+					return {seq_parll_typ_ccd: "PARLL", apvr_typ_ccd: "PARLL_AG"};  //리턴되는 데이터가 변경됩니다.
+				});
+				
+				var positionName = me.getPosNm(selected.posi_ccd) == null ? "" : me.getPosNm(selected.posi_ccd);
+				var departmentName = selected.dept_nm == null ? "" : '(' + selected.dept_nm + ')';
+				var approvalSubName = ' ' + positionName + departmentName;
+				
+				var created = {
+					apvr_typ_ccd: chechedAprvEmpTypeItem,
+					usr_id: selected.usr_id,
+					usr_nm: selected.usr_nm,
+					apvr_jobtit_nm: me.getPosNm(selected.posi_ccd), // 직위
+					apvr_dept_nm: selected.dept_nm, // 부서명
+					aprv_nm: selected.usr_nm + approvalSubName, //결재자정보
+					apvlln_mod_poss_yn: "Y",
+					seq_parll_typ_ccd: chechedAprvEmpTypeItem === "PARLL_AG" ? "PARLL" : "SEQ"
+					
+				};
+				provider.addItemAt((indexArr[0] + 1), created);
+				
+				
+				me.resetSortOrd();
+				me.$.userSearch.value = "";
+				me.$.userSearch.resultValue = "";
+			},
+			// 결재자 추가
+			onAddList: function(selected) {
+				var me       = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					allItems = provider.getItems();
+				var chechedAprvEmpTypeItem = me.get("checkedAprvEmpTypeItem");
+				
+				var positionName = me.getPosNm(selected.posi_ccd) == null ? "" : me.getPosNm(selected.posi_ccd);
+				var departmentName = selected.dept_nm == null ? "" : '(' + selected.dept_nm + ')';
+				var approvalSubName = ' ' + positionName + departmentName;
+				
+				//일반 결재선
+				var created = [];
+				created.push({
+					apvr_typ_ccd: chechedAprvEmpTypeItem,
+					usr_id: selected.usr_id,
+					usr_nm: selected.usr_nm,
+					apvr_jobtit_nm: me.getPosNm(selected.posi_ccd), // 직위
+					apvr_dept_nm: selected.dept_nm, // 부서명
+					aprv_nm: selected.usr_nm + approvalSubName, // 결재자 정보
+					apvlln_mod_poss_yn: "Y",
+					seq_parll_typ_ccd: chechedAprvEmpTypeItem === "PARLL_AG" ? "PARLL" : "SEQ"
+					
+				});
+				provider.addItems(created);
+				
+				me.resetSortOrd();
+				me.$.userSearch.value = "";
+				me.$.userSearch.resultValue = "";
+			},
+			// 결재자 삭제
+			onDeleteListUser: function() {
+				var me       = this,
+					message  = "STD.N1300", // 삭제 하시겠습니까?
+					provider = this.$.gridPanel.getDataProvider();
+				
+				var checked = provider.selectionCheckedIndexes();
+				if(checked && checked.length > 0) {
+					UT.confirm(message, function() {
+						//결재선 삭제시 병렬합의 1개인경우 병렬합의 제거로직 추가
+						for(var i = 0; i < checked.length; i++) {
+							var currentData = provider.getItemAt(checked[i]);
+							var nodedexes = provider.filterIndexes(function(data) {
+								return (data.usr_id !== currentData.usr_id && data.apvlln_sort === currentData.apvlln_sort);
+							}, true);
+							if(nodedexes.length === 1) {
+								provider.setItemAt(nodedexes[0], {seq_parll_typ_ccd: "SEQ", apvr_typ_ccd: "AG"});
+							}
+						} //~:
+						var deleted = provider.removeItems(true);
+						if(deleted.length > 0) {
+							if(me.formula('isEditableAprvLine')) { // 결재선 변경 시
+								me.set("deleteApprovalLines", me.deleteApprovalLines.concat(deleted));
+								UT.alert("STD.APR1019"); // 결재선 저장을 하셔야만 수정내용이 최종 저장 됩니다.
+							} else {
+								me.set("deleteApprovalLines", deleted);
+							}
+						}
+						me.resetSortOrd();
+					});
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				}
+			},
+			
+			// 위로
+			onUpListUser: function() {
+				var me       = this,
+					grid     = me.$.gridPanel,
+					provider = me.$.gridPanel.getDataProvider();
+				
+				var checked = provider.selectionCheckedIndexes();
+				var allIndexs = provider.getItems();
+				if(checked.length > 0) {
+					for(var i = 0, len = checked.length; i < len; i++) {
+						var prevParlSize = 0;
+						var currentIndex = checked[i],
+							upIndex      = currentIndex - 1;
+						
+						var currentData = provider.getItemAt(currentIndex);
+						if(currentData.seq_parll_typ_ccd === "PARLL") {
+							//병렬자인경우 순서변경 불가
+							UT.alert("STD.APR1025");
+							return;
+						}
+						
+						// 결재선 변경 시 : 상위 row 가 현재 결재자 일 경우 break;
+						var item = provider.getItemAt(upIndex);
+						if(me.formula('isEditableAprvLine') && item.curr_apvr_yn === 'Y') {
+							break;
+						}
+						
+						// 위 인덱스가 0이 아니고 (기안자), 상위 row의 selection이 false 여야함
+						if(upIndex != 0 && !provider.isSelectionChecked(upIndex)) {
+							//다음 인덱스가 병렬자인경우 병렬자 제외하고 downIndex재계산,
+							var prevData = provider.getItemAt(upIndex);
+							if(prevData.seq_parll_typ_ccd === "PARLL") {
+								for(j = upIndex; j > 0; j--) {
+									var prevData = provider.getItemAt(j);
+									if(prevData.seq_parll_typ_ccd === "PARLL") {
+										prevParlSize++;
+									} else {
+										break;
+									}
+								}
+								upIndex = currentIndex - prevParlSize;
+							}
+							
+							provider.moveRow(currentIndex, upIndex);
+							grid.selectionCheck(upIndex, true);
+							grid.selectionCheck(currentIndex, false);
+						}
+					}
+				}
+				
+				me.resetSortOrd();
+			},
+			// 아래로
+			onDownListUser: function() {
+				var me       = this,
+					grid     = me.$.gridPanel,
+					provider = me.$.gridPanel.getDataProvider();
+				var checked = provider.selectionCheckedIndexes();
+				var allIndexs = provider.getItems();
+				if(checked.length > 0) {
+					var itemSize = provider.getItemSize();
+					for(var i = checked.length - 1; i >= 0; i--) {
+						var nextParlSize = 0;
+						var currentIndex = checked[i],
+							downIndex    = currentIndex + 1;
+						
+						var currentData = provider.getItemAt(currentIndex);
+						if(currentData.seq_parll_typ_ccd === "PARLL") {
+							//병렬자인경우 순서변경 불가
+							UT.alert("STD.APR1025");
+							return;
+						}
+						
+						// 아래 인덱스가 맨 마지막이 아니고 , 아래 row의 selection이 false 여야함
+						if(downIndex < provider.getItemSize() && !provider.isSelectionChecked(downIndex)) {
+							
+							//다음 인덱스가 병렬자인경우 병렬자 제외하고 downIndex재계산,
+							var nextData = provider.getItemAt(downIndex);
+							if(nextData.seq_parll_typ_ccd === "PARLL") {
+								for(j = downIndex; j < itemSize; j++) {
+									var nextData = provider.getItemAt(j);
+									if(nextData.seq_parll_typ_ccd === "PARLL") {
+										nextParlSize++;
+									} else {
+										break;
+									}
+								}
+								downIndex = currentIndex + nextParlSize;
+							}
+							
+							provider.moveRow(currentIndex, downIndex);
+							grid.selectionCheck(downIndex, true);
+							grid.selectionCheck(currentIndex, false);
+						}
+					}
+				}
+				
+				me.resetSortOrd();
+			},
+			
+			// 순서값 재설정
+			resetSortOrd: function() {
+				var me       = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					allItems = provider.getItems();
+				var i = 0;
+				var z = 0;
+				//param = {"apvlln_sort" : i,"seq_parll_typ_ccd" === "SEQ", "apvr_typ_ccd","AG"};
+				provider.setItemAtBatch(true, function(index, data) {
+					//병렬합의자는 같은 sort ord를 갖음
+					if(data.seq_parll_typ_ccd === "PARLL") {
+						if(z === 0) {
+							i++;
+							z++;
+						}
+					} else {
+						//결재자
+						i++;
+						z = 0;
+					}
+					return {"apvlln_sort": i};
+				}, {visibleOnly: true}); // 위로아래로 버튼을 통해 row 순서가 변경되는 경우(-> 강제 sorting) 고유아이디(rowId)로 set 하지 않고, 화면에 보이는 순서대로 set해야 함
+			},
+			
+			// 직위명
+			getPosNm: function(posCd) {
+				var me = this;
+				var name = "";
+				var codes = me.get("codes.posCd");
+				for(var i = 0, len = codes.length; i < len; i++) {
+					if(codes[i].data === posCd) {
+						name = codes[i].label;
+						break;
+					}
+				}
+				return name;
+			},
+			//결재선 선택 팝업호출
+			onShowAprvLineMasterPopup: function() {
+				var me = this, provider = me.$.gridPanel.getDataProvider();
+				var all = provider.getItems();
+				
+				var showPopupfn = function() {
+					var aprvlinePopup = UT.popup('ep-aprvline', me, 900, 500, {
+						'selected-items': function(popup, e) {
+							var result = e.detail
+							//선택  처리
+							me.onAddAprvLineMaster(result);
+							popup.close();
+						}
+					}, {maximizable: true, titleText: "결재선선택"});
+					aprvlinePopup.show();
+					aprvlinePopup.getWindowContent().load();
+				};
+				if(all.length > 1) {
+					UT.confirm("STD.APR1009", function() {
+						showPopupfn();
+					});
+				} else {
+					showPopupfn();
+				}
+			},
+			onAddAprvLineMaster: function(selected) {
+				var me = this, provider = me.$.gridPanel.getDataProvider();
+				provider.removeAll();
+				me.set("deleteApprovalLines", []);
+				me.set("approvalMaster.resetApprovalLineList", true);
+				
+				var selected = selected[0].detailList;
+				
+				var positionName = me.getPosNm(me.currentUsrInfo.posi_ccd) == null ? "" : me.getPosNm(me.currentUsrInfo.posi_ccd);
+				var departmentName = me.currentUsrInfo.dept_nm == null ? "" : '(' + me.currentUsrInfo.dept_nm + ')';
+				var approvalSubName = ' ' + positionName + departmentName;
+				
+				
+				//기안자 추가
+				var lines = [];
+				lines.push({
+					apvr_typ_ccd: "DFT", // 기안
+					usr_id: me.currentUsrInfo.usr_id,
+					usr_nm: me.currentUsrInfo.usr_nm,
+					apvr_jobtit_nm: positionName, // 직위
+					apvr_dept_nm: me.currentUsrInfo.dept_nm, // 부서명
+					aprv_nm: me.currentUsrInfo.usr_nm + approvalSubName, // 결재자 정보
+					apvlln_sort: 1
+				});
+				provider.addItems(lines);
+				
+				//결재 라인 생성
+				var created = [];
+				for(var i = 0, len = selected.length; i < len; i++) {
+					var sortOrd = selected[i].apvr_sort++;
+					
+					var positionName = me.getPosNm(selected[i].aprvemp_pos_cd) == null ? "" : me.getPosNm(selected[i].aprvemp_pos_cd);
+					var departmentName = selected[i].aprvemp_dept_nm == null ? "" : '(' + selected[i].aprvemp_dept_nm + ')';
+					var approvalSubName = ' ' + positionName + departmentName;
+					
+					created.push({
+						apvr_typ_ccd: selected[i].apvr_typ_ccd,
+						seq_parll_typ_ccd: selected[i].seq_parll_typ_ccd,
+						usr_id: selected[i].apvr_id,
+						usr_nm: selected[i].aprvemp_usr_nm,
+						apvr_jobtit_nm: positionName, // 직위
+						apvr_dept_nm: selected[i].aprvemp_dept_nm, // 부서명
+						aprv_nm: selected[i].aprvemp_usr_nm + approvalSubName // 결재자 정보
+					});
+				}
+				provider.addItems(created);
+				me.resetSortOrd();
+			},
+			
+			
+			// 결재선 변경 저장
+			onSaveAprvLine: function() {
+				var me         = this,
+					provider   = me.$.gridPanel.getDataProvider(),
+					createdIdx = provider.getNewIndexes(),
+					updatedIdx = provider.getUpdateIndexes(),
+					deleted    = me.get("deleteApprovalLines");
+				
+				if(createdIdx.length + updatedIdx.length + deleted.length === 0) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+				
+				if(me._isDuplicateAprvLines()) {
+					UT.alert("STD.APR1014"); // 중복 데이터가 있습니다
+					return;
+				}
+				
+				// 신규 추가 건 및 수정 건 에 대해서 기본값 셋팅
+				provider.setItemAtBatch(createdIdx.concat(updatedIdx), function(index, data) {
+					if(UT.isEmpty(data.apvl_uuid)) {
+						data.apvl_uuid = me.get("approvalMaster.apvl_uuid");
+						data.apvlln_apvl_res_ccd = "WTG"; // 결재 상태 : 미처리
+						data.last_apvr_yn = "N"; // 전결 여부 : N
+					}
+					data.apvlln_typ_ccd = (data.apvr_typ_ccd === "REF") ? "RL" : "AL"; // 결재선구분 코드 : R(수신) - 참조선, 나머지는 결재선
+					return data;
+				});
+				
+				me.$.saveApprovalLine.body = {
+					insertApprovalLines: provider.getNewItems(),
+					updateApprovalLines: provider.getUpdateItems(),
+					deleteApprovalLines: deleted
+				};
+				
+				UT.confirm("STD.N1200", function() {  // 저장 하시겠습니까?
+					UT.request(me.$.saveApprovalLine);
+				});
+			},
+			
+			// 결재선 변경 저장 완료
+			completeSaveAprvLine: function() {
+				var me = this
+				UT.completeAlert("", function() { // 저장하였습니다.
+					// 결재선 삭제 목록 초기화
+					me.set("deleteApprovalLines", []);
+					// 결재선 재조회
+					UT.request(me.$.findListApprovalLineProcess);
+				});
+			},
+			
+			//사용자아이디가 없고, 수정이불가능할경우 alert
+			_isModPosNAprvLines: function() {
+				var me       = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					allItems = provider.getItems();
+				
+				var isModPosNAndUsrIdNo = allItems.filter(function(item, pos, self) {
+					return (UT.isEmpty(item.usr_id) && item.apvlln_mod_poss_yn === "N");
+				});
+				
+				if(isModPosNAndUsrIdNo.length > 0) {
+					return true;
+				} else {
+					return false;
+				}
+			},
+			//중복 라인 체크
+			_isDuplicateAprvLines: function() {
+				var me       = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					allItems = provider.getItems();
+				
+				var uniqueArray = allItems.filter(function(item, pos, self) {
+					return self.indexOf(SCUtil.Array.find(self, function(child) {
+						return child.usr_id == item.usr_id;
+					})) == pos;
+				});
+				
+				if(allItems.length !== uniqueArray.length) {
+					return true;
+				}
+			},
+			
+			// 닫기
+			onPopupClose: function() {
+				var me = this;
+				me.clearData();
+				me.fire("close", "callback");
+			},
+			
+			// 닫기
+			onClose: function() {
+				var me = this;
+				me.clearData();
+				me.fire("close", "callback");
+			},
+			
+			// 초기화
+			clearData: function() {
+				var me = this;
+				me.reset();
+			},
+			
+			// 전결조건적용 - initialized 됨
+			arbitraryReady: function() {
+				var me = this;
+				return me.$.arbitrary.hasAttribute("__init");
+			},
+			
+			// 전결조건적용 모듈 시작됨
+			arbitraryStarted: function(e, data) {
+				var me = this;
+				
+				me.onFindInfo();
+			},
+			
+			
+			// 전결조건 적용여부
+			arbitraryEnabled: function() {
+				var me = this;
+				return me.arbitraryReady() && me.$.arbitrary.enabled;
+			},
+			
+			onShowAppoverSelector: function() {
+				var me = this;
+				var aprvLineProperties = me.get("aprvLineProperties");
+				var isTwoStepApproval = me.formula("isTwoStepApproval");
+				var limitApprover;
+				if(isTwoStepApproval) {
+					limitApprover = aprvLineProperties.limitApprover.twoStep;
+				} else {
+					limitApprover = aprvLineProperties.limitApprover.oneStep;
+				}
+				
+				var popup = UT.popup("ep-approver-selector", me, "90%", "90%", {
+					"save": function(popup, e) {
+						var data = e.detail;
+						me.set("isChangeAprvLine", true);
+						me.set("aprvLineList", data.aprvLineList);
+						me.set("aprvLineCcList", data.aprvLineCcList)
+						
+						me.setChangeAprvLineCc(data.aprvLineCcList);
+						
+						me.convertDisplayApprover();
+						popup.close();
+					}
+				}, {maximizable: true, titleText: this.translate("결재선")});
+				popup.show();
+				//todo
+				popup.getWindowContent().load(me.get("approvalMaster"), me.formula('crntAprvempInfo'), me.get("aprvLineList"), me.get("aprvLineCcList"), limitApprover, isTwoStepApproval);
+			},
+			
+			convertDisplayApprover: function() {
+				var me = this;
+				me.$.convertDisplayApprover.body = {
+					aprvLineList: me.get("aprvLineList"),
+					aprvLineCcList: me.get("aprvLineCcList")
+				};
+				UT.request(me.$.convertDisplayApprover);
+			},
+			
+			completeConvertDisplayApprover: function(e, res) {
+				var me = this;
+				var response = res.response;
+				
+				me.set("dispApprover.drafter", response.drafter);
+				me.set("dispApprover.approver", response.approver);
+				me.set("dispApprover.agreementer", response.agreementList);
+				me.set("dispApprover.lastApprover", response.lastApprover);
+				me.set("dispApprover.receiptList", response.receiptList);
+				me.set("dispApprover.referenceList", response.referenceList);
+				
+				me.applyFormula("isExistAgreement");
+				me.applyFormula("isExistAprvLineCcList");
+				me.applyFormula("isExistReceiptList");
+				me.applyFormula("isExistReferenceList");
+			},
+			
+			parseUserToAprvLineList: function() {
+				var me           = this,
+					aprvLineList = me.aprvLineList;
+				
+				var drafterFilter = aprvLineList.filter(function(item) {
+					if(item.apvr_typ_ccd === "DFT") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				var approverFilter = aprvLineList.filter(function(item) {
+					if(item.apvr_typ_ccd === "APVL" && item.last_apvr_yn === "N") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				var agreementerFilter = aprvLineList.filter(function(item) {
+					if(item.apvr_typ_ccd === "AG" || item.apvr_typ_ccd === "PARLL_AG") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				var lastApproverFilter = aprvLineList.filter(function(item) {
+					if(item.apvr_typ_ccd === "APVL" && item.last_apvr_yn === "Y") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				if(drafterFilter.length > 0) {
+					var drafter = drafterFilter[0];
+					if(drafter.apvlln_apvl_res_ccd === "APVD") {
+						drafter.apvlln_apvl_res_ccd_nm = this.translate("기안");
+					}
+					me.set("dispApprover.drafter", drafter);
+				} else {
+					me.set("dispApprover.drafter", {});
+				}
+				for(var i = 0; i < approverFilter.length; i++) {
+					var approver = approverFilter[i];
+					approver.apvl_sort = i + 1; // 순수 결재자 순서 표시
+					if(approver.apvlln_apvl_res_ccd === "APVD") {
+						approver.apvlln_apvl_res_ccd_nm = this.translate("결재");
+					} else if(approver.apvlln_apvl_res_ccd === "RET") {
+						approver.apvlln_apvl_res_ccd_nm = this.translate("반려");
+					}
+					me.set("dispApprover.approver" + (i + 1), approver);
+				}
+				for(var i = 0; i < agreementerFilter.length; i++) {
+					var fastSortApproverFilter = aprvLineList.filter(function(item) {
+						if(item.apvr_typ_ccd === "APVL" && item.last_apvr_yn === "N" && item.apvlln_sort < agreementerFilter[i].apvlln_sort) {
+							return true;
+						} else {
+							return false;
+						}
+					});
+					// 합의자의 상위 결재자 정보
+					var upApprover = fastSortApproverFilter[fastSortApproverFilter.length - 1];
+					var approver = approverFilter.filter(function(item) {
+						if(item.usr_id === upApprover.usr_id) {
+							return true;
+						} else {
+							return false;
+						}
+					});
+					// 기안 / 최종승인자 제외 합의자 별 결재자 순서 표시
+					agreementerFilter[i].apvl_sort = approver[0].apvl_sort;
+					agreementerFilter[i].up_usr_nm = approver[0].usr_nm;
+					
+					if(agreementerFilter[i].apvlln_apvl_res_ccd === "APVD") {
+						agreementerFilter[i].apvlln_apvl_res_ccd_nm = this.translate("합의");
+					} else if(agreementerFilter[i].apvlln_apvl_res_ccd === "RET") {
+						agreementerFilter[i].apvlln_apvl_res_ccd_nm = this.translate("반려");
+					}
+				}
+				me.set("dispApprover.agreementer", agreementerFilter);
+				if(lastApproverFilter.length > 0) {
+					var lastApprover = lastApproverFilter[0];
+					if(lastApprover.apvlln_apvl_res_ccd === "APVD") {
+						lastApprover.apvlln_apvl_res_ccd_nm = this.translate("승인");
+					}
+					me.set("dispApprover.lastApprover", lastApprover);
+				} else {
+					me.set("dispApprover.lastApprover", {});
+				}
+			},
+			
+			parseUserToCcList: function() {
+				var me = this;
+				var aprvLineCcList = me.get("aprvLineCcList");
+				
+				var receiptList = aprvLineCcList.filter(function(item) {
+					if(item.rdg_typ_ccd === "RCPT") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				var referenceList = aprvLineCcList.filter(function(item) {
+					if(item.rdg_typ_ccd === "REF") {
+						return true;
+					} else {
+						return false;
+					}
+				});
+				
+				for(var i = 0; i < receiptList.length; i++) {
+					var receipt = receiptList[i];
+					
+					if(i != (receiptList.length - 1)) {
+						receipt.separator = ", ";
+					}
+				}
+				for(var i = 0; i < referenceList.length; i++) {
+					var reference = referenceList[i];
+					
+					if(i != (referenceList.length - 1)) {
+						reference.separator = ", ";
+					}
+				}
+				me.set("dispApprover.receiptList", receiptList);
+				me.set("dispApprover.referenceList", referenceList);
+			},
+			
+			parseDate: function(value) {
+				if(UT.isEmpty(value) || !UT.isDate(value)) {
+					return;
+				}
+				return UT.formatDate(value, "yyyy-MM-dd HH:mm");
+			},
+			
+			existOpn: function(value) {
+				if(UT.isNotEmpty(value)) {
+					return true;
+				} else {
+					return false;
+				}
+			},
+			
+			showApprovalOpinion: function(e) {
+				var me = this;
+				var target = e.currentTarget;
+				var data = target.getAttribute("data-args");
+				
+				me.$.dialog_opinion_text.value = me.get("dispApprover." + data + ".apvl_opn");
+				me.$.dialog_opinion.show();
+			},
+			
+			setChangeAprvLineCc: function(aprvLineCcList) {
+				var me = this;
+				var originAprvLineCcList = me.get("originAprvLineCcList");
+				
+				var originAprvLineCcMap = {};
+				for(var i in originAprvLineCcList) {
+					originAprvLineCcMap[originAprvLineCcList[i].usr_id] = originAprvLineCcList[i];
+				}
+				var aprvLineCcMap = {};
+				for(var i in aprvLineCcList) {
+					aprvLineCcMap[aprvLineCcList[i].usr_id] = aprvLineCcList[i];
+				}
+				
+				// 신규 찾기
+				insertAprvLineCcList = [];
+				for(var i in aprvLineCcList) {
+					if(UT.isEmpty(originAprvLineCcMap[aprvLineCcList[i].usr_id])) {
+						insertAprvLineCcList.push(aprvLineCcList[i]);
+					}
+				}
+				me.set("changeAprvLineCcInfo.insertAprvLineCcList", insertAprvLineCcList);
+				
+				// 수정 찾기
+				updateAprvLineCcList = [];
+				for(var i in originAprvLineCcList) {
+					var originAprvLineCcInfo = originAprvLineCcList[i];
+					var aprvLineCcInfo = aprvLineCcMap[originAprvLineCcList[i].usr_id];
+					
+					if(UT.isNotEmpty(aprvLineCcInfo) && originAprvLineCcInfo.rdg_typ_ccd === "RCPT" && aprvLineCcInfo.rdg_typ_ccd === "REF") {
+						updateAprvLineCcList.push(aprvLineCcInfo);
+					}
+				}
+				me.set("changeAprvLineCcInfo.updateAprvLineCcList", updateAprvLineCcList);
+				
+				// 삭제 찾기
+				removeAprvLineCcList = [];
+				for(var i in originAprvLineCcList) {
+					if(UT.isEmpty(aprvLineCcMap[originAprvLineCcList[i].usr_id])) {
+						removeAprvLineCcList.push(originAprvLineCcList[i]);
+					}
+				}
+				me.set("changeAprvLineCcInfo.removeAprvLineCcList", removeAprvLineCcList);
+			},
+			
+			onPrint: function() {
+				var me = this;
+				var apvl_uuid = me.get("approvalMaster.apvl_uuid");
+				
+				if(UT.isEmpty(apvl_uuid)) {
+					return;
+				}
+				var url = "/printApproval.do?apvl_uuid=" + apvl_uuid;
+				UT.popupWindow(url, "printApproval", "width:400px,height:500px");
+			}
+		});
+	</script>
+
+</dom-module>

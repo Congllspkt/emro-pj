@@ -1,0 +1,30 @@
+/* gnb메뉴 */
+sc-mdi .gnbBar {background-color : #fff; border-top:2px solid #e7262e;border-bottom:1px solid #8f9698;}
+sc-mdi sc-mdi-topmenu .mdiTopMenu > li span {color: #000; border-left: 1px solid #fff;}
+sc-mdi sc-mdi-topmenu .mdiTopMenu > li:hover a span,
+sc-mdi sc-mdi-topmenu .mdiTopMenu > .selected a span {background:#e7262e; color: #fff !important; line-height:31px;}
+sc-mdi .topMenuLeftScroll{border-left:1px solid #bbb;}
+sc-mdi .topMenuLeftScroll span {background: #fff url("../../img/glys_topmenu_w.png") no-repeat 10px 9px;}
+sc-mdi .topMenuLeftScroll span:hover {background: #ddd url("../../img/glys_topmenu_w.png") no-repeat 10px 9px;}
+sc-mdi .topMenuRightScroll{border-left:1px solid #bbb;}
+sc-mdi .topMenuRightScroll span {background:#fff url("../../img/glys_topmenu_w.png") no-repeat 11px -41px; }
+sc-mdi .topMenuRightScroll span:hover {background:#ddd url("../../img/glys_topmenu_w.png") no-repeat 11px -41px;}
+sc-mdi .utilAreaUp{border-left:1px solid #bbb;height: 31px;}
+sc-mdi .utilAreaUp span {background:#fff url("../../img/glys_topmenu_w.png") no-repeat 7px -93px;}
+sc-mdi .utilAreaUp span:hover {background:#ddd url("../../img/glys_topmenu_w.png") no-repeat 7px -93px;}
+sc-mdi .utilAreaDown{border-left:1px solid #bbb;height: 31px;}
+sc-mdi .utilAreaDown span {background:#fff url("../../img/glys_topmenu_w.png") no-repeat 7px -143px; }
+sc-mdi .utilAreaDown span:hover {background:#ddd url("../../img/glys_topmenu_w.png") no-repeat 7px -143px;}
+/* 레프트메뉴 */
+sc-mdi .leftSplitter {border-right: none;}
+.leftSplitter aside {background:#757575; }
+.leftSplitter aside li {background:#757575;border-bottom:1px solid rgba(255,255,255,0.2);} /* 이미지 변경 필요 */
+.leftSplitter aside li:hover {background: #929292;}
+.leftSplitter aside li.select {background:#929292;}
+.leftSplitter aside li.favor:before, .leftSplitter aside li.link:before {border-left:7px solid #929292;}
+.leftSplitter aside .wrap_sb_content li {background:none;}
+.leftSplitter aside .wrap_sb_content li a {background:none;}
+.leftSplitter aside .wrap_sb_content li a:hover {background:none}
+.leftSplitter aside .wrap_sb_content li:hover:before {display:none;}
+.leftSplitter aside li a {background:url("../../img/icons_sidebar.png") no-repeat;}
+sc-mdi-sidemenu .leftCloseBtn span {background:url("../../img/icons_sidebar.png") no-repeat -48px -45px;}

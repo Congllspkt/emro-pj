@@ -1,0 +1,153 @@
+<dom-module id="es-boardconfig-list">
+	<!--
+        ******************************************************************************************
+        ** @Program-name 	: 게시판 관리
+        ** @Description		: 관리자 > 게시판 관리
+        ** @Author 			: jeKim
+        ** @Create Date 	: 2016.03.16
+        ** @History 		: 2016.03.16 jeKim 최초작성
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		<!-- 게시판 목록 : 조회 -->
+		<sc-ajax id="findBoardAdminList"
+				 url="findBoardAdminList.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+		<cc-sub-title-bar title-text="게시판 목록"></cc-sub-title-bar>
+
+		<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+			<cc-fieldset>
+				<sc-label text="게시판 명" ></sc-label>
+				<sc-text-field value="{{searchParam.bbd_nm}}" on-enter="onSearch"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="표시 명" ></sc-label>
+				<sc-text-field value="{{searchParam.bbd_dspy_nm}}" on-enter="onSearch"></sc-text-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+
+		<sc-grid id="gridPanelBoardList" data-provider="{{resultList}}" class="flex" use-selection="false" use-state="false"
+				 on-item-click="onItemClick">
+			<cc-grid-toolbar>
+				<sc-button text="게시판 작성"  on-click="onAddBoardAdmin" auth-s></sc-button>
+			</cc-grid-toolbar>
+
+			<sc-grid-columns>
+				<sc-data-column data-field="bbd_uuid" header-text="게시판 ID" width="90" text-align="center"></sc-data-column>
+				<sc-data-column data-field="bbd_nm" header-text="게시판 명" width="180" text-align="left" style-name="link"></sc-data-column>
+				<sc-data-column data-field="bbd_dspy_nm" header-text="표시 명" width="180" text-align="left"></sc-data-column>
+			</sc-grid-columns>
+		</sc-grid>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-boardconfig-list",
+            properties : {
+                // 게시판 목록 : 조회 조건
+                searchParam: {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+
+                // 게시판 목록 : 조회 결과
+                resultList: {
+                    type: Array,
+                    value : function() {
+                        return [];
+                    }
+                }
+            },
+
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+                // 게시판 목록 조회
+                me.onSearch();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 게시판 목록 : 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "bbd_nm"){
+                    me.fire('find-boardadmin-detail', data);
+                }
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 게시판 목록 : 조회
+            onSearch : function() {
+                var me = this;
+                UT.request(me.$.findBoardAdminList);
+            },
+
+            // 게시판 목록 : 게시판 생성
+            onAddBoardAdmin : function(){
+                var me = this;
+                // 게시판 관리 추가
+                var row = {
+                    bbd_page_list_cnt: "10",	// 목록수
+                    bbd_page_cnt: "10",	// 페이지 수
+                    pst_tit_len: "10",	// 제목길이
+                    use_yn: "Y",			// 사용여부
+                    edtr_typ: "DEXT5",		// 에디터 유형
+                    ath_use_yn: "Y",		// 첨부파일 사용여부
+                    cmnt_use_yn: "Y",		// 댓글사용여부
+                    bbd_re_use_yn: "Y",		// 답글 사용여부
+                    pst_no_show_yn:"Y",	// 번호 보이기 여부
+                    vcnt_show_yn: "Y",	// 조회수 보이기 여부
+                    reg_dttm_show_yn: "Y",	// 등록일 보이기 여부
+                    crtr_show_yn: "Y",	// 등록자 보이기 여부
+                    ath_show_yn: "Y",		// 첨부 보이기 여부
+                    is_new: true
+                };
+
+                me.fire("add-boardadmin", row);
+            }
+        });
+	</script>
+
+</dom-module>

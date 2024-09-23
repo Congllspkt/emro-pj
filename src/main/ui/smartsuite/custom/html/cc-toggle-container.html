@@ -1,0 +1,57 @@
+<!-- <link rel="import" href="./cc-down-animation.html"> -->
+<dom-module id="cc-toggle-container">
+<!--
+    ******************************************************************************************
+    ** @Program-name     : 컨테이너 내의 컨텐츠를 hide/visible 처리 한다.
+    ** @Description        : 
+    ** @Author             : ksKim
+    ** @Create Date     : 2016.06.24
+    ** @History         : 2016.06.24 ksKim 최초작성
+    
+    ex ) 
+    <cc-toggle-container></cc-toggle-container>
+        
+    ******************************************************************************************
+-->
+  <template>
+		<div id="_toggleContainer" class="toggle-container">
+			<div id="_toggleTarget">
+				<content></content>
+			</div>
+	        <div class="close-table">
+	        	<sc-button id="_toggleBtn" class="toggle-up-btn" on-click="_toggleSearch"></sc-button>
+	        </div>
+		</div>
+  </template>
+  <script>
+      Polymer({
+        is: 'cc-toggle-container',
+        properties: {
+            _visible : {
+                type : Boolean,
+                value : true
+            }
+        },
+        
+        _toggleSearch: function(e) {
+        	var me = this;
+        	if(me._visible) {
+	     	  	me._visible = false;
+	     	  	me.$._toggleTarget.classList.add('_toggleHide');
+	     	  	me.$._toggleBtn.classList.add('toggle-down-btn');
+	     	  	me.$._toggleBtn.classList.remove('toggle-up-btn');
+	     	  	me.$._toggleContainer.classList.add('_topBorder');
+        	} else {
+        		me._visible = true;
+        		me.$._toggleTarget.classList.remove('_toggleHide');
+	     	  	me.$._toggleBtn.classList.remove('toggle-down-btn');
+	     	  	me.$._toggleBtn.classList.add('toggle-up-btn');   
+	     	  	me.$._toggleContainer.classList.remove('_topBorder');
+        	}
+        	
+        	// 그리드 컨테이너 리사이즈 처리를 위한 이벤트 
+    		me.fire("area-resize");    	
+        }        
+    });
+    </script>  
+</dom-module>

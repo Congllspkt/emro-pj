@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="exchange">
+	<insert id="insertExchangeKrApi">
+	/* exchange.insertExchangeKrApi : 환율API등록*/
+	<bind name="getFormatNow" value="g.getFormatNow(g.now,'yyyyMMdd')"/>
+		INSERT INTO EXCHRATE_IF
+		(
+		TEN_ID
+		, SEARCHDATE
+		, CUR_UNIT
+		, TTB
+		, TTS
+		, DEAL_BAS_R
+		, BKPR
+		, YY_EFEE_R
+		, TEN_DD_EFEE_R
+		, KFTC_DEAL_BAS_R
+		, KFTC_BKPR
+		, STS
+		, REGR_ID
+		, REG_DTTM
+		, MODR_ID
+		, MOD_DTTM
+		)
+		VALUES
+		(#{g.tenant},
+		#{getFormatNow},
+		#{p.cur_unit},
+		#{p.ttb},
+		#{p.tts},
+		#{p.deal_bas_r},
+		#{p.bkpr},
+		#{p.yy_efee_r},
+		#{p.ten_dd_efee_r},
+		#{p.kftc_deal_bas_r},
+		#{p.kftc_bkpr},
+		'C',
+		#{g.username},
+		#{g.now},
+		#{g.username},
+		#{g.now})
+	</insert>
+</mapper>

@@ -1,0 +1,281 @@
+<dom-module id="es-rolemenu-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <!-- 코드 조회 -->
+        <sc-code-group>
+            <sc-code code="C016" value="{{codes.C016}}"></sc-code> <!-- 사용자 유형 -->
+        </sc-code-group>
+
+        <!-- 목록 조회 -->
+        <sc-ajax id="findList"
+                 url="findListRoleMenu.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindList">
+        </sc-ajax>
+
+        <!-- 목록 저장 -->
+        <sc-ajax id="saveList"
+                 url="saveListRoleMenu.do"
+                 on-response="completeSaveList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <cc-search-condition-panel search-button-hidden="true" search-condition-cls="label-row" auth-r>
+            <cc-fieldset>
+                <sc-label text="사용자 유형"></sc-label>
+                <sc-combobox-field
+                        selected-index="0" display-field="label" value-field="data" readonly="true" input-clear="false"
+                        items="{{codes.C016}}" value="{{searchParam.usr_typ_ccd}}" on-change="onChangeUsrCls"
+                        validation-group="search">
+                </sc-combobox-field>
+            </cc-fieldset>
+        </cc-search-condition-panel>
+
+        <sc-grid id="gridPanel" class="flex" is-tree="true" editable="true" use-selection="false" sortable="false"
+                 on-item-edit-end="onItemEditEnd">
+            <cc-grid-toolbar title-text="[[searchParam.role_nm]]" i18n-disabled>
+                <sc-button text="펼침" on-click="onExpandAll"   auth-r></sc-button>
+                <sc-button text="접기" on-click="onCollapseAll" auth-r></sc-button>
+                <sc-button text="저장" on-click="onSaveList"    autr-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="menu_nm" header-text="메뉴 명" width="250" text-align="left"></sc-data-column>
+                <sc-data-column data-field="menu_cd" header-text="메뉴 코드" width="100" text-align="center"></sc-data-column>
+                <sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="100" text-align="center" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+            </sc-grid-columns>
+        </sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-rolemenu-list',
+            properties: {
+
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            C016: []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            lang_ccd : SCLocaleManager.getLocale()
+                        };
+                    }
+                }
+
+            },
+
+            formulas : {
+                // 수정 가능 상태 : 역할 코드가 선택 되었을 경우
+                isEditable: function() {
+                    return (!UT.isEmpty(this.searchParam.role_cd));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            load: function(data) {
+                var me = this;
+                if('ko_KR' != SCMdiManager.locale) {
+                	me.set("searchParam.role_nm", data.role_nm_en);
+				} else {
+	                me.set("searchParam.role_nm", data.role_nm);
+				}
+                me.set("searchParam.role_cd", data.role_cd);
+                me.set("searchParam.usr_typ_ccd", data.usr_typ_ccd);
+                me.onFindList();
+                me.applyFormula();
+            },
+
+            clear: function() {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemEditEnd: function(event) {
+                var me = this,
+                	data      = event.detail.data,
+                    item      = event.detail.item,
+            		nodeIndex = item.nodeIndex,
+                    field     = item.dataField,
+            		value     = data[field];
+
+                if(field === 'use_yn') {
+                    me.setChildNodesUseYn(value, nodeIndex);
+                    me.setParentNodeUseYn(value, nodeIndex);
+                }
+            },
+            // 자식노드 use_yn 설정
+            setChildNodesUseYn : function(value, curIndex) {
+            	var me = this,
+            		provider = me.$.gridPanel.getDataProvider();
+            	
+            	var childIndexes = provider.getChildIndexes(curIndex);
+            	if(childIndexes.length > 0) {
+	             	provider.setItemAtBatch(childIndexes, function(index, data) {
+	            		// 자식노드 별 각 자식노드들의 use_yn 설정
+            			me.setChildNodesUseYn(value, index);
+            			
+	            		return {"use_yn": value};
+	            	});
+            	}
+            },
+            // 부모노드 use_yn 설정
+            setParentNodeUseYn : function(value, curIndex) {
+           		var me = this,
+	        		provider = me.$.gridPanel.getDataProvider();
+           	
+            	if(value === "Y") {
+            		// 모든 조상 노드 use_yn='Y' 처리
+            		var ancestorsIndexes = provider.getAncestorsIndexes(curIndex);
+            		provider.setItemAtBatch(ancestorsIndexes, function(index, data) {
+            			return {"use_yn": value};
+            		});
+            	} else {
+            		// use_yn='Y'인 형제노드가 하나도 없는 경우 (형제노드 모두 use_yn='N'인 경우)
+            		var parentIndex = provider.getParentIndex(curIndex);
+            		if(parentIndex > -1 && !me.hasUsingChildNodes(provider, parentIndex)) {
+            			// 부모노드 use_yn='N' 처리
+            			provider.setItemAt(parentIndex, {"use_yn": value});
+            			
+            			// 부모노드의 부모노드 use_yn 설정
+           				me.setParentNodeUseYn(value, parentIndex);
+            		}
+            	}
+            },
+            // use_yn='Y'인 자식노드가 있는지 확인
+            hasUsingChildNodes : function(provider, index) {
+    			var childNodes = provider.getChildItems(index), hasChecked = false;
+    			for(var i=0; i<childNodes.length; i++) {
+    				var childNode = childNodes[i];
+    				if(childNode["use_yn"] === "Y") {
+    					hasChecked = true;
+    					break;
+    				}
+    			}
+    			return hasChecked;
+    		},
+    		
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 조회
+            onFindList: function() {
+                var me = this;
+
+                if(!me.validate('search')) {
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.request(me.$.findList);
+            },
+
+            // 조회 완료
+            completeFindList: function(e, res) {
+                var me = this,
+                    result = res.response;
+
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "menu_cd", "par_menu_cd", "children", "ROOT", null, true);
+                me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+            },
+
+            //저장
+            onSaveList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(); 
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('역할코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+				
+                var updated = provider.getUpdateItems();
+                if(updated.length === 0) {
+                	UT.alert("STD.N1700");	// "변경된 내용이 없습니다."
+                	return;
+                }
+                
+                UT.confirm("STD.N1200", function() {	// "저장 하시겠습니까?"
+                    var inserts = [],
+                        deletes = [];
+                    for (var i = 0, len = updated.length; i < len; i++) {
+                        updated[i].role_cd = me.get("searchParam.role_cd");
+                        if (updated[i].use_yn === "Y") {
+                            inserts.push(updated[i]);
+                        } else {
+                            deletes.push(updated[i]);
+                        }
+                    }
+                    me.$.saveList.body = {
+                        insertListMenuRole: inserts,
+                        deleteListMenuRole: deletes
+                    };
+                    UT.request(me.$.saveList);
+                });
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+                UT.alert(message, function(){
+                    me.onFindList();
+                });
+            },
+
+            // 메뉴구분 변경
+            onChangeUsrCls: function() {
+                var me = this;
+                if (me.get("searchParam.role_cd")) {
+                    me.onFindList();
+                }
+            },
+
+            //펼침
+            onExpandAll:function(){
+                var me = this;
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('역할코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+                me.$.gridPanel.expandAll();
+            },
+
+            //접기
+            onCollapseAll:function(){
+                var me = this;
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('역할코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+                me.$.gridPanel.collapseAll();
+            }
+        });
+    </script>
+
+</dom-module>

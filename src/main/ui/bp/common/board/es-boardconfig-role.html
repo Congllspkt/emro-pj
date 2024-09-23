@@ -1,0 +1,118 @@
+<dom-module id="es-boardconfig-role">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <!-- 게시판 역할 : 조회 -->
+        <sc-ajax id="findBoardAuthList"
+                 url="findBoardAuthList.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+		
+        <!-- 게시판 역할 : 저장 -->
+        <sc-ajax id="saveBoardAuthList"
+                 url="saveBoardAuthList.do"
+                 on-response="completeSaveBoardAuthList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <sc-grid id="gridPanel" data-provider="{{resultList}}" class="vbox flex-4" editable="true" use-selection="false" use-state="false" on-item-edit-end="onItemEditEnd">
+            <cc-grid-toolbar title-text="게시판 역할">
+                <sc-button text="저장" on-click="onSaveBoardAuth" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="role_nm" header-text="명" width="200" text-align="left"></sc-data-column>
+                <sc-checkbox-column data-field="wrtg_perm_yn" header-text="쓰기 허용 여부" width="100" text-align="center" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                <sc-checkbox-column data-field="show_yn" header-text="보이기 여부" width="100" text-align="left" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+            </sc-grid-columns>
+        </sc-grid>
+
+    </template>
+    <script>
+        Polymer({
+            is : "es-boardconfig-role",
+            properties: {
+
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            load: function(data) {
+                var me = this;
+                me.set("searchParam", data);
+                me.onSearch();
+
+            },
+
+            onItemEditEnd: function(e){
+            	var me = this,
+            	data = e.detail.data,
+                item = e.detail.item,
+                provider = e.detail.provider,
+                oldValue = e.detail.oldValue,
+                newValue = e.detail.newValue,
+                grid = e.detail.grid;
+             
+                if(item.dataField === "wrtg_perm_yn" && newValue === "Y") {
+                    provider.setCellValue(item.rowIndex, "show_yn", data);
+                }
+            },
+            onSearch: function(){
+                var me = this;
+                UT.request(me.$.findBoardAuthList);
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+            },
+
+            // 게시판 역할 : 저장
+            onSaveBoardAuth: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    var updated = provider.getUpdateItems();
+                    me.$.saveBoardAuthList.body = {
+                        insertList: updated
+                    };
+                    UT.request(me.$.saveBoardAuthList);
+                });
+
+            },
+
+            // 게시판 역할 : 저장 완료
+            completeSaveBoardAuthList: function() {
+                var me = this;
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onSearch();
+                });
+
+            }
+        })
+    </script>
+</dom-module>

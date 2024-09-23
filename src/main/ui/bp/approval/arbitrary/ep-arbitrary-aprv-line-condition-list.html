@@ -1,0 +1,334 @@
+<link rel="import" href="es-arbitrary-factor-field.html" lazy></link>
+
+<dom-module id="ep-arbitrary-aprv-line-condition-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+        .cond {
+            display: inline-block;
+        }
+    </style>
+
+    <template>
+
+        <sc-ajax id="factorList" url="selectListArbitraryDetailFactor.do" body="{{searchParam}}" on-response="completeFactorList"> <!-- 항목 목록 조회-->
+        </sc-ajax>
+
+        <sc-ajax id="gridColumn" url="selectListDataSource.do" on-response="completeGridColumn">
+        </sc-ajax>
+
+        <sc-ajax id="saveList" url="saveListArbitraryAprvLineCondition.do" on-response="completeSaveList"> <!-- 목록 저장 -->
+        </sc-ajax> 
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        
+        <sc-toolbar hidden="[[formula('isIncludedGrid')]]">
+            <sc-spacer></sc-spacer>
+            <sc-button text="적용" on-click="onSaveList" auth-s hidden="[[formula('isIncludedGrid')]]"></sc-button>
+        </sc-toolbar>
+
+        <cc-search-condition-panel id="searchContainer" on-search="onSearchList" search-button-hidden="[[!formula('isIncludedGrid')]]" validation-group="search" hidden="[[formula('isOnlyGrid')]]">
+            <cc-fieldset>
+                <template is="dom-repeat" items="[[factors]]" as="factor" index="index">
+                    <template is="dom-if" if="[[isNotGrid(factor)]]">
+                        <es-arbitrary-factor-field factor="{{factor}}" class="cond">
+                        </es-arbitrary-factor-field>
+                    </template>
+                </template>
+            </cc-fieldset>
+        </cc-search-condition-panel>
+
+        <div class="vspace-10"></div>
+        <sc-toolbar hidden="[[!formula('isIncludedGrid')]]">
+            <sc-spacer></sc-spacer>
+            <sc-button text="적용" on-click="onSaveList" auth-s hidden="[[!formula('isIncludedGrid')]]"></sc-button>
+        </sc-toolbar>
+        
+        <template is="dom-repeat" items="[[factors]]" as="factor" index="index">
+            <template is="dom-if" if="[[isGrid(factor)]]">
+                <es-arbitrary-factor-field factor="{{factor}}" class="grid flex vbox">
+                </es-arbitrary-factor-field>
+            </template>
+        </template>
+        
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-arbitrary-aprv-line-condition-list",
+            properties: {
+                searchParam: { // 조회 조건
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                factors: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                tempFactors: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                includedGrid: {
+                    type: Boolean,
+                    value: false
+                },
+                isOnlyGrid: {
+                	type: Boolean,
+                    value: false
+                }
+            },
+
+            formulas: {
+                isIncludedGrid: function() {
+                    var me = this;
+                    return me.includedGrid;
+                },
+                isOnlyGrid: function(){
+                	var me = this;
+                	return me.isOnlyGrid;
+                },
+            },
+
+            initialized: function() {
+                var me = this;
+                me.applyFormula();
+            },
+            
+            load: function(param) {
+                var me = this;
+                
+                me.set("searchParam", param);
+                if (UT.isNotEmpty(me.searchParam.dapvl_uuid) && UT.isNotEmpty(me.searchParam.dapvl_tbl_id) && UT.isNotEmpty(me.searchParam.dapvl_apvlln_id)) {
+                    UT.request(me.$.factorList);
+                }
+            },
+            
+            // 테이블항목 목록조회 완료
+            completeFactorList: function(e, res) {
+                var me = this;
+                var factors = res.response;
+                var comboCount = 0;
+                if (UT.isNotEmpty(factors)) {
+                    for (var i = 0, len = factors.length; i < len; i++) {
+                        if (me.isGrid(factors[i])) {
+                            me.set("includedGrid", true);
+                            
+                            if(factors[i].scr_typ_ccd === "TREEGRID"){
+                            	me.$.gridColumn.body = {sql_id: factors[i].sql_id};
+                            }else{
+                            	me.$.gridColumn.body = {
+                                        sql_id: factors[i].sql_id,
+                                        _page: {
+                                            page: 1,
+                                            size: 1,
+                                            start: 1,
+                                            end: 1
+                                        }
+                                    };
+                            }
+                        }else{
+                        	comboCount++;
+                        }
+                    }
+                    
+                    if (me.includedGrid) {
+                        me.set("tempFactors", factors);
+                        UT.request(me.$.gridColumn);
+                    } else {
+                        me.set("factors", factors);
+                    }
+                    if(comboCount === 0){
+                    	me.set("isOnlyGrid",true);
+                    }
+                } else {
+                    // 항목없음
+                    me.set("factors", []);
+                }
+                me.applyFormula();
+            },
+            
+            // 그리드 컬럼 정보 구성 
+            completeGridColumn: function(e, res) {
+                var me = this;
+                var factors = me.tempFactors;
+                var result = res.response;
+                
+                if (UT.isNotEmpty(result)) {
+                    var columns = result[0];
+
+                    for (var y = 0, ylen = factors.length; y < ylen; y++) {
+                        if (me.isGrid(factors[y])) {
+                            factors[y]._columns = columns;
+                        } else {
+                            if (columns.hasOwnProperty(factors[y].parm_key)) { // 그리드 컬럼에 존재하면 필수여부 N
+                                factors[y].mand_yn = "N";
+                            }
+                        }
+                    }
+                }
+                me.set("factors", factors);
+                me.applyFormula();
+            },
+
+            // 조회
+            onSearchList: function() {
+                var me = this;
+                
+                if (!me.validate("search")) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요
+                    return;
+                }
+                
+                if (me.includedGrid) {
+                    var grid = me.querySelector(".grid");
+                    var cond = me.querySelectorAll(".cond");
+
+                    if (UT.isNotEmpty(cond)) {
+                        var condParam = {};
+                        for (var i = 0, len = cond.length; i < len; i++) {
+                            var paramValue = cond[i].getParamValue();
+                            for (var key in paramValue) {
+                                condParam[key] = paramValue[key];
+                            }
+                        }
+                        grid.searchGrid(condParam);
+                    }
+                }
+            },
+
+            // 조회결과 
+            completeSearchList: function(e, res) {
+                var me = this;
+                
+                if (me.includedGrid) {
+                    var grid = me.querySelector(".grid");
+                    grid.setData(res.response);
+                }
+            },
+
+            onSaveList: function() {
+                var me = this;
+                
+                if (!me.validate("search")) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요
+                    return;
+                }
+                
+                var created = [];
+                var commons = [];
+                var cond = me.querySelectorAll(".cond");
+                if (UT.isNotEmpty(cond)) {
+                    for (var i = 0, len = cond.length; i < len; i++) {
+                        var saveValue = cond[i].getSaveValue();
+                        saveValue.dapvl_apvlln_id = me.searchParam.dapvl_apvlln_id;
+                        commons.push(saveValue);
+                    }
+                }
+                
+                if (me.includedGrid) {
+                    var grid = me.querySelector(".grid");
+                    var selected = grid.getSaveValue();
+                    if (UT.isNotEmpty(selected)) {
+                        for (var i = 0, len = selected.length; i < len; i++) {
+                            var gridValue = selected[i].gridValue;
+                            var saveValue = selected[i].saveValue;
+                            saveValue.dapvl_apvlln_id = me.searchParam.dapvl_apvlln_id;
+                            
+                            var arr = [];
+                            for (var x = 0, xlen = commons.length; x < xlen; x++) {
+                                var key = commons[x]._param_key;
+                                var nm = commons[x]._param_nm;
+                                
+                                arr[x] = UT.copy(commons[x]);
+                                
+                                if (UT.isNotEmpty(key) && gridValue.hasOwnProperty(key)) {  // 검색조건의 값보다 그리드에 있는 값이 우선 적용됨.
+                                    arr[x].parm_key_val = gridValue[key];
+                                }
+                                if (UT.isNotEmpty(nm) && gridValue.hasOwnProperty(nm)) {  // 검색조건의 값보다 그리드에 있는 값이 우선 적용됨.
+                                    arr[x].parm_nm_val = gridValue[nm];
+                                }
+                            }
+                            arr.push(saveValue);
+                            
+                            created.push(arr);
+                        }
+                    } else {
+                        return;
+                    }
+                } else {
+                    created.push(commons);
+                }
+                
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveList.body = {
+                        headerData: me.searchParam,
+                        insertAprvLineConditions: created
+                    };
+                    UT.request(me.$.saveList);
+                });
+                
+            },
+            
+            // 목록저장 완료
+            completeSaveList: function(e, res) {
+                var me = this;
+                var result = res.response;
+
+                if (result.resultStatus === "S") {
+                    UT.completeAlert("", function() { // 요청을 완료 하였습니다
+                        me.fire("saved-aprv-line-conditions");
+                        if (me.includedGrid) {
+                            var grid = me.querySelector(".grid");
+                            grid.gridClearCheckAll();
+                        }
+                    });
+                } else {
+                    var rows = [];
+                    var invalid_datas = result.invalid_datas || [];
+                    for (var i = 0, len = invalid_datas.length; i < len; i++) {
+                        var dup = invalid_datas[i].duplicated;
+                        var col = [];
+                        for (var index in dup) {
+                            col.push(dup[index].parm_key_val);
+                        }
+                        rows.push(col.join(","));
+                    }
+                    if (UT.isNotEmpty(rows)) {
+                        var msg = me.translate("STD.N2010", null, invalid_datas.length) + "<br>" + rows.join("<br>"); 
+                        UT.alert(msg, function() {
+                            me.fire("saved-aprv-line-conditions");
+                            if (me.includedGrid) {
+                                var grid = me.querySelector(".grid");
+                                grid.gridClearCheckAll();
+                            }
+                        }, true); // 중복 데이터 {0}건 제외 후 추가하였습니다 
+                        
+                    } else {
+                        UT.alert("STD.E9999"); // 오류가 발생하였습니다.\n관리자에게 문의하세요
+                    }
+                }
+            },
+            
+            isGrid: function(factor) {
+                var me = this;
+                return (factor.scr_typ_ccd === "GRID" || factor.scr_typ_ccd === "TREEGRID");
+            },
+            
+            isNotGrid: function(factor) {
+                var me = this;
+                return (!me.isGrid(factor));
+            }
+            
+        });
+    </script>
+
+</dom-module>

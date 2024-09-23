@@ -1,0 +1,137 @@
+<dom-module id="ep-attach">
+
+    <style>
+       :host {
+            @apply(--fit-layout);
+        }
+    </style>
+    
+    <template>
+    
+        <cc-sub-title-bar>
+            <sc-button text="저장" on-click="onSave" hidden$="{{!options.editable}}"></sc-button>
+        </cc-sub-title-bar>
+
+        <sc-panel title-text="첨부파일" class="flex">
+            <sc-upload id="upload" class="h-200" style="height:200px;"
+                value="{{athfGrpUuid}}"
+                editable="{{options.editable}}"
+                max-total-file-count="{{options.maxTotalFileCount}}"
+                max-total-file-size="{{options.maxTotalFileSize}}"
+                extension="{{options.allowExtension}}"
+                show-move-buttons="{{options.showMoveButtons}}"
+                image-only="{{options.imageOnly}}">
+            </sc-upload>
+        </sc-panel>
+
+    </template>
+    
+    <script>
+        Polymer({
+            is: "ep-attach",
+            properties: {
+                athfGrpUuid: {
+                    type: String,
+                    value: ""
+                },
+                options: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            editable: true,
+                            maxTotalFileCount: 100,
+                            maxTotalFileSize: "100MB",
+                            allowExtension: undefined,
+                            showMoveButtons: false,
+                            imageOnly: false,
+                            required: false
+                        }
+                    }
+                },
+                titleText: {
+                	type: String,
+                	value: function() {
+                		return this.translate("첨부파일");
+                	}
+                }
+            },
+
+            // 기본 파라미터 설정
+            load: function(param) {
+                var me = this;
+                if(UT.isEmpty(param.athg_uuid)) {
+                    me.$.upload.reset();
+                }
+                me.set("athfGrpUuid", param.athg_uuid);
+                me.setUploadOptions(param.options);
+            },
+            
+            // 업로더 옵션 설정
+            setUploadOptions: function(options) {
+                var me = this;
+                options = options || {};
+                if (UT.isBoolean(options.editable)) {
+                    me.set("options.editable", options.editable);
+                }
+                if (UT.isNumber(options.maxTotalFileCount)) {
+                    me.set("options.maxTotalFileCount", options.maxTotalFileCount);
+                }
+                if (UT.isString(options.maxTotalFileSize)) {
+                    me.set("options.maxTotalFileSize", options.maxTotalFileSize);
+                }
+                if (UT.isBoolean(options.showMoveButtons)) {
+                    me.set("options.showMoveButtons", options.showMoveButtons);
+                }
+                if (UT.isString(options.allowExtension)) {
+                    me.set("options.allowExtension", options.allowExtension);
+                }
+                if (UT.isBoolean(options.imageOnly)) {
+                    me.set("options.imageOnly", options.imageOnly);
+                }
+                if(UT.isBoolean(options.required)) {
+                    me.set("options.required", options.required);
+                }
+            },
+            
+            // 저장
+            onSave: function() {
+                var me = this;
+
+                if (!me.$.upload.isDirty) {
+                    UT.alert("STD.N1700"); // 변경된 내용이 없습니다
+                    return;
+                }
+
+                // 필수 서류일 경우 제어
+                if(me.get("options.required") && me.$.upload.totalFileCount < 1) {
+                    UT.alert("STD.VS1024");
+                    return;
+                }
+                
+                UT.confirm("STD.N1200", function() { // 저장하시겠습니까?
+                    var localFiles = me.$.upload.localFiles;
+                	me.$.upload.upload().then(function(e) {
+                		var param = {
+                            athg_uuid: me.get("athfGrpUuid"),
+                			file_count: me.$.upload.totalFileCount
+                		};
+                		param["inserts"] = me.$.upload.allFiles ? localFiles : null;
+                		param['allFiles'] = me.$.upload.allFiles;
+                        me.fire("saved-attach", param);
+                        me.onClose();
+                    });
+                });
+            },
+
+            // 닫기
+            onClose: function() {
+                var me = this;
+                me.reset();
+                me.$.upload.reset();
+                me.fire("close");
+            }
+            
+        });
+    </script>
+
+</dom-module>

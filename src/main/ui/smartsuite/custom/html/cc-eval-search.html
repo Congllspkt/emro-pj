@@ -1,0 +1,200 @@
+<!--
+
+평가 조회 (cc-eval-search) 커스텀 태그
+
+<cc-eval-search value="{{입력 value}}" result-value="{{검색 결과 value}}" exc-sts="평가상태" eval-typ-cd="평가업무구분"></cc-eval-search>
+
+1. 주요 Property
+1) value : 해당 텍스트 필드 input value binding
+[string]
+
+2) result-value : 검색 결과 값 binding
+[string] [optional]
+
+3) exc-sts : 평가상태
+[string] [optional]
+
+4) eval-typ-cd : 평가업무구분(상세코드2자리사용) - R704
+[string]
+
+
+2. value Proeprty
+1) value-class : 입력 텍스트 필드 크기
+[string] [optional]
+
+2) value-placeholder : 입력 텍스트 필드 placeholder
+[string] [optional]
+
+3) readonly, required, disabled 입력 텍스트 필드 제어
+[boolean] [optional]
+
+
+3. result Value Property
+1) result-class : 결과 텍스트 필드 크기
+[string] [optional]
+
+2) result-placeholder : 결과 텍스트 필드 placeholder
+[string] [optional]
+
+3) result-hidden : 결과 텍스트 필드 숨김 제어
+[boolean] [optional]
+
+
+4. trigger Field Property
+1) disabled-trigger : Trigger Field disabled 제어
+[boolean] [optional]
+
+2) hide-trigger : Trigger Field 숨김 제어
+[boolean] [optional]
+
+-->
+
+<sc-link rel="import" href="../../../bp/srm/shared/ep-eval-list.html" lazy></sc-link>
+
+<dom-module id="cc-eval-search">
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <template>
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <sc-text-field class$="[[valueClass]] value-field"
+                       placeholder="[[valuePlaceholder]]"
+                       required="[[required]]"
+                       disabled="[[disabled]]"
+                       readonly="[[readonly]]"
+                       value="{{value}}"
+                       on-keydown="onKeyDown"
+                       on-enter="onFindEvalList"
+                       max-length="200">
+        </sc-text-field>
+        <div class="hspace-5" hidden="[[hideTrigger]]"></div>
+        <sc-trigger-field trigger-cls="field-search" on-trigger-click="onShowPopupFindEvalList" disabled="[[disabledTrigger]]" hide-trigger="[[hideTrigger]]"></sc-trigger-field>
+        <div class="hspace-5" hidden="[[resultHidden]]"></div>
+        <sc-text-field class$="[[resultClass]]" value="{{resultValue}}" placeholder="[[resultPlaceholder]]" hidden="[[resultHidden]]" readonly></sc-text-field>
+    </template>
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "cc-eval-search",
+
+            behaviors : [
+                Polymer.CCSearchFieldBehavior
+            ],
+
+            properties: {
+                // value Field
+                valueField: {
+                    type: String,
+                    value: "eval_nm"
+                },
+
+                // result-Value Field
+                resultField : {
+                    type : String,
+                    value : 'eval_id'
+                },
+
+                valuePlaceholder : {
+                    type: String,
+                    value: I18N.translate("평가 명")
+                },
+
+                resultPlaceholder : {
+                    type: String,
+                    value: I18N.translate("코드")
+                },
+
+                param: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+                evalTypCd : {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+                excSts: {
+                    type: String,
+                    value: "80"
+                },
+            },
+
+            // text-field 검색
+            onFindEvalList : function() {
+                var me = this;
+                if(!me.readonly) {
+                    if(!me.excSts){
+                        UT.alert("STD.SRM1093");
+                        return;
+                    }
+                    // 자동완성 함수 시작(EP-EVAL-LIST의 경우 CC-AUTOCOMPLETE-BEHAVIOR 상속 X)
+                    var evalPopup = me.createPopup();
+                    evalPopup.show();
+                    evalPopup.getWindowContent().load({
+                        defaultParam: {
+                            exc_sts :     me.excSts,
+                            eval_typ_cd : me.evalTypCd,
+                            eval_nm :     me.value,
+                        },
+                        singleSelect : true,
+                        autoComplete: true
+                    });
+                }
+            },
+
+            // 검색버튼 클릭
+            onShowPopupFindEvalList : function() {
+                var me = this;
+
+                if(!me.excSts){
+                    UT.alert("STD.SRM1093");
+                    return;
+                }
+
+                var evalPopup = me.createPopup();
+                evalPopup.show();
+                evalPopup.getWindowContent().load({
+                    defaultParam: {
+                        exc_sts :     me.excSts,
+                        eval_typ_cd : me.evalTypCd,
+                        eval_nm :     me.value,
+                    },
+                    singleSelect : true
+                });
+            },
+
+            // Popup 생성
+            createPopup : function() {
+                var me = this;
+                return UT.popup('ep-eval-list', me, 650, 500, {
+                    "selected-items": function(popup, e) {
+                        var items  = e.detail;
+                        var result = items[0];
+
+                        // 선택 완료 후 callback
+                        if(result){
+                            me.clearFlag = false;
+                            me.set("value",       result[me.valueField]);     // 코드명
+                            me.set("resultValue", result[me.resultField]);    // 코드(평가아이디)
+                        }
+                        popup.close();
+                    }
+                }, {titleText: "평가 검색"});
+            }
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,155 @@
+<dom-module id="ep-sheettemplate-headers-list">
+<!--
+	******************************************************************************************
+	** @Program-name    : ep-sheettemplate-headers-list 시트 템플릿 설정된 컬럼의 헤더를 가져온다.
+	** @Description     : 
+	** @Author          : GaRam, Choi
+	** @Create Date     : 2020.07.31
+	******************************************************************************************
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+<!--
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+-->
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findSheetMasterAppend"
+				url="findListSheetMaster.do"
+				body="{{searchParam}}"
+				last-response="{{resultList}}">
+		</sc-ajax>
+
+
+		<cc-auth-checker check-list="auth-r"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<!-- 조회조건 -->
+			<cc-search-container on-search="onSearch" >
+				<table>
+					<colgroup>
+						<col style="width:120px">
+						<col>
+						<col style="width:120px">
+						<col>
+					</colgroup>
+					<tr>
+						<th><sc-label text="컬럼 코드"></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.col_cd}}" maxlength="18"></sc-text-field>
+						</td>
+						<th><sc-label text="컬럼 이름" ></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.col_nm}}" ></sc-text-field>
+						</td>
+					</tr>
+				</table>
+			</cc-search-container>
+			
+			<!-- 그리드 -->
+			<sc-grid id="sheetGridPanel" class="flex" data-provider="{{resultList}}" use-state="false" selection-mode="radio" use-selection="true" validation-group="save">
+				<cc-grid-toolbar>
+					<sc-button text="추가" on-click="onAdd" auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="sheet_nm" header-text="시트 이름" width="150" text-align="right" ></sc-data-column>
+					<sc-data-column data-field="sheet_typ" header-text="시트 타입" width="150" text-align="right"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field	data-field="sheet_id"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+			
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "ep-sheettemplate-headers-list",
+            properties : {
+                codes: {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                        }
+                    }
+                },
+
+                // 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+
+				// 조회 결과 리스트
+				resultSheetList: {
+                    type: Array,
+					value : function() {
+						return [];
+					}
+                }
+            },
+            
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+            },
+
+			load: function(data){
+				var me = this,
+				param = UT.copy(data);
+
+				me.set("searchParam",param);
+
+				me.onSearch();
+			},
+
+			onSearch : function() {
+				var me = this;
+				UT.request(me.$.findSheetMasterAppend);
+			},
+			onAdd : function(){
+				var me = this,provider = me.$.sheetGridPanel.getDataProvider();
+				var selected = provider.selectionCheckedItems();
+
+				if(UT.isEmpty(selected)){
+					UT.alert("STD.N1600");
+				}else if(selected.length > 1) {
+					UT.alert("STD.BID0011"); //한개만 선택해주세요.
+				}else{
+					me.fire("selected-item", selected[0]);
+				}
+			},
+
+
+
+        });
+	</script>
+
+</dom-module>

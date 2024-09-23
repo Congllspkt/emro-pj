@@ -1,0 +1,371 @@
+<script src="../../../../ui/lib/things/lic/things-lic.js"></script>
+
+<script src="../../../../ui/lib/things/things-scene-min.js"></script>
+<script src="../../../../ui/lib/things/things-scene-chartjs-min.js"></script>
+<script src="../../../../ui/lib/things/things-scene-table-min.js"></script>
+<script src="../../../../ui/lib/things/things-scene-progressbar-min.js"></script>
+<script src="../../../../ui/lib/things/things-scene-half-roundrect-min.js"></script>
+<script src="../../../../ui/lib/things/things-scene-gauge-min.js"></script>
+
+<script src="../../../../ui/lib/things/things-board-integration-min.js"></script>
+
+
+<dom-module id="cc-hatio-dashboard">
+    <style>
+	    @charset "utf-8";
+	    @font-face {
+	      font-family: NanumBarunGothic;
+	      src: url(../../../lib/things/resources/NanumBarunGothic/NanumBarunGothic.woff);
+	    }
+	    @font-face {
+	      font-family: NanumBarunGothic-Bold;
+	      src: url(../../../lib/things/resources/NanumBarunGothic/NanumBarunGothicBold.woff);
+	      font-weight: bold
+	    }
+	    /* @font-face {
+	      font-family: Yantramanav-Regular;
+	      src: url(../../../lib/things/resources/Yantramanav/otf/Yantramanav-Regular.otf);
+	    } */
+	    .full-screen{
+	    	position: absolute;
+			bottom: 30px;
+			right: 70px;
+	    }
+	    .settings{
+	    	position: absolute;
+			top: 15px;
+			right: 70px;
+	    }
+	    .mdi_lan{
+			border: 1px solid #1e5784;
+			border-radius: 0px;
+	    }
+	    .mdi_lan a{
+	    	border-radius: 0px;
+	    }
+	    .full-screen-button{
+	    	width: 50px;
+    		height: 53px;
+    		border-radius: 100%;
+    		text-align: center;
+    		display: inline-block;
+	    }
+	    
+	        
+    </style>
+
+    <template>
+        
+  		<div class="content-wrapper">
+	    	<div class="content">
+		    	<content></content>
+		        <div id="scene-viewer" class="scene-viewer" ></div>
+		        <!-- <sc-button id="fullScreen" class="btn full-screen" ></sc-button> -->
+		        <div style="float:left" class="full-screen" >
+	        		<sc-button id="fullScreen" on-click="fullScreen" class="full-screen-button btn icon" icon-cls="btn" i18n-disabled>
+	        			<i class="fa fa-arrows-alt fa-2x" style="padding-top: 14px;margin-left: -2px;"></i>
+	        		</sc-button>
+	        		
+	        	</div>
+		        <!-- <div class="settings">
+		        	<div class="mdi_lan" style="float:left">
+						<a>{{fitName}}</a>
+						<div class="lan_list">
+							<ul>
+								<template id="localeList" is="dom-repeat" items="{{fits}}" as="fit" >
+									<li><a on-click="_onChangeFit">[[fit.displayName]]</a></li>
+								</template>
+							</ul>
+						</div>
+					</div>
+					<div class="mdi_lan" style="float:left;width:93px">
+						<a style="width:91px">{{name}}</a>
+						<div class="lan_list">
+							<ul style="width:91px">
+								<template id="localeList" is="dom-repeat" items="{{scenes}}" as="scene" >
+									<li ><a on-click="_onChangeScene" >[[scene.displayName]]</a></li>
+								</template>
+							</ul>
+						</div>
+					</div>
+		        </div> -->
+		       
+             </div>
+    	</div>
+    </template>
+          
+    <script>
+        Polymer({
+            is: 'cc-hatio-dashboard',
+            
+            properties : {
+            	name : {
+                	type : String,
+                	value : ''
+                },
+                
+                scenes : {
+                	type : Array,
+                	value : function(){
+                		return [
+							{displayName : "SCENE-58", value : "SCENE-58"},
+							{displayName : "SCENE-60", value : "SCENE-60"},
+							{displayName : "SCENE-62", value : "SCENE-62"},
+                		]
+                	}
+                },
+                
+                fit : {
+                	type : String,
+                	value : 'both'
+                },
+                
+                fitName : {
+                	type : String,
+                	value : 'Both'
+                },
+                
+                fits : {
+                	type : Array,
+                	value : function(){
+                		return [
+							{displayName : "Both", value : "both"},
+							{displayName : "Ratio", value : "ratio"},
+							{displayName : "Center", value : "center"},
+							{displayName : "None", value : "none"},
+                		]
+                	}
+                },
+                
+                integrator : {
+                	type : Object,
+                	value : function() {
+                		return{};
+                	}
+                },
+                
+                sceneInstance : {
+                	type : Object,
+                	value : function(){
+                		return {};
+                	}
+                }
+                
+            },
+            behaviors:[
+				Polymer.SCResizableBehavior
+   			],
+            
+            listeners: {
+            	'sc-resize': 'doContentElementResize'
+            },
+            
+            fullScreen : function(){
+            	var me = this;
+            	me.sceneInstance.fullscreen(me.fit);
+            },
+            
+            _onChangeFit:function(e){
+            	var me = this;
+            	me.fit = e.model.fit.value;
+            	me.fitName = e.model.fit.displayName; 
+            	me.integrator.fit(me.fit, me.sceneInstance);
+            },
+            _onChangeScene:function(e){
+            	var me = this;
+            	me.name = e.model.scene.value; 
+            	/* me.integrator.fit(me.fit, me.sceneInstance); */
+            	if(me.integrator.sceneNames[me.name]){
+            		me.sceneInstance = me.integrator.sceneNames[me.name];
+            		me.integrator.fit(me.fit, me.sceneInstance);
+            		me.sceneInstance.resize();
+            		
+            	}else{
+            		me.integrator.fitMode = me.fit;
+            		me.sceneInstance = me.integrator.integrate({
+	          		      target: 'scene-viewer',
+	          		      sceneName: me.name
+	          		});
+            		/* me.integrator.fit(me.fit, me.sceneInstance); */
+            		me.sceneInstance.fit(me.fit);
+            		me.sceneInstance.resize();
+            		
+            		
+                	me.sceneInstance.on('click', function(e, hint){
+	              	      var self = hint.origin;
+	              	      sceneSelf = hint.origin;
+	              	      point = {
+	              	        x: e.offsetX,
+	              	        y: e.offsetY
+	              	      }
+	
+	              	      var target = document.getElementById('scene-viewer');
+	              	      me.hidePicker(target);
+	
+	              	      if(!self.model.id || self.model.hidden)
+	              	        return;
+	
+	              	      if(self.model.id.match(/date_picker/)) {
+	              	        // do something
+	              	        me.showPicker(target, point, 'this is date picker');
+	              	      }
+	  				});
+            		
+            	}
+            },
+			
+            _initialized : function() {
+            	var me = this;
+            	
+            	me.integrator = SceneIntegrator.instance({
+            	      authorizationKey: "tokenuser",
+            	      withCredentials: true,
+            	      baseURL: 'http://board.hatiolab.com/rest',
+            	      fit: me.fit,
+            	      license: ThingsLicense
+            	    });
+            	me.sceneInstance = me.integrator.integrate({
+            	    target: me.container,
+            	    sceneName: me.name
+            	});
+            	
+            	me.sceneInstance.on('click', function(e, hint){
+            	      var self = hint.origin;
+            	      sceneSelf = hint.origin;
+            	      point = {
+            	        x: e.offsetX,
+            	        y: e.offsetY
+            	      }
+
+            	      var target = document.getElementById('scene-viewer');
+            	      me.hidePicker(target);
+
+            	      if(!self.model.id || self.model.hidden)
+            	        return;
+
+            	      if(self.model.id.match(/date_picker/)) {
+            	        // do something
+            	        me.showPicker(target, point, 'this is date picker');
+            	      }
+				});
+            	
+            	this.doContentElementResize();
+            },
+            
+            doContentElementResize : function() {
+         		Polymer.dom.addDebouncer(this.debounce('_debounceHatioDashboardResize', this._doContentElementResize, 100));
+       		},
+            
+            _doContentElementResize : function(){
+            	var me = this;
+            	
+            	var rect, height,me = this;
+            	rect = this.getBoundingClientRect();
+       			
+            	height = rect.height - this.contentPaddingBottom;
+       			
+       			
+       			this.content.style.width = (rect.width - this.contentPaddingLeft - this.borderWidth) + 'px';
+       			this.content.style.height = height + 'px';
+       			this.container.style.width = this.content.style.width; 
+       			this.container.style.height = height + 'px';
+            	
+            	if(UT.isNotEmpty(me.sceneInstance) && me.integrator){
+            		 /* me.sceneInstance.resize();
+            		 me.integrator.fit(me.fit, me.sceneInstance); */
+            		me.sceneInstance.fit(me.fit);
+            		me.sceneInstance.resize();
+            	}
+            },
+            
+            
+            
+            hidePicker : function(target){
+            	target = target.querySelector('.scene-wrapper')
+                var picker = target.querySelector('.picker')
+
+                if(picker) {
+                    target.removeChild(picker);
+                }
+            },
+            
+            showPicker : function(target, position, innerText){
+            	var div = document.createElement('div')
+                div.setAttribute('class', 'picker');
+                div.style.width = '200px';
+                div.style.height = '100px';
+                div.style.position = 'absolute';
+                div.style.zIndex = 10;
+                div.style.border = '#ccc solid 1px'
+                div.style.backgroundColor = '#f6f6f6'
+
+
+                target = target.querySelector('.scene-wrapper')
+
+                var x = 0, y = 0;
+                if(!position) {
+                  x = target.width / 2;
+                  y = target.height / 2;
+                } else {
+                  x = position.x;
+                  y = position.y;
+                }
+
+                div.style.left = x + 'px';
+                div.style.top = y + 'px';
+
+                div.innerText = innerText || '';
+
+                target.append(div)
+            },
+            
+            get contentPaddingBottom() {
+    			if(!this._contentPaddingBottom) {
+    				this._contentPaddingBottom = Number(getComputedStyle(this.content).paddingBottom.replace('px', ''))
+    			}    			
+    			return this._contentPaddingBottom;
+      		},
+      		
+      		get contentPaddingLeft() {
+    			if(!this._contentPaddingLeft) {
+    				this._contentPaddingLeft = Number(getComputedStyle(this.content).paddingLeft.replace('px', '')) * 2;
+    			}    			
+    			return this._contentPaddingLeft;
+      		},
+      		
+      		get borderWidth() {
+      			if(!this._borderWidth) {
+      				this._borderWidth =  Number(this.getComputedStyleValue('border-left-width').replace('px', '')) * 2;
+      			}
+      			return this._borderWidth;
+      		},
+            
+            get content() {
+      			if(!this._content) {
+      				this._content = this.querySelector('div.content');
+      			}
+      			return this._content;
+      		},
+            
+            get container() {
+      			if(!this._container) {
+      				this._container = this.querySelector('.scene-viewer');  
+      			}
+      			return this._container;
+      		},
+            
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    if(!this._isPrepared) {
+	    				this._isPrepared = true;
+	    				this._initialized();
+	    			}
+                }
+    		},
+        });
+    </script>
+
+</dom-module>

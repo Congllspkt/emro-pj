@@ -1,0 +1,141 @@
+<dom-module id="es-menu-role-mapping">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <sc-ajax id="findListMenuRole"
+                 url="findListMenuRole.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <sc-ajax id="saveListRoleMenu"
+                 url="saveListRoleMenu.do"
+                 on-response="completeSaveListMenuRole">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="desc-box" hidden="[[!formula('isMenuCodeBinding')]]">
+            <p class="sub-text">
+				<!-- 메뉴를 허용할 역할을 설정해주세요. 역할을 부여받은 사용자만 해당 메뉴를 볼 수 있습니다. -->
+                <span class="label-emphasis" data-tooltip-text$="[[translate('STD.ADM1071')]]">[[searchParam.menu_cd]] : [[searchParam.menu_nm]]<span class="tooltip"></span></span>
+            </p>
+            <!-- <p class="sub-text">메뉴를 허용 할 역할을 설정해주세요.<br>부여받은 역할을 가진 사용자만 해당 메뉴를 볼 수 있습니다.</p> -->
+        </div>
+        <div class="desc-box" hidden="[[formula('isMenuCodeBinding')]]">
+            <p class="sub-text">[[translate('STD.ADM1072')]]</p>		<!--메뉴목록에서 메뉴코드를 선택해주세요.-->
+        </div>
+
+        <sc-grid id="gridPanel" class="flex" data-provider="{{resultList}}" editable="true" use-selection="false">
+            <cc-grid-toolbar hidden="[[!formula('isMenuCodeBinding')]]">
+                <sc-button text="저장" on-click="onSaveRoleMapping" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="role_cd" header-text="역할 코드" width="80" text-align="center"></sc-data-column>
+                <sc-data-column data-field="role_nm" header-text="역할 명" width="150" text-align="left"></sc-data-column>
+                <sc-data-column data-field="role_nm_en" header-text="역할 명 영문" width="150" text-align="left"></sc-data-column>
+                <sc-checkbox-column data-field="use_yn" header-text="역할 배정" width="150" text-align="center" editable="true"
+                                    display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field	data-field="menu_cd"		data-type="text"></sc-grid-field>
+            </sc-grid-fields>
+            </sc-grid-field>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is: 'es-menu-role-mapping',
+
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            formulas: {
+                isMenuCodeBinding: function() {
+                    return UT.isNotEmpty(this.get('searchParam.menu_cd'));
+                }
+            },
+
+            load: function(data) {
+                var me = this;
+                me.set('searchParam', data);
+                me.applyFormula();
+                UT.request(me.$.findListMenuRole);
+            },
+
+            onSaveRoleMapping: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    updated = provider.getUpdateItems(),
+                    len = updated.length;
+
+
+                if(len === 0) {
+                    UT.alert("STD.N1700"); // 변경된 내용이 없습니다.
+                    return;
+                }
+
+                if(!me.formula('isMenuCodeBinding')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메뉴코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                if(me.get('searchParam.menu_cd').indexOf("ADM") > -1){
+                    if(!Polymer.$Array.find(SCSessionManager.userDetails.authorities,function(role) { return role.authority == 'SA100' })){
+                        UT.alert("STD.ADM1070");		//관리자 권한은 일반 관리자가 수정할 수 없습니다.
+                        return;
+                    }
+                }
+
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    var inserts = [],
+                        deletes = [];
+
+                    for(var i=0; i<len; i++) {
+                        if(updated[i].use_yn ==="Y") {
+                            inserts.push(updated[i]);
+                        } else {
+                            deletes.push(updated[i]);
+                        }
+                    }
+                    me.$.saveListRoleMenu.body = {
+                        insertListMenuRole : inserts,
+                        deleteListMenuRole : deletes
+                    };
+                    UT.request(me.$.saveListRoleMenu);
+                });
+            },
+
+            completeSaveListMenuRole: function() {
+                var me = this;
+
+                UT.request(me.$.findListMenuRole);
+                me.fire('change-info', me.get('searchParam'));
+                UT.completeAlert(); // 저장 하였습니다.
+            },
+
+            clear: function(){
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            }
+        })
+    </script>
+</dom-module>

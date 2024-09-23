@@ -1,0 +1,144 @@
+<!--
+ * @Desc notice widget
+ * @Author patrick.sung
+ * @Created 2016-05-03
+ -->
+<link rel="import" href="../sc-widget-content-behavior.html"/>
+<dom-module id="sc-widget-notice">
+    <template>
+        <style>
+            :host {
+                @apply(--fit-layout);
+            }
+        </style>
+                 
+        <sc-ajax auto id="protocolGetSetting" url="../portal/findWidgetProperties.do" body$='{"wdgt_id":"[[widgetId]]"}'
+                 handle-as="json"
+                 last-response="{{_data}}" on-response="_onGetSetting" method="post"
+                 contentType="application/json"></sc-ajax>
+
+        <sc-ajax id="getList"
+                 url="../portal/widget/findNoticeBoardList.do"
+                 method="post"
+                 body="{{searchParam}}"
+                 on-response="completeFindNoticeBoardList">
+        </sc-ajax>
+
+       	<!-- 게시판-->
+<!--         <div class="po_contents"> -->
+<!--             <h3><span>Notice<a href="">+ more</a></span></h3> -->
+            <div class="wrap_contents" class="wrap_contents">
+                <div class="main_board">
+                    <ul id="noticont">
+                    </ul>
+                </div>
+            </div>
+<!--         </div> -->
+        <!-- //게시판-->
+    </template>
+    <script>
+        Polymer({
+            is: "sc-widget-notice",
+
+            behaviors: [BehaviorWidgetContent],
+
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: {}
+                },
+                _opened: Boolean
+            },
+            //위젯 정보를 가져오고 난뒤 호출되는 함수
+            _onGetSetting: function () {
+                /* if (!this._data) {
+                    this._data = {
+                        widgetId: this.widgetId,
+                        count: '5'
+                    };
+                }else{
+                	this._data = JSON.parse(this._data);
+                } */
+                this.findNoticeBoardList();
+            },
+            // refresh-widget 시 호출되는 함수
+            refresh: function() {
+            	var me = this;
+                
+            	me.findNoticeBoardList();
+            },
+            findNoticeBoardList: function() {
+            	var me = this;
+            	
+            	me.searchParam = {
+                	bbd_uuid : this.portletParam,
+                	_page    : {manualQuery: false, page: 1, size: 30, start: 1, end: 30}
+                };
+                me.$.getList.generateRequest();
+            },
+            completeFindNoticeBoardList: function(el, res) {
+            	var me = this,
+            		result = res.response;
+            	
+            	var noti = Polymer.dom(me.$.noticont);
+            	while(noti.firstChild) {
+            		var a = noti.firstChild.querySelector("a");
+            		if(a) me.unlisten(a, "tap", "onMoveBoardDetail");
+            		noti.removeChild(noti.firstChild);
+            	}
+            	
+            	if(UT.isNotEmpty(result)) {
+            		var rows = result.content;
+            		for(var i=0; i<rows.length; i++) {
+                		var row = rows[i];
+                		
+                		var a = document.createElement("a");
+                		a.data = row;
+                		a.innerHTML = me.onLabel(row.pst_tit, row) + "<span>" + me.dateConvert(row.reg_dttm) + "</span>";
+                		me.listen(a, "tap", "onMoveBoardDetail");
+                		
+                		var li = document.createElement("li");
+                		li.appendChild(a);
+                		
+                		Polymer.dom(me.$.noticont).appendChild(li);
+                	}
+            	}
+            },
+            
+            //게시글 리스트의 라벨 표시함수
+            onLabel : function(value, row) {
+                var me = this;
+            	if(row.ann_yn === "Y") {
+            	    var val = "<b>" + me.translate("공지") + "</b>";
+            	    val += value;
+            	    return val;
+				}
+				return value;
+			},
+			//게시글 작성일자 표시 컨버터 함수
+            dateConvert: function(value){
+            	return UT.formatDate(value,"yyyy/MM/dd HH:mm");
+            },
+            _getMenuInfo : function(menuCd) {
+                var menuInfo = SCMenuManager.getMenuNode(menuCd);
+                return menuInfo;
+            },
+            //게시글 선택시 이동하는 함수 
+            onMoveBoardDetail: function(e){
+            	var me = this;
+            	var data = e.target.data,
+            		bbd_uuid = data.bbd_uuid,
+            		pst_no  = data.pst_no;
+
+                var userType = SCSessionManager.userDetails.userInfo.usr_typ_ccd;
+                var menuCode = userType == 'VD'? "SCMT00010"  : "CMT10000";
+
+            	var menuInfo = me._getMenuInfo(menuCode),
+            		menuName = menuInfo.menu_nm,
+            		menuUrl = menuInfo.menu_url;
+            	
+            	MDIUT.createWindow(menuCode, menuName, menuUrl + '&widget=1&pst_no='+pst_no);
+            }
+        });
+    </script>
+</dom-module>

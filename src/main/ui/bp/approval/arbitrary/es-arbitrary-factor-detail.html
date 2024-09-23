@@ -1,0 +1,314 @@
+<dom-module id="es-arbitrary-factor-detail">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    
+        <!-- 코드 조회 -->
+        <sc-request-group init>
+            <sc-code-group>
+                <sc-code code="G010" value="{{codes.dispTyp}}" ></sc-code> <!-- 화면 유형 -->
+                <!-- <sc-code code="DAPVL_CND_INPVAR_CCD" value="{{codes.dataSrc}}" ></sc-code> DataSource -->
+            </sc-code-group>
+            <sc-ajax url="findListCommonCodeAttributeCode.do" body="{{codesParamDataSrc}}" last-response="{{codes.dataSrc}}">
+            </sc-ajax>
+            
+        </sc-request-group>
+
+        <!-- 상세정보 조회 -->
+        <sc-ajax id="selectData" url="selectFactor.do" body="{{selectParam}}" on-response="completeSelectData"></sc-ajax>
+
+        <!-- 상세정보 저장 -->
+        <sc-ajax id="saveData" url="saveFactor.do" on-response="completeSaveData"> </sc-ajax>
+
+        <sc-ajax id="dataSrcColumn" url="selectListDataSource.do" on-response="completeDataSrcColumn">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <cc-sub-title-bar title-text="전결 조건 입력변수 상세">
+            <sc-button text="저장" on-click="onSaveData" auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+        </cc-sub-title-bar>
+
+        <cc-form-panel column="1" validation-group="save">
+            <cc-fieldset>
+                <sc-label text="전결 조건 입력변수 명"></sc-label>
+                <sc-text-field value="{{detailData.dapvl_cnd_inpvar_nm}}" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]" max-length="100" />
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="화면 유형"></sc-label>
+                <sc-combobox-field value="{{detailData.scr_typ_ccd}}" items="{{codes.dispTyp}}" display-field="label" value-field="data"
+                                   required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]" placeholder="선택" on-change="changedDisplayType" />
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전결 조건 입력변수"></sc-label>
+                <sc-combobox-field value="{{detailData.dapvl_cnd_inpvar_ccd}}" items="{{codes.dataSrc}}" display-field="label" value-field="data"
+                                   id="dataSrcCombo" required="[[formula('isEditableDataSrc')]]" readonly="[[!formula('isEditableDataSrc')]]" placeholder="선택" on-change="changedDataSource">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전결 조건 입력변수 값"></sc-label>
+                <sc-text-field value="{{detailData.dapvl_cnd_inpvar_val}}" required="[[formula('isEditableGrpCd')]]" readonly="[[!formula('isEditable')]]" disabled="[[!formula('isEditable')]]" max-length="18"
+                               mask-re="/[0-9a-zA-Z\_\-]/" strip-chars-re="/[ㄱ-힣]/" placeholder="그룹코드를넣어주십시오">
+                </sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset id="trTreeParam" style="display:none;">
+                <sc-label text="상위노드 파라미터 KEY"></sc-label>
+                <sc-text-field value="{{detailData.parnode_parm_key}}" required="[[formula('isTreeGrid')]]" hidden="[[!formula('isTreeGrid')]]"
+                               max-length="100" mask-re="/[0-9a-zA-Z\_\-]/" strip-chars-re="/[ㄱ-힣]/">
+                </sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="파라미터 KEY"></sc-label>
+                <div class="field-box">
+                    <sc-text-field value="{{detailData.parm_key}}" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]" max-length="100"
+                                   mask-re="/[0-9a-zA-Z\_\-]/" strip-chars-re="/[ㄱ-힣]/">
+                    </sc-text-field>
+                    <span style="margin-right:5px"></span>
+                    <sc-combobox-field value="{{detailData.dapvl_cnd_inpvar_from_id}}" items="{{codes.dataSrcColumn}}" display-field="label" value-field="data"
+                                       required="[[formula('isEditableDataSrc')]]" readonly="[[!formula('isEditableDataSrc')]]" placeholder="파라미터 필드 명">
+                    </sc-combobox-field>
+                </div>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="파라미터 명"></sc-label>
+                <div class="field-box">
+                    <sc-text-field value="{{detailData.parm_nm}}" required="[[formula('isRequiredParamNm')]]" readonly="[[!formula('isEditableParamNm')]]"
+                                   max-length="100" mask-re="/[0-9a-zA-Z\_\-]/" strip-chars-re="/[ㄱ-힣]/">
+                    </sc-text-field>
+                    <span style="margin-right:5px"></span>
+                    <sc-combobox-field value="{{detailData.dapvl_cnd_inpvar_from_nm}}" items="{{codes.dataSrcColumn}}" display-field="label" value-field="data"
+                                       required="[[formula('isRequiredDataSrcNm')]]" readonly="[[!formula('isEditableDataSrc')]]" placeholder="파라미터 필드 명"
+                                       validator="validatorDataSrcNm">
+                    </sc-combobox-field>
+                </div>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전결 조건 입력변수 설명"></sc-label>
+                <sc-textarea-field value="{{detailData.dapvl_cnd_inpvar_expln}}" readonly="[[!formula('isEditable')]]" max-length="1000" class="h-50">
+                </sc-textarea-field>
+            </cc-fieldset>
+        </cc-form-panel>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-arbitrary-factor-detail',
+            properties: {
+                codes: { // 코드 데이터
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            dispTyp: [],
+                            dataSrc: [],
+                            dataSrcColumn: []
+                        };
+                    }
+                },
+                codesParamDataSrc: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            cstr_cnd_cd: "SQL_ID",
+                            ccd: "G009"
+                        };
+                    }
+                },
+                selectParam: { // 조회조건
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                detailData: { // 상세정보
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+            },
+
+            formulas: {
+                isEditable: function() {
+                    var me = this;
+                    return me.detailData._new || UT.isNotEmpty(me.detailData.dapvl_cnd_inpvar_uuid);
+                },
+                isEditableGrpCd: function() {
+                    var me = this;
+                    return me.formula("isEditable") && me.detailData.dapvl_cnd_inpvar_ccd === "CCD";
+                },
+                isEditableDataSrc: function() {
+                    var me = this;
+                    return me.formula("isEditable") && (me.detailData.scr_typ_ccd != "TXT");
+                },
+                isEditableParamNm: function() {
+                    var me = this;
+                    return me.formula("isEditable") && (me.detailData.scr_typ_ccd != "TXT");
+                },
+                isRequiredParamNm: function() {
+                    var me = this;
+                    return me.formula("isEditable") && me.detailData.scr_typ_ccd === "COMBOBOX";
+                },
+                isRequiredDataSrcNm: function() {
+                    var me = this;
+                    return me.formula("isEditable") && me.detailData.scr_typ_ccd === "COMBOBOX";
+                },
+                isTreeGrid: function(){
+                	var me =  this;
+                	return (me.formula("isEditable") && me.detailData.scr_typ_ccd === "TREEGRID");
+                },
+            },
+
+            initialized: function() {
+                var me = this;
+
+                me.load({});
+            },
+            
+            load: function(param) {
+                var me = this;
+
+                if (UT.isEmpty(param.dapvl_cnd_inpvar_uuid)) { // 신규 추가
+                    me.set("detailData", param);
+                    me.applyFormula();
+                } else {
+                    me.set("detailData", {});
+                    me.set("selectParam", {
+                        dapvl_cnd_inpvar_uuid : param.dapvl_cnd_inpvar_uuid
+                    });
+                    me.onSelectData();
+                }
+            },
+
+            // 초기화
+            clear: function() {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            // 조회
+            onSelectData: function() {
+                var me = this;
+                UT.request(me.$.selectData);
+            },
+
+            // 조회 완료
+            completeSelectData: function(e, res) {
+                var me = this;
+                
+                me.set("detailData", res.response);
+                me.applyFormula();
+            },
+
+            // 저장
+            onSaveData: function() {
+                var me = this;
+
+                if (!me.validate("save")) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveData.body = {
+                        factorData: me.detailData
+                    };
+                    UT.request(me.$.saveData);
+                });
+            },
+
+            // 저장 완료
+            completeSaveData: function(e, res) {
+                var me = this;
+                var result = res.response;
+
+                UT.completeAlert("", function() {  // 저장하였습니다.
+                    me.fire("saved-factor", result.factorData);
+                    me.set("detailData", result.factorData);
+                });
+            },
+            
+            // 데이터소스 변경됨 
+            changedDataSource: function() {
+                var me = this;
+                
+                if (me.formula("isEditableDataSrc") && me.$.dataSrcCombo.selectedItem) {
+                    var sqlId = me.$.dataSrcCombo.selectedItem.cstr_cnd_val; // sql id
+                    if (UT.isEmpty(sqlId)) {
+                        UT.alert("STD.APR2008"); // Data Source의 Sql Id 가 등록되지 않았습니다
+                        me.applyFormula();
+                        return;
+                    }
+                    me.$.dataSrcColumn.body = {
+                        sql_id: sqlId, // sql id
+                        _page: {
+                            page: 1,
+                            size: 1,
+                            start: 1,
+                            end: 1
+                        }
+                    };
+                    UT.request(me.$.dataSrcColumn);
+                } else {
+                    me.set("codes.dataSrcColumn", []);
+                }
+                me.applyFormula();
+                if(me.formula('isTreeGrid')){
+                	me.$.trTreeParam.style.display = "";
+                }else{
+                	me.$.trTreeParam.style.display = "none";
+                }
+            },
+            
+            // 화면 유형 변경됨
+            changedDisplayType: function() {
+                var me = this;
+                if (me.detailData.scr_typ_ccd === "INPUT") {
+                    me.set("detailData.dapvl_cnd_inpvar_ccd", "");
+                    me.set("detailData.parm_nm", "");
+                }
+                me.applyFormula();
+            },
+            
+            // 컬럼 정보 구성 
+            completeDataSrcColumn: function(e, res) {
+                var me = this;
+                var result = res.response;
+                
+                if (UT.isNotEmpty(result)) {
+                    var dataSrcColumn = [];
+                    var columns = result[0];
+                    for (var p in columns) {
+                        if (p === "rownum_" || p === "__row_number__") {
+                            continue;
+                        }
+                        dataSrcColumn.push({
+                            label: p,
+                            data: p
+                        });
+                    }
+                    me.set("codes.dataSrcColumn", dataSrcColumn);
+                }
+                me.applyFormula();
+            },
+            
+            // 추가 유효성 검사
+            validatorDataSrcNm: function(dataSrcNm) {
+                var me = this;
+
+                if (UT.isEmpty(dataSrcNm) && UT.isNotEmpty(me.detailData.parm_nm)) {
+                    return me.translate("STD.APR2000"); // DataSource 필드명을 입력하십시오
+                }
+                return true;
+            }
+            
+        });
+    </script>
+
+</dom-module>

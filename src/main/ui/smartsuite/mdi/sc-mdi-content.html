@@ -1,0 +1,437 @@
+<dom-module id="sc-mdi-content">
+	<template>
+		<sc-mdi-tabbar id="mdiTabbar" mdi-manager="[[mdiManager]]"
+					   on-mdi-tab-selected="_onMdiTabSelected" 
+					   on-mdi-tab-closed="_onMdiTabClosed" 
+					   on-mdi-tab-close-all="_onMdiTabCloseAll"
+					   on-mdi-tab-help="_onMdiTabHelp"
+					   on-mdi-tab-favorit="_onMdiTabFavorit"
+					   hidden="[[tabbarHidden]]"></sc-mdi-tabbar>
+		<!-- Breadcrumbs -->
+		<sc-bc id="mdiBreadCrumb"></sc-bc>
+		<!-- //Breadcrumbs -->
+		<sc-pages id="mdiPages"></sc-pages>
+		<sc-mdi-progress id="mdiProgress"></sc-mdi-progress>
+	</template>
+	<script>
+
+		Polymer({
+
+	    	is: 'sc-mdi-content',
+
+	    	properties: {
+
+	    		createdWindows: {
+					type: Array,
+					value:  [],
+					notify: true
+
+				},
+
+				maxTabCount : {
+					type: Object,
+					value: function(){
+						var defaultMaxTabCount = 10;
+						var browse = navigator.userAgent.toLowerCase();
+					    if( (navigator.appName == 'Netscape' && browse.indexOf('trident') != -1) || (browse.indexOf("msie") != -1)) {
+					    	defaultMaxTabCount = 6;
+					    }
+						return defaultMaxTabCount;
+					}
+				},
+
+				_boundWindowModuleLoad : {
+					type : Function,
+					value : function() {
+						return this._onWindowModuleLoad.bind(this);
+					}
+				},
+
+				_boundWindowModuleLoaded : {
+					type : Function,
+					value : function() {
+						return this._onWindowModuleLoaded.bind(this);
+					}
+				},
+
+				_boundWindowModuleFailure : {
+					type : Function,
+					value : function() {
+						return this._onWindowModuleFailure.bind(this);
+					}
+				},
+
+				menuPaths : {
+                    type : Object,
+                    value : {}
+                },
+
+                tabbarHidden:{
+                	type : Object,
+                	value : function(){
+                		return false;
+                	}
+                },
+
+                _bindedFunctions:{
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                
+                mdiManager: {
+                	type: Object
+                }
+			},
+
+			get mdiTabbarHeight() {
+                if(!this.validCacheSizeRect(this._mdiTabbarRect)) {
+                    this._mdiTabbarRect = this.$.mdiTabbar.getBoundingClientRect();
+                }
+                return this._mdiTabbarRect.height;
+            },
+
+            get mdiTabbarWidth() {
+                if(!this.validCacheSizeRect(this._mdiTabbarRect)) {
+                    this._mdiTabbarRect = this.$.mdiTabbar.getBoundingClientRect();
+                }
+                return this._mdiTabbarRect.width;
+            },
+
+            get mdiBreadCrumbHeight(){
+            	if(!this.validCacheSizeRect(this._mdiBreadCrumbRect)) {
+					this._mdiBreadCrumbRect = this.$.mdiBreadCrumb.getBoundingClientRect();
+	            }
+            	return this._mdiBreadCrumbRect.height;
+            },
+
+			get mdiContentPadding() {
+				if(!this.validCacheSize(this._mdiContentPadding)) {
+					this._mdiContentPadding = Number(this.getComputedStyleValue('padding-left').replace('px', '')) + Number(this.getComputedStyleValue('padding-right').replace('px', ''));
+				}
+				return this._mdiContentPadding;
+			},
+
+			get activatedWindow() {
+				return this.$.mdiPages.selectedItem;
+			},
+
+            get startPage() {
+                return this.mdiManager.getStartPage();
+            },
+
+			_onMdiTabSelected : function(event) {
+				this.activateWindow(event.detail.windowId);
+
+				if(SCMdiHistory.useHistory) {
+                    SCMdiHistory.setHistory(event.detail.windowId);
+				}
+
+			},
+
+			_onMdiTabClosed : function(event) {
+				this.removeWindow(event.detail.windowId);
+			},
+
+			_onMdiTabCloseAll : function(event) {
+                var me = this;
+				var tabs = this.$.mdiPages.items;
+
+                var alert = UT.alert("메뉴 삭제 및 메모리 초기화 중");
+
+                setTimeout(function() {
+                    for(var i=0,len=tabs.length,tab; i<len; i++) {
+                        tab = tabs[i];
+                        if(tab.windowId === me.startPage.menu_id){
+                            continue;
+                        }
+                        me.removeWindow(tab.windowId);
+                    }
+                    setTimeout(function() {
+                        alert.close();
+                    }, 50);
+                }, 100);
+			},
+
+			_onMdiContentIronResize : function(containerHeight, windowWidth, sidemenuWidth) {
+				this.style.height = containerHeight + 'px';
+		        this.style.width = (windowWidth - sidemenuWidth - this.mdiContentPadding) + 'px';
+		        this.$.mdiPages.style.width = this.style.width;
+		        this.$.mdiPages.style.height = (containerHeight - this.mdiTabbarHeight - this.mdiBreadCrumbHeight) + 'px';
+		        this.$.mdiProgress.targetWidth = windowWidth - sidemenuWidth;
+		        this.$.mdiProgress.targetHeight = containerHeight;
+		        if(this.activatedWindow) {
+		            //_onMdiContentIronResize  함수를 _mdiWindowResize 로 변경함
+		            this.activatedWindow._mdiWindowResize();
+		        }
+		        var containerWeight = windowWidth - sidemenuWidth - this.mdiContentPadding;
+		        this.$.mdiTabbar._onMdiTabbarIronResize(containerWeight);
+		        this.onGridResize();
+			},
+
+			/** 내부에 그리드가 있는 경우 리사이즈 */
+			onGridResize: function(){
+				var grids = this.querySelectorAll("sc-grid");
+				for(var i=0; i<grids.length; i++){
+					this.gridContentResize(grids[i]);
+				}
+			},
+			
+			gridContentResize: function(grid){
+				if(grid && grid.doContentElementResize){
+					grid.doContentElementResize();
+				}else{
+					setTimeout(function(){
+						(!grid._delayedCount ? (grid._delayedCount = 1) : grid._delayedCount += 1);
+						(grid._delayedCount < 3) && this.gridContentResize(grid);
+					}.bind(this), 100);
+				}
+			},
+
+			_onWindowModuleLoad : function(event) {
+				event.target.removeEventListener('window-module-load', this._boundWindowModuleLoad);
+			},
+
+			_onWindowModuleLoaded : function(event) {
+				event.target.removeEventListener('window-module-loaded', this._boundWindowModuleLoaded);
+				event.target.removeEventListener('window-module-load-failure', this._boundWindowModuleFailure);
+			},
+
+			_onWindowModuleFailure : function(event) {
+				event.target.removeEventListener('window-module-loaded', this._boundWindowModuleLoaded);
+				event.target.removeEventListener('window-module-load-failure', this._boundWindowModuleFailure);
+
+                this._failMessage(event);
+			},
+
+			_failMessage: function(event) {
+				UT.alert("STD.E9999");
+			},
+
+			createWindow: function(windowId, windowName, windowUrl, options) {
+				// Boolean일 경우에는 lazy로 인식.
+				if(SCUtil.isBoolean(options)) {
+					return this.createWindowWithOptions(windowId, windowName, windowUrl, {lazy: options});
+				} else {
+					return this.createWindowWithOptions(windowId, windowName, windowUrl, options);
+				}
+			},
+
+			createWindowWithOptions: function(windowId, windowName, windowUrl, options) {
+				options = options || {};
+				var lazy = options.lazy;
+				var params = options.params;
+				var callback = options.callback; // module initialized 후 호출할 callback function
+				var windowIndex, createHandler = function() {
+                    var newWindow = new SCMdiWindow({
+                        id : windowId,
+                        windowId : windowId,
+                        windowName : windowName,
+                        windowUrl : windowUrl,
+                        lazy : lazy,
+                        params: params,
+                        mdiManager: this.mdiManager, 
+                        initializedCallback: callback
+                    });
+
+                    newWindow.addEventListener('window-module-load', this._boundWindowModuleLoad);
+                    newWindow.addEventListener('window-module-loaded', this._boundWindowModuleLoaded);
+                    newWindow.addEventListener('window-module-load-failure', this._boundWindowModuleFailure);
+                    this.$.mdiTabbar.addTab(newWindow);
+                    Polymer.dom.flush();
+                    Polymer.dom(this.$.mdiPages).appendChild(newWindow);
+                    Polymer.dom.flush();
+                    this.createdWindows.push(windowId);
+                    this.fire('window-created');
+                    if(!lazy){
+                        return this.activateWindow(windowId);
+                    }
+				}.bind(this);
+
+				if(!windowUrl && windowId && windowName) {
+					console.warn(windowId+'['+windowName+'] url is undefined');
+					return;
+				}
+
+				windowIndex = this.createdWindows.indexOf(windowId);
+				if(windowIndex == -1) {
+                    if(this.createdWindows.length >= this.maxTabCount) {
+						this.selectRemoveWindowPopup(createHandler);
+						return;
+                    }
+                    return createHandler();
+				} else if(!lazy){
+                    return this.activateWindow(windowId);
+                }
+
+			},
+
+            selectRemoveWindowPopup: function(createHandler) {
+                var messageBox = new SCMessageBox(),
+                    mdiTabs = this.$.mdiTabbar.$.mdiTabs.items;
+
+                var tabListHtml = '<div class="alertMessage">'+ this.translate("STD.MDI1012", null, this.maxTabCount) + '</div>';
+                tabListHtml += '<li id="allClose" class="removeMenuMessageBox"><a><span style="width:90%;">' + this.translate("모든 메뉴 닫기") + '</span><div class="windowCloseIcon"></div> </a></li>' ;;
+
+
+                for (var i=0, len=mdiTabs.length, menuId; i<len; i++) {
+                    menuId = mdiTabs[i].dataset.windowId;
+                    if(menuId === this.mdiManager.getStartPage().menu_id){
+                        continue;
+                    }
+                    tabListHtml+= '<li id="'+menuId+'" class="removeMenuMessageBox"><a><span style="width:90%;">' + mdiTabs[i].innerText + '</span><div class="windowCloseIcon"></div> </a></li>' ;
+                    this._bindedFunctions[menuId] = this.selectRemoveWindow.bind(this, menuId, createHandler, messageBox);
+
+                }
+
+                messageBox.autoGrowMessageBox = true;
+                messageBox._messageElement.innerHTML = tabListHtml;
+
+                var tabs = messageBox.querySelectorAll("li");
+                for (var idx in tabs) {
+                    if(idx === "0"){ // 전체 닫기
+                        tabs[idx].firstChild.addEventListener('tap', this.selectAllRemoveWindow.bind(this, createHandler, messageBox));
+					}
+                    else if (tabs.hasOwnProperty(idx)) {
+                        tabs[idx].firstChild.addEventListener('tap', this._bindedFunctions[tabs[idx].id]);
+                    }
+                }
+                messageBox.show({
+                    title: '알림',
+                    modal : true,
+                    buttons : 'cancel',
+                    iconCls : null
+                })
+			},
+
+            selectAllRemoveWindow: function(callback, messageBox) {
+				messageBox.hide();
+				this._onMdiTabCloseAll();
+				callback.call(this);
+
+				var tabs = messageBox.querySelectorAll("li");
+				for (var idx in tabs) {
+					if (tabs.hasOwnProperty(idx)) {
+						tabs[idx].firstChild.removeEventListener('tap', this._bindedFunctions[tabs[idx].id]);
+					}
+				}
+				this._bindedFunctions = {};
+            },
+
+            selectRemoveWindow: function(menuId, callback, messageBox) {
+                if(menuId){
+                    messageBox.hide();
+                    this.removeWindow(menuId);
+                    callback.call(this);
+
+                    var tabs = messageBox.querySelectorAll("li");
+                    for (var idx in tabs) {
+                        if (tabs.hasOwnProperty(idx)) {
+                            tabs[idx].firstChild.removeEventListener('tap', this._bindedFunctions[tabs[idx].id]);
+                        }
+                    }
+                    this._bindedFunctions = {};
+                }
+            },
+
+			removeWindow: function(windowId) {
+				var mdiPages = Polymer.dom(this.$.mdiPages),
+					window = mdiPages.querySelector('sc-mdi-window[window-id="'+windowId+'"]');
+
+				if(!window) {
+				    return;
+				}
+
+				this.$.mdiTabbar.removeTab(windowId);
+                this.createdWindows.splice(this.createdWindows.indexOf(windowId), 1);
+				window.hidden = true;
+                window.module = null;
+				window.removeEventListener('window-module-load', this._boundWindowModuleLoad);
+				window.removeEventListener('window-module-loaded', this._boundWindowModuleLoaded);
+				window.removeEventListener('window-module-load-failure', this._boundWindowModuleFailure);
+				window.destroy();
+
+				Polymer.dom.flush();
+				Polymer.dom.addDebouncer(this.debounce('_windowDestroyDebouncer', this.windowDestroyDebouncer, 16));
+			},
+
+			windowDestroyDebouncer : function() {
+				Polymer.dom.flush();
+				if(window.CollectGarbage) {
+					window.CollectGarbage();
+					this.async(function() {
+						window.CollectGarbage();
+					}, 1000);
+		    	}
+				if(!this.$.mdiPages.querySelector('sc-mdi-window')) {
+					this.$.mdiPages.selected = -1;
+					this.$.mdiTabbar.activateTab = null;
+				}
+			},
+
+			activateWindow: function(windowId) {
+				var window = Polymer.dom(this.$.mdiPages).querySelector('sc-mdi-window[window-id="'+windowId+'"]'),
+					windowIndex = this.createdWindows.indexOf(windowId);
+				if(window && window.lazy) {
+					window.lazy = false;
+					window.loadModule();
+				}
+				if(windowIndex > -1) {
+					if(windowId !== this.$.mdiTabbar.activateTab){
+						this.$.mdiPages.selectedIndex = windowIndex;
+						this.$.mdiTabbar.activateTab = windowId;
+						this.fire('window-activated', window, {bubbles: false});
+					}
+
+					if(windowId === this.startPage.menu_id) {
+						this.$.mdiBreadCrumb.hidden = true;
+					} else {
+					    this.$.mdiBreadCrumb.hidden = false;
+					}
+					window.checkAuthentication();
+				}
+				else {
+					this.$.mdiPages.selected = -1;
+					this.$.mdiTabbar.activateTab = null;
+					this.fire('window-activated', window, {bubbles: false});
+				}
+
+				return window;
+			},
+
+            setMenuPath : function(menuPath) {
+                this.$.mdiBreadCrumb.innerHTML = menuPath ? menuPath : '';
+            },
+
+            /** 특정 엘리먼트가 생성되기전의 사이즈(width:0, height:0)가 Cache에 담기면 계산 오류 발생 */
+            validCacheSizeRect: function(clientRect){
+                if(!clientRect || (!this.validCacheSize(clientRect.width) &&
+                        		   !this.validCacheSize(clientRect.height))){
+                    return false;
+                }else{
+                	return true;
+                }
+            },
+            validCacheSize: function(size){
+                if(!size){
+                    return false;
+                }else{
+                	return true;
+                }
+            },
+
+            _destroy: function(){
+                this.menuPaths = null;
+				this.createdWindows = null;
+				this.maxTabCount = null;
+				this._boundWindowModuleLoad = null;
+				this._boundWindowModuleLoaded = null;
+				this._boundWindowModuleFailure = null;
+				this.menuPaths = null;
+				this.tabbarHidden = null;
+				this._bindedFunctions = null;
+			}
+	  	});
+	</script>
+</dom-module>

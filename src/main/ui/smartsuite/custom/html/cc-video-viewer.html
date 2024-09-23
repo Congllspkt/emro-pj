@@ -1,0 +1,697 @@
+<sc-link rel="stylesheet" type="text/css" href="../../../assets/css/circle_video.css"></sc-link>
+<dom-module id="cc-video-viewer">
+<!-- 
+/**
+ *
+ *	@description : 비디오 뷰어
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2018. 10. 30.
+ */
+-->
+	<style>
+		:host{
+			@apply(--vbox-layout)
+		}
+		* {
+		    box-sizing: border-box;
+		}
+		sc-listbox{
+			border: none;
+		}
+		sc-listbox>* {
+		    cursor: auto;
+		}
+		li {
+			margin: 0;
+			padding: 0;
+		}
+		.hide{
+			display: none;
+		}
+	</style>
+	
+	<template>
+		<!-- ajax 선언 부 -->
+		<sc-ajax id="selectList" url="viewer/findListFileItem.do" on-response="onResponseList"></sc-ajax>
+		<!-- 첨부파일 삭제 -->
+        <sc-ajax id="deleteFileList" url="upload/delete.do" headers="[[_headers]]"></sc-ajax>
+		<sc-upload id="uploader" hidden></sc-upload>
+		<input type="file" id="fileInput" on-change="_onFileChange" hidden>
+		<!-- <sc-button text="업로드" on-click="_onUploadFile"></sc-button> -->
+		<div class="media_box mgr35">
+			<ul id="imgVideUl">
+				<sc-listbox id="imageListBox" items="[[imgVideoList]]">
+				  <template>
+				  <li>
+				  	<div class="video_box">
+				  		<span class="video_del" data-name="[[item.name]]" data-id="[[item.id]]" on-click="onDeleteItem" style="cursor: pointer;" hidden="[[readonly]]"></span>
+			  			<template is="dom-if" if="[[_isVideo(item)]]">
+			  				<!-- <div class="go_play">
+			  					<button class="button" on-click="onPlay"></button>
+								<p>플레이 버튼을 누르면 재생됩니다.</p>
+							</div> -->
+			  				<video style="width:100%;height: 320px;" preload="metadata" controls>
+							<source src="[[_getVideoUrl(item)]]" type="video/mp4">
+		 							Your browser does not support the video tag.
+							</video>
+			  			</template>
+			  			<template is="dom-if" if="[[_isImage(item)]]">
+			  				<img style="width:100%;height: 320px;cursor: pointer;" src="[[_getImgUrl(item)]]" data-id="[[item.id]]" on-click="onClickImage">
+			  			</template>
+					</div>
+	 			  </li>
+				</template>
+				</sc-listbox>
+				<li>
+				<div class="conts_input_box" id="imageVideoInputBox" hidden="[[readonly]]" file-data-transfer-allowed>
+					<div class="go_select">
+						<button class="button" on-click="onAddFile" disabled="[[readonly]]"></button>
+						<p>이미지 및 동영상 선택</p>
+					</div>
+				</div>
+				</li>
+			</ul>
+		</div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'cc-video-viewer',
+			properties : {
+				readonly: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+				disabled: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+				groupId: {
+					type: Object,
+					value: function(){
+						return {};
+					},
+					notify: true
+				},
+				currentFileGroupId: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+				maxListSize: {
+					type: Object,
+					value: function(){
+						return 3;
+					}
+				},
+				videoList: {
+					type: Array
+				},
+				imageList: {
+					type: Object,
+					value: function(){
+						return [];
+					}
+				},
+				imgVideoList: {
+					type: Object,
+					value: function(){
+						return [];
+					}
+				},
+				maxSortOrd: {
+					type: Object,
+					value: function(){
+						return 0;
+					}
+				},
+				maxTotalFileSize : {
+                    type : String,
+                    value : function() {
+                        return "100MB";
+                    }
+                },
+
+                /**
+                 * 단일파일별 첨부할 수 있는 파일 최대 사이즈 제한설정으로 bytes,KB,MB,GB,TB,PB,EB 단위를 사용할 수 있습니다.
+                 * @type {String}
+                 * @default 10MB
+                 */
+                maxFileSize : {
+                    type : String,
+                    value : function() {
+                        return "100MB";
+                    }
+                },
+
+                /**
+                 * 단일파일별 첨부할 수 있는 파일 최소 사이즈 제한설정으로 bytes,KB,MB,GB,TB,PB,EB 단위를 사용할 수 있습니다.
+                 * @type {String}
+                 * @default 0bytes
+                 */
+                minFileSize : {
+                    type : String,
+                    value : function() {
+                        return "0bytes";
+                    }
+                },
+				extensions: {
+					type: String,
+					value: "png,jpg,jpeg,mp4"
+				},
+				blobImgList: {
+					type: Array
+				},
+				deleteFileList: {
+					type: Array
+				},
+				/**
+                 * Uploader 객체
+                 * @type {Object}
+                 */
+                _uploader: Object,
+                /**
+                 * csrf 정보
+                 * @type {String}
+                 */
+                _headers: {
+                	type: Object,
+                    value: function(){
+                    	return {
+                            'menuCode': SCMenuManager.getCurrentMenuId(this.dataHost), // 메뉴코드 추가
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=_csrf]').content //CSRF
+                        };
+                    }
+                }
+			},
+			behaviors: [Polymer.SCInteractDraggableBehavior],
+			observers: [
+				'_onChangeGroupId(groupId)',
+				'_drawImgVideList(imgVideoList)',
+				'_onChangeReadonly(readonly)'
+			],
+			formulas: {
+                isNoData: function() { // 데이터 없음
+                    var me = this;
+                    return UT.isEmpty(me.get("resultList"));
+                }
+            },
+			/**
+             * SCUploadUtil 을 반환합니다.
+             * @type {Object}
+             */
+            get uploadUtil() {
+                if(!this._uploadUtil) {
+                    this._uploadUtil = SCUploadUtil;
+                }
+                return this._uploadUtil;
+            },
+            _onDrop: function(e){
+            	var t = this._uploader;
+                e.preventDefault();
+                SCLoadMask.show();
+            	t.addLocalFiles([e.dataTransfer.files[0]]);
+            },
+            _onDragOver: function(e){
+            	e.preventDefault();
+            },
+            _onDragEnter: function(e){
+            	e.preventDefault();
+            },
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			 /**
+              * 업로드 생성, 이벤트 바인딩
+              */
+             attached: function () {
+            	 if(!this._attachedCalled) {
+                     this._attachedCalled = true;
+                     //한번만 호출되도록 로직작성
+                     
+                     var me = this;
+
+	                 if(window.SMART_UPLOADER && window.SCUploadUtil) { //SCUpload 완료되는 시점을 정확하게 잡을 수 없어 주기적으로 확인
+	                     me.init();
+	                 } else {
+	                     setTimeout(function() {
+	                         me.attached();
+	                     }, 100);
+	                 }
+                 }
+             },
+			 init: function () {
+				 var me = this;
+				 
+                 this._uploader = new SMART_UPLOADER({
+                     browseButton: this.$.fileInput, //Upload Input Button
+                     url: 'upload/upload.do', //Upload URL
+                     filters	: {
+                         maxAllFileCount  : 6,
+                         minFileSize 	 : this.uploadUtil.displaySizeToByte(this.minFileSize),
+                         maxFileSize		 : this.uploadUtil.displaySizeToByte(this.maxFileSize),
+                         maxAllFileSize 	 : this.uploadUtil.displaySizeToByte(this.maxTotalFileSize),
+                         extensions		 : this.extensions,
+                         restrictFileName : this.restrictExtension
+                     },
+                     headers : this._headers
+                 });
+                 
+                 me.$.fileInput.accept = "video/*,image/*";
+                 
+               //smtupload.Uploader.prototype.createRequestBody = function(e, t) {
+                 this._uploader.createRequestBody = function(e, t) {
+                	 	if(smtupload.isArray(t)){
+                	 		e.files = this.extractOrgFiles(t);
+                	 	}else{
+                	 		e.id = t.id;
+                	 		e.file = t.orgFile;
+                	 		e.thumfileName = t.name;
+                	 	}
+                     return e;
+                  };
+                  var maxSortOrd = me.get("maxSortOrd") || 0;
+                 smtutil.XMLHttpRequest.prototype.createFormData = function(e){
+                     var t = new FormData;
+                     for (var i in e)
+                         if ("files" === i){
+                        	 for (var r = e[i], n = 0; n < r.length; n++){
+                        		 t.append("ids", r[n].uuid);
+                                 t.append("files", r[n]);
+                        	 }
+                         }else{
+                        	 if(UT.isNotEmpty(e["thumfileName"]) && "file" === i){
+                        		 maxSortOrd++;
+                        		 var name = maxSortOrd+"_"+e["thumfileName"];
+                        		 t.append(i, e[i],name);
+                        	 }else{
+                        		 t.append(i, e[i]);
+                        	 }
+                         }
+                     return t;
+                 };
+                 
+                 
+                 this._uploader.bind('FileAdded', this._onFileAdded.bind(this)); //파일 객체 추가 이벤트 등록
+                 this._uploader.bind('FileStateChanged', this._onFileStateChanged.bind(this)); //개발자가 파일별 진행상태를 확인하는 이벤트
+                 this._uploader.bind('UploadStateChanged', this._onUploadStateChanged.bind(this)); //개발자가 전체 Progress 진행상태를 확인하는 이벤트
+                 this._uploader.bind('UploadCompleted', this._onUploadCompleted.bind(this)); //파일 객체 업로드 완료 이벤트 등록
+                 this._uploader.bind('UploadFailed', this._onUploadFailed.bind(this)); //파일 객체 업로드 실패 이벤트 등록
+                 this._uploader.bind('FilterError', this._onFilterError.bind(this)); //파일 객체 업로드 에러 이벤트 등록
+                 me.$.imageVideoInputBox.addEventListener('drop',this._onDrop.bind(this));
+                 me.$.imageVideoInputBox.addEventListener('dragover',this._onDragOver.bind(this));
+                 me.$.imageVideoInputBox.addEventListener('dragenter',this._onDragEnter.bind(this));
+             },
+             /**
+              * 파일 추가 이벤트 핸들러
+              * 파일을 업로드한다
+              */
+             _onFileAdded: function (newFile) {
+            	var me = this;
+                this._currentFile = newFile[0] || newFile; //현재 파일
+                var groupId = me.groupId || Polymer.SCAutoGenIdBehavior.generateId(true);
+ 				var fileReader = new FileReader();
+ 				var file = this._currentFile.orgFile;
+ 				
+				fileReader.onload = function() {
+					var blob = new Blob([fileReader.result], {type: file.type});
+				      var url = URL.createObjectURL(blob);
+				      me.addRow(me._currentFile,url);
+				   };
+				fileReader.readAsArrayBuffer(file);
+                me.set("currentFileGroupId",groupId);
+             },
+             _onFileChange: function(e){
+            	 var me = this;
+ 				var fileReader = new FileReader();
+ 				var file = e.target.files[0];
+ 				SCLoadMask.show();
+             },
+             _onFileStateChanged: function(oldFile,newFile){
+            	 var me = this;
+            	 if(me.uploadProgressPopup){
+            		 me.uploadProgressPopup.getWindowContent().progressChanged(newFile.id, newFile.percent);
+            	 }
+             },
+             _onUploadStateChanged:function(oldProgress,newProgress){
+            	 var me = this;
+            	 if(me.uploadProgressPopup){
+                	 me.uploadProgressPopup.getWindowContent().totalProgressChanged(newProgress.percent);
+                 }
+             },
+             /**
+              * 파일 업로드 완료 이벤트 핸들러
+              */
+             _onUploadCompleted: function (e) {
+            	 var me = this;
+                 this.set("_currentFile.remote", "true");
+                 //console.log(me.currentFileGroupId);
+                 me.onSelectList(me.currentFileGroupId);
+                 //thumnailUploadFile 업로드처리추가
+                 if(me.uploadProgressPopup){
+                	 me.uploadProgressPopup.close();
+                 }
+                 this.__promiseResolve(this, e);
+             },
+             
+             /**
+              * 파일 업로드 실패 이벤트 핸들러
+              */
+             _onUploadFailed: function (e) {
+                 this.__promiseResolve(this, e);
+                 UT.alert(this.translate("STD.N7000"));
+                 SCLoadMask.hide();
+             },
+
+             /**
+              * 첨부파일 필터(확장자, 사이즈)의 설정된 조건에 벗어나는 파일을 첨부할 때 호출되는 이벤트 핸들러로 `filter-error` 이벤트를 전파합니다.
+              * @param {Object} error
+              * @private
+              */
+             _onFilterError : function(error) {
+                 UT.alert(error.message, null, true);
+                 SCLoadMask.hide();
+             },
+
+             /**
+              * 파일 업로드 대상이 없는 경우
+              * Promise 반환
+              */
+             _uploadFileEmptyCheck: function () {
+                 var localFiles = this._uploader.getLocalFiles();
+                 if(localFiles.length === 0) {
+                     this.__promiseResolve(this, null);
+                     return true;
+                 }
+                 return false;
+             },
+
+             _onRemoteStateChanged: function (remote) {
+                 if(remote) {
+                     this.setAttribute("remote", "");
+                 } else {
+                     this.removeAttribute("remote");
+                 }
+             },
+             reset: function(){
+            	 var me = this;
+            	 	me.set("currentFileGroupId", "");
+					me.set("imgVideoList",[]);
+					me.set("videoList",[]);
+					me.set("imageList",[]);
+					me.set("blobImgList",[]);
+					me.set("deleteFileList",[]);
+					me._uploader.onClear();
+	                me._currentFile = null;
+             },
+             /**
+              * 이벤트 리스너 삭제 / 객체 초기화
+              */
+              _destroy: function () {
+                 this._uploader.unbind('FileAdded', this._onFileAdded.bind(this)); //파일 객체 추가 이벤트 삭제
+                 this._uploader.unbind('UploadCompleted', this._onUploadCompleted.bind(this)); //파일 객체 업로드 완료 이벤트 삭제
+                 this._uploader.unbind('UploadFailed', this._onUploadFailed.bind(this)); //파일 객체 업로드 실패 이벤트 삭제
+                 this._uploader.unbind('FilterError', this._onFilterError.bind(this)); //파일 객체 업로드 에러 이벤트 등록
+                 this._uploader.destroy(); //업로드 객체 제거
+                 this._uploader = null;
+                 this._currentFile = null;
+             },
+			// 1. 그룹아이디가 있는경우호출
+			_onChangeGroupId : function(newValue, oldValue){
+				var me = this;
+				//console.log("_onChangeGroupId");
+				
+				if(UT.isNotEmpty(newValue) && UT.isEmpty(me.get("currentFileGroupId"))){
+					me.$.selectList.body = {
+							groupId: newValue
+					}
+					UT.request(me.$.selectList);
+				}
+				
+				if(UT.isEmpty(newValue)){
+					me.set("currentFileGroupId", "");
+					me.set("imgVideoList",[]);
+					me.set("videoList",[]);
+					me.set("imageList",[]);
+					me.set("blobImgList",[]);
+					me.set("deleteFileList",[]);
+				}
+			},
+			onSelectList: function(groupId){
+				var me = this;
+				if(UT.isNotEmpty(groupId)){
+					me.$.selectList.body = {
+							groupId: groupId
+					}
+					UT.request(me.$.selectList);
+				}
+			},
+			_isVideo: function(item){
+				var me = this;
+				if(UT.isNotEmpty(item) && UT.isNotEmpty(item.mimeType) && item.mimeType.indexOf("video") > -1){
+					return true;
+				}else{
+					return false;
+				}
+			},
+			_isImage: function(item){
+				var me = this;
+				if(UT.isNotEmpty(item) && UT.isNotEmpty(item.mimeType) && item.mimeType.indexOf("image") > -1){
+					return true;
+				}else {
+					return false;
+				}
+			},
+			_getVideoUrl : function(item) {
+				if(UT.isNotEmpty(item) && item.mimeType.indexOf("video") > -1 && item.addFileFlag){
+					return item.addFileUrl;
+				}else if(UT.isNotEmpty(item) && item.mimeType.indexOf("video") > -1){
+					return 'viewer/findVideoViewer.do?id=' + encodeURIComponent(item.id);
+				}else {
+					return "";
+				}
+	        },
+	        _getImgUrl : function(item) {
+	        	if(UT.isNotEmpty(item) && UT.isNotEmpty(item.mimeType) && item.mimeType.indexOf("image") > -1 && item.addFileFlag){
+					return item.addFileUrl;
+	        	}else if(UT.isNotEmpty(item) && UT.isNotEmpty(item.mimeType) && item.mimeType.indexOf("image") > -1){
+					return 'upload/download.do?id=' + encodeURIComponent(item.id);
+				}else {
+					return "";
+				}
+	        },
+	        isInt: function(value) {
+	        	  return !isNaN(value) && 
+	        	         parseInt(Number(value)) == value && 
+	        	         !isNaN(parseInt(value, 10));
+	        },
+	        onResponseList: function(e,res){
+				var me = this,
+					result = res.response;
+				var videoList = [], imageList = [];
+				var maxSortOrd = me.get("maxSortOrd") || 0;
+				if(UT.isNotEmpty(result)){
+					for(var i = 0,len= result.length; i <len;i++){
+						if(result[i].mimeType === "video/mp4" || result[i].mimeType === "application/mp4"){
+							videoList.push(result[i]);
+						}else if("image".indexOf(result[i].mimeTyp)){
+							imageList.push(result[i]);
+						}
+						var name = result[i].name;
+						var names = name.split("_");
+						var sortOrd = names[0] || 0;
+						if(me.isInt(sortOrd)){
+							sortOrd = parseInt(sortOrd);
+						}
+						if(maxSortOrd < sortOrd){
+							maxSortOrd = sortOrd;
+						}
+					}
+				}
+				/* 이름순으로 정렬 */
+				result.sort(function(a, b) { // 오름차순
+				    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+				    // 광희, 명수, 재석, 형돈
+				});
+				me.set("maxSortOrd",maxSortOrd);
+				me.set("videoList",videoList);
+				me.set("imageList",imageList);
+				me.set("imgVideoList",result);
+			},
+			//화면드로잉
+			_drawImgVideList: function(newList, oldList){
+				var me = this,
+					maxListSize = me.get("maxListSize");
+				var imgVideoList = me.get("imgVideoList") || [];
+				var listLength = imgVideoList.length;
+				
+				//debugger;
+				//최대 maxListSize가 있는경우 선택화면을 안띄운다.
+				if(listLength < maxListSize){
+					//addFileItemBox();
+					me.$.imgVideUl.lastChild.classList.remove('hide');
+				}else{
+					me.$.imgVideUl.lastChild.classList.add('hide');
+				}
+			},
+			_onChangeReadonly: function(nV,oV){
+				var me = this;
+				var spans = me.querySelectorAll('.video_del');
+				for(var i = 0,len=spans.length; i<len;i++){
+					spans[i].hidden = me.readonly;
+				}
+			},
+			//파일 업로드 호출
+			onAddFile: function(e){
+				var me = this;
+				this.$.fileInput.click();
+			},
+			//addRow
+			addRow: function(file,url){
+				var me = this;
+				var item = {
+						'id': file.id,
+						'name': file.name,
+						'addFileFlag': true,
+						'addFileUrl' : url,
+						'mimeType': file.type,
+				};
+				me.$.imageListBox.add(item);
+				var imgVideoList = me.get("imgVideoList") || [];
+				SCLoadMask.hide();
+				me._drawImgVideList(imgVideoList);
+			},
+            /**
+             * 첨부파일 업로드에 사용할 Promise 객체를 생성하여 반환합니다.
+             * @private
+             */
+            _generatePromise : function() {
+                return new Promise(function(resolve, reject) {
+                    this.__promiseResolve = resolve;
+                    this.__promiseReject = reject;
+                }.bind(this));
+            },
+            load: function(){
+                this.$.selectList.body = {
+                    groupId : (this.groupId || '')
+                };
+                return this.$.selectList.request();
+            },
+            /**
+             * 파일 업로드
+             * 기존 파일이 있으면 삭제 후 업로드
+             * @return {Promise} promise
+             */
+            upload: function () {
+                var me = this;
+                var promise = me._generatePromise();
+                var localFiles = me._uploader.getLocalFiles();
+                if(UT.isNotEmpty(localFiles)){
+                	if(!me.uploadProgressPopup){
+                    	me.uploadProgressPopup = UT.popup("sc-upload-progress-popup",me,500,200,{},{destroyOnHided: false});
+                    }
+                    me.uploadProgressPopup.show();
+                    me.uploadProgressPopup.getWindowContent().setParam(me._uploader.files);
+                }else{
+                	me.__promiseResolve(this, null);
+                }
+                if(UT.isEmpty(me.get("groupId"))) {
+                    me.groupId = me.get("currentFileGroupId");
+                }
+              	 var deleteLists = me.get("deleteFileList") || [];
+                   //썸네일이미지와 동영상을 업로드함.
+                   //upload
+   		           if(deleteLists.length > 0){
+	  		        	me.deleteFiles(deleteLists).then(function () {
+	  		                if(UT.isEmpty(localFiles)){
+	  		                	me.__promiseResolve(this, null);
+	  		                }
+	  	   		        	me._uploader.upload({
+	  	    		               groupId: me.groupId
+	  	    		        });
+	  	   		        });
+   		           }else{
+	   		        	me._uploader.upload({
+	   		               groupId: me.groupId
+	   		        	});
+   		           }
+               return promise;
+            },
+			_onUploadFile: function(){
+				var me = this,
+					deleteLists = me.get("deleteFileList") || [];
+          	 	 //썸네일이미지와 동영상을 다운로드함.
+                //upload
+                if(deleteLists.length > 0){
+                	me.deleteFiles(deleteLists);
+                }
+                me._uploader.upload({
+                    groupId: me.currentFileGroupId
+                });
+			},
+			/**
+             * 파일 삭제
+             * @return {Promise} promise
+             */
+            deleteFiles: function (files) {
+            	var me = this;
+                var fileIds = files.map(function(file) {
+                    return file.id;
+                });
+                this.$.deleteFileList.body = fileIds;
+                return this.$.deleteFileList.request();
+            },
+			//삭제
+			onDeleteItem: function(e){
+				var me = this,
+				target = e.target;
+				if(!me.readonly){
+					var fileId = target.dataId;
+					var deleteFileList = me.get("deleteFileList") || [];
+					var imgVideoList = me.get("imgVideoList") || [];
+
+					target.parentNode.parentNode.parentNode.removeChild(target.parentNode.parentNode);
+					var file = me._uploader.getFile(fileId);
+
+					if(UT.isEmpty(file)){
+						//삭제
+						deleteFileList.push({id:fileId});
+					}else{
+						//local file만삭제가능
+						me._uploader.deleteFiles([fileId]);
+					}
+					
+					var newImgVideoList = [];
+					for(var i = 0,len = imgVideoList.length; i < len ; i++){
+						var item = imgVideoList[i];
+						if(item.id != fileId){
+							newImgVideoList.push(item);
+						}
+					}
+					me.set("deleteFileList",deleteFileList);
+					me.set("imgVideoList",newImgVideoList);
+				}
+			},
+			onPlay: function(e){
+				var me = this,
+					target = e.target;
+				var video = e.target.parentNode.parentNode.querySelector('video');
+				video.hidden = false;
+				video.play();
+			},
+			onClickImage: function(e){
+				var me = this,
+				target = e.target,
+				fileId = target.dataId;
+				UT.showImageViewerPopup({index: 0, items:[{data: target.src}]});
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,1433 @@
+<sc-link rel="import" href="ep-column-list.html"></sc-link>
+<sc-link rel="import" href="ep-group-column-list.html"></sc-link>
+<sc-link rel="import" href="ep-column-common-code-list.html"></sc-link>
+<sc-link rel="import" href="ep-template-calc-column.html"></sc-link>
+<sc-link rel="import" href="es-column-search.html"></sc-link>
+
+<dom-module id="es-bid-template">
+	<!--
+        ******************************************************************************************
+        ** @Program-name    : bid template 추가/수정/삭제
+        ** @Description     :
+        ** @Author          : GaRam, Choi
+        ** @Create Date     : 2020.07.31
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<sc-code-group>
+				<sc-code code="BID001" value="{{codes.columnType}}" ></sc-code> <!-- 컬럼 타입 -->
+				<sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+				<sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+				<sc-code code="BID004" value="{{codes.columnClsType}}" ></sc-code> <!-- 컬럼 구분( 내부/외부 )-->
+				<sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+			</sc-code-group>
+			<sc-ajax id="findListFormatterForCombobox" url="findListFormatterForCombobox.do" last-response="{{codes.formatterList}}"> </sc-ajax><!-- 전체 formatter 목록 -->
+		</sc-request-group>
+
+		<!-- 공통코드 가져오기 -->
+		<sc-ajax id="findListCommonCode"
+				 url="shared/findListCommonCode.do"></sc-ajax>
+
+
+		<sc-ajax
+				id="confirmBidTemplateAll"
+				url="confirmBidTemplateAll.do"
+				on-response="completeConfirmTemplate">
+		</sc-ajax>
+
+		<sc-ajax
+				id="confirmBidTemplateAllCancel"
+				url="confirmBidTemplateAllCancel.do"
+				on-response="completeConfirmTemplate">
+		</sc-ajax>
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findTemplateSheetColumnAndDataList"
+				url="findTemplateSheetColumnAndDataList.do"
+				body="{{sheetInfo}}"
+				on-response="completeFindList">
+		</sc-ajax>
+
+		<sc-ajax
+
+				id="findBidTemplateSheetColumnHeadersDiaLog"
+				url="findBidTemplateSheetColumnHeaders.do"
+				body="{{sheetInfo}}"
+				on-response="completeFindListDialog">
+		</sc-ajax>
+
+		<sc-ajax
+				id="findBidTemplateSheetColumnHeadersCheck"
+				url="findBidTemplateSheetColumnHeaders.do"
+				body="{{sheetInfo}}">
+		</sc-ajax>
+
+		<sc-ajax
+				id="findRFQTemplateConfirmYn"
+				url="findRFQTemplateConfirmYn.do"
+				body="{{sheetInfo}}">
+		</sc-ajax>
+
+
+		<!-- 저장 -->
+		<sc-ajax
+				id="saveBidTemplateSheetColumns"
+				url="saveBidTemplateSheetColumns.do"
+				on-response="completeSaveInfo">
+		</sc-ajax>
+
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteBidTemplateSheetColumns"
+				url="deleteBidTemplateSheetColumns.do"
+				on-response="completeDeleteColumnHeaderInfo">
+		</sc-ajax>
+
+
+		<sc-ajax
+				id="saveBidTemplateSheetDataList"
+				url="saveBidTemplateSheetDataList.do"
+				on-response="completeSaveInfo">
+		</sc-ajax>
+
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteBidTemplateSheetDataList"
+				url="deleteBidTemplateSheetDataList.do"
+				on-response="completeDeleteInfo">
+		</sc-ajax>
+
+		<sc-ajax
+			id="findCalculateColumn"
+			url="findCalculateColumn.do"
+			on-response="completeCalculateColumn">
+		</sc-ajax>
+
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+		<!-- 그리드 패널 -->
+		<sc-grid id="templateSheetColumnGridPanel"  class="h-500" editable="true"  on-item-click="onGridItemClick" on-item-edit-end="onItemEditEnd">
+			<cc-grid-toolbar>
+				<sc-button text="비드템플릿 확정" on-click="onConfirmBidTemplateY" auth-r hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="비드템플릿 확정 취소" on-click="onConfirmBidTemplateN" auth-r hidden="[[formula('hidden')]]"></sc-button>
+				<!--<sc-button text="Excel Upload" on-click="onPopupExcelUpload" hidden="[[!formula('hidden')]]"></sc-button>-->
+				<sc-button text="비드디자이너" on-click="onPopupColumns" hidden="[[!formula('hidden')]]"></sc-button>
+				<!--<sc-button text="계산" on-click="onCalculateColumnChange" hidden="[[!formula('hidden')]]"></sc-button>-->
+				<sc-button text="조회" on-click="onFindList" hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="저장" on-click="onSave" auth-s hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="추가" on-click="onAdd" auth-s hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="삭제" on-click="onDelete" auth-s hidden="[[!formula('hidden')]]"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+
+			</sc-grid-columns>
+		</sc-grid>
+
+		<!-- 기본컬럼 -->
+		<template id="defaultColumnsTemplate">
+			<sc-grid-columns id="defaultColumns">
+
+			</sc-grid-columns>
+			<sc-grid-fields id="defaultFields">
+			</sc-grid-fields>
+		</template>
+
+		<sc-dialog id="columnListDialog"  class="vbox flex" title-text="컬럼 목록" title-align="left" style="width:1500px;height:700px" modal="true">
+			<cc-page-title-bar>
+				<sc-button text="계산 컬럼 생성" on-click="onCalculateColumnSave"></sc-button>
+				<sc-button text="위로"   on-click="onUpListUser"    auth-a></sc-button>
+				<sc-button text="아래로" on-click="onDownListUser"  auth-a></sc-button>
+				<sc-button text="저장" on-click="onColumnSave"></sc-button>
+				<sc-button text="삭제" on-click="onDesignerDelete"></sc-button>
+			</cc-page-title-bar>
+
+
+			<div class="hbox flex" style="overflow-x:hidden;">
+				<es-column-search id="columnSearch"  class="flex-3" on-selected-items="desingerSelectItems"></es-column-search>
+				<div class="hspace-10"></div>
+				<div class="vbox flex-7">
+					<table class="tb-form">
+						<colgroup>
+							<col style="width:100px;">
+							<col>
+						</colgroup>
+						<tr>
+							<th>
+								<sc-label text="Sheet 이름"></sc-label>
+							</th>
+							<td>
+								<sc-text-field id="sheet_template_nm" class="h-100" max-length="1000" required="true"></sc-text-field>
+							</td>
+						</tr>
+					</table>
+					<sc-grid id="columnsGridPanel" class="flex" editable="true"
+							 use-state="true" use-selection="true"  on-item-click="onItemClick">
+						<sc-grid-columns>
+							<sc-checkbox-column data-field="man_yn" header-text="필수 여부" width="100" text-align="right" checked-value="true" un-checked-value="false" editable="true"></sc-checkbox-column>
+							<sc-data-column data-field="col_cd" header-text="컬럼 코드" width="150" text-align="left" editable="false" item-style-function="itemColTypeStyleFunction"></sc-data-column>
+							<sc-data-column data-field="col_nm" header-text="컬럼 이름" width="150" text-align="left" editable="false"></sc-data-column>
+							<sc-data-column data-field="disp_nm" header-text="표시 명" width="150" text-align="right" editable="true"></sc-data-column>
+							<sc-data-column data-field="sort_ord" header-text="정렬 순서" width="150" text-align="right" editable="false"></sc-data-column>
+							<sc-combobox-column data-field="col_typ_cd" header-text="컬럼 타입" display-field="label" value-field="data" editable="false" items="{{codes.columnType}}"></sc-combobox-column>
+							<sc-combobox-column data-field="col_fmt_typ" header-text="컬럼 포맷 타입" display-field="data" value-field="data" editable="true" items="{{codes.formatterList}}"  item-editable-function="itemDecimalFunction"></sc-combobox-column>
+							<sc-combobox-column data-field="col_cls" header-text="컬럼 구분" display-field="label" value-field="data" editable="true" items="{{codes.columnClsType}}"></sc-combobox-column>
+							<sc-data-column data-field="col_len" data-type="number"	 header-text="컬럼 길이" width="150" text-align="right" editable="true"></sc-data-column>
+							<sc-data-column data-field="point_len" data-type="number"  header-text="소수점 자리수" width="150" text-align="right" editable="true" item-editable-function="itemDecimalFunction"></sc-data-column>
+							<sc-combobox-column data-field="point_cal_typ" header-text="소수점 포맷팅" display-field="label" value-field="data" editable="true" item-editable-function="itemDecimalFunction" items="{{codes.precHndlTyp}}"></sc-combobox-column>
+							<sc-group-column header-text="그룹 코드" width="200">
+								<sc-data-column data-field="grp_cd"  width="180" text-align="right" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+								<sc-image-column  data-field="btn_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+							</sc-group-column>
+							<sc-group-column header-text="대 그룹 코드" width="140">
+								<sc-data-column data-field="hd_grp_cd"  width="120" text-align="left" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+								<sc-image-column  data-field="hd_grp_cd_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+							</sc-group-column>
+							<sc-group-column header-text="공통코드 코드" width="200">
+								<sc-data-column data-field="common_cd"  width="180" text-align="right" editable="true" item-editable-function="commonCodeEditableFunction" ></sc-data-column>
+								<sc-image-column  data-field="common_code_select" width="20"  text-align="center" image-change-function="onCommonCodeImageChange"></sc-image-column>
+							</sc-group-column>
+							<sc-combobox-column data-field="field_align" header-text="필드 정렬" display-field="label" value-field="data" editable="true" items="{{codes.fieldAlign}}"></sc-combobox-column>
+							<sc-combobox-column data-field="use_yn" header-text="사용 여부" display-field="label" value-field="data" editable="true" items="{{codes.C022}}"></sc-combobox-column>
+						</sc-grid-columns>
+						<sc-grid-fields>
+							<sc-grid-field	data-field="templ_sheet_id"	></sc-grid-field>
+							<sc-grid-field	data-field="calculate_val"	></sc-grid-field>
+							<sc-grid-field	data-field="templ_sheet_col_id"	></sc-grid-field>
+							<sc-grid-field	data-field="sheet_id"	></sc-grid-field>
+							<sc-grid-field	data-field="sheet_nm"	></sc-grid-field>
+							<sc-grid-field	data-field="sheet_typ"	></sc-grid-field>
+						</sc-grid-fields>
+					</sc-grid>
+				</div>
+			</div>
+		</sc-dialog>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "es-bid-template",
+			behaviors : [
+				Polymer.Templatizer
+			],
+			properties : {
+				// 조회조건
+				sheetInfo: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				},
+
+				titleText : {
+					type: String,
+					value : ""
+				},
+
+				hiddenButton:{
+					type: Boolean,
+					value:false
+				},
+				groupColumnSearch:{
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				codes:{
+					type: Object,
+					reset: false,
+					value : function(){
+						return {
+							columnType : [],
+							columnClsType : [],
+							fieldAlign : [],
+							precHndlTyp : [],
+							C022 : []
+						};
+					}
+				},
+				requestCode :{
+					type:String,
+					value:""
+				}
+			},
+			formulas: {
+				hidden: function () {
+					return this.hiddenButton;
+				}
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+
+			},
+			load : function(data) {
+				var me = this;
+
+				if(null != data){
+					var param = UT.copy(data);
+
+					me.set("titleText",param.sheet_nm);
+					me.set("sheetInfo",param);
+
+					me.$.findTemplateSheetColumnAndDataList.body = param;
+				}
+
+				UT.request(me.$.findTemplateSheetColumnAndDataList);
+			},
+
+
+
+			onFindList : function(){
+
+				var me = this;
+				me.$.findTemplateSheetColumnAndDataList.body = me.sheetInfo;
+				UT.request(me.$.findTemplateSheetColumnAndDataList);
+
+				me.fire("reset-all-find",me);
+			},
+
+
+
+			// 데이터 조회 후 처리
+			completeFindList : function(e, res) {
+				var me = this,
+						result = res.response,
+						confirmYn = result.confirmYn,
+						headerListMap = result.headerListMap,
+						headerGroupListMap = result.headerGroupListMap,
+						headerDepthGroupListMap = result.headerDepthGroupListMap,
+						dataListMap = result.dataListMap;
+
+                var sheetInfo = me.get("sheetInfo");
+
+                if(UT.isObject(me.get("sheetInfo")) && UT.isNotEmpty(me.get("sheetInfo"))){
+                    if(UT.isNotEmpty(sheetInfo.confirm_yn) && sheetInfo.confirm_yn == 'Y'){
+                        me.set("hiddenButton",false);
+                    }else if(UT.isNotEmpty(confirmYn) && confirmYn == 'Y'){
+						me.set("hiddenButton",false);
+					}else{
+                        me.set("hiddenButton",true);
+                    }
+                    me.applyFormula("hidden");
+                }
+
+
+
+				// 기본컬럼
+				var columns = UT.templateColumns(this, '#defaultColumnsTemplate', '#defaultColumns');
+
+				var groupColumns =[];
+				var headerGroupColumns =[];
+
+				//2Depth 그룹 컬럼이 있을 경우
+				if(headerDepthGroupListMap.length > 0){
+					for(var i=0; i<headerDepthGroupListMap.length; i++) {
+						var item = headerDepthGroupListMap[i];
+
+						var headerText = item["col_nm"];	// 동적컬럼 headerText
+						var colCd = item["col_cd"];	// 동적컬럼 col_cd
+						var headerGroupColumn = me.createGroupColumn(headerText,colCd);
+						headerGroupColumn.editable = true;
+						headerGroupColumns.push(headerGroupColumn);
+					}
+				}
+
+				//그룹 컬럼이 있을 경우
+				if(headerGroupListMap.length > 0){
+					for(var i=0; i<headerGroupListMap.length; i++) {
+						var item = headerGroupListMap[i];
+
+						var headerText = item["col_nm"];	// 동적컬럼 headerText
+						var colCd = item["col_cd"];	// 동적컬럼 col_cd
+						var groupColumn = me.createGroupColumn(headerText,colCd);
+						groupColumn.editable = true;
+						groupColumns.push(groupColumn);
+					}
+				}
+
+
+				// 조회결과
+				if(headerListMap.length > 0) {
+
+					for(var i=0; i<headerListMap.length; i++) {
+						var item = headerListMap[i];
+
+
+						var headerText = item["disp_nm"];	// 동적컬럼 headerText
+						var dataField = item["templ_sheet_col_id"];	// 동적컬럼 dataField
+						var columnType = item["col_typ_cd"];
+						var grpCd = item["grp_cd"];
+						var fieldAlign = item["field_align"];
+						var commonCd = item["common_cd"];
+						var maxLength = item["col_len"];
+						var pointCalTyp = item["point_cal_typ"];
+						var pointLength = item["point_len"];
+						var mandatoryYn = item["man_yn"];
+						var colClsType = item["col_cls"]
+						var headerGrpCd = item["hd_grp_cd"];
+						var columnFormatterType = item["col_fmt_typ"];
+
+
+						if(UT.isNotEmpty(commonCd)){
+							// 공통코드를 동기로 가져온다.
+
+							me.$.findListCommonCode.sync = true;
+							me.$.findListCommonCode.timeout  = false;
+							me.$.findListCommonCode.body=[commonCd];
+							me.$.findListCommonCode.generateRequest();
+							var codeGetResult =  me.$.findListCommonCode.lastResponse;
+							var codeItems = codeGetResult[commonCd];
+							me.set("codes."+commonCd,codeItems)
+						}
+
+
+						if(UT.isNotEmpty(headerGrpCd) && UT.isNotEmpty(grpCd)){
+
+							for(var a=0; a<headerGroupColumns.length; a++) {
+								var headerGroupItem = headerGroupColumns[a];
+								var headerGroupColCd = headerGroupItem["col_cd"];
+
+								if(UT.isNotEmpty(headerGroupColCd) && headerGroupColCd == headerGrpCd){
+									for(var a=0; a<groupColumns.length; a++) {
+										var groupItem = groupColumns[a];
+										var groupColCd = groupItem["col_cd"];
+
+										if(UT.isNotEmpty(groupColCd) && groupColCd == grpCd){
+											var groupColumnItem = groupItem;
+											if(UT.isNotEmpty(groupColumnItem)){
+												var column = me.createColumn(dataField, headerText, 150, fieldAlign, true);
+												column.editable = false;
+												headerGroupItem.appendChild(groupColumnItem);
+												groupColumnItem.appendChild(column);
+												columns.push(headerGroupItem);
+											}
+										}
+									}
+								}
+							}
+
+						}else if(UT.isNotEmpty(grpCd)){
+							for(var a=0; a<groupColumns.length; a++) {
+								var groupItem = groupColumns[a];
+								var groupColCd = groupItem["col_cd"];
+
+								if(UT.isNotEmpty(groupColCd) && groupColCd == grpCd){
+									var groupColumnItem = groupItem;
+									if(UT.isNotEmpty(groupColumnItem)){
+										var column = me.createColumn(dataField, headerText, 150, fieldAlign, true,columnType,codeItems,maxLength,pointCalTyp,pointLength,mandatoryYn,colClsType,columnFormatterType);
+										groupColumnItem.appendChild(column);
+
+
+                                        if(UT.isNotEmpty(sheetInfo.confirm_yn) && sheetInfo.confirm_yn == 'Y'){
+                                            column.editable = false;
+                                        }else if(UT.isNotEmpty(confirmYn) && confirmYn == 'Y'){
+											column.editable = false;
+										}
+
+										columns.push(groupColumnItem);
+									}
+								}
+							}
+						}else{
+							// 동적컬럼 생성
+							var column = me.createColumn(dataField, headerText, 150, fieldAlign, true,columnType,codeItems,maxLength,pointCalTyp,pointLength,mandatoryYn,colClsType,columnFormatterType);
+
+                            if(UT.isNotEmpty(sheetInfo.confirm_yn) && sheetInfo.confirm_yn == 'Y'){
+                                column.editable = false;
+                            }else if(UT.isNotEmpty(confirmYn) && confirmYn == 'Y'){
+								column.editable = false;
+							}
+
+                            columns.push(column);
+						}
+					}
+				}
+
+
+				me.$.templateSheetColumnGridPanel.setColumns(columns);		// column 셋팅
+
+				if(dataListMap.length > 0){
+					me.$.templateSheetColumnGridPanel.setDataProvider(dataListMap);	// dataProvider 셋팅
+				}
+
+
+
+
+			},
+
+			// 그룹 컬럼 생성
+			createGroupColumn: function(headerText,colCd) {
+				var grpCol = document.createElement("sc-group-column");
+				grpCol.col_cd = colCd;
+				grpCol.headerText = headerText;
+				grpCol.i18nDisabled = true;
+				grpCol.width        = "300";
+				return grpCol;
+			},
+
+			// 컬럼 생성
+			createColumn : function(dataField, headerText, width, textAlign, i18nDisabled,columnType,codeItems,maxLength,pointCalTyp,pointLength,mandatoryYn,colClsType,columnFormatterType) {
+
+				var elementType = "";
+				var option = "";
+
+				//String
+				if(columnType === "STRING") {
+					var column = document.createElement("sc-data-column");
+					column.editable = colClsType == "B"? true : false;
+				}else if(columnType === "INT") { //int
+					var column = document.createElement("sc-data-column");
+					column.dataType = "number";
+					if(UT.isNotEmpty(columnFormatterType)) column.formatType = columnFormatterType;
+					column.editable = colClsType == "B"? true : false;
+				}else if(columnType === "CALC") { //int
+					var column = document.createElement("sc-data-column");
+					column.dataType = "number";
+					column.formatType="amt";
+					column.editable = false;
+				}else if(columnType === "DATE") { //date
+					var column = document.createElement("sc-date-column");
+					column.editable = colClsType == "B"? true : false;
+				}else if(columnType === "COMBOBOX") { //combobox
+					var column = document.createElement("sc-combobox-column");
+					column.items = codeItems;
+					column.displayField = "label";
+					column.valueField = "data";
+					column.editable = colClsType == "B"? true : false;
+				}else if(columnType === "POPUP") { //popup
+					var column = document.createElement("sc-data-column");
+					column.dyniamicColumnPopupFunction="ep-column-list";
+					column.editable = colClsType == "B"? true : false;
+				}else{
+					var column = document.createElement("sc-data-column");
+					column.editable = colClsType == "B"? true : false;
+				}
+
+				if(textAlign === 3){
+					textAlign = "right";
+				}else if(textAlign === 2){
+					textAlign = "left";
+				}else if(textAlign === 1){
+					textAlign = "center";
+				}
+
+				column.maxLength = maxLength;
+				column.dataField    = dataField;
+				column.headerText   = headerText;
+				column.width        = width || "100";
+				column.textAlign    = textAlign || "center";
+				column.i18nDisabled = i18nDisabled || "false";
+				column.pointCalTyp = pointCalTyp || "NONE";
+				column.pointLength = pointLength || 0;
+				if(UT.isNotEmpty(mandatoryYn) && mandatoryYn === "true") column.required = mandatoryYn; // required 에 true/false 형식으로 값을 넣어서 반영되는것이 아닌 required 속성이 넣어지면 빨간모서리 태그가 박힘
+				return column;
+			},
+
+
+			onItemEditEnd : function(event) {
+				var me = this,
+						e = event.detail,
+						data = e.data,
+						item = e.item,
+						dataField = item.dataField,
+						columnName = item.columnName,
+						newValue = e.newValue,
+						oldValue = e.oldValue,
+				provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+
+				me.rowIndex = item.rowIndex;
+
+				// 소수점 처리 방안이 있을 경우 값을 강제로 변경한다.
+				if(UT.isNotEmpty(e.grid.getColumnElByName(dataField).pointCalTyp) && "NONE" != e.grid.getColumnElByName(dataField).pointCalTyp){
+					var pointCalTyp = e.grid.getColumnElByName(dataField).pointCalTyp;
+					var pointLength = e.grid.getColumnElByName(dataField).pointLength;
+
+					newValue = me.onRegex(newValue,pointCalTyp,pointLength);
+					var a = {};
+					a[dataField] = newValue;
+					provider.setItemAt(item.rowIndex, a);
+				}
+
+			},
+
+
+
+			onRegex: function(value,pointCalTyp,pointLength) {
+				var precision = 0;
+				var me = this;
+
+				//몇자리 올림인지
+				var lmt = pointLength || 0;
+				precision = parseInt(lmt, 10);
+
+				//(ROUND: 반올림, CEIL: 올림, FLOOR: 내림)
+				return me.toFixedRound(value, pointCalTyp, precision + 1);
+			},
+
+
+
+			onPopupColumns : function () {
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider([]);
+				me.$.findBidTemplateSheetColumnHeadersDiaLog.body = me.sheetInfo;
+				UT.request(me.$.findBidTemplateSheetColumnHeadersDiaLog);
+			},
+
+
+			completeFindListDialog : function(e,res){
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider(res.response);
+
+				var sheetInfo = me.get("sheetInfo");
+
+				if(UT.isObject(sheetInfo)){
+					me.$.sheet_template_nm.value = sheetInfo.sheet_nm;
+				}
+
+				me.$.columnListDialog.show();
+			},
+
+
+
+
+
+			onSelectColumns : function () {
+				var me = this;
+
+				var columnsPopup = UT.popup("ep-column-list", me, "900", "700", {
+					"selected-items": function (popup, e) {
+						if(!me.checkDup(e.detail)){
+							var dataProvider = me.$.columnsGridPanel.getDataProvider();
+							var sheetInfo = me.get("sheetInfo");
+
+							for(var i=0; i<e.detail.length; i++) {
+								var selected = e.detail[i];
+
+								var addRow = {
+									templ_sheet_col_id : selected.col_id,
+									col_cd : selected.col_cd,
+									col_nm : selected.col_nm,
+									disp_nm : selected.col_nm,
+									col_cls : "B",
+									col_typ_cd : selected.col_typ_cd,
+									col_len : selected.col_len,
+									point_len : selected.point_len,
+									point_cal_typ : selected.point_cal_typ,
+									grp_cd : selected.grp_cd,
+									field_align : selected.field_align,
+									use_yn : selected.use_yn,
+									sheet_id : sheetInfo.sheet_id
+								};
+								dataProvider.addItem(addRow);
+							}
+                            me.resetSortOrd();
+							columnsPopup.hide();
+						}else{
+							UT.alert("STD.BID0010"); //중복된 컬럼이 있습니다. 중복된 컬럼은 추가 할 수 없습니다.
+						}
+					}
+				}, {titleText: this.translate("컬럼 검색")});
+
+				columnsPopup.show();
+				columnsPopup.getWindowContent().load(me.get("sheetInfo"));
+			},
+
+
+			onPopupExcelUpload : function () {
+
+
+				var me = this, grid = me.$.templateSheetColumnGridPanel;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+				var itemCnt = me.$.templateSheetColumnGridPanel.getDataProvider().getItems().length;
+
+
+				// 엑셀 업로드 팝업
+				var popup = UT.popup('cc-excel-import', me, 900, 700, null, {closable : false});
+
+				var i = 0;
+
+				var importer = popup.getContent();
+				importer.autoColumnMapping = true;
+				importer.doImport(grid, function(rows) {
+
+					var rowColumnInfo = {};
+
+
+					for( var a=0; a<Object.keys(rows[0]).length; a++){
+						//Object
+						var columnInfo = {};
+						rowColumnInfo[Object.keys(rows[0])[a]] = me.$.templateSheetColumnGridPanel.getColumnElByName(Object.keys(rows[0])[a]);
+					}
+
+					rows.forEach(function(row) {
+
+						//validation
+						var entriesObject = Object.entries(row);
+
+						for(var b=0; b<entriesObject.length; b++){
+							if(UT.isNotEmpty(rowColumnInfo[entriesObject[b][0]])){
+								if(UT.isNotEmpty(rowColumnInfo[entriesObject[b][0]].pointCalTyp)){
+									var pointCalTyp = rowColumnInfo[entriesObject[b][0]].pointCalTyp;
+									var pointLength = rowColumnInfo[entriesObject[b][0]].pointLength;
+
+									var newValue = me.onRegex(entriesObject[b][1],pointCalTyp,pointLength);
+									row[entriesObject[b][0]] = newValue;
+								}
+
+
+								if(UT.isNotEmpty(rowColumnInfo[entriesObject[b][0]].items)){
+									var comboDatas = UT.getArrayValuesByKey(rowColumnInfo[entriesObject[b][0]].items, "data");
+
+									//공통 코드에 맞는 데이터가 엑셀에 넣었는가.
+									if(comboDatas.indexOf(entriesObject[b][1]) == -1 ){
+										row[entriesObject[b][0]] = "";
+									}
+								}
+							}
+						}
+
+
+						i ++;
+						row.sheet_data_id = UT.generateUUID();
+						provider.addItemAt(itemCnt+i, row);
+					});
+				}, me);
+
+				// 엑셀 업로드 팝업 열기
+				popup.show();
+
+
+
+
+				/*var me = this;
+
+				var columnsPopup = UT.popup("ep-template-excel-upload", me, "900", "700", {
+					"selected-items": function (popup, e) {
+						if(!me.checkDup(e.detail)){
+							var dataProvider = me.$.columnsGridPanel.getDataProvider();
+							var sheetInfo = me.get("sheetInfo");
+
+							for(var i=0; i<e.detail.length; i++) {
+								var selected = e.detail[i];
+
+								var addRow = {
+									templ_sheet_col_id : selected.col_id,
+									col_cd : selected.col_cd,
+									col_nm : selected.col_nm,
+									disp_nm : selected.col_nm,
+									col_cls : "B",
+									col_typ_cd : selected.col_typ_cd,
+									col_len : selected.col_len,
+									point_len : selected.point_len,
+									point_cal_typ : selected.point_cal_typ,
+									grp_cd : selected.grp_cd,
+									field_align : selected.field_align,
+									use_yn : selected.use_yn,
+									sheet_id : sheetInfo.sheet_id
+								};
+								dataProvider.addItem(addRow);
+							}
+                            me.resetSortOrd();
+							columnsPopup.hide();
+						}else{
+							UT.alert("STD.BID0010"); //중복된 컬럼이 있습니다. 중복된 컬럼은 추가 할 수 없습니다.
+						}
+					}
+				}, {titleText: this.translate("컬럼 검색")});
+
+				columnsPopup.show();
+				columnsPopup.getWindowContent().load(me.get("sheetInfo"));*/
+			},
+
+			checkDup : function(selectedList){
+				var me = this;
+				var newList = selectedList;
+				var existList = me.$.columnsGridPanel.getDataProvider().getItems() || [];
+				for(var i=0; i<newList.length; i++){
+					for(var j=0; j<existList.length; j++){
+						if(newList[i].col_cd == existList[j].col_cd){
+							// 중복시 true
+							return true;
+						}
+					}
+				}
+				// 미중복시 false
+				return false;
+			},
+
+
+			onColumnSave : function(){
+				var me = this;
+				// 데이터 유효성 확인
+				/*if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}*/
+
+				var sheet_nm = me.$.sheet_template_nm.value;
+
+				var provider = me.$.columnsGridPanel.getDataProvider(),
+						created = provider.getNewItems(),
+						updated = provider.getUpdateItems();
+
+				if(created.length + updated.length === 0 && UT.isEmpty(sheet_nm)) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+
+				UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+
+
+					me.set("sheetInfo.sheet_nm",sheet_nm);
+
+					me.$.saveBidTemplateSheetColumns.body = {
+						insertList: created,
+						updateList: updated,
+						sheetInfo : me.get("sheetInfo")
+					};
+
+
+					UT.request(me.$.saveBidTemplateSheetColumns);
+				});
+			},
+
+
+
+			completeSaveInfo : function(e,res){
+				var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onFindList();
+					me.$.columnListDialog.close();
+				});
+			},
+
+			completeDeleteColumnHeaderInfo : function(e,res){
+				var me = this;
+
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.$.columnListDialog.close();
+					me.onFindList();
+				});
+			},
+
+			onShowList: function () {
+			 var me = this;
+			 me.fire("show-list");
+			},
+
+			onAdd : function(){
+				var me = this;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+
+				var row = {
+					sheet_data_id : UT.generateUUID(),
+					use_yn : 'Y'
+				}
+
+				provider.addItemAt(0, row);
+			},
+
+			onCalculateColumnSave : function(){
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+
+				var data = me.get("sheetInfo");
+
+				if(provider.filterItems({col_typ_cd : "CALC"}).length > 0) {
+					UT.alert("STD.BID0013"); //계산 컬럼은 1개만 생성할 수 있습니다.
+				}else{
+					// 계산식 팝업 호출
+					var templateFactorCalcPopup = UT.popup('ep-template-calc-column', me, 950, 600, {
+						"apply-data" : function(popup, e) {
+							var calcData = e.detail;
+
+							var row = {
+								sheet_data_id : UT.generateUUID(),
+								use_yn : 'Y',
+								calculate_val : calcData.calc,
+								col_nm : calcData.col_nm,
+								disp_nm : calcData.col_nm,
+								col_cd : calcData.col_cd,
+								col_typ_cd : "CALC",
+								textAlign : "3"
+							}
+
+							provider.addItemAt(0, row);
+
+
+							popup.close();
+						}
+					});
+					templateFactorCalcPopup.show();
+					templateFactorCalcPopup.getWindowContent().load({"sheetInfo":data});
+				}
+			},
+
+			onCalculateColumnChange : function(){
+				var me = this;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+				var items = provider.getItems();
+
+				if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}
+
+				me.$.findCalculateColumn.body = {
+					items : items,
+					sheetInfo : me.get("sheetInfo")
+				}
+
+				UT.request(me.$.findCalculateColumn);
+			},
+
+
+			onDelete: function(){
+				var me = this;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+				var item = provider.selectionCheckedItems();
+
+				if(item.length < 1){
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다.
+					return;
+				}
+
+				UT.confirm("STD.N1300", function () {	// 삭제 하시겠습니까?
+					me.$.deleteBidTemplateSheetDataList.body = {
+						deleteItem : item,
+						sheetInfo : me.get("sheetInfo")
+					};
+					UT.request(me.$.deleteBidTemplateSheetDataList);
+				});
+
+			},
+
+			onSave : function(){
+				var me = this;
+				// 데이터 유효성 확인
+				if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}
+
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider(),
+						created = provider.getNewItems(),
+						updated = provider.getUpdateItems();
+
+				var newIndexes = provider.getNewIndexes();
+
+				var updateIndexes = provider.getUpdateIndexes();
+
+				if(created.length + updated.length === 0) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+
+				UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+					me.$.saveBidTemplateSheetDataList.body = {
+						insertList: created,
+						updateList: updated,
+						insertIndex : newIndexes,
+						updateIndex : updateIndexes,
+						sheetInfo: me.sheetInfo
+					};
+
+					UT.request(me.$.saveBidTemplateSheetDataList);
+				});
+			},
+
+
+			completeDeleteInfo : function(e,res){
+				var me = this;
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.onFindList();
+				});
+			},
+
+
+			onGridItemClick : function(e){
+				var me = this;
+				var data = e.detail.data;
+				var item = e.detail.item;
+
+				//popupColumn이 있다면, 별도 펑션을 호출 처리
+				if(UT.isNotEmpty(e.currentTarget.getColumns()[item.columnIndex]) && UT.isNotEmpty(e.currentTarget.getColumns()[item.columnIndex].dyniamicColumnPopupFunction)){
+					var columnsPopup = UT.popup(e.currentTarget.getColumns()[item.columnIndex].dyniamicColumnPopupFunction, me, "900", "700", {
+						"selected-items": function (popup, e) {
+							if(!me.checkDup(e.detail)){
+								var dataProvider = me.$.columnsGridPanel.getDataProvider();
+								var sheetInfo = me.get("sheetInfo");
+
+								for(var i=0; i<e.detail.length; i++) {
+									var selected = e.detail[i];
+
+									var addRow = {
+										col_id : selected.col_id,
+										col_cd : selected.col_cd,
+										col_nm : selected.col_nm,
+										col_cls : "B",
+										disp_nm : selected.col_nm,
+										col_typ_cd : selected.col_typ_cd,
+										col_len : selected.col_len,
+										point_len : selected.point_len,
+										point_cal_typ : selected.point_cal_typ,
+										grp_cd : selected.grp_cd,
+										field_align : selected.field_align,
+										use_yn : selected.use_yn,
+										sheet_id : sheetInfo.sheet_id
+									};
+									dataProvider.addItem(addRow);
+								}
+
+								columnsPopup.hide();
+							}else{
+								UT.alert("STD.N1900"); // 중복
+							}
+						}
+					}, {titleText: this.translate("컬럼 검색")});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("sheetInfo"));
+				};
+
+			},
+
+
+			onItemClick : function(e) {
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+				var data = e.detail.data;
+				var item = e.detail.item;
+
+				// col_typ_cd 는 변경 될 수 있음.
+				if(item.dataField === "btn_select" && !(data.col_typ_cd == 'GROUPCODE')){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "hd_grp_cd_select" && !(data.col_typ_cd == 'GROUPCODE') && (UT.isNotEmpty(data.grp_cd))){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"hd_grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "common_code_select" && (data.col_typ_cd == 'COMBOBOX')){
+
+					var commonPopup = UT.popup("ep-column-common-code-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"common_cd" : selected.grp_cd});
+							commonPopup.close();
+						}
+					}, {titleText: this.translate("공통 코드 검색")});
+
+					commonPopup.show();
+					commonPopup.getWindowContent().load();
+				}else if(item.dataField === "col_cd" && data.col_typ_cd === "CALC" && provider.getItemState(item.rowIndex) != "created"){
+					
+					var sheetInfo = me.get("sheetInfo");
+
+					// 계산식 팝업 호출
+					var templateFactorCalcPopup = UT.popup('ep-template-calc-column', me, 950, 600, {
+						"apply-data" : function(popup, e) {
+							var calcData = e.detail;
+							provider.setItemAt(item.rowIndex, {"calculate_val":calcData.calc});
+							popup.close();
+							me.onColumnSave();
+						}
+					});
+					templateFactorCalcPopup.show();
+					templateFactorCalcPopup.getWindowContent().load({"sheetInfo":sheetInfo , "templ_sheet_col_id" : data.templ_sheet_col_id});
+					
+				}
+			},
+
+
+
+
+			onImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] != "GROUPCODE"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+
+			itemEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "grp_cd":
+						return data.col_typ_cd != "GROUPCODE";
+					case "hd_grp_cd":
+						return (data.col_typ_cd != "GROUPCODE" && UT.isNotEmpty(data.grp_cd));
+					default:
+						return false;
+				}
+			},
+
+			onCommonCodeImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] == "COMBOBOX"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+			commonCodeEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "common_cd":
+						return data.col_typ_cd == "COMBOBOX";
+					default:
+						return false;
+				}
+			},
+
+
+			onDesignerDelete: function(){
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+				var item = provider.selectionCheckedItems();
+
+				if(item.length < 1){
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다.
+					return;
+				}
+
+				UT.confirm("STD.N1300", function () {	// 삭제 하시겠습니까?
+					me.$.deleteBidTemplateSheetColumns.body = {
+						deleteItem : item,
+						sheetInfo: me.sheetInfo
+					};
+					UT.request(me.$.deleteBidTemplateSheetColumns);
+				});
+
+			},
+
+
+			itemDecimalFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "point_len":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "point_cal_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "col_fmt_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					default:
+						return false;
+				}
+			},
+
+            // 위로
+            onUpListUser: function() {
+                var me = this,
+                    grid = me.$.columnsGridPanel,
+                    provider = me.$.columnsGridPanel.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+                if (checked.length > 0) {
+                    for (var i = 0, len = checked.length; i < len; i++) {
+                        var currentIndex = checked[i],
+                            upIndex = currentIndex - 1;
+
+                        provider.moveRow(currentIndex,upIndex);
+                        grid.selectionCheck(upIndex,true);
+                        grid.selectionCheck(currentIndex,false);
+                    }
+                }
+
+                me.resetSortOrd();
+            },
+            // 아래로
+            onDownListUser: function() {
+                var me = this,
+                    grid = me.$.columnsGridPanel,
+                    provider = me.$.columnsGridPanel.getDataProvider();
+                var checked = provider.selectionCheckedIndexes();
+                if (checked.length > 0) {
+                    var itemSize = provider.getItemSize();
+                    for (var i = checked.length -1; i >= 0; i--) {
+                        var nextParlSize = 0;
+                        var currentIndex = checked[i],
+                            downIndex = currentIndex + 1;
+
+                        provider.moveRow(currentIndex,downIndex);
+                        grid.selectionCheck(downIndex,true);
+                        grid.selectionCheck(currentIndex,false);
+
+                    }
+                }
+
+                me.resetSortOrd();
+            },
+
+            resetSortOrd: function() {
+                var me = this,
+                    provider = me.$.columnsGridPanel.getDataProvider();
+                var i = 0;
+                provider.setItemAtBatch(true, function(index, data){
+                        i++;
+                    return {"sort_ord" : i};
+                }, {visibleOnly:true});
+            },
+
+
+
+			toFixedRound : function(_number1, Round, Scale){
+
+				if(Scale === 0){
+					return null;
+				}
+				// String 변환
+				var _num = _number1.toString();
+
+				var sign = "";
+
+				if(Round === null || typeof Round === 'undefined'){
+					Round = "NONE";
+				}
+				if(Scale === null || typeof Scale === 'undefined'){
+					Scale = 4;
+				}
+
+				if(_number1 < 0){
+					sign = "-";
+					_num = _num.substring(1,_num.length);
+				}
+				//소수점 위치
+				var indexdot = _num.indexOf(".");
+
+				// 곱한 10의 n 승
+				var muxcnt = _num.length - indexdot -1;
+
+				// 정수가 들어왔거나 소수점처리 안한다면 그냥 리턴
+				if(indexdot == -1 || Round == "NONE" || muxcnt < Scale)
+					return _number1.toString();
+
+				// 소수점 제거된 입력값
+				var _numX = Number(_num.substring(0, indexdot) + _num.substring(indexdot+1, _num.length));
+
+				var _numS = "";
+
+				switch(Round)
+				{
+					case "ROUND" :
+						_numS = ( (Number(_numX) + (5*Math.pow(10, muxcnt-Scale))) / Math.pow(10,muxcnt) ).toString();
+						_numS = (_numS.indexOf(".") == -1)? _numS : _numS.substring(0, _numS.indexOf(".") + Scale);
+						break;
+					case "CEIL":
+						_numS = ( (Number(_numX) + (Math.pow(10, muxcnt+1-Scale)-1)) / Math.pow(10,muxcnt)).toString();
+						_numS = (_numS.indexOf(".") == -1)? _numS : _numS.substring(0, _numS.indexOf(".") + Scale);
+						break;
+					case "FLOOR":
+						_numS = ( Number(_numX) / Math.pow(10,muxcnt)).toString();
+						_numS = (_numS.indexOf(".") == -1)? _numS : _numS.substring(0, _numS.indexOf(".") + Scale);
+						break;
+					default: //아무것도 아닐 경우
+						return _number1.toString();
+						break;
+				}
+
+				return Number(sign+_numS);
+			},
+
+
+			completeCalculateColumn: function(e, res) {
+				var me = this;
+				var data = res.response;
+
+				if(data) {
+					me.$.templateSheetColumnGridPanel.setDataProvider(data);
+					me.$.templateSheetColumnGridPanel.getDataProvider().setItemStateAtBatch(true, function(index, data){
+						return "updated";
+					})
+				}
+			},
+
+			itemColTypeStyleFunction : function(data, item){
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+				if(item.dataField === "col_cd" && data.col_typ_cd === "CALC" && provider.getItemState(item.rowIndex) != "created"){
+					return {
+						fontWeight : "bold",
+						fontColor : "#0e006f"
+					};
+				}
+			},
+
+			desingerSelectItems: function (data) {
+				var me = this;
+
+				if(!me.checkDup(data.detail)){
+					var dataProvider = me.$.columnsGridPanel.getDataProvider();
+					var sheetInfo = me.get("sheetInfo");
+
+					for(var i=0; i<data.detail.length; i++) {
+						var selected = data.detail[i];
+
+						var addRow = {
+							col_id : selected.col_id,
+							col_cd : selected.col_cd,
+							col_nm : selected.col_nm,
+							col_cls : "B",
+							disp_nm : selected.col_nm,
+							col_typ_cd : selected.col_typ_cd,
+							col_fmt_typ : selected.col_fmt_typ,
+							col_len : selected.col_len,
+							point_len : selected.point_len,
+							point_cal_typ : selected.point_cal_typ,
+							grp_cd : selected.grp_cd,
+							field_align : selected.field_align,
+							use_yn : selected.use_yn,
+							sheet_id : sheetInfo.sheet_id,
+							common_cd : selected.common_cd,
+						};
+						dataProvider.addItem(addRow);
+					}
+
+					me.resetSortOrd();
+				}else{
+					UT.alert("STD.N1900"); // 중복
+				}
+			},
+
+
+
+			//BidTemplate를 확정처리한다.
+			onConfirmBidTemplateY : function(e,res){
+				var me = this;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+
+				UT.confirm("STD.BID0014", function() { //BidTemplate를 확정처리 하시겠습니까? 확정처리 시 수정이 불가능합니다.
+
+					UT.request(me.$.findBidTemplateSheetColumnHeadersCheck, function(){
+
+						var items = me.$.findBidTemplateSheetColumnHeadersCheck.lastResponse;
+
+						var newArr = items.filter(function(item) {
+							return item.col_typ_cd === "CALC";
+						});
+
+						if(newArr.length == 0){
+							UT.alert("STD.BID0015"); //계산 컬럼이 존재하지 않습니다. 계산컬럼을 추가한 후 확정처리 해주시기 바랍니다.
+						}else{
+							me.$.confirmBidTemplateAll.body = {
+								sheetInfo: me.sheetInfo
+							};
+
+							UT.request(me.$.confirmBidTemplateAll);
+						}
+					});
+				});
+			},
+            onConfirmBidTemplateN : function(e,res){
+				var me = this;
+				var provider = me.$.templateSheetColumnGridPanel.getDataProvider();
+
+				UT.confirm("STD.BID0016", function() { //BidTemplate를 확정 취소 하시겠습니까?
+
+					UT.request(me.$.findRFQTemplateConfirmYn, function(){
+
+                        var result = me.$.findRFQTemplateConfirmYn.lastResponse;
+
+                        if(result.length == 0){
+                            me.$.confirmBidTemplateAllCancel.body = {
+                                sheetInfo: me.sheetInfo
+                            };
+
+                            UT.request(me.$.confirmBidTemplateAllCancel);
+                        }else{
+                            UT.alert("STD.BID0017"); //이미 진행 중인 업무가 있어, 확정 취소가 불가능합니다.
+                        }
+
+
+					});
+				});
+			},
+
+
+
+
+			completeConfirmTemplate : function(e,res){
+				var me = this;
+
+				me.onFindList();
+				me.applyFormula();
+			},
+
+
+		});
+	</script>
+
+</dom-module>

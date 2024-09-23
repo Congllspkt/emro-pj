@@ -1,0 +1,183 @@
+<dom-module id="ep-error-extract">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <sc-ajax id="extractJarFilesVersion"
+                 url="libraryclient/extractLibraries.do"
+                 body="{{searchParam}}"
+                 on-response="completeExtractJarFilesVersion">
+        </sc-ajax>
+
+        <cc-page-title-bar>
+            <sc-button text="다운로드" on-click="onDownload"></sc-button>
+        </cc-page-title-bar>
+
+        <sc-grid id="grid" data-provider="{{dependenciesJar}}" use-state="false" use-selection="false">
+            <cc-grid-toolbar title-text="라이브러리 목록">
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="lib_artifact_id" header-text="Artifact ID" width="150" text-align="left"></sc-data-column>
+                <sc-data-column data-field="lib_group_id" header-text="Group ID" width="150" text-align="left"></sc-data-column>
+                <sc-data-column data-field="lib_nm" header-text="라이브러리" width="300" text-align="left"></sc-data-column>
+                <sc-data-column data-field="lib_version" header-text="Version" width="50" text-align="left"></sc-data-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="lib_fullpath"></sc-grid-field>
+                <sc-grid-field data-field="lib_sha1"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is: "ep-error-extract",
+            properties: {
+                titleText: {
+                    type: String,
+                    value: function () {
+                        return "Error정보다운로드"
+                    }
+                },
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                basicInfo: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                dependenciesJar: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                html: {
+                    type: String,
+                    value: function() {
+                        return "";
+                    }
+                },
+            },
+
+            load: function (basicInfo, basicInfoHTML) {
+                var me = this;
+                basicInfo.basicInfoHTML = basicInfoHTML;
+                me.set("basicInfo", basicInfo);
+
+                UT.request(me.$.extractJarFilesVersion);
+            },
+
+            //Error 정보 다운로드
+            onDownload: function() {
+                var me = this;
+
+                //타이틀
+                me.html = "";
+                me.html += "<h1>Error Report</h1>";
+
+                //목차
+                me.html += "<h5>Contents</h5>";
+                me.html += "<ul>";
+                me.html += "<li><a href='#basicInfo'>Basic Info</a></li>";
+                //me.html += "<li><a href='#userScreen'>User Screen</a></li>";
+                me.html += "<li><a href='#stackTrace'>StackTrace</a></li>";
+                me.html += "<li><a href='#dependencies'>Dependencies</a></li>";
+                me.html += "</ul>";
+
+                //기본 정보
+                me.html += "<h3 id='basic'>Basic Info</h3>";
+                me.html += "<br>" + me.basicInfo.basicInfoHTML + "<br>";
+                //me.html += "<h3 id='basic'>User Screen</h3>";
+                //me.html += "<img src='" + me.$.grid.querySelector("canvas").toDataURL() + "'>";
+                me.html += "<h3 id='stackTrace'>StackTrace</h3>";
+                me.html += "<pre>" + me.basicInfo.stk_trce_cont + "</pre>";
+
+                //의존 라이브러리 정보
+                me.html += "<h3 id='dependencies'>Dependencies</h3>";
+                me.html += "<br>" + me.createDependenciesTable(me.dependenciesJar || []) + "<br>";
+
+                //파일 생성
+                var blob = new Blob([me.html], {type: 'text/html'}); // pass a useful mime type here
+                var url = URL.createObjectURL(blob);
+
+                var filename = (me.basicInfo.err_uuid ||"error") + ".html";
+                if (window.navigator.msSaveBlob) { // IE
+                    window.navigator.msSaveOrOpenBlob(blob, filename);
+                } else {
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.setAttribute("download", filename);
+                    a.click();
+                }
+            },
+
+            createBasicInfoTable: function (dependenciesJar) {
+                if(dependenciesJar.length === 0) {
+                    return "";
+                }
+
+                var htmlStr = '<table style="border-collapse: collapse;" border="1">';
+
+                htmlStr += "<tr>";
+                htmlStr += ["Artifact ID", "Group ID", "라이브러리", "Version"].map(function(fieldName) {
+                    return "<th>" + fieldName + "</th>";
+                }).join("");
+                htmlStr += "</tr>";
+
+                for(var i=0, len=dependenciesJar.length;i<len;i++) {
+                    var jar = dependenciesJar[i];
+                    htmlStr += "<tr>";
+                    htmlStr += ["lib_artifact_id", "lib_group_id", "lib_nm", "lib_version"].map(function(fieldName) {
+                        return "<td>" + (jar[fieldName] || "") + "</td>";
+                    }).join("");
+                    htmlStr += "</tr>";
+                }
+
+                htmlStr += "</table>";
+
+                return htmlStr;
+            },
+
+            createDependenciesTable: function (dependenciesJar) {
+                if(dependenciesJar.length === 0) {
+                    return "";
+                }
+
+                var htmlStr = '<table style="border-collapse: collapse;" border="1">';
+
+                htmlStr += "<tr>";
+                htmlStr += ["Artifact ID", "Group ID", "라이브러리", "Version"].map(function(fieldName) {
+                    return "<th>" + fieldName + "</th>";
+                }).join("");
+                htmlStr += "</tr>";
+
+                for(var i=0, len=dependenciesJar.length;i<len;i++) {
+                    var jar = dependenciesJar[i];
+                    htmlStr += "<tr>";
+                    htmlStr += ["lib_artifact_id", "lib_group_id", "lib_nm", "lib_version"].map(function(fieldName) {
+                        return "<td>" + (jar[fieldName] || "") + "</td>";
+                    }).join("");
+                    htmlStr += "</tr>";
+                }
+
+                htmlStr += "</table>";
+
+                return htmlStr;
+            },
+
+            completeExtractJarFilesVersion: function (e, res) {
+                var me = this;
+                me.set("dependenciesJar", res.response);
+
+                me.onDownload();
+            }
+        });
+    </script>
+</dom-module>

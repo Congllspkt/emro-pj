@@ -1,0 +1,146 @@
+<sc-link rel="import" href="../../../smartsuite/portal/portal-layout/vue-grid-layout/vue-grid-layout-config.html"></sc-link>
+<dom-module id="es-portlet-layout-config">
+
+	<style>
+		:host { 
+			@apply(--vbox-layout) 
+		}
+	</style>
+
+	<template>
+		<!-- 공통코드 조회 -->
+		<sc-code-group>
+			<sc-code code="C016" value="{{codes.userDivList}}" ></sc-code>
+		</sc-code-group>
+		
+		<sc-ajax id="findListCommonCodeAttributeCode"
+				 url="findListCommonCodeAttributeCode.do"
+				 last-response="{{codes.homeType}}">
+        </sc-ajax>
+		
+		<!-- 레이아웃 -->
+		<cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+			<cc-fieldset>
+				<sc-label text="사용자 유형"></sc-label>
+				<sc-combobox-field placeholder="필수" selected-index="0" required="true"
+								   display-field="label" value-field="data" items="{{codes.userDivList}}"
+								   value="{{usrCls}}"
+								   on-change="onUsrClsChange">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="HOME 화면 유형"></sc-label>
+				<sc-combobox-field id="homeTypField" placeholder="필수" required="true"
+								   display-field="label" value-field="data" items="{{codes.homeType}}" value="{{homeType}}"
+								   on-change="onHomeTypeChange">
+				</sc-combobox-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+
+		<div class="hspace-10"></div>
+		
+		<div class="flex vbox-1">
+			<sc-pages id="pages" class="fit" selected-index="0" >
+				<template>
+					<vue-grid-layout-config id="vueGridLayoutConfig" page-id="vueGrid"></vue-grid-layout-config>
+				</template>
+		   </sc-pages>
+		</div>
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-portlet-layout-config",
+            
+            properties: {
+            	// 사용자 구분 코드
+                codes: {
+                	type: Object,
+                	value: function() {
+                		return { 
+                			userDivList: [],
+                			homeType: []
+                		};
+                	}
+                },
+
+             	// 선택된 사용자 구분
+                usrCls: {
+                	type: Object,
+                	value: function() {
+                		return undefined;
+                	}
+                },
+
+                homeType: {
+                    type: Object,
+                    value: function() {
+                        return undefined;
+                    }
+                },
+
+                // 설정된 공통 속성
+                commonConfig: {
+            		type: Object
+            	}
+            },
+            
+            /**
+             * 초기화
+             */ 
+            initialized: function() {
+            	var allWidget = this.querySelectorAll('sc-widget');
+            	for(var i = 0; i < allWidget.length; i++) {
+            		allWidget[i].removeAttribute('mouseover-head');
+            	}
+            	//this.onSearch();
+            },
+            
+            /**
+             * 선택된 구분값이 변경될 때
+             */
+            onUsrClsChange: function(event) {
+                if(!this.usrCls) return;
+                this.$.findListCommonCodeAttributeCode.body = {
+                    ccd : "C017",
+                    cstr_cnd_cd : "USR_TYP",
+                    cstr_cnd_val: this.usrCls
+				};
+
+                UT.request(this.$.findListCommonCodeAttributeCode, function() {
+
+                    this.$.homeTypField.selectedIndex = 0;
+				}.bind(this));
+			},
+
+            onHomeTypeChange: function() {
+                if(!this.usrCls || !this.homeType) return;
+                this.onSearch();
+			},
+
+            /**
+             * 선택된 구분값이 변경될 때
+             */
+            onSearch: function(event) {
+                if(!this.validate('search')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+            	
+       			this.$.pages.selectItem(this.$.vueGridLayoutConfig);
+       			this.$.vueGridLayoutConfig.layoutTarget = {
+       			    usr_typ_ccd : this.usrCls,
+					home_scr_typ_ccd : this.homeType
+				};
+
+       			this.$.vueGridLayoutConfig.commonConfig = this.commonConfig[this.usrCls];
+            }
+        });
+	</script>
+
+</dom-module>

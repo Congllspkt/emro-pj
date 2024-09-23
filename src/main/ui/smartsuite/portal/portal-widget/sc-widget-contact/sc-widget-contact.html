@@ -1,0 +1,61 @@
+<!--
+ * @Desc Banner widget
+ * @Author eunjoo.chung
+ * @Created 2017-03-30
+ -->
+
+<dom-module id="sc-widget-contact">
+    <template>
+        <style>
+            :host {
+                @apply(--vbox-layout);
+            }
+
+            .box-content {
+				width: 100%;
+				height: 100%;
+				position: relative;
+			}
+			
+.wrap_contact {margin:10px; overflow:hidden; box-sizing:border-box;  color:#000; font-weight:bold;}
+.wrap_contact div {width:50%;display:table; height:110px; float:left; box-sizing:border-box;}
+.wrap_contact div ul {margin-right:10px; height:110px}
+.wrap_contact li {height:50px; width:100%; display:table;}
+.wrap_contact a {display:table-cell; width:100%; height:100%; border:1px solid #ddd; background-color:#f7f7f7; vertical-align:middle; text-align:center; color:#000; box-sizing:border-box;}
+.wrap_contact .ban li:first-child {margin-bottom:8px;}
+.wrap_contact a:hover {border:1px solid #1e5784; background:#fff;}
+.wrap_contact a:before {color:#000; font:normal normal normal 30px/49px FontAwesome; display:inline; text-align:center; margin-right:10px;}
+.wrap_contact .ban li:nth-child(1) a:before {content : "\f0ed";}
+.wrap_contact .ban li:nth-child(2) a:before {content : "\f044";}
+.wrap_contact .tel li {font-size:18px; padding-top:5px;}
+.wrap_contact .tel {border:1px solid #ccc; background-color:#f7f7f7; text-align:center;}
+.wrap_contact .tel li:first-child:before {content : "\f025"; font:normal normal normal 30px/50px FontAwesome; margin:10px;}
+.wrap_contact .tel li:last-child {font-size:30px; font-weight:normal; padding-top:0;}
+        </style>
+         
+
+		<div class="box-content">
+			<!-- <img src="../img/img_contact.png" /> -->
+			<section class="wrap_contact">
+				<div class="ban">
+				<ul>
+				<li><a>Manual</a></li>
+				<li><a>Guideline</a></li>
+				</ul>
+				</div>
+				<div class="tel">
+				<ul>
+				<li>Contact</li>
+				<li><span>1588-1234</span></li>
+				</ul>
+				</div>
+			</section>
+		</div>
+    </template>
+    <script>
+        Polymer({
+            is: "sc-widget-contact",
+          
+        });
+    </script>
+</dom-module>

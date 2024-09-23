@@ -1,0 +1,338 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-source-editor
+    ** Author          : choijh
+    ** Create Date     : 2017.07.12
+    ** History         : 2017.07.12 choijh 최초작성
+    ******************************************************************************************
+-->
+<script src="../../../../lib/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+
+<dom-module id="cc-source-editor">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	<template>
+		<div class="edit-mode-content" hidden="{{modeHidden}}">
+			<sc-label text="[[translate('MODE')]]"></sc-label>
+			<sc-combobox-field value="{{mode}}" items="[[modeList]]" disabled="{{modeDisabled}}"></sc-combobox-field>
+		</div>
+
+		<sc-tab-navigation id="tabNavi" class="flex" on-item-select="onItemSelected">
+			<div id="editor" title-text="Edit" class="fit"></div>
+			<div id="viewer" title-text="View" class="fit" hidden="{{viewHidden}}">
+				<iframe id="content" class="fit"></iframe>
+			</div>
+		</sc-tab-navigation>
+	</template>
+	<script>
+		Polymer({
+			is : 'cc-source-editor',
+			properties : {
+                /**
+                 * editor 객체입니다.
+                 */
+                sourceEditor : {
+                    type : Object
+                },
+                /**
+                 * 사용자가 값을 제어하는 Value 입니다.
+				 * 동기화가 필요할 경우 syncValue 함수를 호출해야 합니다.
+                 */
+				value: {
+					type: String,
+					notify: true
+				},
+				/**
+                 * Editable 여부 변수
+                 */
+                readonly: Boolean,
+                /**
+                 * Editable 여부 변수
+                 */
+				editable: Boolean,
+                /**
+                 * disabled 여부 변수
+                 */
+				disabled: Boolean,
+                /**
+                 * Editor에서 지원가능한 언어 목록
+                 */
+				modeList: {
+                    type: Array,
+					value: function() {
+                     	return [
+                            {text: "html", value: "html"},
+                            {text: "freemarker", value: "freemarker"},
+                            {text: "json", value: "json"},
+                            {text: "python", value: "python"},
+                            /*{text: "javascript", value: "ace/mode/javascript"},
+                            {text: "css", value: "ace/mode/css"}*/
+                        ];
+					}
+                },
+                /**
+                 * Editor의 현재 선택된 언어 (기본값 html)
+                 */
+				mode: {
+                    type: String,
+                    observer: "_changedMode",
+					value: function () {
+						return "html";
+                    }
+				},
+                /**
+                 * Editor의 현재 선택된 언어 (기본값 html)
+                 */
+				viewHidden: {
+				    type : Object,
+					value : function() {
+				    	return false
+					}
+				},
+				modeDisabled: {
+                    type : Object,
+                    value : function() {
+                        return false
+                    }
+				},
+
+                useWorker: {
+				    type: Object,
+                    observer: "_changedUseWorker",
+					value: true
+				},
+				
+				resetable: {
+					type: Boolean,
+					reflectToAttribute: true,
+					value: true
+				}
+			},
+
+            listeners : {
+                'sc-resize' : '_onResize'
+            },
+
+            /**
+             * cc-module-behavior의 종속성을 가지고 있음
+             */
+            behaviors: [
+                Polymer.CCModuleBehavior,
+                Polymer.SCResizableBehavior
+            ],
+
+            /**
+             * Observer
+             */
+			observers:[
+                'setEditable(editable, sourceEditor)',
+                'setDisabled(disabled, sourceEditor)',
+                'setReadonly(readonly, sourceEditor)',
+				'setEditMode(mode, sourceEditor)',
+                'setValue(value, sourceEditor)'
+			],
+
+            /**
+             * Edit 화면 Element
+             */
+            get editorEle(){
+                return this.$.editor;
+            },
+
+            /**
+             * View 화면 Element
+             */
+            get viewerEle(){
+                return this.$.viewer;
+            },
+
+            /**
+             * View Iframe Content Element
+             */
+            get viewerContentEle(){
+                var content = this.$.content;
+                return content.contentWIndow || content.contentDocument;
+            },
+
+            /**
+             * 상단 탭바의 우측 MODE 선택 Element
+             */
+            get editModeEle() {
+                return this.querySelector('.edit-mode-content');
+            },
+
+            /**
+             * Editor의 기본 Config 설정
+             */
+            initialized: function () {
+            	var me = this;
+                var sourceId = UT.generateUUID();
+                me.editorEle.id = sourceId;
+
+                var sourceEditor = me.sourceEditor = ace.edit(sourceId);
+
+                sourceEditor.setTheme("ace/theme/eclipse");
+                sourceEditor.getSession().setUseWorker(me.useWorker);
+                sourceEditor.$blockScrolling = Infinity;
+                
+                sourceEditor.renderer.on('afterRender', function() {
+                	me.debounce('_onEditorAfterRender', function () {
+                		me._onResize();
+                    }, 50);
+                });
+            },
+            
+            _destroy: function(){
+            	this.cancelDebouncer('_onEditorAfterRender');
+            	this.sourceEditor.renderer.off('afterRender');
+            },
+
+            /**
+             * Editor Resize
+             */
+            _onResize: function (force) {
+                force = force || true;
+
+                if(this.sourceEditor) {
+                    this.sourceEditor.resize(force);
+				}
+            },
+
+            /**
+             * Scroll 초기화
+             */
+            _onScrollInit: function () {
+                //scroll 초기화
+                var eles = document.querySelectorAll("div.ace_scrollbar.ace_scrollbar-v, div.ace_scrollbar.ace_scrollbar-h");
+                for(var i=0, len = eles.length; i<len; i++) {
+                    var ele = eles[i];
+                    ele.scrollTop = 0;
+                    ele.scrollLeft = 0;
+                }
+            },
+
+            /**
+             * value 세팅 및 view 동기화
+             */
+			setValue: function (value) {
+                var sourceEditor = this.sourceEditor;
+
+                sourceEditor.setValue(value || "");
+                sourceEditor.selection.clearSelection();
+                sourceEditor.gotoLine(0);
+
+                this._onScrollInit();
+                this.syncViewer(value);
+                this._onResize();
+            },
+
+            /**
+             * value 값 가져오기
+             */
+			getValue: function () {
+                return this.sourceEditor.getValue();
+            },
+
+            /**
+             * editor의 value를 tag의 value와 동기화
+             */
+            syncValue: function () {
+                this.value = this.getValue();
+            },
+
+            /**
+             * editor의 value를 view와 동기화
+             */
+			syncViewer: function (value) {
+                value = value || this.getValue();
+
+                var content = (!(value === "" || typeof value === "undefined")) ? value : '<div style="color: #aeaeae;  text-align: center;  position: relative;  top: 50%;"> '+  this.translate("STD.N4100") +'</div>';  //데이터가 존재하지 않습니다.
+                this.viewerContentEle.body.innerHTML = content;
+            },
+
+            /**
+             * editor의 값이 빈값인지 확인
+             */
+			isEmpty: function () {
+                var value = this.getValue();
+				return (value === "" || typeof value === "undefined");
+            },
+            
+            /**
+             * Editable 여부 설정
+             */
+            setReadonly: function (value) {
+				this.sourceEditor.setReadOnly(value);
+            },
+
+            /**
+             * Editable 여부 설정
+             */
+            setEditable: function (value) {
+				this.sourceEditor.setReadOnly(!value);
+            },
+
+            /**
+             * Disabled 여부 설정
+             */
+            setDisabled: function (value) {
+                this.sourceEditor.setReadOnly(value);
+            },
+
+            /**
+             * Editor의 언어 Mode 설정
+             */
+            setEditMode: function (mode) {
+                this.sourceEditor.getSession().setMode("ace/mode/" + mode);
+            },
+
+            /**
+             * Editor의 언어 Mode 설정
+             */
+            _changedMode: function (mode) {
+                if(this.sourceEditor) {
+                    this.setEditMode(mode);
+				}
+            },
+
+            /**
+             * Editor의 언어 Mode 설정
+             */
+            _changedUseWorker: function (useWorker) {
+                if(this.sourceEditor && this.sourceEditor.getSession) {
+                    this.sourceEditor.getSession().setUseWorker(useWorker);
+                }
+            },
+
+            /**
+             * 상단의 Tab 선택 시 호출되는 함수
+             */
+            onItemSelected: function (e, itemInfo) {
+				var item = itemInfo.item;
+
+				if(item.id === "viewer") {
+				    this.syncViewer();
+                    this.editModeEle.hidden = true;
+				} else {
+                    this.editModeEle.hidden = false;
+				}
+            },
+
+			reset: function () {
+                this.setValue("");
+				this.$.tabNavi.selectItem(this.$.editor);
+            },
+
+            /**
+             * Editor에 Focus를 준다
+             */
+            focus: function () {
+				this.sourceEditor.focus();
+            }
+		});
+
+	</script>
+</dom-module>

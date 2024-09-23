@@ -1,0 +1,144 @@
+<!--
+    ******************************************************************************************
+    ** @Program-name    : 약관 정보
+    ** @Description     : 협력사 약관 정보 동의 팝업
+    ** @Author          : DHLee
+    ** @Create Date     : 2019.05.14
+    ** @History         : 2019.06.14 DHLee 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="sc-mdi-terms-popup">
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+        .term_container {margin: 0 5px 38px 5px;}
+    </style>
+
+    <template>
+        <!-- 약관 정보 조회(현재일자에 유효한 약관) -->
+        <sc-ajax id="findListNewRegistrationApplyChargeTermsTemplateInfo"
+                 url="findListNewRegistrationApplyChargeTermsTemplateInfo.do"
+                 last-response="{{termsInfoList}}">
+        </sc-ajax>
+
+        <!-- 약관 정보 저장 -->
+        <sc-ajax id="saveChargeTermsAgree"
+                 url="saveChargeTermsAgree.do"
+                 on-response="completesaveChargeTermsAgree"
+                 on-exception-response="exceptionsaveChargeTermsAgree">
+        </sc-ajax>
+
+        <div class="vbox flex term_container">
+            <h3 class="terms_tit">
+                <b>[[translate('약관 및 개인정보 수집 및 이용 동의')]]</b>
+                <span>[[translate('시스템 사용을 위한 동의 사항 입니다. 개인정보수집 및 이용에 대한 안내를 읽고 동의해 주십시오.')]]</span>
+            </h3>
+
+            <sc-container>
+                <template is="dom-repeat" items="[[termsInfoList]]">
+                    <div class="join_agree">
+                        <h4>[[item.termcnd_nm]]</h4>
+                        <div class="border_box">
+                            <div class="agree_area">
+                                <p class="checkarea">
+                                    <sc-checkbox-field id="[[item.termcnd_uuid]]" required="[[isRequired(item.mand_cnst_yn)]]" on-checkchange="onChangeCheckEvent"></sc-checkbox-field>
+                                    <span>[[translate('이용약관에 동의합니다.')]]</span>
+                                </p>
+                            </div>
+                            <div class="term" inner-h-t-m-l="[[item.ctmpl_cont]]"></div>
+                        </div>
+                    </div>
+                </template>
+            </sc-container>
+
+            <div class="btnarea">
+                <sc-button class="btn_agree" text="약관 동의" on-click="onTermsAgree"></sc-button>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "sc-mdi-terms-popup",
+            properties: {
+                termsInfoList : {
+                    type: Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+            },
+
+            // Attached Function
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                    me.$.findListNewRegistrationApplyChargeTermsTemplateInfo.request();
+                }
+            },
+
+            // 체크 박스 필수 여부 Binding Function
+            isRequired : function(data){
+                return (data === 'Y' ? true : false);
+            },
+
+            // 체크박스 Change Event
+            onChangeCheckEvent : function(event){
+                var me = this;
+                var checkedYn = event.detail ? "Y" : "N";
+                var targetId  = event.currentTarget.id;
+                var list = me.get('termsInfoList');
+                // 해당 termcnd_uuid 찾아 약관 동의 여부 Set
+                for(var idx in list){
+                	if(list[idx].termcnd_uuid === targetId){
+                		list[idx].termcnd_cnst_yn = checkedYn;
+                	}
+                }
+            },
+
+            // 약관 동의 버튼 Click Event
+            onTermsAgree : function() {
+                var me = this;
+                var checkboxElements = me.querySelectorAll('sc-checkbox-field[required]');
+                var flag = false;
+
+                // Validation Check
+                for(var i=0; i<checkboxElements.length; i++){
+                    var element = checkboxElements[i];
+                    if(!element.validate()){
+                        flag = true;
+                    }
+                }
+                if(flag){
+                    UT.alert("STD.E9000");
+                    return;
+                }
+
+                // 약관의 내용에 동의하시겠습니까?
+                UT.confirm("STD.MDI1013", function() {
+                    me.$.saveChargeTermsAgree.body = {
+                        termsList : me.termsInfoList
+                    };
+                    UT.request(me.$.saveChargeTermsAgree);
+                });
+            },
+
+            // 협력사 약관 정보 저장  Callback Function
+            completesaveChargeTermsAgree : function(){
+                var me = this;
+                // 동의하였습니다.
+                UT.alert("STD.MDI1014");
+                me.fire("agree-terms");
+            },
+
+            exceptionsaveChargeTermsAgree: function() {
+                var me = this;
+                me.fire("agree-terms");
+            }
+        });
+    </script>
+</dom-module>

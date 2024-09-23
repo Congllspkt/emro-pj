@@ -1,0 +1,51 @@
+<sc-link rel="import" href="es-mail-work-list.html"></sc-link>
+<sc-link rel="import" href="es-mail-work-form.html"></sc-link>
+<sc-link rel="import" href="es-mail-work-history.html"></sc-link>
+
+<dom-module id="em-mail-work">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+	        <es-mail-work-list id="list" on-selected-mail-work="onFindWork" on-add-work="onAddWork" class="flex-4"></es-mail-work-list>
+	        <div class="hspace-10"></div>
+
+            <sc-tab-navigation id="tabNavi" class="flex-6">
+                <es-mail-work-form id="form" title-text="이메일 업무" on-save-work="onSaveWorkList"></es-mail-work-form>
+                <es-mail-work-history id="history" title-text="이메일 업무 전송이력"></es-mail-work-history>
+            </sc-tab-navigation>
+    	</div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-mail-work',
+
+
+            onFindWork: function(e, data){
+                var me = this;
+                me.$.form.load(data);
+                me.$.history.load(data);
+            },
+
+            // 메일목록 : 추가
+            onAddWork: function(){
+                var me = this;
+
+                me.$.form.addMailWorkForm();
+            },
+
+            onSaveWorkList: function(){
+                var me = this;
+                me.$.list.onSearch();
+            }
+
+        });
+    </script>
+
+</dom-module>

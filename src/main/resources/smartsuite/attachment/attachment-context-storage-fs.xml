@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+				http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+				http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+				http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd" 
+	default-lazy-init="true">
+	
+	<!--
+		파일 시스템 저장소 연결 
+	 -->
+	<bean id="fsStorageConn" class="smartsuite5.attachment.core.conn.impl.LocalStorageConn">
+	
+		<!-- 저장소 설명 -->
+		<property name="storageName" value="파일 시스템 저장소"></property>
+		<property name="storageDescription" value="파일 시스템에 접근하는 저장소"></property>
+	
+		<!-- 저장소 연결 정보 -->
+		<property name="accessInfo">
+			<bean id="storageAccessInfo" class="smartsuite5.attachment.core.dat.StorageAccessInfo">
+				<property name="url" value="c:\upload" />
+			</bean>
+		</property>
+		
+		<!-- 위치 정보 -->
+		<property name="locationInfo">
+			<bean id="storageLocInfo" class="smartsuite5.attachment.core.dat.impl.DateFormatBasedStorageLocationInfo">
+				<property name="subPathPattern" value="yyyy/MM/dd" />
+			</bean>
+		</property>
+		
+		<!-- 제약 정보 -->
+		<property name="athfLmtInfo">
+			<bean id="limitInfo" class="smartsuite5.attachment.core.dat.StorageAthfLmtInfo">
+				<constructor-arg index="0" name="maxFileSize" value="20MB" />
+				<constructor-arg index="1" name="minFileSize" value="0bytes" />
+				<constructor-arg index="2" name="maxTotalFileSize" value="100MB" />
+				<constructor-arg index="3" name="maxTotalFileCount" value="100" />
+				<constructor-arg index="4" name="extension" value="jpg,gif,png,tif,bmp,txt,xls,doc,ppt,xlsx,docx,pptx,rtf,gul,hwp,pdf,mht,eml,zip,mp4,der,key,pfx,jar,p12" /> 
+				<constructor-arg index="5" name="restrictFileName" value="html,jsp,java,class,js,exe" />
+				<constructor-arg index="6" name="preventDuplicate" value="false" />
+			</bean>
+		</property>
+		
+		<!-- 첨부파일 서술자 -->
+		<property name="athfDescriptorMgrList"> 
+			<list>
+				<bean id="dbmsDescMgr"  
+						class="smartsuite5.attachment.core.mgr.descriptor.impl.StandardDBMSStorageAthfDescriptorMgr">
+					<property name="postPrcsList">
+						<list>
+							<ref bean="thumbnailPrcs" />
+						</list>
+					</property>
+				</bean>
+			</list>
+		</property>
+		
+		<!-- 전처리 -->
+		<property name="prePrcsList">
+			<list>
+				<ref bean="athfCryptoPrcs"/>
+				<ref bean="accessLogPrcs" />
+			</list>
+		</property>
+		
+		<!-- 후처리 -->
+		<property name="postPrcsList">
+			<list>
+				<ref bean="athfCryptoPrcs"/>
+				<ref bean="accessLogPrcs" />
+				<ref bean="thumbnailPrcs" />
+			</list>
+		</property>
+		
+		<!-- 예외 처리 -->
+		<property name="exceptionHandlerList">
+			<list>
+				<ref bean="storageExceptionHandler" />
+			</list>
+		</property>
+	</bean>
+	
+</beans>

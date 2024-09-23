@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	
+	<property resource="smartsuite/properties/logging.properties" />
+	
+	<property name="loggingPattern" 
+		value="%d{HH:mm:ss.SSS} [%thread] %-5level %36logger{36} [EID:%X{eid}] [SS-ID:%X{ssid}] [USER-ID:%X{user}] - %msg[END]%n" />
+	 
+	<!-- console log appender -->
+	<appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<Pattern>${loggingPattern}</Pattern>
+		</layout>
+	</appender>
+	
+	<!-- log file appender -->
+	<appender name="fileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logging.destination}/debug.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+		    <!-- Daily Rollover -->
+		    <fileNamePattern>${logging.destination}/debug.%d{yyyy-MM-dd}_[%i].log</fileNamePattern>
+		    <!-- File Size 300Mb -->
+		    <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">	      		
+	      		<maxFileSize>300MB</maxFileSize>
+	    	</timeBasedFileNamingAndTriggeringPolicy>
+	    	<!-- Keep 30 days -->
+			<maxHistory>30</maxHistory>
+	  	</rollingPolicy>
+	  	<encoder>
+			<pattern>${loggingPattern}</pattern>
+		</encoder>
+	</appender>
+	
+	<!-- access log file appender -->	
+	<appender name="accessLogAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logging.destination}/Access/access.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- Daily Rollover -->
+			<fileNamePattern>${logging.destination}/Access/access.%d{yyyy-MM-dd}_[%i].log</fileNamePattern>
+			<!-- File Size 100Mb -->
+			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+	        	<maxFileSize>100MB</maxFileSize>
+        	</timeBasedFileNamingAndTriggeringPolicy>
+			<!-- Keep 30 days -->
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%msg%n%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="remoteMeetAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logging.destination}/RemoteMeet/remoteMeet.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- Daily Rollover -->
+			<fileNamePattern>${logging.destination}/RemoteMeet/remoteMeet.%d{yyyy-MM-dd}_[%i].log</fileNamePattern>
+			<!-- File Size 100Mb -->
+			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+	        	<maxFileSize>100MB</maxFileSize>
+        	</timeBasedFileNamingAndTriggeringPolicy>
+			<!-- Keep 30 days -->
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>${loggingPattern}</pattern>
+		</encoder>
+	</appender>
+
+	<!-- Access Log -->
+	<!-- http://alm.emro.co.kr/browse/NFCH-896  사용자 접속 기록(access log)용 로그 파일 추가 -->
+	<logger name="accessLogger" additivity="false">
+		<level value="INFO" />
+		<appender-ref ref="accessLogAppender" />
+	</logger>
+
+	<logger name="remoteMeetAopExecution" additivity="false">
+		<level value="INFO" />
+		<appender-ref ref="remoteMeetAppender" />
+	</logger>
+
+    <logger level="WARN" name="org.springframework.beans.factory.config" />
+
+	<logger level="WARN" name="org.springframework.web.servlet.mvc.method.annotation" />
+
+	<logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder" />
+	
+	<logger level="TRACE" name="org.springframework.security.access.method" />
+	
+	<!-- QUARTZ 스케줄러  모니터링 -->
+	<logger level="DEBUG" name="org.quartz.core.JobRunShell" additivity="false" />
+	
+	<!-- root -->
+	<root level="${logging.level}">
+		<appender-ref ref="consoleAppender" />
+		<appender-ref ref="fileAppender" />
+	</root>
+
+</configuration>

@@ -1,0 +1,32 @@
+<!-- Portal Initialize -->
+<script type="text/javascript">
+	var SCPortalLocation = {
+		portalPath : 	"ui/smartsuite/portal/",
+		portletPath : 	"ui/smartsuite/portal/portal-widget/",
+		imagePath : 	"ui/smartsuite/portal/portal-widget/img/",
+		iconImagePath : "ui/smartsuite/portal/portal-widget/img/icon_setting.png",
+	};
+	Polymer.Loader.loadCss("ui/smartsuite/portal/portal-widget/css/style_portlet.css");
+</script>
+
+<!-- Util -->
+<link rel="import" href="sc-portal-id-generator.html">
+
+<!-- Portal -->
+<link rel="import" href="sc-portal.html">
+<link rel="import" href="sc-portal-sprite.html">
+<link rel="import" href="sc-portal-manager.html">
+<link rel="import" href="sc-portal-manager-style.html">
+
+<!-- Portlet Widgets -->
+<link rel="import" href="portal-widget/sc-widget/sc-widget.html">
+
+<!-- VueJS 3rd -->
+<script src="lib/vue-grid/vue.min.js"></script>
+<script src="lib/vue-grid/vue-grid-layout.min.js"></script>
+
+<!-- Portlet BasedOn Vue -->
+<link rel="import" href="portal-layout/vue-grid-layout/vue-grid-layout-behavior.html">
+<link rel="import" href="portal-layout/vue-grid-layout/vue-grid-layout-config-behavior.html">
+<link rel="import" href="portal-layout/vue-grid-layout/vue-grid-portlet-manager.html">
+<link rel="import" href="portal-layout/vue-grid-layout/vue-grid-layout.html">

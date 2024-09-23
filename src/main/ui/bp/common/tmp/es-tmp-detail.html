@@ -1,0 +1,260 @@
+<sc-link rel="import" href="../../shared/ep-freemarker-preview.html"></sc-link>
+
+<dom-module id="es-tmp-detail">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<!-- 공통코드 조회 -->
+		<sc-code-group>
+			<sc-code code="C014" value="{{codes.tmpl_typ_ccd}}" ></sc-code> <!-- 구분 -->
+			<sc-code code="C002" value="{{codes.langCd}}"></sc-code> <!-- 언어코드 -->
+		</sc-code-group>
+
+		<!-- 조회 -->
+		<sc-ajax id="findListTemplateById"
+				 url="findListTemplateById.do"
+				 last-response="{{tmpInfo}}"
+				 on-response="completeFindInfo"></sc-ajax>
+		<!-- 조회 -->
+		<sc-ajax id="findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId"
+				 url="findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId.do"
+				 on-response="completeFindMultiLangTemplateInfo"></sc-ajax>
+
+		<!-- 저장  -->
+		<sc-ajax id="saveTemplateBaseInfo"
+				 url="saveTemplateBaseInfo.do"
+				 body="{{tmpInfo}}"
+				 on-response="completeSaveInfo"></sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		<cc-sub-title-bar title-text="내용">
+			<sc-button text="저장" on-click="onSaveInfo" auth-s></sc-button>
+		</cc-sub-title-bar>
+		<div class="vbox flex">
+			<cc-form-panel column="1" validation-group="save" label-width="120">
+				<cc-fieldset>
+					<sc-label text="템플릿 언어"></sc-label>
+					<sc-combobox-field value="{{tmpInfo.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data"
+									   required="true" placeholder="필수" on-change="onChangeTemplateLangCode">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="템플릿 유형"></sc-label>
+					<sc-combobox-field display-field="label" value-field="data"
+									   items="{{codes.tmpl_typ_ccd}}" value="{{tmpInfo.tmpl_typ_ccd}}" placeholder="선택"
+									   required="[[formula('isEditable')]]" readonly="[[!formula('isNew')]]">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="템플릿 아이디"></sc-label> <!-- 템플릿 기초 아이디 -->
+					<sc-text-field value="{{tmpInfo.basc_ctmpl_cd}}" required="[[formula('isNew')]]" readonly="[[!formula('isNew')]]" max-length="30"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="템플릿 명"></sc-label>
+					<sc-text-field value="{{tmpInfo.basc_ctmpl_nm}}" max-length="200" readonly="[[!formula('isEditable')]]"></sc-text-field>
+				</cc-fieldset>
+			</cc-form-panel>
+
+
+			<cc-sub-title-bar title-text="내용">
+				<!--<sc-button text="미리보기" on-click="onPreview" auth-r></sc-button>-->
+			</cc-sub-title-bar>
+			<!-- 템플릿 에디터 -->
+			<cc-source-editor id="editor" class="flex" value="{{tmpInfo.basc_ctmpl_cont}}" editable="true" value-type="{{editorMode}}" disabled="[[!formula('isEditable')]]"></cc-source-editor>
+		</div>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-tmp-detail',
+
+            properties:{
+
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            tmpl_typ_ccd:[]
+                        };
+                    }
+                },
+
+                // 템플릿 정보
+                tmpInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                editorMode: {
+                    type: String
+                },
+				tmpChangeReady: {
+					type: Boolean,
+					value: false
+				},
+            },
+
+            /*observers: [
+                "changeEditorMode(tmpInfo.tmpl_typ_ccd)"
+            ],*/
+
+            formulas: {
+                // 신규 상태
+                isNew: function() {
+                    return this.tmpInfo.isNew === true;
+                },
+
+                // 수정 가능 상태 (신규 & 수정)
+                isEditable: function() {
+                    return (this.formula('isNew') || !UT.isEmpty(this.tmpInfo.basc_ctmpl_cd));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data) {
+                var me = this;
+
+
+                me.$.findListTemplateById.body = {
+                    basc_ctmpl_cd : data.basc_ctmpl_cd,
+                    tmpl_typ_ccd : data.tmpl_typ_ccd,
+					lang_ccd : data.lang_ccd == null? SCLocaleManager.getLocale() : data.lang_ccd
+                };
+
+                me.onFindInfo();
+            },
+
+			onChangeTemplateLangCode:function (){
+				var me = this;
+				if(me.get("tmpChangeReady")) {
+					me.set("tmpInfo.basc_ctmpl_cont", "");
+					me.set("tmpInfo.basc_ctmpl_nm", "");
+					me.$.findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId.body = me.get("tmpInfo");
+
+					UT.request(me.$.findTemplateInfoByTemplateClassMultiLangAndTemplateBaseId);
+				}
+			},
+
+            //신규 추가
+            onAddTmp: function(){
+                var me = this;
+
+                me.set("tmpInfo", {});
+                me.set("tmpInfo.basc_ctmpl_cont", "");
+                me.set("tmpInfo.isNew", true);
+
+                me.applyFormula();
+                me.$.editor.reset();
+                me.$.editor.focus();
+            },
+
+            //초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            /*changeEditorMode: function(tmpl_typ_ccd) {
+                if(tmpl_typ_ccd === "TX") { //Text Mode일때는 순수하게 Text만 들어가게 해야함
+                    this.set("editorMode", "text");
+                } else {
+                    this.set("editorMode", "body");
+                }
+            },*/
+
+            // 템플릿 상세 조회
+            onFindInfo: function(data){
+                var me = this;
+				me.set("tmpInfo",{});
+				me.set("tmpChangeReady", false);
+				UT.request(me.$.findListTemplateById);
+            },
+
+            // 템플릿 상세 조회 완료
+            completeFindInfo: function(e, res){
+				var me = this,
+						result = res.response;
+				if(UT.isNotEmpty(result)){
+					var langCcd = result.lang_ccd;
+					if(UT.isEmpty(langCcd)) me.set("tmpInfo.lang_ccd", SCLocaleManager.getLocale());
+				}else{
+					me.set("tmpInfo.lang_ccd", SCLocaleManager.getLocale());
+				}
+                me.applyFormula();
+                me.$.editor.focus();
+				me.set("tmpChangeReady", true);
+            },
+
+
+			completeFindMultiLangTemplateInfo: function(e, res){
+				var me = this,
+						result = res.response;
+				if(UT.isNotEmpty(result)){
+					me.set("tmpInfo.lang_ccd",result.lang_ccd);
+					me.set("tmpInfo.basc_ctmpl_cd",result.basc_ctmpl_cd);
+					me.set("tmpInfo.basc_ctmpl_nm",result.basc_ctmpl_nm);
+					me.set("tmpInfo.basc_ctmpl_cont",result.basc_ctmpl_cont);
+					me.set("tmpInfo.basc_ctmpl_cont_parm_nm",result.basc_ctmpl_cont_parm_nm);
+				}
+				me.set("tmpChangeReady", true);
+            },
+
+            // 저장
+            onSaveInfo: function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null, me.translate('템플릿코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.editor.syncValue();
+
+                    UT.request(me.$.saveTemplateBaseInfo);
+                })
+            },
+
+            // 저장 완료
+            completeSaveInfo: function(){
+                var me = this;
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.fire("saved-tmp");
+				});
+            },
+			
+			onPreview: function () {
+                var me = this;
+			    var previewPopup = UT.popup("ep-freemarker-preview", me, 1000, 600,{},{maximizable : true, titleText : "Preview"});
+
+				me.$.editor.syncValue();
+
+                previewPopup.show();
+                previewPopup.getWindowContent().load(me.tmpInfo.basc_ctmpl_cont);
+            }
+
+        });
+	</script>
+</dom-module>

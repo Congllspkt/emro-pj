@@ -1,0 +1,105 @@
+<sc-link rel="import" href="es-formatter-list.html"></sc-link>
+<sc-link rel="import" href="es-formatter-detail-date.html"></sc-link>
+<sc-link rel="import" href="es-formatter-detail-number.html"></sc-link>
+<sc-link rel="import" href="es-prec-formatter-detail.html"></sc-link>
+<sc-link rel="import" href="es-prec-formatter-list.html"></sc-link>
+
+<dom-module id="em-formatter">
+<!-- 
+/**
+ *
+ *	@description : 포맷터관리
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 2. 18.
+ */
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<div class="vbox flex-5">
+				<es-formatter-list id="formatterList" class="flex-4" on-selected-detail="onSelectedDetail" on-reset-detail="onResetDetail"></es-formatter-list>
+				<sc-pages id="pages" selected="0" class="flex-6">
+					<es-formatter-detail-date id="formatterDetailDate"></es-formatter-detail-date>
+					<template>
+					<es-formatter-detail-number id="formatterDetailNum" on-selected-prec-detail="onSelectPrecDetail"></es-formatter-detail-number>
+					</template>
+				</sc-pages>
+			</div>
+			<sc-splitter split-type="vertical"></sc-splitter>
+			<div class="vbox flex-5">
+			<es-prec-formatter-detail id="precFormatterDetail" class="flex-2" on-reload-format-detail="onReloadDisplayDetailList"></es-prec-formatter-detail>
+			<sc-splitter split-type="horizontal"></sc-splitter>
+			<es-prec-formatter-list id="precFormatterList" class="flex-8" on-reset-prec-format=onResetPrecFormatGrpCd></es-prec-formatter-list>			
+			</div>
+		</div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'em-formatter',
+			properties : {
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			initialized : function(){
+			},
+			// 그룹 현황 : 그룹코드 선택
+            onSelectedDetail: function(e, data) {
+                var me = this;
+                var param = UT.copy(data);
+                if(UT.isNotEmpty(param)){
+                	me.DataTyp = param.dat_typ_ccd;
+                	if(param.dat_typ_ccd === "NUMC"){
+                		me.$.pages.selectItem(me.$.formatterDetailNum);
+                		me.$.formatterDetailNum.load(data);
+                		me.$.precFormatterDetail.reset();
+                	}else if(param.dat_typ_ccd === "DT"){
+                		me.$.pages.selectItem(me.$.formatterDetailDate);
+                		me.$.formatterDetailDate.load(data);
+                	}
+                }
+			},
+			// 소수점 정보 상세보기
+			onSelectPrecDetail: function(e,data){
+				var me = this;
+				var param = UT.copy(data);
+				me.$.precFormatterDetail.load(param);
+			},
+			// 그룹 현황 조회 시 상세 내용 초기화
+            onResetDetail: function() {
+                var me = this;
+                me.$.precFormatterDetail.reset();
+                if(me.$.formatterDetailNum.isAttached){
+					me.$.formatterDetailNum.onResetPrecGrpCd();
+				}
+                if(me.$.formatterDetailDate.isAttached){
+                	me.$.formatterDetailDate.clear();
+                }
+			},
+			//displayFormat관리 detail List재조회
+			onReloadDisplayDetailList: function(){
+				var me = this;
+				if(me.$.formatterDetailNum.isAttached){
+					me.$.formatterDetailNum.onReloadList();
+				}
+			},
+			//소수점관리에 매핑된 공통코드 재조회
+			onResetPrecFormatGrpCd: function(){
+				var me = this;
+				if(me.$.precFormatterDetail.isAttached){
+					me.$.precFormatterDetail.onResetPrecGrpCd();
+				}
+			}
+		});
+	</script>
+</dom-module>

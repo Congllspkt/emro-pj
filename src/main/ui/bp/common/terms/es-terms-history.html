@@ -1,0 +1,80 @@
+<dom-module id="es-terms-history">
+    <style>
+        :host{
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <sc-code code="C022" value="{{codes.C022}}" auto></sc-code>
+
+        <sc-ajax id="findListUserTermsAgreeHistory"
+                 url="findListUserTermsAgreeHistory.do"
+                 body="{{searchParam}}"
+                 last-response="{{list}}">
+        </sc-ajax>
+
+        <sc-grid id="gridPanel" 
+                 data-provider="{{list}}"
+                 use-state="false"
+                 use-selection="false">
+            <cc-grid-toolbar title-text="[[getTermInfoText(searchParam.ctmpl_nm, searchParam.termcnd_ren_revno)]]" i18n-disabled></cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="vd_nm"  header-text="협력사 명" text-align="left" width="150"></sc-data-column>
+                <sc-data-column data-field="usr_id" header-text="사용자 아이디"></sc-data-column>
+                <sc-data-column data-field="usr_nm" header-text="사용자 명" text-align="left" width="120"></sc-data-column>
+                <sc-combobox-column data-field="termcnd_cnst_yn" header-text="동의 여부" items="[[codes.C022]]" display-field="label" value-field="data" width="70"></sc-combobox-column>
+                <sc-date-column data-field="termcnd_cnst_dttm" header-text="약관 동의 여부 선택 일자"></sc-date-column>
+                <!-- <sc-data-column data-field="ctmpl_nm"  header-text="약관명" text-align="left" width="200"></sc-data-column>
+                <sc-data-column data-field="termcnd_ren_revno" header-text="약관차수" width="60"></sc-data-column> -->
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="termcnd_uuid" type="text"></sc-grid-field>
+                <sc-grid-field data-field="vd_cd" type="text"></sc-grid-field>
+                <sc-grid-field data-field="termcnd_cnst_uuid" type="text"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is: 'es-terms-history',
+            properties:{
+                codes:{
+                    type: Object,
+                    value: function(){
+                        return {
+                            C022:[]
+                        };
+                    },
+                    reset: false
+                },
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+                list: {
+                    type: Array,
+                    value: function(){
+                        return [];
+                    }
+                }
+            },
+            
+            load: function(param){
+                var me = this;
+                me.set("searchParam", param);
+                UT.request(me.$.findListUserTermsAgreeHistory);
+            },
+
+            getTermInfoText: function(termsName, termsRev){
+                var me = this;
+                var text = "";
+
+                text =  me.translate(termsName) + "(" + termsRev + me.translate("차수") + ") " + me.translate("동의 이력");
+                return text;
+            }
+        });
+    </script>
+
+</dom-module>

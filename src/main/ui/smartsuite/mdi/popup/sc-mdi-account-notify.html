@@ -1,0 +1,94 @@
+<dom-module id="sc-mdi-account-notify">
+	<style>
+		:host {
+			font-size : 18px;
+		}
+		
+		:host header {
+			padding : 20px;
+			border : 1px solid #1e5784;
+			border-radius : 3px;
+			background-color : #1e5784;
+			text-align : center;
+			color : white;
+			font-weight : bold;
+			font-size : 24px;
+		}
+		
+		:host section {
+			padding : 10px;
+		}
+		
+		:host footer {
+			padding : 0px 10px;
+		}
+		
+		:host .list {
+			text-indent : 10px;
+		}
+		
+		:host .check {
+			position : absolute;
+			right : 10px;
+			bottom : 10px;
+			font-size : 12px;
+		}
+		
+	</style>
+	
+	<template>
+		<sc-code code="A002" auto on-response="_onCodeResponse"></sc-code>
+		<header>SMARTsuite 장기 미사용 계정 정지 안내</header>
+		<section>
+			<div>장기간 시스템 사용이력이 없는 계정을 대상으로 아래와 같이 정지하고자 합니다.</div>
+			<br/>
+			<div>적용 일시/대상</div>
+			<div class="list">- 적용일시 : [[_getAccountDisableForSpecifiedDate()]]</div>
+			<div class="list">- 적용대상 : [[applyDate]]</div>
+			<br/>
+		</section>
+		<footer>※ 장기 미사용 계정 정지관련 문의가 있으신 분은 관리자에게 문의하시기 바랍니다. 감사합니다.</footer>
+		<sc-checkbox-field class="check" label="일주일간 해당 팝업 보지 않기" on-value-changed="_onCheckboxValueChanged"></sc-checkbox-field>
+	</template>
+	
+	<script>
+		Polymer({
+			
+			is : 'sc-mdi-account-notify',
+			
+			properties : {
+				code : {
+					type : Array
+				},
+				applyDate : {
+					type : String
+				}
+			},
+			
+			_onCodeResponse : function(event) {
+				var codes = event.target.value;
+				var disableCode = codes.find(function(data) {
+					return data.data == SCSessionManager.getAccountSettings().accountDisableCode;
+				})
+				this.applyDate = SCUtil.String.simpleFormat('만 {0} 내 1회 이상 로그인 기록이 없는 회원', disableCode.label);
+			},
+			
+			_getAccountDisableForSpecifiedDate : function() {
+				var date = moment(SCSessionManager.getAccountSettings().accountDisableForSpecifiedDate);
+				return date.format("YYYY년 MM월 DD일");
+			},
+			
+			_onCheckboxValueChanged : function(event) {
+				var value = event.detail.value;
+				var key = SCSessionManager.currentUser.usr_id + ".accountNotifySkip";
+				if(value) {
+					document.cookie = key + "=true; expires=" + moment(new Date).add(1, 'w').toDate() + ";path=/";
+				}
+				else {
+					document.cookie = key + "=false; expires=" + moment(new Date).subtract(1, 'd').toDate() + ";path=/";
+				}
+			}
+			
+		});
+	</script>
+</dom-module>

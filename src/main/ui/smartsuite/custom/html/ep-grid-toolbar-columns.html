@@ -1,0 +1,57 @@
+<dom-module id="ep-grid-toolbar-columns">
+    <style>
+	    .columnlist{
+	    		display : block;
+				width : 100%;
+				height : 100%;
+	            overflow:auto;
+	     }
+    </style>
+   <template>
+        <sc-grid  id="gridPanel" class="columnlist"  editable="true" on-item-edit-end="onItemEditEnd" use-selection="false" use-state="false" stateful="false">
+        	<sc-grid-columns>
+            	<sc-checkbox-column data-field="checked"   header-text="Check"  width="90"   item-editable-function="onItemEditbleFunction" display-checkbox="false" checked-value="true" un-checked-value="false"></sc-checkbox-column>
+                <sc-data-column data-field="headerText"   header-text="컬럼"  width="130"    editable="false"></sc-data-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+            	<sc-grid-field data-field="dataField"></sc-grid-field>
+			</sc-grid-fields>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is : 'ep-grid-toolbar-columns',
+            properties : {
+            	resultList: {
+            		type: Array,
+            		value: []
+            	},
+            	headerText:{
+            		type: String,
+            		value:''
+            	}
+            },
+            setColumnInfo : function(colList){
+            	var me = this;
+            	me.$.gridPanel.setDataProvider(colList);
+            },
+            onItemEditbleFunction : function(data, item){
+                return data["toolbarColumnEditable"] == "true";
+            },
+            onItemEditEnd : function(e){
+            	var me = this;
+            	var event = e.detail,
+            	    data = event.data,
+            	    item = event.item,
+            	    provider = event.provider,
+            	    oldValue = event.oldValue,
+            	    newValue = event.newValue;
+            	
+            	if(item.dataField == 'checked'){
+            		me.fire('toolbar-column-visible-changed',{dataField:data.dataField,
+							            			          checked  :newValue});
+            	}
+            }
+        });
+    </script>
+</dom-module>

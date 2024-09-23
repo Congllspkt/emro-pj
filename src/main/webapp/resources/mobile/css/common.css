@@ -1,0 +1,70 @@
+@charset "utf-8";
+
+/* ----------------------------
+2019.10.01 chbyeon - 디자인팀 (사용안함)
+---------------------------- */
+
+/* ===== reset ===== */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {display:block}
+
+body {line-height:1.2}
+ol, ul {list-style:none}
+blockquote, q {quotes:none}
+blockquote:before, blockquote:after,q:before, q:after {content: ''; content: none}
+table {border-collapse:collapse; border-spacing:0}
+a{text-decoration:none; cursor:pointer}
+label{cursor:pointer}
+em, address {font-style:normal}
+img, fieldset {border:0}
+img, input, button, select, textarea {vertical-align:middle}
+.hidden, legend {position:absolute; width:0; height:0; font-size:0; line-height:0; overflow:hidden; visibility:hidden; z-index:-1}
+caption {padding:0; width:0; height:0; overflow:hidden; visibility:hidden; font-size:0; line-height:0}
+button {cursor:pointer}
+
+/* ===== common ===== */
+body {color:#2f2f2f; font-family:"맑은고딕",Malgun Gothic,"돋움",Dotum,helvetica,sans-serif}
+a:hover, a:focus, a:active, a:link, a:visited {color:#2f2f2f;text-decoration:none}
+/* text */
+.align_right {text-align:right !important}
+.align_left {text-align:left !important}
+.align_center {text-align:center !important}
+/* float */
+.float_right {float:right !important}
+.float_left {float:left !important}
+/* block */
+.block {display:block !important}
+/* padding */
+.p20{padding:20px !important}
+.pt20 {padding-top:20px !important}
+.pb10 {padding-bottom:10px !important}
+.pb20 {padding-bottom:20px !important}
+/* color */
+.gray {color:#707070 !important}
+.blue {color:#297eea !important}
+.red {color:#ed1c24 !important}
+/* bg-color */
+.bg {background: #ebeff6 !important}
+/* list-style */
+.list_d{list-style:disc; padding-left:20px !important}

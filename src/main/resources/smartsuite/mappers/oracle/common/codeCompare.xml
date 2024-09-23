@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="codeCompare">
+	
+	<select id="findListCompareTable" resultType="map">
+	/* findListCompareTable : 비교대상테이블 조회 */
+		SELECT MODULE
+		      ,MODULE_UUID
+			  ,AS_TB
+			  ,AS_TB_NM
+			  ,AS_COL
+			  ,AS_COL_NM
+			  ,TO_TB
+			  ,TO_TB_NM
+			  ,TO_COL
+			  ,TO_COL_NM
+			  ,SORT
+			  ,GRP_CD
+		      ,DOC_NO
+			  ,DEL_YN
+			  ,EXC_YN
+			  ,REG_DTTM
+			  ,MOD_DTTM
+		  FROM COMPARE_COL_91
+		  <trim prefix="WHERE" prefixOverrides="AND">
+			  <if test="p.module != null and p.module != ''">
+			  AND MODULE = #{p.module}
+			  </if>
+			  <if test="p.doc_no != null and p.doc_no != ''">
+			  AND UPPER(DOC_NO) LIKE UPPER(#{p.doc_no})
+			  </if>
+			  <if test="p.as_tb != null and p.as_tb != ''">
+			  AND (UPPER(AS_TB) LIKE UPPER(#{p.as_tb})
+                    OR UPPER(TO_TB) LIKE UPPER(#{p.as_tb}))
+			  </if>
+			  <if test="p.as_tb_nm != null and p.as_tb_nm != ''">
+			  AND (UPPER(AS_TB_NM) LIKE UPPER(#{p.as_tb_nm})
+                    OR UPPER(TO_TB_NM) LIKE UPPER(#{p.as_tb_nm}))
+			  </if>
+			  <if test="p.as_col != null and p.as_col != ''">
+			  AND (UPPER(AS_COL) LIKE UPPER(#{p.as_col})
+                    OR UPPER(TO_COL) LIKE UPPER(#{p.as_col}))
+			  </if>
+			  <if test="p.as_col_nm != null and p.as_col_nm != ''">
+			  AND (UPPER(AS_COL_NM) LIKE UPPER(#{p.as_col_nm})
+                    OR UPPER(TO_COL_NM) LIKE UPPER(#{p.as_col_nm}))
+			  </if>
+              <if test="p.grp_cd != null and p.grp_cd != ''">
+                  AND UPPER(GRP_CD) LIKE UPPER(#{p.grp_cd})
+              </if>
+		  </trim>
+		  ORDER BY SORT
+	</select>
+	
+	<insert id="insertCompareTable">
+	/* insertCompareTable : 비교대상테이블 저장 */
+		INSERT INTO COMPARE_COL_91 (
+		    TEN_ID
+		  , MODULE
+		  , MODULE_UUID
+		  , AS_TB
+		  , AS_TB_NM
+		  , AS_COL
+		  , AS_COL_NM
+		  , TO_TB
+		  , TO_TB_NM
+		  , TO_COL
+		  , TO_COL_NM
+		  , GRP_CD
+		  , DOC_NO
+		  , DEL_YN
+		  , EXC_YN
+		  , REG_DTTM
+		) VALUES (
+		    #{g.tenant}
+		  , #{p.module}
+		  , #{p.module_uuid}
+          , #{p.as_tb}
+          , #{p.as_tb_nm}
+          , #{p.as_col}
+          , #{p.as_col_nm}
+          , #{p.to_tb}
+          , #{p.to_tb_nm}
+          , #{p.to_col}
+          , #{p.to_col_nm}
+          , #{p.grp_cd}
+          , #{p.doc_no}
+          , #{p.del_yn}
+          , #{p.exc_yn}
+          , #{g.now}
+		)
+	</insert>
+	
+	<update id="updateCompareTable">
+	/* updateCompareTable : 비교대상테이블 수정 */
+		UPDATE COMPARE_COL_91
+		   SET AS_TB_NM 	= #{p.as_tb_nm}
+		     , AS_COL_NM 	= #{p.as_col_nm}
+		     , TO_TB  		= #{p.to_tb}		
+		     , TO_TB_NM 	= #{p.to_tb_nm}
+		     , TO_COL 		= #{p.to_col}		
+		     , TO_COL_NM 	= #{p.to_col_nm}
+		     , GRP_CD 		= #{p.grp_cd}
+		     , DOC_NO       = #{p.doc_no}
+		     , DEL_YN 		= #{p.del_yn}
+		     , EXC_YN 		= #{p.exc_yn}
+		     , MOD_DTTM 	= #{g.now}
+		 WHERE TEN_ID = #{g.tenant}
+		   AND MODULE_UUID = #{p.module_uuid}
+		   AND MODULE = #{p.module}
+	</update>
+	
+	<delete id="deleteCompareTable">
+	/* deleteCompareTable : 비교대상테이블 삭제 */ 
+		DELETE 
+		  FROM COMPARE_COL_91
+		 WHERE TEN_ID = #{g.tenant}
+		   AND MODULE = #{p.module}
+		   AND MODULE_UUID = #{p.module_uuid}
+	</delete>
+	
+	<select id="findListGrpCd" resultType="map">
+	/* findListGrpCd : 그룹코드 조회 */
+		SELECT MODULE
+		     , MODULE_UUID
+			 , GRP_CD
+			 , AS_GRP_NM
+			 , AS_DTL_CD
+			 , AS_DTL_NM_KR
+			 , AS_DTL_NM_EN
+			 , TO_GRP_NM_KR
+			 , TO_GRP_NM_EN
+			 , TO_DTL_CD
+			 , TO_DTL_NM_KR
+			 , TO_DTL_NM_EN
+			 , DEL_YN
+			 , SORT
+			 , REG_DTTM
+		     , MOD_DTTM
+		 FROM COMPARE_DTLCD_91
+		 <trim prefix="WHERE" prefixOverrides="AND">
+		 	  <if test="p.module != null and p.module != ''">
+			  AND MODULE = #{p.module}
+			  </if>
+			  <if test="p.grp_cd != null and p.grp_cd != ''">
+			  AND UPPER(GRP_CD) LIKE UPPER(#{p.grp_cd})
+			  </if>
+			  <if test="p.as_grp_nm != null and p.as_grp_nm != ''">
+			  AND (UPPER(AS_GRP_NM) LIKE UPPER(#{p.as_grp_nm})
+                    OR UPPER(TO_GRP_NM_KR) LIKE UPPER(#{p.as_grp_nm})
+                    OR UPPER(TO_GRP_NM_EN) LIKE UPPER(#{p.as_grp_nm}))
+			  </if>
+			  <if test="p.as_dtl_cd != null and p.as_dtl_cd != ''">
+			  AND (UPPER(AS_DTL_CD) LIKE UPPER(#{p.as_dtl_cd})
+                    OR UPPER(TO_DTL_CD) LIKE UPPER(#{p.as_dtl_cd}))
+			  </if>
+			  <if test="p.as_dtl_nm_kr != null and p.as_dtl_nm_kr != ''">
+			  AND (UPPER(AS_DTL_NM_KR) LIKE UPPER(#{p.as_dtl_nm_kr})
+                    OR UPPER(AS_DTL_NM_EN) LIKE UPPER(#{p.as_dtl_nm_kr})
+                    OR UPPER(TO_DTL_NM_KR) LIKE UPPER(#{p.as_dtl_nm_kr})
+                    OR UPPER(TO_DTL_NM_EN) LIKE UPPER(#{p.as_dtl_nm_kr}))
+			  </if>
+		  </trim>
+		ORDER BY SORT 
+	</select>
+	
+	<insert id="insertGrpCd">
+	/* insertGrpCd : 그룹코드 저장 */ 
+		INSERT INTO COMPARE_DTLCD_91(
+			MODULE
+		  , MODULE_UUID
+		  , TEN_ID
+		  , GRP_CD
+		  , AS_GRP_NM
+		  , AS_DTL_CD
+		  , AS_DTL_NM_KR
+		  , AS_DTL_NM_EN
+		  , TO_GRP_NM_KR
+		  , TO_GRP_NM_EN
+		  , TO_DTL_CD
+		  , TO_DTL_NM_KR
+		  , TO_DTL_NM_EN
+		  , DEL_YN
+		  , REG_DTTM
+		) VALUES (
+			#{p.module}
+		  , #{p.module_uuid}
+		  , #{g.tenant}
+		  , #{p.grp_cd}
+		  , #{p.as_grp_nm}
+		  , #{p.as_dtl_cd}
+		  , #{p.as_dtl_nm_kr}
+		  , #{p.as_dtl_nm_en}
+		  , #{p.to_grp_nm_kr}
+		  , #{p.to_grp_nm_en}
+		  , #{p.to_dtl_cd}
+		  , #{p.to_dtl_nm_kr}
+		  , #{p.to_dtl_nm_en}
+		  , #{p.del_yn}
+		  , #{g.now}
+		)
+	</insert>
+	
+	<update id="updateGrpCd">
+	/* updateGrpCd : 그룹코드 수정 */
+		UPDATE COMPARE_DTLCD_91
+		   SET AS_GRP_NM 	= #{p.as_grp_nm}
+		  	 , AS_DTL_NM_KR	= #{p.as_dtl_nm_kr}
+		  	 , AS_DTL_NM_EN	= #{p.as_dtl_nm_en}
+		  	 , TO_GRP_NM_KR	= #{p.to_grp_nm_kr}
+		  	 , TO_GRP_NM_EN	= #{p.to_grp_nm_en}
+		  	 , TO_DTL_CD	= #{p.to_dtl_cd}	
+		  	 , TO_DTL_NM_KR	= #{p.to_dtl_nm_kr}
+		  	 , TO_DTL_NM_EN	= #{p.to_dtl_nm_en}
+		  	 , DEL_YN		= #{p.del_yn}
+		     , MOD_DTTM     = #{g.now}
+		 WHERE TEN_ID = #{g.tenant}
+		   AND MODULE = #{p.module}
+		   AND MODULE_UUID = #{p.module_uuid}
+	</update>
+	
+	<delete id="deleteListGrpCdInfo">
+	/* deleteListGrpCdInfo : 그룹코드 삭제 */
+		DELETE
+		  FROM COMPARE_DTLCD_91
+		 WHERE TEN_ID = #{g.tenant}
+		   AND MODULE = #{p.module}
+		   AND MODULE_UUID = #{p.module_uuid}
+		   AND GRP_CD    = #{p.grp_cd}
+	</delete>
+</mapper>

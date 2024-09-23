@@ -1,0 +1,262 @@
+<dom-module id="ep-excel-field-setup">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-request-group init>
+            <!-- 공통코드 조회 -->
+            <sc-code-group>
+                <sc-code code="C009" value="{{codes.use_yn}}" ></sc-code> <!-- 사용여부 -->
+                <sc-code code="C036" value="{{codes.C036}}" ></sc-code>
+                <sc-code code="EML_TASK_TYP_CCD" value="{{codes.mail_work_cls}}"></sc-code><!-- M003 : 이메일 업무 구분 코드 -->
+            </sc-code-group>
+
+            <!-- 콤보박스 템플릿 목록 -->
+            <sc-ajax url="getMailWorkList.do"
+                     last-response="{{codes.workMailTemplate}}">
+            </sc-ajax>
+        </sc-request-group>
+
+        <!-- 콤보박스 템플릿 목록 -->
+        <sc-ajax id="findSheetFieldValue"
+                 url="findSheetFieldValue.do"
+                 on-response="onAppendGridRowForCellSize"
+                 body="{{excelInfo}}"
+                 last-response="{{codes.cellFieldValue}}">
+        </sc-ajax>
+
+        <sc-ajax id="excelTemplateSetupAfterDownLoad"
+                 url="excelTemplateSetupAfterDownLoad.do"
+                 on-response="onDownLoadExcel">
+        </sc-ajax>
+        
+        <sc-ajax id="excelTemplateMailSendTest"
+                 url="excelTemplateMailSendTest.do">
+        </sc-ajax>
+
+		<cc-sub-title-bar title-text="엑셀 템플릿 테스트">
+		</cc-sub-title-bar>
+
+        <cc-form-panel validation-group="save" label-width="120">
+            <cc-fieldset>
+                <sc-label text="명"></sc-label>
+                <sc-text-field value="{{excelInfo.eml_task_nm}}" max-length="200" readonly="true"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="유형"></sc-label>
+                <sc-combobox-field
+                        items="{{codes.mail_work_cls}}" display-field="label" value-field="data" input-clear="false"
+                        value="{{excelInfo.eml_task_typ_ccd}}"  readonly="true">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="첨부파일"></sc-label>
+                <cc-excel-upload-field id="fileUpload" value="{{excelInfo.athg_uuid}}" editable="false"></cc-excel-upload-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="이메일 템플릿"></sc-label>
+                <sc-combobox-field
+                        display-field="eml_tmpl_nm" value-field="eml_tmpl_cd"
+                        items="{{codes.workMailTemplate}}" value="{{excelInfo.eml_tmpl_cd}}" readonly="true">
+                </sc-combobox-field>
+             </cc-fieldset>
+             <cc-fieldset>
+                <sc-label text="수신 이메일 주소"></sc-label>
+                <sc-text-field value="{{excelInfo.eml}}" max-length="200" required="true" validator-type="eml"></sc-text-field>
+            </cc-fieldset>
+        </cc-form-panel>
+
+
+        <sc-grid id="excelCellGridPanel" editable="true" class="flex" use-state="false">
+            <cc-grid-toolbar title-text="Excel Row">
+                <!--<sc-button text="행 추가" on-click="onAddRow" auth-s></sc-button>-->
+                <sc-button text="다운로드" on-click="onExcelTemplateSetup" auth-s></sc-button>
+                <sc-button text="이메일 발신" on-click="onExcelTemplateMailSendTest" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-combobox-column
+                        items="{{codes.cellFieldValue}}" width="250"  header-text="dataSetField" display-field="label" value-field="data" input-clear="false" editable="true"
+                        data-field="set_field_nm">
+                </sc-combobox-column>
+                <sc-data-column data-field="value" header-text="template value" width="200" text-align="left" editable="true" ></sc-data-column>
+            </sc-grid-columns>
+        </sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-excel-field-setup",
+            properties: {
+                findInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            param: {},
+                            result: {}
+                        };
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            use_yn:[],
+                            C036:[],
+                            mail_work_cls:[],
+                            workMailTemplate:[],
+                            cellFieldValue:[]
+                        };
+                    },
+                    reset: false
+                },
+                // 이메일 업무 엑셀 정보
+                excelInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            athg_uuid : "",
+                            eml_task_typ_ccd : "",
+                            field_value :"",
+                            email:""
+                        };
+                    }
+                },
+            },
+            initialized: function() {
+
+            },
+
+            // 기본 파라미터 설정
+            load: function(options) {
+                var me = this;
+
+                if (UT.isObject(options.defaultParam)) {
+                    me.set("excelInfo.athg_uuid",options.defaultParam.excelInfo.athg_uuid);
+                    me.set("excelInfo.cnfm_yn",options.defaultParam.excelInfo.cnfm_yn);
+                    me.set("excelInfo.eml_task_typ_ccd",options.defaultParam.excelInfo.eml_task_typ_ccd);
+                    me.set("excelInfo.eml_task_uuid",options.defaultParam.excelInfo.eml_task_uuid);
+                    me.set("excelInfo.eml_task_nm",options.defaultParam.excelInfo.eml_task_nm);
+                    me.set("excelInfo.isEditable",options.defaultParam.excelInfo.isEditable);
+                    me.set("excelInfo.isNew",options.defaultParam.excelInfo.isNew);
+                    me.set("excelInfo.eml_tmpl_cd",options.defaultParam.excelInfo.eml_tmpl_cd);
+                    me.applyFormula();
+                    me.onFindInfo();
+                }
+            },
+
+            onFindInfo: function() {
+                var me = this;
+                UT.request(me.$.findSheetFieldValue);
+            },
+            onAddRow: function() {
+                var me = this,
+                    provider = me.$.excelCellGridPanel.getDataProvider();
+
+
+                var addRow = {
+                    set_field_nm :"",
+                    value : ""
+                };
+
+                provider.addItem(addRow);
+            },
+            // 저장 완료
+            onAppendGridRowForCellSize: function(e, res){
+                var me = this,
+                    result = res.response,
+                    provider = me.$.excelCellGridPanel.getDataProvider();
+
+
+                for(var i=0; i < result.length; i++){
+                    var cellData = result[i];
+
+
+                    var addRow = {
+                        set_field_nm :cellData.data,
+                        value : ""
+                    };
+
+                    provider.addItem(addRow);
+                }
+            },
+            onDownLoadExcel: function(e, res){
+                var me = this,
+                    result = res.response,
+                    provider = me.$.excelCellGridPanel.getDataProvider();
+
+
+                var fileName = "test_template.xlsx";
+                var zip = new JSZip(result,{"base64": true});
+                var blobData = zip.generate({type: "blob", compression: "DEFLATE"});
+                //window.navigator.msSaveOrOpenBlob(blobData, fileName);
+
+
+                if (Polymer.isIE || navigator.appVersion.toString().indexOf('.NET') > 0) {
+                    window.navigator.msSaveOrOpenBlob(blobData, fileName);
+                }else{
+                    var a = document.createElement("a");
+                    document.body.appendChild(a);
+                    var url = URL.createObjectURL(blobData);
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    document.body.removeChild(a);
+                }
+
+
+            },
+
+            onExcelTemplateSetup : function(){
+                var me = this,
+                    provider = me.$.excelCellGridPanel.getDataProvider();
+
+                if(null == me.get("excelInfo")) {
+                    UT.alert("STD.MW0012");
+                }else{
+                    UT.confirm("STD.MW0013", function() {
+
+                        me.$.excelTemplateSetupAfterDownLoad.body = {
+                            templateDataList: provider.getItems(),
+                            excelInfo : me.get("excelInfo")
+                        };
+                        UT.request(me.$.excelTemplateSetupAfterDownLoad);
+
+                    });
+                }
+
+
+
+            },
+            onExcelTemplateMailSendTest : function(){
+                var me = this,
+                    provider = me.$.excelCellGridPanel.getDataProvider();
+				
+                if(!me.validate()){
+                	UT.alert("STD.E0000");
+                	return;
+                }
+                
+                if(null == me.get("excelInfo")) {
+                    UT.alert("STD.MW0012");
+                }else {
+                    UT.confirm("STD.MW0014", function () {
+                        me.$.excelTemplateMailSendTest.body = {
+                            templateDataList: provider.getItems(),
+                            excelInfo: me.get("excelInfo")
+                        };
+                        UT.request(me.$.excelTemplateMailSendTest);
+
+                    });
+                }
+            },
+
+
+        });
+    </script>
+
+</dom-module>

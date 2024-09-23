@@ -1,0 +1,263 @@
+<dom-module id="es-printout-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+	    <sc-code-group>
+            <sc-code code="C003" value="{{codes.taskTypCcd}}" ></sc-code> <!-- 공통코드 유형 -->
+        </sc-code-group>
+	    
+	    <!-- 문서 출력 관리 조회 -->
+	    <sc-ajax id=findListDocumentOutputManagement
+				 url="findListDocumentOutputManagement.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+	    </sc-ajax>
+	    
+	    <!-- 문서 출력 관리 저장 -->
+        <sc-ajax id="saveListDocumentOutputManagement"
+                 url="saveListDocumentOutputManagement.do"
+                 on-response="completeSaveListDocumentOutputManagement">
+        </sc-ajax>
+
+        <!-- 문서 출력 관리 삭제 -->
+        <sc-ajax id="deleteListDocumentOutputManagement"
+                 url="deleteListDocumentOutputManagement.do"
+                 on-response="completeDeleteListDocumentOutputManagement">
+        </sc-ajax>
+        
+		<div class="vbox flex">
+        	<cc-sub-title-bar title-text="인쇄 현황">
+        	</cc-sub-title-bar>
+        	
+        	<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+        		<cc-fieldset>
+        			<sc-label text="업무 분류"></sc-label>
+        			<sc-combobox-field display-field="label" value-field="data" items="{{codes.taskTypCcd}}" 
+	                        		value="{{searchParam.task_typ_ccd}}" placeholder="전체"></sc-combobox-field>
+        		</cc-fieldset>
+        		<cc-fieldset>
+        			<sc-label text="문서 아이디"></sc-label>
+        			<sc-text-field value="{{searchParam.doc_id}}" on-enter="onSearch" max-length="16"></sc-text-field>
+        		</cc-fieldset>
+        		<cc-fieldset>
+        			<sc-label text="문서 설명"></sc-label>
+        			<sc-text-field value="{{searchParam.doc_expln}}" on-enter="onSearch" max-length="60"></sc-text-field>
+        		</cc-fieldset>
+        	</cc-search-condition-panel>
+        	
+            <sc-grid id="gridPanel" editable="true" class="flex" data-provider="{{resultList}}"
+                     on-item-click="onItemClick" validation-group="save">
+                <cc-grid-toolbar>
+                	<sc-button text="추가" on-click="onAdd" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDelete" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSave" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-combobox-column data-field="task_typ_ccd" 	header-text="업무 유형" 		width="100" text-align="center" items="{{codes.taskTypCcd}}" display-field="label" value-field="data"></sc-combobox-column>
+                    <sc-data-column data-field="cat_id" 			header-text="카테고리 아이디" 	width="120" text-align="center" max-length="18" editable="true"></sc-data-column>
+                    <sc-data-column data-field="cat_expln" 			header-text="카테고리 설명" 	width="150" text-align="left" 	max-length="60" editable="true"></sc-data-column>
+                    <sc-data-column data-field="doc_id" 			header-text="문서 아이디" 	width="150" text-align="center" max-length="60" item-editable-function="onDocIdEditable" style-name="link" required="true"></sc-data-column>
+                    <sc-data-column data-field="doc_expln" 			header-text="문서 설명" 		width="150" text-align="left" 	max-length="60" editable="true"></sc-data-column>
+                    <sc-data-column data-field="scr_hgt_size" 		header-text="화면 높이" 		width="80" 	text-align="center" max-length="60" editable="true"></sc-data-column>
+                    <sc-data-column data-field="scr_wid_size" 		header-text="화면 넓이" 		width="80" 	text-align="center" max-length="60" editable="true"></sc-data-column>
+                    <sc-data-column data-field="doc_call_cd" 		header-text="문서 호출 코드" 	width="100" text-align="center" max-length="60" editable="true"></sc-data-column>
+                    <sc-data-column data-field="regr_id" 			header-text="등록자 아이디" 	width="100" text-align="center" max-length="60"></sc-data-column>
+                    <sc-date-column data-field="reg_dttm" 			header-text="등록 일시" 		width="100" text-align="center" max-length="60"></sc-date-column>
+                    <sc-data-column data-field="modr_id" 			header-text="수정자 아이디" 	width="100" text-align="center" max-length="60"></sc-data-column>
+                    <sc-date-column data-field="mod_dttm" 			header-text="수정 일시" 		width="100" text-align="center" max-length="60"></sc-date-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                	<sc-grid-field data-field="doc_id"></sc-grid-field>
+                	<sc-grid-field data-field="doc_outp_uuid"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'es-printout-list',
+			properties : {
+				/* 코드 데이터 */
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                        	taskTypCcd: []
+                        };
+                    }
+                },
+				searchParam : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+	    		/* 조회결과 */
+                resultList : {
+                	type : Array,
+                	value : function(){
+                		return [];
+                	}
+                }
+			},
+			
+			initialized: function () {
+				var me = this;
+            },
+            
+            /* search */
+	    	onSearch : function(){
+	    		var me = this;
+	    		UT.request(me.$.findListDocumentOutputManagement);
+	    		me.fire('reset-printout-detail');
+	    	},
+	    	
+	    	/* 그리드 클릭 이벤트 */
+			onItemClick : function(event) {
+				var me = this,
+	                data = event.detail.data,
+	                item = event.detail.item,
+	                provider = event.detail.provider;
+	    		
+                if(provider.getItemState(item.rowIndex) == "created"){
+                    return;
+                }
+	    		
+	    		if(item.dataField === "doc_id") {
+	    			this.fire("find-printout-detail", data);
+	    		}
+	    	},
+	    	
+	    	/* 문서ID editable 제어 */
+            onDocIdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+	    	
+	    	/* 추가 */
+	    	onAdd : function() {
+	    		var me = this,
+                provider = me.$.gridPanel.getDataProvider();
+	    		
+	    		if(UT.isEmpty(me.searchParam.task_typ_ccd)) {
+                    UT.alert(me.translate("STD.E1012",null,me.translate('업무 분류')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+	    		
+	    		// 그리드 신규행 추가
+                var row = {
+                	task_typ_ccd: me.searchParam.task_typ_ccd,    	// 업무 유형
+                	cat_id: "",                        				// 카테고리 아이디
+                	cat_expln: "",                    				// 카테고리 설명
+                	doc_id: "",                    					// 문서 아이디
+                	doc_expln: "",                    				// 문서 설명
+                	src_hgt_size: "",                    			// 화면 높이
+                	src_wid_size: "",								// 화면 넓이
+               		doc_call_cd: "",								// 문서 호출 코드
+               		regr_id: SCSessionManager.currentUser.usr_id	// 등록자 아이디 
+                };
+                provider.addItemAt(0,row);
+	    	},
+	    	
+	    	/* 저장 */
+	    	onSave : function() {
+				var me = this;
+	    		
+	    		var provider = me.$.gridPanel.getDataProvider(),
+	                created = provider.getNewItems(),
+	                updated = provider.getUpdateItems();
+				
+	    		/* 저장 유효성 체크 */
+                if(!me.validation()) {
+                    return;
+                }
+	    		
+	            if(created.length + updated.length === 0) {
+	                UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+	                return;
+	            }
+	
+	            UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+	                me.$.saveListDocumentOutputManagement.body = {
+	                    insertList: created,
+	                    updateList: updated
+	                };
+	                UT.request(me.$.saveListDocumentOutputManagement);
+	            });
+	    	},	
+	    	
+	    	/* 저장 유효성 체크 */ 
+            validation: function() {
+                var me = this;
+
+                // 기본 validate
+                if(!me.validate('save')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                // 문서ID 중복 체크
+                var provider = me.$.gridPanel.getDataProvider(),
+                    rows = provider.getItems();
+                var unique_check = {};
+                for (var i=0, len = rows.length; i<len; i++) {
+                    if(typeof unique_check[rows[i].doc_id] == "undefined"){
+                        unique_check[rows[i].doc_id] = 0;
+                    } else {
+                        UT.alert(me.translate("STD.E1000",null, me.translate('문서 ID')),null,true); // "'{0}'에 동일한 값이 존재합니다"
+                        return false;
+                    }
+                }
+                return true;
+            },
+	    	
+	    	/* 저장 완료 */
+	    	completeSaveListDocumentOutputManagement: function() {
+	    		var me = this,
+                message = "STD.N1500"; // 저장하였습니다.
+				UT.alert(message, function(){
+					// 문서 출력 관리 정보 조회
+					me.onSearch();
+				});
+	    	},
+	    	
+	    	/* 삭제 */
+			onDelete: function() {
+				var me = this, 
+					message = "STD.N1300", // 삭제 하시겠습니까?
+					provider = me.$.gridPanel.getDataProvider(), 
+					checked = provider.selectionCheckedIndexes();
+
+				if (checked && checked.length > 0) {
+					UT.confirm(message, function() {
+						var deleted = provider.removeItems();
+						if (UT.isNotEmpty(deleted)) {
+							me.$.deleteListDocumentOutputManagement.body = {
+								deleteList : deleted
+							};
+							UT.request(me.$.deleteListDocumentOutputManagement);
+						}
+					});
+				} else {
+					UT.alert("STD.N1600");	// 선택된 항목이 없습니다
+				}
+			},
+
+			/* 삭제 완료 */
+			completeDeleteListDocumentOutputManagement : function() {
+				var me = this, message = "STD.N2500"; // 삭제하였습니다.
+				UT.alert(message, function() {
+					// 문서 출력 관리 정보 조회
+					me.onSearch();
+				});
+			}
+		});
+	</script>
+</dom-module>

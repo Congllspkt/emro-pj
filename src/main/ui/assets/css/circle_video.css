@@ -1,0 +1,28 @@
+@charset "utf-8";
+
+/*~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ 
+2018.11.08 ChaeMin Kim 
+혁신활동 > 분임조 활동 > 개선안
+~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~*/
+
+/*Reset*/
+/* 레이아웃 */
+.media_conts{width : 1200px; border-bottom : 1px solid #ddd; padding-bottom : 30px;}
+.media_box{width : 580px; display : inline-block; }
+
+/* 동영상 재생 */
+.media_box .video_box{margin-top: 20px;position: relative; height : 325px; background : #191919; }
+.media_box .video_box .video_del{z-index:1; position : absolute; top:19px; left: 19px; width : 29px; height: 31px; background : url('../img/circle_video/ico_video_del.png') 0 0 no-repeat; }
+.media_box .video_box .go_play{position : absolute; top:120px; left : 50%; margin-left : -114px; text-align: center;}
+.media_box .video_box .go_play button{width : 62px; height : 62px; background : url('../img/circle_video/ico_video_play.png') 0 0 no-repeat; margin-bottom : 12px; }
+.media_box .video_box .go_play p{font-size : 14px; color : #d9d8d8;}
+
+/* 이미지/동영상 선택 */
+.media_box .conts_input_box{position: relative;  height : 325px; border : 1px solid #e3e3e3; box-sizing: border-box; margin-top : 20px;}
+.media_box .conts_input_box .go_select{position : absolute; top:122px; left : 50%; margin-left : -74px; text-align: center; }
+.media_box .conts_input_box .go_select button{width : 54px; height : 54px; background : url('../img/circle_video/ico_conts_select.png') 0 0 no-repeat; margin-bottom : 13px; text-align: center;}
+.media_box .conts_input_box .go_select p{font-size : 14px; color : #787878;}
+
+/* 여백 */
+.mgr35{margin-right : 35px;}
+

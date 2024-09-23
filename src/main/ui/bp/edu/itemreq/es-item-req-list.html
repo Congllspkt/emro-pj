@@ -1,0 +1,233 @@
+<dom-module id="es-item-req-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+         <sc-request-group init>
+            <sc-code-group>
+				<sc-code code="MT002" value="{{codes.progStsList}}"></sc-code>
+			</sc-code-group>
+        </sc-request-group>
+        
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<sc-ajax id="findListItemReq"
+				 url="findListItemReq.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="deleteListItemReq"
+				 url="deleteListItemReq.do"
+				 on-response="completeDeleteListItemReq">
+		</sc-ajax>
+ 
+
+        	<cc-sub-title-bar title-text="사용자 목록" ></cc-sub-title-bar>
+            <cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" >
+            	<cc-fieldset>
+				<sc-label text="일자"></sc-label>
+				<sc-period-date-field required="true" from-value="{{searchParam.from_date}}" to-value="{{searchParam.to_date}}"
+									  default-from-value="-1y" default-to-value="0d" string-date="false">
+				</sc-period-date-field>
+			</cc-fieldset>
+			
+			<cc-fieldset>
+				<sc-label text="요청자"></sc-label>
+				<cc-user-search id="userSearch" value="{{searchParam.reqr_nm}}"
+								result-field="usr_id" result-value="{{searchParam.reqr_id}}">
+				</cc-user-search>
+			</cc-fieldset>
+			
+			<cc-fieldset>
+				<sc-label text="품목 코드"></sc-label>
+				<cc-multi-text-field id="itemCd" value="{{searchParam.item_cd}}"
+									 multi-value="{{searchParam.item_cds}}" on-enter="onEnterSearch"
+									 title="품목 코드">
+				</cc-multi-text-field>
+			</cc-fieldset>
+			
+			<cc-fieldset>
+				<sc-label text="품목 명"></sc-label>
+				<sc-text-field value="{{searchParam.item_nm}}" on-enter="onEnterSearch"></sc-text-field>
+			</cc-fieldset>
+			
+			<cc-fieldset>
+				<sc-label text="요청 번호"></sc-label>
+				<cc-multi-text-field id="itemRegReqNo" value="{{searchParam.item_reg_req_no}}"
+									 multi-value="{{searchParam.item_reg_req_nos}}" on-enter="onEnterSearch"
+									 title="요청 번호">
+				</cc-multi-text-field>
+			</cc-fieldset>
+			
+			<cc-fieldset>
+				<sc-label text="요청 상태"></sc-label>
+				<sc-combobox-field display-field="label" value-field="data"
+								   items="{{codes.progStsList}}" value="{{searchParam.item_reg_req_sts_ccd}}" placeholder="전체">
+				</sc-combobox-field>
+			</cc-fieldset>
+			
+			<cc-fieldset column-span="2">
+				<sc-label text="품목분류"></sc-label>
+					<!-- <cc-cate-combobox-field >
+					</cc-cate-combobox-field> -->
+					<cc-cate-combobox-field id="itemCateField" 
+						itemcat-lvl1-cd="{{searchParam.itemcat_lvl_1_cd}}" 
+						itemcat-lvl2-cd="{{searchParam.itemcat_lvl_2_cd}}"
+						itemcat-lvl3-cd="{{searchParam.itemcat_lvl_3_cd}}" 
+						itemcat-lvl4-cd="{{searchParam.itemcat_lvl_4_cd}}">
+					</cc-cate-combobox-field>
+				
+			</cc-fieldset>
+ 
+            </cc-search-condition-panel>
+
+            <sc-grid id="gridPanel" data-provider="{{resultList}}" on-item-click="onDataCellClicked" use-state="false"
+				 editable="false" use-selection="true" selection-able-function="onSelectionAbleFn" class="flex">
+			<cc-grid-toolbar>
+				<sc-button text="신규" on-click="onAddReq" auth-s></sc-button> 
+				<sc-button text="삭제" on-click="onDeleteList" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-combobox-column data-field="item_reg_req_sts_ccd" header-text="요청 상태" width="100"
+									display-field="label" value-field="data"
+									items="{{codes.progStsList}}"></sc-combobox-column>
+				<sc-data-column data-field="item_reg_req_no" header-text="요청 번호" width="120" style-name="link"></sc-data-column>
+				<sc-combobox-column data-field="req_typ_ccd" header-text="요청 유형" width="80"
+									display-field="label" value-field="data"
+									items="{{codes.reqTypList}}"></sc-combobox-column>
+				<sc-data-column data-field="item_cd" header-text="품목 코드" width="100"></sc-data-column>
+				<sc-data-column data-field="disp_item_nm" header-text="품목 명" width="200" text-align="left"></sc-data-column>
+				<sc-data-column data-field="item_spec" header-text="품목 규격" width="300" text-align="left"></sc-data-column>
+				<sc-data-column data-field="mfgr_nm" header-text="제조사 명" width="80" text-align="left"></sc-data-column>
+				<sc-data-column data-field="mdl_no" header-text="모델 번호" width="80" text-align="left"></sc-data-column>
+				<sc-data-column data-field="itemcat_lvl_1_nm" header-text="품목분류1 명" width="100" text-align="left"></sc-data-column>
+				<sc-data-column data-field="itemcat_lvl_2_nm" header-text="품목분류2 명" width="100" text-align="left"></sc-data-column>
+				<sc-data-column data-field="itemcat_lvl_3_nm" header-text="품목분류3 명" width="100" text-align="left"></sc-data-column>
+				<sc-data-column data-field="itemcat_lvl_4_nm" header-text="품목분류4 명" width="100" text-align="left"></sc-data-column>
+				<sc-data-column data-field="reqr_nm" header-text="요청자" width="100"></sc-data-column>
+				<sc-date-column data-field="reg_dttm" header-text="요청 일시" width="100"></sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="item_nm"></sc-grid-field>
+				<sc-grid-field data-field="item_nm_en"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+
+    </template>
+
+    <script>
+    Polymer({
+		is: 'es-item-req-list',
+		properties: {
+			codes: {
+				type: Object,
+				value: function() {
+					return {
+						progStsList: [], 	// 진행상태
+						reqTypList: []		// 품목 운영조직
+					};
+				}
+			},
+			searchParam: {
+				type: Object,
+				value: function() {
+					return {};
+				}
+			},
+			resultList : {
+				type : Array,
+				value : function() {
+					return [];
+				}
+			}
+		},
+		
+		load: function() {
+			var me = this;
+			me.onSearch();
+		},
+		
+		onSearch: function() {
+			var me = this;
+			
+			// 조회조건 필수값 체크
+			if(!me.validate('search')) {
+				UT.alert("STD.E0000");
+				return;
+			}
+			
+			UT.request(me.$.findListItemReq);
+		},
+
+		onEnterSearch: function() {
+			var me = this;
+			me.onSearch();
+		},
+		
+		onDataCellClicked: function(event) {
+			var me   = this;
+			var data = event.detail.data;
+			var	item = event.detail.item;
+			
+			if(item.dataField === "item_reg_req_no") {
+				//요청유형
+				if(data.req_typ_ccd === "CHG") {
+					me.fire("show-modify-detail", data);
+				} else {
+					me.fire("show-detail", data);
+				}
+			}
+		},
+		
+		onSelectionAbleFn: function(data) {
+			if(data.item_reg_req_sts_ccd === "CRNG" || data.item_reg_req_sts_ccd === "RET") {
+				return true; //체크 가능
+			} else {
+				return false; //체크 불가능
+			}
+		},
+
+		
+		onAddReq: function () {
+			this.fire("add-req");
+		},
+		
+		onDeleteList: function() {
+			var me = this;
+			var provider = me.$.gridPanel.getDataProvider();
+			var deleted = provider.selectionCheckedItems();
+			
+			if(UT.isEmpty(deleted)) {
+				UT.alert("STD.N1600");
+				return;
+			}
+			
+			UT.confirm("STD.N1300", function() {	//삭제 하시겠습니까?
+				if(deleted.length > 0) {
+					me.$.deleteListItemReq.body = {deleteList: deleted};
+					UT.request(me.$.deleteListItemReq);
+				}
+			});
+		},
+		
+		completeDeleteListItemReq: function(e, res) {
+			var me = this;
+			var result = res.response;
+			if(UT.isObject(result) && result.success) {
+				// [삭제] 처리를 완료했습니다.
+				UT.completeAlert("삭제", function() {
+					me.onSearch();
+				});
+			} else {
+				UT.alert("STD.E9999");// 오류가 발생하였습니다.\n관리자에게 문의하세요
+			}
+		}
+	});
+    </script>
+
+</dom-module>

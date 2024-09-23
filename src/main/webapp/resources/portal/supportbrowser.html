@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, user-scalable=no">
+	<title>EMRO SMARTsuite9.0 Login</title>
+	<link rel="stylesheet" type="text/css" href="./css/main.css"/>
+</head>
+
+<body>
+	<div id="wrap">
+	  <a style="font-size:30px;text-decoration:blink;position: fixed; right:100px;bottom:100px;background:white;height:26px;border-radius:5px;background: #8c8c8c; color: white;" href="#wrap">↑</a>
+	  <div class="top">
+	    <img src="./img/main_logo.png" alt="메인 로고"/>
+	  </div>
+	
+	   <div class="contents">
+         <p class="title">현재 사용자의 브라우저는 <span id="browser" class="strong"></span>입니다. 최신 브라우저로 <span class="strong">업데이트</span>해주세요.</p>
+       <div class="sub_contents">
+         <div style="display:inline-block; text-align:left;">
+         <h2>지원 브라우저</h2>
+          <br>
+           <ul id="supportBrowser">
+           </ul>
+         </div>
+       </div>
+       <hr>
+      <div class="guide_contents" id="MSIE">
+          <h2>Internet Explorer 11 설치하기(권장)</h2>
+          <h3>1. Internet Expolorer <a class="strong" href="https://www.microsoft.com/ko-kr/download/internet-explorer-11-for-windows-7-details.aspx" target="_blank">다운로드 페이지로 이동</a>합니다.</h3>
+          <p><a href="https://www.microsoft.com/ko-kr/download/internet-explorer-11-for-windows-7-details.aspx" target="_blank"><img class="guide_img" src="./img/ie11_1.png"/></a></p>
+          <h3>2. 상단의 도움말을 클릭하여  <span class="strong">'파일 다운로드'를 클릭</span>합니다.  </h3>
+          <p><img class="guide_img" src="./img/ie11_2.png"/></p>
+          <h3>3. <span class="strong">실행 버튼을 클릭</span>합니다.</h3>
+          <p><img class="guide_img" src="./img/ie11_3.png"/></p>
+          <h3>4. <span class="strong">설치를 클릭</span>하여   IE11 버전을 설치합니다.  </h3>
+          <p><img class="guide_img" src="./img/ie11_5.png"/></p>
+          <h3>5. 설치가 완료되면 컴퓨터를 <span class="strong">다시 시작</span>합니다. </h3>
+          <p><img class="guide_img" src="./img/ie11_6.png"/></p>
+          <h3>6. 컴퓨터가 다시 켜지면 <span class="strong">인터넷 브라우저를 실행</span>합니다. 오른쪽 상단위의 설정 버튼을 클릭 후 <span class="strong">Internet Explorer 정보를 클릭</span>합니다.  </h3>
+          <p><img class="guide_img" src="./img/ie11_7.png"/></p>
+          <h3>7. <span class="strong">Internet Exploer11이 제대로 표시되는지 확인</span>합니다. </h3>
+          <p><img class="guide_img" src="./img/ie11_8.png"/></p>
+      </div>
+      
+      <hr>
+      
+      <div class="guide_contents" id="Chrome">
+          <h2>Chrome 최신 버전 설치하기</h2>
+          <h3>1. Chrome <a class="strong" href="https://www.google.co.kr/chrome/browser/desktop/" target="_blank">다운로드 페이지로 이동</a>하고 Chrome  다운로드 버튼을 클릭합니다. </h3>
+          <p><img class="guide_img" src="./img/chrome_1.png"/></p>
+          <h3>2. <span class="strong">동의 및 설치를 클릭</span>합니다.</h3>
+          <p><img class="guide_img" src="./img/chrome_2.png"/></p>
+          <h3>3. <span class="strong">실행을 클릭</span>합니다.</h3>
+          <p><img class="guide_img" src="./img/chrome_3.png"/></p>
+          <h3>4. <span class="strong">'예'를 클릭</span>합니다. 예를 누르면 설치가 진행되는 것을 확인할 수 있습니다. </h3>
+          <p><img class="guide_img" src="./img/chrome_4.png"/></p>
+          <h3>5. 설치가 완료되면 크롬이 제대로 <span class="strong">설치되었는지 확인</span>합니다.</h3>
+          <p><img class="guide_img" src="./img/chrome_5.png"/></p>
+      </div>
+    </div>
+    
+  </div>
+  <script src="../../js/jquery.min.js"></script>
+  <script src="../../js/main/browser.js"></script>
+  <script type="text/javascript">
+  $(function() {
+    $('#browser').text(BROWSER.browserInfo.browser + " / " + BROWSER.browserInfo.version);
+
+    //IE8,9 대상이기 때문에 ECMA5 문법은 사용하면 에러남
+    /*    BROWSER.supportBrowsers.forEach(function(v) {
+      $('<li>').html(
+      $('<a>').attr({
+        'href' : '#' + v.browser
+      }).text(v.browser + " / " + (v.version.toUpperCase()==="ALL"? v.version:v.version + " 이상"))).appendTo('#supportBrowser');
+    });*/
+
+    for(var i=0; i<BROWSER.supportBrowsers.length; i++) {
+      var v = BROWSER.supportBrowsers[i];
+      $('<li>').html(
+      $('<a>').attr({
+        'href' : '#' + v.browser
+      }).text(v.browser + " / " + (v.version.toUpperCase()==="ALL"? v.version:v.version + " 이상"))).appendTo('#supportBrowser');
+    }
+  });
+  </script>
+  <script type="text/javascript">
+  /* href : smooth move */
+  $(function() {
+    $('a[href*="#"]:not([href="#"])').click(function() {
+      if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+        var target = $(this.hash);
+        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+        if (target.length) {
+          $('html, body').animate({
+            scrollTop: target.offset().top
+          }, 700);
+          return false;
+        }
+      }
+    });
+  });
+  </script>
+</body>
+</html>

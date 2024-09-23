@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="dictionary">
+
+	<select id="findListDictionary" resultType="map">
+	/* findListCompareTable : 비교대상테이블 조회 */
+		SELECT NO
+			  ,ATT_NM
+			  ,ATT_EN
+			  ,ATT_EN_ALT
+			  ,ATT_EN_ABB
+			  ,"COMMENT"
+			  ,DEL
+		  FROM DICTIONARY
+		  <trim prefix="WHERE" prefixOverrides="AND">
+			  <if test="p.att_nm != null and p.att_nm != ''">
+			  AND UPPER(ATT_NM) LIKE UPPER(#{p.att_nm})
+			  </if>
+			  <if test="p.att_en != null and p.att_en != ''">
+			  AND UPPER(ATT_EN) LIKE UPPER(#{p.att_en})
+			  </if>
+			  <if test="p.att_en_alt != null and p.att_en_alt != ''">
+			  AND UPPER(ATT_EN_ALT) LIKE UPPER(#{p.att_en_alt})
+			  </if>
+			  <if test="p.att_en_abb != null and p.att_en_abb != ''">
+			  AND UPPER(ATT_EN_ABB) LIKE UPPER(#{p.att_en_abb})
+			  </if>
+		  </trim>
+		  ORDER BY NO
+	</select>
+	
+	<insert id="insertDictionary">
+	/* insertDictionary : 용어집 추가 */
+		INSERT INTO DICTIONARY (
+		    NO
+		  ,	ATT_NM 
+		  , ATT_EN
+		  , ATT_EN_ALT
+		  , ATT_EN_ABB
+		  , "COMMENT"
+		  , DEL
+		) VALUES (
+			(SELECT NVL(MAX(NO), 0) + 1 FROM DICTIONARY)
+		  ,	#{p.att_nm}
+		  , #{p.att_en}
+		  , #{p.att_en_alt}
+		  , #{p.att_en_abb}
+		  , #{p.comment}
+		  , #{p.del}
+		)
+	</insert>
+	
+	<update id="updateDictionary">
+	/* updateDictionary : 용어집 수정 */
+		UPDATE DICTIONARY
+		   SET ATT_EN_ALT = #{p.att_en_alt}
+		     , ATT_EN_ABB = #{p.att_en_abb}
+		     , "COMMENT"  = #{p.comment}
+		     , DEL 		  = #{p.del}
+		 WHERE ATT_NM = #{p.att_nm}
+		   AND ATT_EN = #{p.att_en}
+	</update>
+	
+	<delete id="deleteDictionary">
+	/* deleteDictionary : 용어집 삭제 */ 
+		DELETE 
+		  FROM DICTIONARY
+		 WHERE ATT_NM = #{p.att_nm}
+		   AND ATT_EN = #{p.att_en}
+	</delete>
+</mapper>

@@ -1,0 +1,681 @@
+<dom-module id="es-board-detail">
+	<!--
+        ******************************************************************************************
+        ** @Program-name 	: 게시판 상세 화면
+        ** @Description		:
+        ** @Author 			: jeKim
+        ** @Create Date 	: 2016.03.18
+        ** @History 		: 2016.03.18 jeKim 최초작성
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+
+	</style>
+
+	<template>
+
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+
+		<sc-request-group id="codes" init>
+			<sc-ajax url="findListCompanyCodeForBulletinBoard.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+		</sc-request-group>
+
+		<!-- 게시글 조회 -->
+		<sc-ajax id=findBoardPostInfo
+				 url="findBoardPostInfo.do"
+				 body="{{searchParam}}"
+				 last-response="{{boardInfo}}"
+				 on-response="completeFindBoardPostInfo">
+		</sc-ajax>
+
+		<!-- 게시글 저장 -->
+		<sc-ajax id=saveBoardInfo
+				 url="saveBoardInfo.do"
+				 on-response="completeSaveBoardInfo">
+		</sc-ajax>
+
+		<!-- 게시글 삭제 -->
+		<sc-ajax id="deleteBoardInfo"
+				 url="deleteBoardInfo.do"
+				 on-response="completeDeleteBoardInfo">
+		</sc-ajax>
+
+		<!-- 게시글 댓글 조회 -->
+		<sc-ajax id="findBoardCommentList"
+				 url="findBoardCommentList.do"
+				 body="{{searchDetailParam}}"
+				 last-response="{{boardComntList}}"
+				 on-response="completeFindBoardCommentList">
+		</sc-ajax>
+
+		<!-- 게시글 댓글 저장 -->
+		<sc-ajax id="saveBoardCommentInfo"
+				 url="saveBoardCommentInfo.do"
+				 on-response="completeSaveBoardCommentInfo">
+		</sc-ajax>
+
+		<!-- 게시글 댓글 삭제 -->
+		<sc-ajax id="deleteBoardCommentInfo"
+				 url="deleteBoardCommentInfo.do"
+				 on-response="completeDeleteBoardCommentInfo">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<!-- 툴바 -->
+		<cc-page-title-bar title-text="게시글 작성">
+			<sc-button text="수정" hidden="[[!formula('isUpdate')]]" on-click="onSaveBoard" auth-s></sc-button>
+			<sc-button text="삭제" hidden="[[!formula('isDeletable')]]" on-click="onDeleteBoard" auth-s></sc-button>
+			<sc-button text="답글" hidden="[[!formula('isReplUseYn')]]" on-click="onAddReplyBoard" auth-s></sc-button>
+			<sc-button text="저장" hidden="[[!formula('isNew')]]" on-click="onSaveBoard" auth-s></sc-button>
+			<sc-button text="목록" on-click="onShowBoardList" auth-r></sc-button>
+		</cc-page-title-bar>
+
+		<!-- 게시물 작성 폼 -->
+		<cc-form-panel label-width="150" >
+			<cc-fieldset>
+				<sc-label text="제목"></sc-label>
+				<sc-text-field value="{{boardInfo.pst_tit}}" maxlength="100" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="작성자 명"></sc-label>
+				<sc-label class="w-200" text="{{boardInfo.crtr_nm}}" i18n-disabled></sc-label>
+			</cc-fieldset>
+			<cc-fieldset hidden="[[!formula('isCompanyBoardUseForVendor')]]">
+				<sc-label text="회사"></sc-label>
+				<sc-combobox-field class="w-200" value="{{boardInfo.co_cd}}" items="{{codes.company}}" display-field="comp_nm" value-field="co_cd" readonly="[[!formula('isEditable')]]"
+								   placeholder="선택" required="[[formula('isEditable')]]"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset hidden="[[!formula('isPostPrdDisp')]]">
+				<sc-label text="자동 게시 일자"></sc-label>
+				<sc-period-date-field id="periodDateField" from-value="{{boardInfo.auto_pstg_st_dt}}" to-value="{{boardInfo.auto_pstg_exp_dt}}"
+										  default-from-value="0d" default-to-value="1M" string-date="false" readonly="[[!formula('isEditable')]]"></sc-period-date-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="메인 공지사항 여부"></sc-label>
+				<sc-checkbox-field input-value="{{boardInfo.main_ann_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+			</cc-fieldset>
+			<cc-fieldset hidden="[[!formula('isNotiYnDisp')]]">
+				<sc-label text="공지사항 여부"></sc-label>
+				<sc-checkbox-field input-value="{{boardInfo.ann_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]" on-checkchange="onNotiYnCheckChange"></sc-checkbox-field>
+			</cc-fieldset>
+			<cc-fieldset hidden="[[!formula('isSecrtYnDisp')]]">
+				<sc-label text="비밀글 여부"></sc-label>
+				<sc-checkbox-field input-value="{{boardInfo.sectxt_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isSecrtYnEditable')]]"></sc-checkbox-field>
+			</cc-fieldset>
+		</cc-form-panel>
+
+		<div class="flex page">
+			<!-- DEXT5 에디터 -->
+			<sc-panel title-text="내용">
+				<sc-editor id="editorPanel" class="h-400" value="{{boardInfo.pst_cont}}" remove-source-button="[[formula('isEditable')]]" ></sc-editor>
+			</sc-panel>
+
+			<!-- DEXT5 업로드 -->
+			<sc-panel title-text="첨부파일" collapsible="true" hidden="[[!formula('isAttDispY')]]">
+				<sc-upload id="uploadPanel" class="h-200" value="{{boardInfo.athg_uuid}}" editable="[[formula('isAttDispYEditable')]]"></sc-upload>
+			</sc-panel>
+
+			<!-- 댓글 -->
+			<sc-panel title-text="댓글" collapsible="true" hidden="[[!formula('isComntUseYn')]]">
+				<div id="boardComnt">
+
+				</div>
+			</sc-panel>
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-board-detail",
+            properties : {
+				// 코드 데이터
+				codes: {
+					type: Object,
+					reset: false,
+					value: function () {
+						return {
+							company: {},
+						};
+					}
+				},
+                // 게시판 정보
+                boardAdminInfo : {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 관리자 여부
+                boardAdminYn: {
+                    type: Object,
+                    value: function(){
+                        return{};
+                    }
+                },
+
+                // 게시글 정보 조회 결과
+                boardInfo : {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 게시글 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            bbd_uuid: ""
+                        };
+                    }
+                },
+
+                // 댓글 조회결과
+                boardComntList: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 댓글 조회 조건
+                searchDetailParam:{
+                    type: Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+
+                _bindedFunctions:{
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+
+            },
+
+            formulas : {
+
+                // 신규 상태
+                isNew : function(){
+                    return this.boardInfo.is_new === true;
+                },
+
+                // 수정 상태
+                isUpdate : function() {
+                   return (!UT.isEmpty(this.boardInfo.pst_no) && !this.formula('isNew') ) && (SCSessionManager.currentUser.usr_id === this.boardInfo.regr_id);
+                },
+
+                // 삭제 가능 상태
+                isDeletable : function() {
+                    return (!UT.isEmpty(this.boardInfo.pst_no) && !this.formula('isNew') ) &&
+						(SCSessionManager.currentUser.usr_id === this.boardInfo.regr_id || this.formula('isAdmin'));
+                },
+
+                // 수정 가능 상태 (신규 & 수정)
+                isEditable : function() {
+                    return (this.formula('isNew') || this.formula('isUpdate'));
+                },
+
+                // 첨부파일 사용 가능과 수정 가능 상태
+                isAttDispYEditable: function(){
+                	return (this.formula('isEditable') && this.formula('isAttDispY'));
+                },
+                
+                // 관리자 상태
+                isAdmin: function() {
+                    return	this.boardAdminYn.admin_yn === "Y";
+                },
+
+                // 답글버튼 (저장된 글인 경우, 현재 사용자가 관리자이고, 답글 사용하는 게시판내에서 공지글이 아닐 때)
+                isReplUseYn: function() {
+                    return ((!this.formula('isNew') || this.formula('isUpdate')) && this.boardAdminInfo.bbd_re_use_yn === "Y" && this.boardInfo.ann_yn !== "Y");
+                },
+
+                // 답글 상태
+                isReply : function() {
+                    return this.boardInfo.is_reply === true;
+                },
+
+                // 기간 사용 여부
+                isPrdUseYn: function() {
+                    return this.boardAdminInfo.pstg_pd_use_yn === "Y"
+                },
+
+                // 기간 보이기 여부
+                isPostPrdDisp : function() {
+                    return this.formula("isAdmin") && this.formula("isPrdUseYn");
+                },
+
+                // 공지글여부 보이기 여부
+                isNotiYnDisp : function() {
+                    return this.formula("isPostPrdDisp") && this.boardInfo.pst_grp_seqno === 0;
+                },
+
+                // 비밀글 사용 여부
+                isSecrtUseYn : function() {
+                    return this.boardAdminInfo.sectxt_use_yn === "Y";
+                },
+
+                // 비밀글여부 보이기 여부
+                isSecrtYnDisp : function() {
+                    return this.formula("isSecrtUseYn");
+                },
+
+                // 비밀글 여부 수정가능 상태 (신규 작성시에만 가능, 공지글인 경우엔 불가)
+                isSecrtYnEditable : function() {
+                    return this.formula('isNew') && (this.boardInfo.pst_grp_seqno === 0) && (this.boardInfo.ann_yn !== "Y");
+                },
+
+                // 첨부 보이기 여부
+                isAttDisp : function() {
+                    return this.boardAdminInfo.ath_show_yn === "Y"
+                },
+
+                // 댓글 사용 여부
+                isComntUseYn : function() {
+                    return this.boardAdminInfo.cmnt_use_yn === "Y" && !this.formula('isNew');
+                },
+                
+                isAttDispY: function(){
+                	return (this.boardAdminInfo.ath_show_yn === "Y");
+                },
+				// 회사별 게시판 사용 여부 (협력사)
+				isCompanyBoardUseForVendor: function() {
+					return this.formula('isCompanyBoardUse') && this.formula('isVendor');
+				},
+
+				// 협력사 여부
+				isVendor: function(){
+					return SCSessionManager.getCurrentUser().usr_typ_ccd === "VD";
+				},
+
+				// 구매사 여부
+				isBuyer: function(){
+					return SCSessionManager.getCurrentUser().usr_typ_ccd === "BUYER";
+				},
+				// 회사별 게시판 사용 여부
+				isCompanyBoardUse: function(){
+					return this.boardAdminInfo.co_bbd_use_yn === "Y";
+				}
+
+
+            },
+
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data) {
+                var me = this;
+
+				if(data.companyCode){
+					me.set("codes.company", data.companyCode);
+				}
+
+                if(!data.searchParam){ // 글쓰기
+                    me.onAddBoard(data);
+                } else { // 게시물 선택
+                    me.onSearchInfo(data);
+                }
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+            // 게시물 조회
+            onSearchInfo: function(data){
+                var me = this;
+
+                if(data){
+                    me.set("searchParam"	, data.searchParam);
+                    me.set("boardAdminInfo"	, data.boardAdminInfo);
+                    me.set("boardAdminYn"	, data.boardAdminYn);
+
+                }
+
+                UT.request(me.$.findBoardPostInfo);
+            },
+
+            // 게시물 조회 완료
+            completeFindBoardPostInfo: function(e,res){
+                var me = this;
+
+                if(me.formula('isComntUseYn')){ // 댓글 사용 여부
+                    me.onSearchBoardComnt();
+                }
+                me.applyFormula();
+
+            },
+
+            // 공지글 여부 변경 시
+            onNotiYnCheckChange : function(event) {
+                var me = this, checked = event.detail;
+
+                if(checked) {
+                    // 공지글인 경우 비밀글일 수 없다.
+                    me.set("boardInfo.sectxt_yn", "N");
+                }
+                me.applyFormula("isSecrtYnEditable");
+            },
+
+            // 글쓰기
+            onAddBoard: function(data){
+                var me = this;
+                me.set("boardAdminInfo", data.boardAdminInfo);
+                me.set("boardAdminYn",data.boardAdminYn);
+
+                var row = {
+                    bbd_uuid    : me.boardAdminInfo.bbd_uuid,
+                    pst_grp_seqno : 0,
+                    regr_id      : SCSessionManager.currentUser.usr_id,
+                    crtr_nm      : SCSessionManager.currentUser.usr_nm,
+                    is_new      : true
+                };
+
+                // 초기화
+                me.set("boardInfo", row);
+                me.$.periodDateField.reset(); // 게시기간 초기화
+
+                me.applyFormula();
+
+            },
+
+            // 게시물 저장
+            onSaveBoard: function(){
+                var me = this;
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                var postSd = UT.convertDayHourMinToDt(me.boardInfo.auto_pstg_st_dt);
+                var postEd = UT.convertDayHourMinToDt(me.boardInfo.auto_pstg_exp_dt);
+
+				postSd.setHours("00");
+				postSd.setMinutes("00");
+				postSd.setSeconds("00");
+
+                postEd.setHours("23");
+                postEd.setMinutes("59");
+				postEd.setSeconds("59");
+
+				me.boardInfo.auto_pstg_st_dt = postSd;
+				me.boardInfo.auto_pstg_exp_dt = postEd;
+
+				if(this.formula('isCompanyBoardUse') && this.formula('isBuyer')){
+					me.set("boardInfo.co_cd", SCSessionManager.getCurrentUser().co_cd);
+				}
+
+                UT.confirm("STD.N1200", function() { //저장 하시겠습니까?
+                    me.$.uploadPanel.upload().then(function(){
+                        me.$.editorPanel.syncValue();
+                        me.$.saveBoardInfo.body = {
+                            boardInfo : me.boardInfo
+                        };
+                        UT.request(me.$.saveBoardInfo);
+                    })
+                });
+
+            },
+
+            // 게시물 저장 완료
+            completeSaveBoardInfo: function(){
+                var me = this;
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onShowBoardList();
+				});
+
+            },
+
+            // 게시물 삭제
+            onDeleteBoard : function(){
+                var me = this;
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    me.$.deleteBoardInfo.body = {
+                        boardInfo : me.boardInfo
+                    };
+                    UT.request(me.$.deleteBoardInfo);
+                });
+
+            },
+
+            // 게시판 삭제 완료
+			completeDeleteBoardInfo:function() {
+                var me = this;
+				UT.alert("STD.N2500", function () { // 삭제하였습니다.
+					me.onShowBoardList();
+				});
+            },
+
+            // 목록
+            onShowBoardList: function(){
+                var me = this;
+                me.fire('show-boardlist', me.get("boardAdminInfo"));
+                me.clearComnt();
+                me.reset();
+            },
+
+            /******************************
+             * 답글
+             ******************************/
+            // 답글 신규
+            onAddReplyBoard: function(){
+                var me = this;
+
+                var row = {
+                    bbd_uuid	: me.boardInfo.bbd_uuid,
+                    pst_grp_no	: me.boardInfo.pst_grp_no,
+                    pst_lvl	: me.boardInfo.pst_lvl + 1,
+                    pst_grp_seqno	: me.boardInfo.pst_grp_seqno + 1,
+                    sectxt_yn    : me.boardInfo.sectxt_yn,			// 답글 작성 시 원본글이 비밀글이면 답글도 비밀글로 작성되어야 함
+                    crtr_nm 		: SCSessionManager.currentUser.usr_nm,
+                    is_new		: true
+                };
+
+                // 초기화
+                me.set("boardInfo", row);
+                me.$.periodDateField.reset(); // 게시기간 초기화
+
+                me.applyFormula();
+            },
+
+            /******************************
+             * 댓글
+             ******************************/
+            // 댓글 조회
+            onSearchBoardComnt: function(){
+                var me = this;
+                // 댓글 초기화
+                me.clearComnt();
+
+                me.set("searchDetailParam", me.get("boardInfo"));
+                UT.request(me.$.findBoardCommentList);
+            },
+
+            // 댓글 조회 완료
+            completeFindBoardCommentList: function(){
+                var me = this,
+                    resultLength = me.boardComntList.length;
+
+                me.onAddComnt(resultLength);
+            },
+
+            // 댓글 생성
+            onAddComnt: function (comntLength) {
+                var me = this,
+                    curUser = SCSessionManager.currentUser,
+                    result = me.boardComntList;
+
+
+                var innerHtml = "<cc-form-panel column='1' label-width=\"w-120\" >";
+                for (var i = 0; i < comntLength + 1; i++) {
+
+                    var comntItem = {};
+                    if (i < comntLength) {
+                        // 기존 댓글
+                        comntItem = result[i];
+                        // 작성자 일 경우 : 수정 가능
+                        comntItem.isComntEditable = (curUser.usr_id === comntItem.regr_id);
+                        // 작성자/관리자 일 경우 : 삭제 가능
+                        comntItem.isComntDeletable = (comntItem.isComntEditable || me.formula('isAdmin'));
+
+                    } else {
+                        // 신규 댓글 초기값 설정
+                        comntItem = {
+                            is_new: true,
+                            pst_no: me.get("boardInfo.pst_no"),
+                            bbd_uuid: me.get("boardInfo.bbd_uuid"),
+                            cmnt_cont: "",
+                            crtr_nm: UT.isEmpty(curUser.disp_usr_nm) ? curUser.usr_nm : curUser.disp_usr_nm,
+                            isComntEditable: true
+                        };
+                    }
+
+                    
+                    innerHtml = innerHtml + '<cc-fieldset><sc-label text="' + comntItem.crtr_nm + '" i18n-disabled></sc-label>' +
+							'<sc-textarea-field id=\"taComntCont' + i + '\" max-length="500" readonly=' + !comntItem.isComntEditable + '></sc-textarea-field>';
+
+                    if (comntItem.is_new) {
+                        // 신규 댓글 : 등록 버튼 및 이벤트 생성
+                        innerHtml = innerHtml + '<div><sc-button id="addComment' + i + '" style="margin-left:3px;height: 40px;width: 50px;" text="등록"></sc-button></div>';
+                        me._bindedFunctions["addComment" + i] = me.onSaveBoardComnt.bind(this, comntItem, i);
+                    } else if (comntItem.isComntEditable || comntItem.isComntDeletable) {
+                        // 기존 댓글 > 게시판 관리자 or 작성자 일 경우 : 수정/삭제 버튼 및 이벤트 생성
+                        //수정 가능한지
+                        innerHtml = innerHtml + '<sc-button id="updComment' + i + '" style="margin-left:3px;height: 40px;width: 50px;" text="수정" disabled="' + !comntItem.isComntEditable + '"></sc-button>';
+                        innerHtml = innerHtml + '<sc-button id="delComment' + i + '" style="margin-left:3px;height: 40px;width: 50px;" text="삭제" disabled="' + !comntItem.isComntDeletable + '"></sc-button>';
+
+                        me._bindedFunctions["updComment" + i] = me.onSaveBoardComnt.bind(this, comntItem, i);
+                        me._bindedFunctions["delComment" + i] = me.onDeleteBoardComnt.bind(this, comntItem, i);
+                    }
+					innerHtml = innerHtml + '</cc-fieldset>';
+                }
+
+				innerHtml = innerHtml+ '</cc-form-panel>';
+
+                // innerHTML 을 사용하여 문자열을 dom 을 추가할 때 lazy 하게 등록된 엘리먼트의 웹컴포넌트 등록과정 생략
+                // Polymer.DomApi 의 setHtml 을 이용하여 구현
+                Polymer.dom(me.$.boardComnt).setHtml(innerHtml);
+                // 버튼 이벤트 등록
+                var buttons = Polymer.dom(me.$.boardComnt).querySelectorAll("sc-button");
+                for (var idx in buttons) {
+                    if (buttons.hasOwnProperty(idx)) {
+                        buttons[idx].addEventListener('click', me._bindedFunctions[buttons[idx].id]);
+                    }
+                }
+                
+                //XSS 개선
+                for (var j = 0; j < comntLength; j++) {
+                   	var comntItem = Polymer.dom(me.$.boardComnt).querySelector("#taComntCont" + j);
+                   	comntItem.value = result[j].cmnt_cont;
+            	}
+                
+
+            },
+
+            // 댓글 초기화
+            clearComnt:function(){
+                var me = this,
+                    buttons = Polymer.dom(me.$.boardComnt).querySelectorAll("sc-button");
+                // 버튼 이벤트 해지
+                for (var idx in buttons){
+                    if(buttons.hasOwnProperty(idx)){
+                        buttons[idx].removeEventListener('click', me._bindedFunctions[buttons[idx].id]);
+                    }
+                }
+                Polymer.dom(me.$.boardComnt).setHtml("");
+            },
+
+            // 댓글 저장
+            onSaveBoardComnt: function(item, index){
+                var me = this,
+                    comntCont = me.$.boardComnt.querySelector('#taComntCont'+index);	// 내용
+
+                if(comntCont === null) {
+                    throw new Error('Cannot find comment field with id: ' + index);
+                }
+
+                // 필수값 체크
+                if(UT.isEmpty(comntCont.value)){
+                    UT.alert(me.translate("STD.E1001",null,me.translate('내용')),null,true); // '{0}'은(는) 필수 입력 항목입니다.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    // 댓글 내용
+                    item.cmnt_cont = comntCont.value;
+                	item.bbd_uuid = me.boardInfo.bbd_uuid;
+                	
+                    // request body에 데이타 셋팅
+                    me.$.saveBoardCommentInfo.body = {
+                        boardComntInfo : item
+                    };
+                    UT.request(me.$.saveBoardCommentInfo);
+                });
+
+            },
+
+            // 댓글 저장 완료
+            completeSaveBoardCommentInfo: function(){
+                var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onSearchBoardComnt();
+				});
+            },
+
+            // 댓글 삭제
+            onDeleteBoardComnt: function(item, index){
+                var me = this;
+                item.bbd_uuid = me.boardInfo.bbd_uuid;
+                
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    me.$.deleteBoardCommentInfo.body = {
+                        boardComntInfo : item
+                    };
+                    UT.request(me.$.deleteBoardCommentInfo);
+                });
+            },
+
+            // 댓글 삭제 완료
+            completeDeleteBoardCommentInfo:function(){
+                var me = this;
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.onSearchBoardComnt();
+				});
+
+            }
+        });
+	</script>
+
+</dom-module>

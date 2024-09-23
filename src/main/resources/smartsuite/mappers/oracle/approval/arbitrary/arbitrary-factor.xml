@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+DAPVL_CND_INPVAR: 전결설정항목
+ -->
+
+<mapper namespace="arbitrary-factor">
+
+    <insert id="insertFactor">
+    /* arbitrary-factor.insertFactor: 전결설정항목 등록 */
+    INSERT 
+      INTO DAPVL_CND_INPVAR (
+           TEN_ID
+         , DAPVL_CND_INPVAR_UUID
+         , DAPVL_CND_INPVAR_NM
+         , PARM_KEY
+         , PARM_NM
+         , SCR_TYP_CCD
+         , DAPVL_CND_INPVAR_CCD
+         , DAPVL_CND_INPVAR_FROM_ID
+         , DAPVL_CND_INPVAR_FROM_NM
+         , DAPVL_CND_INPVAR_VAL
+         , DAPVL_CND_INPVAR_EXPLN
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+         , PARNODE_PARM_KEY
+    ) VALUES (
+           #{g.tenant}
+         , #{p.dapvl_cnd_inpvar_uuid}
+         , #{p.dapvl_cnd_inpvar_nm}
+         , #{p.parm_key}
+         , #{p.parm_nm}
+         , #{p.scr_typ_ccd}
+         , #{p.dapvl_cnd_inpvar_ccd}
+         , #{p.dapvl_cnd_inpvar_from_id}
+         , #{p.dapvl_cnd_inpvar_from_nm}
+         , #{p.dapvl_cnd_inpvar_val}
+         , #{p.dapvl_cnd_inpvar_expln}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+         , #{p.parnode_parm_key}
+    )
+    </insert>
+    
+    <update id="updateFactor">
+    /* arbitrary-factor.updateFactor: 전결설정항목 수정 */
+    UPDATE DAPVL_CND_INPVAR
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , DAPVL_CND_INPVAR_NM = #{p.dapvl_cnd_inpvar_nm}
+         , PARM_KEY = #{p.parm_key}
+         , PARM_NM = #{p.parm_nm}
+         , SCR_TYP_CCD = #{p.scr_typ_ccd}
+         , DAPVL_CND_INPVAR_CCD = #{p.dapvl_cnd_inpvar_ccd}
+         , DAPVL_CND_INPVAR_FROM_ID = #{p.dapvl_cnd_inpvar_from_id}
+         , DAPVL_CND_INPVAR_FROM_NM = #{p.dapvl_cnd_inpvar_from_nm}
+         , DAPVL_CND_INPVAR_VAL = #{p.dapvl_cnd_inpvar_val}
+         , DAPVL_CND_INPVAR_EXPLN = #{p.dapvl_cnd_inpvar_expln}
+         , PARNODE_PARM_KEY = #{p.parnode_parm_key}
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_CND_INPVAR_UUID = #{p.dapvl_cnd_inpvar_uuid}
+    </update>
+    
+    <delete id="deleteFactor">
+    /* arbitrary-factor.deleteFactor: 전결설정항목 삭제 */
+    DELETE 
+      FROM DAPVL_CND_INPVAR
+     WHERE TEN_ID = #{g.tenant}
+       AND DAPVL_CND_INPVAR_UUID = #{p.dapvl_cnd_inpvar_uuid}
+    </delete>
+
+    <select id="selectListFactor" resultType="map">
+    /* arbitrary-factor.selectListFactor: 전결설정항목 목록 */
+    SELECT DAPVL_CND_INPVAR.TEN_ID
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_NM
+         , DAPVL_CND_INPVAR.PARM_KEY
+         , DAPVL_CND_INPVAR.PARM_NM
+         , DAPVL_CND_INPVAR.SCR_TYP_CCD
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_CCD
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_FROM_ID
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_FROM_NM
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_VAL
+         , DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_EXPLN
+         , DAPVL_CND_INPVAR.REGR_ID
+         , DAPVL_CND_INPVAR.REG_DTTM
+         , DAPVL_CND_INPVAR.MODR_ID
+         , DAPVL_CND_INPVAR.MOD_DTTM
+         , (
+            SELECT COUNT(*) AS USED_COUNT
+              FROM APVL_TYP_DAPVL_CND_INPVAR TF
+             WHERE TF.TEN_ID = DAPVL_CND_INPVAR.TEN_ID
+               AND TF.DAPVL_CND_INPVAR_UUID = DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID
+           ) AS TF_COUNT
+         , (
+            SELECT COUNT(*) AS USED_COUNT
+              FROM DAPVL_TBL_DAPVL_CND_INPVAR DF
+             WHERE DF.TEN_ID = DAPVL_CND_INPVAR.TEN_ID
+               AND DF.DAPVL_CND_INPVAR_UUID = DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_UUID
+           ) AS DF_COUNT
+      FROM DAPVL_CND_INPVAR DAPVL_CND_INPVAR
+     WHERE DAPVL_CND_INPVAR.TEN_ID = #{g.tenant}
+       <if test='p.dapvl_cnd_inpvar_ccd != null and p.dapvl_cnd_inpvar_ccd != ""'>
+       AND DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_CCD = #{p.dapvl_cnd_inpvar_ccd}
+       </if>
+       <if test='p.dapvl_cnd_inpvar_nm != null and p.dapvl_cnd_inpvar_nm != ""'>
+            <bind name="nmPattern" value="'%' + p.dapvl_cnd_inpvar_nm + '%'" />
+       AND UPPER(DAPVL_CND_INPVAR.DAPVL_CND_INPVAR_NM) LIKE UPPER(#{nmPattern})
+       </if>
+     ORDER
+        BY REG_DTTM DESC
+    </select>
+
+    <select id="selectFactor" resultType="map">
+    /* arbitrary-factor.selectFactor: 전결설정항목 상세 */
+    SELECT ABFT.TEN_ID
+         , ABFT.DAPVL_CND_INPVAR_UUID
+         , ABFT.DAPVL_CND_INPVAR_NM
+         , ABFT.PARM_KEY
+         , ABFT.PARM_NM
+         , ABFT.SCR_TYP_CCD
+         , ABFT.DAPVL_CND_INPVAR_CCD
+         , ABFT.DAPVL_CND_INPVAR_FROM_ID
+         , ABFT.DAPVL_CND_INPVAR_FROM_NM
+         , ABFT.DAPVL_CND_INPVAR_VAL
+         , ABFT.DAPVL_CND_INPVAR_EXPLN
+         , ABFT.REGR_ID
+         , ABFT.REG_DTTM
+         , ABFT.MODR_ID
+         , ABFT.MOD_DTTM
+         , ABFT.PARNODE_PARM_KEY
+      FROM DAPVL_CND_INPVAR ABFT
+     WHERE ABFT.TEN_ID = #{g.tenant}
+       AND ABFT.DAPVL_CND_INPVAR_UUID = #{p.dapvl_cnd_inpvar_uuid}
+    </select>
+    
+</mapper>

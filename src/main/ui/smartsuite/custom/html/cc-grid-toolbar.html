@@ -1,0 +1,475 @@
+<sc-link rel="import" href="ep-grid-toolbar-columns.html" lazy></sc-link>
+<!--
+`<cc-grid-toolbar></cc-grid-toolbar>` 는 그리드의 제목을 지정하거나 조회 건수를 표현하고 그리드의 엑셀다운로드 및 개인화 기능을 포함하는 element 입니다.
+`<sc-grid>` 엘리먼트 내부에 선언되며 `<sc-button>` 컴포넌트를 포함 할 수 있습니다.
+
+### 기본예제
+
+	<sc-grid>
+		<cc-grid-toolbar></cc-grid-toolbar>
+	</sc-grid>
+
+### title-text 활용
+그리드의 제목으로 사용할 문자열을 지정 할 수 있습니다. 입력 하지 않을 경우 빈 문자열이 출력됩니다.
+
+    <cc-grid-toolbar title-text="그리드제목"></cc-grid-toolbar>
+
+### 다국어 미처리 방법
+만약 동적으로 변하는 변수명을 그리드의 제목으로 사용하고자 할때는 다국어가 수집되지 않도록 `i18n-disabled` 속성을 추가합니다.
+
+    <cc-grid-toolbar title-text="{{title}}" i18n-disabled></cc-grid-toolbar>
+
+### 버튼 추가 방법
+`<cc-grid-toolbar>` 태그 안에 `<sc-button>` 컴포넌트를 추가하여 우측 정렬되는 버튼을 추가 할수 있습니다.
+
+    <cc-grid-toolbar>
+        <sc-button text="저장"></sc-button>
+        <sc-button text="삭제"></sc-button>
+    </cc-grid-toolbar>
+
+### 엑셀다운로드 사용자 정의 이벤트 구현
+excelDownloadFunction 프로퍼티에 함수를 지정하여 임의의 함수를 호출하도록 정의 할 수 있습니다.
+
+    <cc-grid-toolbar excel-download-function="onExcelClick"></cc-grid-toolbar>
+
+    onExcelClick: function() {
+        // ...
+    }
+
+### 스타일 넣은 서브 타이틀 추가방법
+<cc-grid-toolbar title-text="그리드제목">
+	<div class="sub_title"><span style="color:red;font-weight:bold;margin-left:5px;">서브타이틀내용</span></div>
+-->
+<dom-module id="cc-grid-toolbar">
+	<template>
+		<div class="left_title">
+		<h4 class="title">{{_gridTitle}}</h4>
+		<content select=".sub_title"></content>
+		</div>
+		<div class="rt grid_function">
+			<span class="result" hidden$="[[resultHidden]]">[[_resultCountMsg]]</span>
+			<div class="p-button" hidden$="[[btnGroupHidden]]">
+				<ul>
+					<li hidden$="[[excelBtnGroupHidden]]">
+						<button title="Excel Download" class="excel-download" on-click="onExcelDownload"></button>
+					</li>
+					<li>
+						<button id="columnList" title="Column List" class="column-list"  on-click="onColumnList"></button>
+					</li>
+					<li>
+						<button title="personalized Save" class="personalized-save" on-click="onPersonSave"></button>
+					</li>
+					<li>
+						<button title="personalized initialize" class="personalized-init" on-click="onPersonInit"></button>
+					</li>
+				</ul>
+			</div>
+			<div class="wrap_btn grid_button">
+			  <content>
+			  </content>
+			</div>
+		</div>
+		<!-- 툴바스타일에 float을 적용하면서 높이인식이 되지 않는 부분때문에 추가 -->
+		<!--<div style="clear:both;"></div>-->
+	</template>
+	<script>
+		CCGridToolbar = Polymer({
+			is : 'cc-grid-toolbar',
+			properties :{
+				/**
+                 * 엑셀 다운로드 버튼의 숨김 처리를 위한 프로퍼티 입니다.
+                 *
+                 * @type {String}
+                 */
+				excelBtnGroupHidden: {
+					type: Object,
+					observer: '_changeExcelBtnGroupHidden',
+					value: false
+				},
+				
+
+                /**
+                 *  그리드 제목 문자열을 지정합니다.
+                 *
+                 * @type {String}
+                 */
+				titleText : {
+					type:String,
+					value:'',
+				},
+
+                /**
+                 *  그리드 제목을 보여주기 위한 속성입니다.
+                 *
+                 * @type {String}
+                 */
+				_gridTitle:{
+				    type:String
+				},
+
+                /**
+                 * 'true'일 경우 다국어 변환을 하지 않습니다.
+                 *
+                 * @type {Boolean}
+                 */
+                i18nDisabled:{
+                    type: Boolean,
+                    value: false,
+                    reflectToAttribute: true
+                },
+
+                /**
+                 * 'true'일 경우 조회 건수를 표시 하지 않습니다.
+                 *
+                 * `<cc-grid-toolbar result-hidden="true">`
+                 * @type {Boolean}
+                 */
+                resultHidden: {
+                	 type: Boolean,
+                     value: false
+                },
+
+                /**
+                 * 'true'일 경우 엑셀다운로드 및 개인화 기능 버튼을 비활성화 합니다.
+                 *
+                 * `<cc-grid-toolbar btn-group-hidden="true">`
+                 * @type {Boolean}
+                 */
+                btnGroupHidden: {
+                    type: Boolean,
+                    value: false
+                },
+
+                /**
+                 * excelDownloadFunction 에 합수를 지정하여 사용자 정의 엑셀다운로드 함수를 구현할 수 있습니다.
+                 *
+                 * `<cc-grid-toolbar excel-download-function="onExcelClick">`
+                 * @type {Object}
+                 */
+                excelDownloadFunction: {
+				    type: Function
+				},
+
+				/**
+				 * 조회 건 수입니다.
+				 *
+				 * @type {Number}
+				 */
+				_gridItemCount: {
+		            type: Number,
+		            value: 0
+		        },
+
+		        /**
+				 * 페이징 조회 시 전체 건 수입니다.
+		         *
+				 * @type {Number}
+				 */
+		        _gridTotalCount: {
+		            type: Number,
+		            value: 0
+		        },
+
+				/**
+				 * 조회 결과 건수를 표시하기 위한 문자열입니다.
+				 *
+				 * @type {String}
+				 */
+				_resultCountMsg: {
+					type: String,
+					computed: '_getResultCountMsg(_gridItemCount, _gridTotalCount)'
+				}
+				
+			},
+
+			observers: [
+				'_changeTitleText(titleText,i18nDisabled)'
+			],
+
+            /**
+             * sc-grid 엘리먼트를 반환합니다.
+             *
+             * @type {Element}
+             */
+            get scGrid(){
+                if(!this._scGrid){
+                    var ele = this.parentElement;
+                    this._scGrid = getScGrid(ele);
+                    function getScGrid(findElement){
+                        if(findElement.nodeName && findElement.nodeName.indexOf('SC-GRID') > -1){
+                            return findElement;
+                        }else{
+                            return getScGrid(findElement.parentElement);
+                        }
+                    }
+                }
+                return this._scGrid;
+            },
+
+            /**
+             * `<sc-grid-paging>` 엘리먼트를 반환 합니다.
+             *
+             * @type {Node}
+             */
+            get scGridPaging() {
+                if(!this._scGridPaging){
+                    var ele = this.parentElement;
+                    this._scGridPaging = getScGridPaging(ele);
+                    function getScGridPaging(ele){
+                        var pagingTag = ele.getElementsByTagName('SC-GRID-PAGING');
+                        if(pagingTag.length > 0){
+                            return pagingTag[0];
+                        } else {
+                            console.error('<sc-grid-paging> 을 탐색하지 못하였습니다.')
+                        }
+                    }
+                }
+                return this._scGridPaging;
+            },
+
+            /**
+             * 스크롤 페이징 여부를 반환합니다.
+             *
+             * @type {Boolean}
+             */
+            get isScrollPaging() {
+                if(!this._scrollPaging){
+                    var element = this.parentElement.getElementsByTagName('SC-GRID-PAGING');
+                    this._scrollPaging = element.length > 0 && element[0].getAttribute('scroll-paging') == "true";
+                }
+                return this._scrollPaging;
+            },
+
+			attached : function(){
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            
+		            var me = this;
+					if(me.scGrid.gridBottomHeight > 0){
+						me.set('resultHidden',true);
+					}else{
+						me.listen(me.scGrid,'scgrid-count-changed','_onItemCountChanged');
+						if(me.isScrollPaging){ // 페이징 조회 시 전체건수를 갱신하기 위한 리스너
+							me.listen(me.scGridPaging, 'page-load-completed', '_onPageLoadCompleted')
+						}
+	 					if(me.scGrid._isInitialized && me.scGrid.provider.rowCount() > 0){
+							me.set('_gridItemCount', me.scGrid.provider.rowCount() )
+	 					}
+					}
+		        }
+			},
+			
+			/**
+             * 엑셀 다운로드 버튼의 숨김 처리 값이 변경되면 호출되며, 제일 왼쪽 버튼에 적용되어 있는 스타일을 동적으로 적용합니다.
+             * common.css 의 cc-grid-toolbar .p-button li:first-child button 참조
+             *
+             * @private
+             */
+			_changeExcelBtnGroupHidden: function(value){
+				if(value == true){
+					this.$.columnList.style.borderLeft = "1px solid #ff6000";
+					this.$.columnList.style.borderRadius = "3px 0 0 3px";
+				}
+				else{
+					this.$.columnList.style.borderLeft = "0";
+					this.$.columnList.style.borderRadius = "";
+				}
+			},
+
+            /**
+             * `titleText` 를 명시한 경우 호출되며 지정한 문자열을 그리드 제목으로 설정합니다.
+             *
+             * @private
+             */
+            _changeTitleText: function(){
+                this.set('_gridTitle', this._getTitleText());
+            },
+
+            /**
+             * 그리드 제목을 가져옵니다.
+             *
+             * @private
+             * @return {String}
+             */
+            _getTitleText: function() {
+	            return this.i18nDisabled ? this.titleText : this.translate(this.titleText);
+			},
+
+            /**
+             * 그리드의 조회 건수가 변경 되면 호출되며 화면에 표시되는 조회 건수를 갱신합니다.
+             *
+             * @private
+             */
+			_onItemCountChanged : function(event){
+				var me = this;
+				var count = event.detail.count;
+				me.set('_gridItemCount',count);
+				if(me.isScrollPaging && count === 0) {
+					me.set('_gridTotalCount', count);
+				}
+				
+				me.fire("item-count-changed")
+			},
+
+            /**
+             * 컬럼 목록에서 숨김여부를 선택하거나 취소할때 호출 되며 설정내용을 그리드에 반영합니다.
+             *
+             * @private
+             */
+			_onToolbarColumnVisibleChanged : function(event){
+				var me =  this,
+			    dataField = event.detail.dataField,
+			    checked = event.detail.checked,
+			    gridView = me.scGrid._gridView;
+
+		        var column = gridView.columnByName(dataField);
+		        column.setVisible((checked === "true"));
+		        
+		        layoutVisibleChange(me.scGrid.statefulLayout, dataField, (checked === "true"));		        
+		        
+		        function layoutVisibleChange(layout, dataField, visible){
+		        	for(var i=0; i<layout.length;++i){
+	                    if(layout[i].name === dataField){
+	                    	layout[i].visible = visible;
+	                    	return true;
+	                    }
+	                    if(layout[i].columns){
+	                    	if(layoutVisibleChange(layout[i].columns, dataField, visible)){
+	                    		return true;
+	                    	};
+	                    }
+	                }
+		        	return false;
+		        }
+			},
+
+            /**
+             *  excel 다운로드를 수행합니다.
+             *  excelDownloadFunction 에 함수가 지정되어있을경우 지정한 지정한 함수를 수행합니다.
+             */
+			onExcelDownload : function(e, detail){
+				var excelFn = this.excelDownloadFunction;
+                if(excelFn && UT.isFunction(this.dataHost[excelFn])) {
+                    this.dataHost[excelFn].call(this.dataHost, e, detail);
+				} else {
+                    this.scGrid.defaultExcelDownload(this.scGrid._gridView);
+				}
+			},
+
+            /**
+             *  컬럼목록을 보여주는 팝업을 호출합니다.
+             */
+			onColumnList : function(){
+				var me = this,
+		          layout = me.scGrid.statefulLayout;
+				
+				var popup = SCPopupManager.popup('ep-grid-toolbar-columns', this, 300, 310, {
+		            modal : true,
+		            closable : true,
+		            maximizable : false,
+		            draggable : true
+		        });
+		        //style-chche-disabled 속성 추가
+		        popup.setAttribute('style-cache-disabled', true);
+		        popup.titleText = me.translate("컬럼 목록");
+		        popup._contentElement.style.padding = '5px'
+		        
+			    var view = popup.getWindowContent();
+		        
+			    view.invoke('setColumnInfo', me._getColumnList(layout));
+			    me.listen(view,'toolbar-column-visible-changed','_onToolbarColumnVisibleChanged');
+			    
+			    popup.addEventListener("sc-window-hided", function(e){
+			    	popup.removeEventListener("sc-window-hided", arguments.callee);
+			    	me.unlisten(view,'toolbar-column-visible-changed','_onToolbarColumnVisibleChanged');
+			    	popup = null;
+			    	view = null;
+			    	me = null;
+			    });
+			    
+			    popup.show();
+			},
+
+            /**
+             *  현재 지정한 그리드의 설정을 개인화 저장합니다.
+             */
+			onPersonSave : function(){
+				this.scGrid._saveLayout();
+				UT.completeAlert();
+				UT.completeAlert(); // 요청을 완료하였습니다.
+			},
+            /**
+             *  저장된 개인화를 초기화 합니다.
+             */
+			onPersonInit : function(){
+				this.scGrid._initLayout();
+				//저장소에서 개인화를 삭제할때 사용한다.
+				//this.scGrid.removeSateful();  
+			},
+            /**
+             * 컬럼 목록을 반환합니다.
+             *
+             * @private
+             * @return {Array}
+             */
+			_getColumnList : function(layout){
+                var me = this,
+                	columnList = [];
+                for(var i=0; i<layout.length; ++i){
+                	if(layout[i].disabled){
+                		continue;
+                	}
+                	if(layout[i].headerText && layout[i].headerText != ""){
+                		columnList.push({headerText : layout[i].headerText,
+										 dataField  : layout[i].name,
+					                     checked    : String(layout[i].visible),
+					                     toolbarColumnEditable : layout[i].toolbarColumnEditable
+					                     });
+                	}
+                	if(layout[i].columns){
+                		columnList = columnList.concat(me._getColumnList(layout[i].columns));
+                	}
+                }
+                return columnList;
+			},
+
+			/**
+			 * paging 조회 이후 발생되는 이벤트로 전체 건수를 바인딩 합니다.
+			 *
+			 * @private
+			 */
+			_onPageLoadCompleted: function(event) {
+				var pageableResult = this.scGridPaging.pageableResult,
+				    totalCount = pageableResult.totalSize;
+				this.set('_gridTotalCount', totalCount);
+			},
+			
+			/**
+			 * 조회 결과 건수를 표시하기 위한 문자열을 반환 합니다.
+			 *
+			 * @private
+			 * @return {String}
+			 */
+			_getResultCountMsg: function(itemCount, totalCount){
+				var defaultMsg = "Results : "+ SCFormatter.format('integer',itemCount);
+				if(this.isScrollPaging){
+					return defaultMsg + " / "+ SCFormatter.format('integer',totalCount);
+				}
+				return defaultMsg;
+			},
+			
+			_destroy : function() {
+				if(this._popWindow) {
+					this.unlisten(this._popWindow.getWindowContent(),'toolbar-column-visible-changed','_onToolbarColumnVisibleChanged');
+					this._popWindow.destroy();
+				}
+				this._scGrid = null;
+				this._scGridPaging = null;
+				this._scrollPaging = null;
+			}
+			
+		});
+		
+	</script>
+</dom-module>

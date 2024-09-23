@@ -1,0 +1,265 @@
+﻿@charset "utf-8";
+/*~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~
+2021.05.21 nami Kim
+2021.06.14 nami Kim
+AnySignCloud 로그인
+~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~*/
+
+@import url(default.css);
+
+/*************************************/
+/************** Supplier Login (공급사,외부로그인) **********/
+/*************************************/
+.loginHeader {
+    width : 1200px;
+    height : 95px;
+    background : url('../img/logo_top.png') 0 31px no-repeat; /*20210614수정*/
+    margin : 0 auto;
+}
+.wrap-conts {
+    background : #0a7bdc url('../img/img_bg.png') center 0 no-repeat;
+    height : 720px;
+    box-sizing: border-box;
+}
+.login-conts {
+    width : 1200px;
+    margin : 0 auto;
+    padding-top : 80px;
+}
+.login-box {
+    width : 450px ;
+    height : 560px;
+    background-color: #fff;
+    box-sizing: border-box;
+    padding : 50px;
+}
+.login-box h1 {
+    color : #333;
+    font-size : 30px;
+    text-align: center;
+    display: block;
+    padding-top : 6px;
+}
+.login-box .input-box {
+    margin-top : 34px;
+}
+.input-box div {
+    border :none;
+    padding-left : 37px;
+    background : #fff;
+    width :  350px;
+    height : 42px;
+    box-sizing: border-box;
+    border-radius: 2px;
+}
+.input-box input {
+    width :  290px; /*20210614추가*/
+    height : 42px;
+    font-size : 13px;
+    display: block;
+    border : none;
+    margin-left: 10px;
+    box-sizing: border-box;
+    background: #ededed;
+}
+.input-box input:focus {
+    outline: none;
+}
+.input-box .user_id {
+    background : #ededed url('../img/ico_id.png') 14px center no-repeat;
+    margin-bottom : 10px;
+}
+.input-box .user_pw {
+    background : #ededed url('../img/ico_pw.png') 14px center no-repeat;
+}
+a.btn-login {
+    width : 350px;
+    height : 50px;
+    background: #00aada;
+    margin-top : 10px;
+    color : #fff;
+    font-size : 18px;
+    font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+    padding-top : 16px;
+    border-radius: 2px;
+}
+a.btn-login:hover {
+  background: #002c5f;
+}
+.id-save {
+    display : inline-block;
+    letter-spacing: -1.3px;
+    padding-top : 20px;
+}
+.id-save label.save-label {
+    color : #333;
+    font-size : 13px;
+}
+.id-save input[type="checkbox"] {
+    display: none;
+    border: none !important;
+    box-shadow: none !important;
+}
+.id-save input[type="checkbox"] + label span {
+    background: url('../img/checkbox_id.png') no-repeat;
+    width: 23px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    padding-bottom : 2px;
+}
+.id-save input[type="checkbox"]:checked + label span {
+    background: url('../img/checkbox_id_checked.png') no-repeat;
+    width: 23px;
+    height: 16px;
+    vertical-align: middle;
+    padding-bottom : 3px;
+}
+.txt-find {
+    display : inline-block;
+    font-size : 13px;
+    color : #333;
+    margin-left : 105px;
+    letter-spacing: -0.5px;
+}
+.txt-find a {
+    text-decoration: underline;
+}
+.box-reg {
+    border-top : 1px solid #d3d3d3;
+    padding-top : 20px;
+    margin-top : 20px;
+}
+.box-reg p {
+    font-size : 14px;
+    color : #666;
+}
+.box-reg a {
+    width: 170px;
+  height: 45px;
+    background : #002c5f;
+    color : #fff;
+    font-size : 15px;
+    margin-top : 20px;
+    font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+    padding-top : 13px;
+    border-radius: 2px;
+}
+.box-reg a:nth-child(2) {
+    margin-right : 5px;
+}
+.box-reg a:hover {
+  background: #00aada;
+}
+select.combo-lang {
+    width : 350px;
+    height : 42px;
+    border-radius: 2px;
+    margin-top : 10px;
+    border : none;
+    font-size : 15px;
+    color : #666;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: #fff url('../img/arrow_combo.png') no-repeat 95% 50%;
+    border: 1px solid #dadada;
+    padding-left : 10px;
+}
+select.combo-lang::-ms-expand {
+    display: none;
+}
+footer {
+    background : url("../img/logo_footer.png") 0 0 no-repeat;
+    font-size : 11px;
+    color : #888;
+    width : 1200px;
+    margin: 0 auto;
+    padding-left : 103px;
+    box-sizing: border-box;
+    margin-top : 21px;
+    letter-spacing: 0.5px;
+}
+footer span {
+    font-weight: bold;
+}
+
+/*************************************/
+/************ Buyer Login (구매사,내부로그인) *********/
+/*************************************/
+.sp_login-box {
+    width : 450px ;
+    height : 480px;
+    background-color: #fff;
+    box-sizing: border-box;
+    padding : 110px 50px;
+    margin-top: 43px;/*20210614추가*/
+}
+.mgb-40 {
+    margin-bottom: 40px;
+}
+.sp_login-box h1 {
+    color : #333;
+    font-size : 30px;
+    text-align: center;
+    display: block;
+    padding-top : 6px;
+}
+.input-box .comp_id {
+    background : #fff url('../img/ico_comp.png') 14px center no-repeat;
+    margin-bottom : 10px;
+}
+.box-reg-sp {
+    padding-top : 45px;
+    margin-top : 42px;
+}
+select.combo-lang-sp {
+    margin-top : 0 !important;
+}
+
+/************** Mail Login (메일로 링크 될 로그인화면) **********/
+.wrap-conts-02 {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 500px;
+    height: 500px;
+    margin-left: -250px;
+    margin-top: -250px;
+    box-sizing: border-box
+
+}
+.wrap-conts-02 .login-conts {
+    width: 450px;
+    margin: 0 auto;
+    padding-top: 0;
+    /* height: 100%; */
+}
+.wrap-conts-02 .sp_login-box {
+    width: 450px;
+    height: 480px;
+    background-color: #002c5f;
+    box-sizing: border-box;
+    padding: 110px 50px;
+}
+.wrap-conts-02 .sp_login-box h1 {
+    height : 35px; /*20210614수정*/
+    /*background : url('../../../../img/login/logo_message.png') 0 0px no-repeat;*/
+    margin: 0 75px; /*20210614수정*/
+    color: #ffffffb5;
+}
+.wrap-conts-02 .sp_login-box h2 {
+    color: #ffffffb5;
+    font-size: 21px;
+    text-align: center;
+    display: block;
+    padding-top: 5px;
+    letter-spacing: -1px;
+}
+.wrap-conts-02 a.btn-login:hover {
+    background: #022550;
+}

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mobile-shared">
+  
+  <select id="findListOperationOrganizationByUser" resultType="map">
+    /* mobile-shared.findListOperationOrganizationByUser */
+    /* 로그인한 사용자의 운영단위 유형 별 운영조직 목록 조회 */
+    /* 콤보박스 or 그리드 콤보박스에 사용 */
+        SELECT A.OORG_CD
+             , CASE WHEN 'en_US' = #{p.locale} THEN C.LOGIC_ORG_NM_EN
+                    ELSE C.LOGIC_ORG_NM
+               END AS LOGIC_ORG_NM
+          FROM OORG_USR A
+         INNER JOIN OORG B
+            ON B.TEN_ID       = A.TEN_ID
+           AND B.OORG_CD  = A.OORG_CD
+         INNER JOIN LOGIC_ORG C
+            ON C.TEN_ID     = B.TEN_ID
+           AND C.LOGIC_ORG_TYP_CCD = B.LOGIC_ORG_TYP_CCD
+           AND C.LOGIC_ORG_CD     = B.LOGIC_ORG_CD
+         WHERE A.TEN_ID       = #{p.tenant}
+           AND A.USR_ID       = #{p.username}
+         --AND A.USE_YN       = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+         <if test="p.ounit_cd != null and p.ounit_cd !=''">
+           AND B.OUNIT_CD = #{p.ounit_cd}
+         </if>
+           AND B.USE_YN       = 'Y'
+           AND B.STS         != 'D'
+           AND C.USE_YN       = 'Y'
+           AND C.STS         != 'D'
+    <if test="p.ounit_cd != null and p.ounit_cd !='' and !(p.ounit_cd eq 'PO'.toString())">
+    
+    UNION    /* 구매운영단위 기준 조회가 아닌 경우 사용자의 구매운영조직에 연결된 운영조직을 조회 */
+    
+        SELECT A.CONNSUBJ_OORG_CD AS OORG_CD
+             , CASE WHEN 'en_US' = #{p.locale} THEN C.LOGIC_ORG_NM_EN
+                    ELSE C.LOGIC_ORG_NM
+               END AS LOGIC_ORG_NM
+          FROM OORG_MAPG A
+         INNER JOIN OORG B
+            ON B.TEN_ID      = A.TEN_ID
+           AND B.OORG_CD = A.CONNSUBJ_OORG_CD
+         INNER JOIN LOGIC_ORG C
+            ON C.TEN_ID     = B.TEN_ID
+           AND C.LOGIC_ORG_TYP_CCD = B.LOGIC_ORG_TYP_CCD
+           AND C.LOGIC_ORG_CD     = B.LOGIC_ORG_CD
+         INNER JOIN OORG_USR D
+            ON D.TEN_ID      = A.TEN_ID
+           AND D.OORG_CD = A.CONNSRC_OORG_CD
+         WHERE A.TEN_ID   = #{p.tenant}
+         <bind name="linkTyp" value="'PO' + p.ounit_cd"/>
+           AND A.CONN_TYP_CCD = #{linkTyp}
+           AND A.CONN_YN  = 'Y'
+         --AND D.USE_YN   = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+           AND B.USE_YN   = 'Y'
+           AND B.STS     != 'D'
+           AND C.USE_YN   = 'Y'
+           AND C.STS     != 'D'
+           AND D.USR_ID   = #{p.username}
+    </if>
+     ORDER BY OORG_CD
+    </select>
+    
+    <select id="findCommonCode" resultType="map">
+        SELECT DTL.TEN_ID
+             , DTLMULT.LANG_CCD
+             , DTL.CCD
+             , DTL.DTLCD AS DATA
+             , DTLMULT.DTLCD_NM
+             , DTLMULT.DTLCD_NM AS LABEL
+             , DTL.DTLCD_SORT
+             , DTL.RMK
+             , DTL.USE_YN
+             , DTL.MODR_ID
+        FROM DTLCD DTL
+           , DTLCD_MULTLANG DTLMULT
+        WHERE DTL.TEN_ID = DTLMULT.TEN_ID
+          AND DTL.CCD = DTLMULT.CCD
+          AND DTL.DTLCD = DTLMULT.DTLCD
+          AND DTL.USE_YN = 'Y'
+          AND DTL.STS &lt;&gt; 'D'
+          AND DTL.TEN_ID = #{g.tenant}
+          AND DTL.CCD = #{p.grp_cd}
+          AND DTLMULT.LANG_CCD = #{g.locale}
+        ORDER BY DTL.DTLCD_SORT
+    </select>
+  
+</mapper>

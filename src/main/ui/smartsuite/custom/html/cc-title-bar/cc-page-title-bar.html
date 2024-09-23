@@ -1,0 +1,422 @@
+<!--
+`<cc-page-title-bar></cc-page-title-bar>` 는 <h3> 크기로 제목을 지정하고자 할 때 사용하며, 즐겨찾기와 메뉴얼 기능이 포함되어 있습니다.
+title-text 속성을 활용하여 제목을 지정 할 수 있으며, `<sc-button>` 컴포넌트를 포함 할 수 있습니다.
+부모 엘리먼트가 `<sc-window>`, `<sc-dialog>` 일 경우(팝업), toolbar (즐겨찾기, 메뉴얼) 기능이 비활성화 됩니다.
+
+### 기본예제
+
+	<cc-page-title-bar></cc-page-title-bar>
+
+### title-text 활용
+화면에 표시할 String 을 지정 할 수 있습니다. 입력 하지 않을 경우 현재 메뉴명이 출력됩니다.
+
+    <cc-page-title-bar title-text="메뉴명"></cc-page-title-bar>
+
+### 다국어 미처리 방법
+만약 동적으로 변하는 변수명을 제목으로 사용하고자 할때는 다국어가 수집되지 않도록 `i18n-disabled` 속성을 추가합니다.
+
+    <cc-page-title-bar title-text="{{title}}" i18n-disabled></cc-page-title-bar>
+
+### 버튼 추가 방법
+`<cc-page-title-bar>` 태그 안에 `<sc-button>` 컴포넌트를 추가하여 우측 정렬되는 버튼을 추가 할수 있습니다.
+
+    <cc-page-title-bar>
+        <sc-button text="저장"></sc-button>
+    </cc-page-title-bar>
+-->
+<sc-link rel="import" href="/ui/bp/shared/ep-abbreviations-list.html" lazy></sc-link>
+<dom-module id="cc-page-title-bar">
+    <template>
+    	<sc-ajax id="findInfoAutoManual"
+		url="findInfoAutoManual.do"
+		on-response="completeFindInfoAutoManual">
+		</sc-ajax>
+	
+        <h3>[[_title]]</h3>
+        <ul id="toolbar" hidden$="[[formula('toolbarHidden')]]">
+            <li><button class$="[[formula('isHelpMenual')]]" title="[[translate('메뉴얼 보기')]]" on-tap="_onShowHelp"></button>
+			<li><button class$="[[formula('isAbbreviations')]]" title="[[translate('축약어 정보')]]" on-click="_onShowAbbreviationsByPopover" value="style" hidden="[[!formula('abbrIconVisible')]]" i18n-abbr="false"></button></li>
+        </ul>
+        <div class="wrap_btn">
+            <content></content>
+        </div>
+        <template id="popupfooter">
+    		<div class="hbox">
+				<sc-spacer></sc-spacer>
+				<sc-checkbox-field id="poppfotterCheckbox" label="하루동안 열지 않기"  name="hidden_yn" input-value="{{value.hidden_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+			</div>
+    	</template>
+    
+    </template>
+    <script>
+		var alignBase = JSON.parse(JSON.stringify({
+			top: 'center', // start, center, end
+			bottom: 'center', // start, center, end
+			left: 'center', // start, center, end
+			right: 'center', // start, center, end
+		}));
+		var marginBase = JSON.parse(JSON.stringify({
+			top: {
+				x: 0,
+				y: 0
+			},
+			bottom: {
+				x: 0,
+				y: 0
+			},
+			left: {
+				x: 0,
+				y: 0
+			},
+			right: {
+				x: 0,
+				y: 0
+			}
+		}));
+		var popoverData = {
+			'style': {
+				popoverAutoPosition: false,
+				position: 'right',
+				align: {
+					right: 'start'
+				},
+				margin: {
+					right: {
+						x: 20, y: 20
+					}
+				}
+			}
+		}
+        Polymer({
+            is: 'cc-page-title-bar',
+			resultList: {
+				type: Array,
+				value: function(){
+					return [];
+				}
+			},
+            formulas:{
+                /**
+                 * 부모 element 가 `<sc-window>`, `<sc-dialog>` 일 경우(팝업) `true` 를 반환 합니다.
+                 * `true` 일 경우 toolbar 기능(즐겨찾기, 메뉴얼)이 빌활성화 됩니다.
+                 *
+                 * @type {Boolean}
+                 */
+                toolbarHidden: function(){
+                    return (this._parentWindow instanceof  SCWindow || this._parentWindow instanceof  SCDialog);
+                },
+
+                /**
+                 * 즐겨찾기로 등록이 된 메뉴 일 경우 지정할 class 명을 지정합니다.
+                 *
+                 * @type {String}
+                 */
+                isFavorite: function(){
+                    var me = this;
+                    if('undefined' !== typeof SCMdiWindow && me._parentWindow instanceof SCMdiWindow){
+                        if(SCFavoriteManager.hasMenuFavorite(me._parentWindow.windowId)){
+                            return "a_is_favorite";
+                        }
+                    }
+                    return "";
+                },
+                /**
+                * 메뉴얼이 등록된 경우 표시 호출
+                *
+                */
+                isHelpMenual: function(){
+                    var me = this;
+                    if('undefined' !== typeof SCMdiWindow && me._parentWindow instanceof SCMdiWindow){
+                    	if(this._hasManual){
+                    		return "a_is_manual";
+                    	}
+                    }
+                    return "";
+                },
+				/**
+				 * 로케일에 따라 축약어 정보 아이콘 표시 여부 지정.
+				 *
+				 */
+				abbrIconVisible: function() {
+					return (SCLocaleManager.getLocale() === "en_US");
+                },
+				/**
+				 * 축약어가 존재 하는 경우 표시 호출.
+				 *
+				 */
+				isAbbreviations: function() {
+					var me = this;
+					var resultList = me.get("resultList");
+					
+					if(resultList.length > 0){
+						return "a_is_abbreviations";
+					}
+				}
+            },
+            attached: function(){
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    this._parentWindow = UT.closest(this,"sc-window") || UT.closest(this,"sc-dialog") || UT.closest(this, 'sc-mdi-window');
+                    this._setPageTitle();
+                    this._autoHelpShow();
+                    this.applyFormula();
+                }
+            },
+            _autoHelpShow: function(){
+            	var me = this;
+            	var activatedWindow = SCMenuManager.getWindow();
+                if(activatedWindow) {
+                	me.$.findInfoAutoManual.body = {
+                			menu_cd : activatedWindow.windowId
+                	};
+                	UT.request(me.$.findInfoAutoManual);
+                }
+            },
+            completeFindInfoAutoManual: function(e,res){
+            	var me = this;
+            	var lastResponse = res.response;
+            	this._hasManual = false;
+            	if(UT.isNotEmpty(lastResponse)){
+            		if(lastResponse.mnl_auto_pstg_yn ==="Y" && 'undefined' !== typeof SCMdiWindow && me._parentWindow instanceof SCMdiWindow){
+            			//팝업호출
+            			if(!me.isCookie()){
+            				me._onShowHelp();
+            			}
+            		}
+            		//화면표시
+            		this._hasManual = true;
+            	}
+            	this.applyFormula();
+            },
+            /**
+             * 메뉴얼을 보여줍니다.
+             *
+             * @private
+             */
+            _onShowHelp : function(){
+                var activatedWindow = SCMenuManager.getWindow();
+                var me = this;
+                var langCd = SCLocaleManager.getLocale();
+                
+                if(activatedWindow) {
+                    var request = document.createElement("sc-ajax");
+                    request.url = 'findHelpManualType.do';
+                    request.body = {menu_cd : activatedWindow.windowId};
+                    request.addEventListener("response", (function(event) {
+                        var response = event.detail.response;
+
+                        if(!response) {
+                            UT.alert("STD.ADM1054"); // 게시된 메뉴얼이 없습니다.
+                            return;
+                        }
+
+                        if(response.mnl_typ_ccd === "PDF"){
+                        	if(!UT.isEmpty(response.id)){
+                        		if(!UT.checkAdobeReader()){
+		                            UT.fileDownloadByAttId(response.id);
+                        		} else {
+                        			var url = "popupHelpManual.do?menuCd=" + activatedWindow.windowId+"&langCd="+langCd;
+                        			
+                        			var template = me.$.popupfooter;
+            	                	me.templatize(template);
+            	            		var instance = me.stamp(null);
+            	            		
+            	            		var checkbox = instance.root.querySelector("#poppfotterCheckbox");
+            	            		checkbox.addEventListener('checkchange', function(e){
+            	            			var checked = e.detail;
+            	            			var popup  = me.get("popupJsp");
+            	            			var today = new Date();
+            	            		    today.setDate(today.getDate() + 1);
+            	            		    document.cookie = "page-title_manual_" + activatedWindow.windowId + '=' + activatedWindow.windowId + '; path=/; expires=' + today.toGMTString() + ';'
+            	            		    popup.fire("close");
+            	            		    
+            	                    });
+            	            		
+            	            		var popup = UT.popupJsp(url, activatedWindow, '80%', '100%', null, {maximizable: true,titleText: this.translate("메뉴얼"),footerable: true, footertemplate: instance.root});
+            	            		me.set("popupJsp",popup);
+                        		}
+                        	} else {
+                        		UT.alert("STD.ADM1054"); // 게시된 메뉴얼이 없습니다.
+                                return;
+                        	}
+                        } else {
+                            var url = "popupHelpManual.do?menuCd=" + activatedWindow.windowId+"&langCd="+langCd;
+                            var template = me.$.popupfooter;
+    	                	me.templatize(template);
+    	            		var instance = me.stamp(null);
+    	            		
+    	            		var checkbox = instance.root.querySelector("#poppfotterCheckbox");
+    	            		checkbox.addEventListener('checkchange', function(e){
+    	            			var checked = e.detail;
+    	            			var popup  = me.get("popupJsp");
+    	            			var today = new Date();
+    	            		    today.setDate(today.getDate() + 1);
+    	            		    document.cookie = "page-title_manual_" + activatedWindow.windowId + '=' + activatedWindow.windowId + '; path=/; expires=' + today.toGMTString() + ';'
+    	            		    popup.fire("close");
+    	            		    
+    	                    });
+    	            		
+                            var popup = UT.popupJsp(url, activatedWindow, '80%', '100%', null, {maximizable: true,titleText: this.translate("메뉴얼"),footerable: true, footertemplate: instance.root});
+                            me.set("popupJsp",popup);
+                        } 
+                        
+                    }).bind(this));
+                    request.generateRequest();
+
+                }else {
+                    UT.alert("STD.ADM1026");	// "활성화된 메뉴가 없습니다."
+                }
+            },
+			// 축약어 팝오버 설정
+			_onShowAbbreviationsByPopover: function(e) {
+				var abbrInfo = this.getAbbrInfo();
+				var checkDuplicatedAbbrInfo = this.checkDuplicatedData(abbrInfo);
+				
+				var position = popoverData[e.target.value].position;
+				var align = popoverData[e.target.value].align;
+				var popoverAutoPosition = popoverData[e.target.value].popoverAutoPosition;
+				var margin = popoverData[e.target.value].margin;
+				
+				var createPopover = UT.popover('ep-abbreviations-list', this, 550, 350, {}, {});
+				
+				createPopover.popoverScroll = this;
+				createPopover.popoverPosition = position;
+				if (align) {
+					createPopover.popoverAlign = Object.assign({}, alignBase, align);
+				}
+				if (popoverAutoPosition !== undefined) {
+					createPopover.popoverAutoPosition = popoverAutoPosition;
+				} else {
+					createPopover.popoverAutoPosition = true;
+				}
+				if (margin !== undefined) {
+					createPopover.popoverMargin = Object.assign({}, marginBase, margin);
+				}
+				
+				createPopover.popoverBorderNone = false;
+				createPopover.show(e.target);
+				createPopover.getWindowContent().load(checkDuplicatedAbbrInfo);
+			},
+			
+			// 축약어 및 다국어 정보 수집
+			getAbbrInfo: function() {
+				var me = this,
+					target = me.parentElement,
+					abbrList = target.querySelectorAll("[i18n-abbr-text]");
+				
+				// 축약어 그리드 속성 설정
+				var resultArr = this.setTooltip(abbrList);
+				
+				if(resultArr.length > 0) {
+					for(var i=0; i<resultArr.length; i++) {
+						resultArr[i].setAttribute("show-tooltip", "true");
+					}
+				}
+				
+				// 축약어 팝오버 정보 설정
+				var resultList = [];
+				
+				for(var i=0; i<abbrList.length; i++) {
+					var abbrText = abbrList[i].getAttribute("i18n-abbr-text");
+					var translateText = abbrList[i].getAttribute("i18n-translate-text");
+					
+					if(UT.isNotEmpty(abbrText) && UT.isNotEmpty(translateText)){
+						resultList.push({"key" : abbrText, "value" : translateText});
+					}
+				}
+				
+				me.set("resultList", resultList);
+				
+				return resultList;
+			},
+			
+			// 수집된 축약어 정보 중복 제거
+			checkDuplicatedData: function(abbrInfo) {
+				var resultArr = [];
+				var flag = true;
+				
+				for(var i = 0; i < abbrInfo.length; i++){
+					flag = true;
+					
+					for(var j=0; j<resultArr.length; j++){
+						if(resultArr[j].key === abbrInfo[i].key){
+							flag = false;
+						}
+					}
+					
+					if(flag){
+						resultArr.push(abbrInfo[i]);
+					}
+				}
+				
+				return resultArr;
+			},
+			
+			// 축약어 tooltip 설정
+			setTooltip : function(abbrList) {
+				var resultArr = [];
+				this.setTooltipStyles(abbrList);
+				
+				for(var i=0; i<abbrList.length; i++) {
+					var translateText = abbrList[i].getAttribute("i18n-translate-text");
+					abbrList[i].setAttribute("tooltip", translateText);
+				}
+				
+				for(var j=0; j<abbrList.length; j++) {
+					var tagName = abbrList[j].tagName.toLowerCase();
+					var searchTagName = "column";
+					
+					if(tagName.includes(searchTagName)) {
+						var findGridElement = UT.closest(abbrList[j], "sc-grid");
+						resultArr.push(findGridElement);
+					}
+				}
+				
+				resultArr = resultArr.filter((value ,index) => resultArr.indexOf(value) === index);
+				
+				return resultArr;
+			},
+			
+			// 축약어 아이콘 설정
+			setTooltipStyles: function(abbrList) {
+				for(var i=0; i<abbrList.length; i++) {
+					var abbr = abbrList[i];
+					var isClass = "isClass";
+					var hasClass = abbr.classList.contains(isClass);
+					
+					if(!hasClass) {
+						abbr.classList.add("isClass");
+					}
+				}
+			},
+            
+            isCookie : function(){
+            	 var activatedWindow = SCMenuManager.getWindow();
+            	var isCookie = false;
+    			var cookieData = document.cookie;
+                var cookieArr = null;
+                var cookieList = null;
+                if (cookieData != null && cookieData !== "") {
+                	cookieArr = cookieData.split(';');
+                	cookieList = new Array();
+                	cookieArr.forEach(function (element, index) {
+                		cookieObj = {};
+                		var data = element.split('=');
+                		if(data[0].indexOf("page-title_manual_") > -1)
+                			if(data[1] === activatedWindow.windowId){
+                				isCookie = true;
+                			}
+                			//cookieList.push(data[1]);
+                    });
+                }
+                return isCookie;
+    		},
+
+            behaviors:[
+               Polymer.CCTitleBarBehavior,
+               Polymer.Templatizer
+           ]
+        });
+    </script>
+</dom-module>

@@ -1,0 +1,46 @@
+<sc-link rel="import" href="es-arbitrary-manage-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-manage-detail.html"></sc-link>
+
+<dom-module id="em-arbitrary-manage">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-pages id="pages" selected="0" class="fit">
+            <es-arbitrary-manage-list id="list" on-selected-aprv-type="onSelectedAprvType"></es-arbitrary-manage-list>
+            <template>
+                <es-arbitrary-manage-detail id="detail" on-close="onShowList"></es-arbitrary-manage-detail>
+            </template>
+        </sc-pages>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-arbitrary-manage",
+
+            // 결재 유형 선택됨.
+            onSelectedAprvType: function(e, data) {
+                var me = this;
+
+                me.$.pages.selectItem(me.$.detail);
+                me.$.detail.load(data);
+            },
+
+            // 결재 유형 목록 조회.
+            onShowList: function(e, data) {
+                var me = this;
+
+                me.$.pages.selectItem(me.$.list);
+                me.$.list.load();
+            }
+
+        });
+    </script>
+
+</dom-module>

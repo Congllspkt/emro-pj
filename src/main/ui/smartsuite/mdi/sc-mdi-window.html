@@ -1,0 +1,258 @@
+<sc-link rel="import" href="./popup/sc-mdi-authentication.html" lazy></sc-link>
+<dom-module id="sc-mdi-window">
+	<template>
+		<content></content>
+	</template>
+	<script>
+		SCMdiWindow = Polymer({
+	    	
+			is: 'sc-mdi-window',
+	    	
+	    	properties: {
+	    		
+	    		lazy : {
+	    			type : Object,
+	    			value : false
+	    		},
+	    		
+				windowId : {
+					type: String,
+					reflectToAttribute: true
+				},
+				
+				windowName : {
+					type : String
+				},
+				
+				windowUrl : {
+					type : String
+				},
+				
+				authentication : {
+					type : Object
+				},
+				
+				params: {
+					type: Object
+				},
+				
+				initializedCallback: {
+					type: Function
+				},
+				
+				mdiManager: {
+                	type: Object
+                }
+			},
+
+			factoryImpl : function(config) {
+				this.mixin(this, config);
+				if(!this.lazy) {
+					this.loadModule();
+				}
+			},
+
+			isMdiWindow : true,
+
+			getMenuId: function(){
+				return this.windowId;
+			},
+
+            getMenuNm: function(){
+                return this.windowName;
+            },
+
+			get mdiWindowPadding() {
+				if(this._mdiWindowPadding === undefined) {
+					this._mdiWindowPadding = Number(this.getComputedStyleValue('padding-left').replace('px', '')) * 2;
+				}
+				return this._mdiWindowPadding;
+			},
+
+			get mdiWindowPaddingBottom() {
+				if(this._mdiWindowPaddingBottom === undefined) {
+					this._mdiWindowPaddingBottom = Number(this.getComputedStyleValue('padding-bottom').replace('px', '')) * 2;
+				}
+				return this._mdiWindowPaddingBottom;
+			},
+
+			get mdiContentBorderBottom() {
+				if(this._mdiContentBorderBottom === undefined) {
+					this._mdiContentBorderBottom = Number(this.parentElement.getComputedStyleValue('border-bottom-width').replace('px', ''));
+				}
+				return this._mdiContentBorderBottom;
+			},
+
+			get mdiContentBorderLeft() {
+				if(this._mdiContentBorderLeft === undefined) {
+					this._mdiContentBorderLeft = Number(this.parentElement.getComputedStyleValue('border-left-width').replace('px', '')) * 2;
+				}
+				return this._mdiContentBorderLeft;
+			},
+
+			attached : function() {
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		        }
+	// 			this._mdiWindowResize();
+			},
+
+			/* _onMdiWindowIronResize : function() {
+				if(!this.classList.contains('item-selected')) {
+					return;
+				}
+				if(this._mdiWindowResizeAsync) {
+					this.cancelAsync(this._mdiWindowResizeAsync);
+				}
+				this._mdiWindowResizeAsync = this.async(this._mdiWindowResize, 0);
+			}, */
+
+			_mdiWindowResize : function() {
+				var rect = this.parentElement.getBoundingClientRect();
+				this.style.width = (rect.width - this.mdiWindowPadding - this.mdiContentBorderLeft) + 'px';
+				this.style.height = (rect.height - this.mdiWindowPaddingBottom - this.mdiContentBorderBottom) + 'px';
+				//delete this._mdiWindowResizeAsync;
+				//Polymer.dom(this).flush();				
+			},
+			
+			getQueryParams: function (qs) {
+			    qs = qs.slice(qs.indexOf('?')+1);
+			    var params = {},
+			        tokens,
+			        re = /[?&]?([^=]+)=([^&]*)/g;
+			    while (tokens = re.exec(qs)) {
+			        params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
+			    }
+			    return params;
+			},
+			
+			checkAuthentication : function() {
+				var me = this,
+					handler = function() {
+						me.unlisten(me.authentication, 'sc-mdi-window-load', loadHandler);
+						me.unlisten(me.authentication, 'sc-mdi-window-close', closeHandler);
+					},
+					loadHandler = function() {
+						handler();
+						me.closeAuthentication();
+						me.loadModule();
+					},
+					closeHandler = function() {
+						handler();
+						this.mdiManager.removeWindow(me.windowId);
+					};
+				
+				if(SCMenuManager.isAdminMenu(this.windowId) && SCSessionManager.isAdminAdditionalAuthentication() && !SCSessionManager.isRoleAdmin() && !me.authentication) {
+					this.importLinkByTagName('sc-mdi-authentication', function() {
+						if(!me.authentication) {
+							me.authentication = document.createElement('sc-mdi-authentication');
+							Polymer.dom(me).appendChild(me.authentication);
+							me.authentication.show();
+							me.listen(me.authentication, 'sc-mdi-window-load', loadHandler);
+							me.listen(me.authentication, 'sc-mdi-window-close', closeHandler);
+						}
+					});
+					return false;
+				}
+				else {
+					if(me.authentication && this.authentication.isShowing()) {
+						me.closeAuthentication();
+						me.loadModule();
+					}
+					return true;
+				}
+			},
+			
+			closeAuthentication : function() {
+				var me = this;
+				me.authentication.hide();
+				Polymer.dom(me).removeChild(me.authentication);
+				me.authentication = undefined;
+			},
+			
+			loadModule : function(async) {
+				this.fire('window-module-load', null, {bubbles : false});
+				var me = this,
+					callback = function(message, failed) {
+						SCMdiProgress.hide();
+						if(failed === true) {
+                            me.fire('window-module-load-failure', null, {bubbles : false});
+                        }
+						if(message) {
+							UT.alert("STD.N1000", message);
+							this.mdiManager.removeWindow(me.windowId);
+						}
+					},
+					success = function(moduleId) {
+						var module, params;
+						if(!moduleId) {
+							callback("STD.MDI1010", true);
+							return;
+						}
+						if(!SCRoleManager.hasRole(me.windowUrl, me.windowId, arguments)) {
+							callback("STD.MDI1011", true);
+							return;
+						}
+						
+						params = Polymer.Base.mixin(me.params || {}, me.getQueryParams(me.windowUrl));
+						params.menu_cd = me.windowId;
+						
+						moduleId = params['moduleId'] || moduleId;
+						module = document.createElement(moduleId);
+
+                        module.params = params;
+
+                        var initializedHandler = function() {
+                            me.module = module; //sc-mdi-window의 module 프로퍼티에 담아서 사용
+                            me.unlisten(module,"initialized",initializedHandler);
+                            me.fire('window-module-loaded', module, {bubbles : false});
+                            if (typeof me.initializedCallback == "function") {
+                                me.initializedCallback.call(module, module);
+                            }
+                        }
+                        me.listen(module,"initialized",initializedHandler);
+
+						SCMdiProgress.value(100);
+                        Polymer.dom(me).appendChild(module);
+                        Polymer.dom.flush();
+                        requestAnimationFrame(callback.bind(this, null));
+                    },
+					failure = function(event) {
+						callback(null, true);
+						me = null;
+					},
+					progress = function(value) {
+						SCMdiProgress.value(value);
+					};
+				if(me.checkAuthentication()) {
+					SCMdiProgress.show(me.windowName);
+					SCPreloader.onModuleReady(function() {
+						requestAnimationFrame(function() {
+							var importUrl = me.windowUrl;
+							if(!importUrl) {
+								SCMdiProgress.hide();
+								return;
+							}
+							if(importUrl.indexOf('?') > -1){
+								importUrl = importUrl.slice(0, importUrl.indexOf('?'));	
+							}
+							me.importLink(importUrl, success, failure, progress);
+						});
+					});
+				}
+			},
+            
+            _destroy: function(){
+                this.module = null;
+				this.lazy = null;
+				this.params = null;
+				this.windowId = null;
+				this.windowName = null;
+				this.windowUrl = null;
+				this.authentication = null;
+				this.initializedCallback = null;
+			}
+	  	});
+	</script>
+</dom-module>

@@ -1,0 +1,102 @@
+<!-- 
+ author : JongHyeok Choi 
+ Since 2016. 11. 18.
+ 변경이력 : [2016. 11. 18.] JongHyeok Choi 최초 작성 
+-->
+<dom-module id="cc-email-field">
+    <style>
+        :host {
+			display: inline-block;
+		}   
+    </style>
+    <template>
+       <div style="display:flex;">
+			<sc-text-field class="w-100" value="{{address}}" ></sc-text-field>@<sc-text-field id="domain" class="w-150" value="{{domain}}" disabled="[[disabled]]"></sc-text-field>
+	        <sc-combobox-field class="w-150" items="{{domainList}}" value="{{selectedValue}}"></sc-combobox-field>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is : 'cc-email-field',
+            properties : {
+            	domainList: {
+            		type: Array,
+            		value: function() {
+            			var me = this;
+            			
+            			return [
+							 {text : me.translate("직접 입력")		, value :""}
+           			        ,{text :"gmail.com"		, value :"gmail.com"}
+           			     	,{text :"hanmail.net"	, value :"hanmail.net"}
+           			     	,{text :"nate.com"		, value :"nate.com"}
+           			        ,{text :"naver.com"		, value :"naver.com"}
+           			        ,{text :"yahoo.com"		, value :"yahoo.com"}
+           			        ,{text :"outlook.com"	, value :"outlook.com"}
+           			        ,{text :"hotmail.com"	, value :"hotmail.com"}
+            			];
+            		}
+            	},
+            	//값이 저장됨
+            	selectedValue: {
+            		type: String,
+            		reflectToAttribute: true,
+            		observer: '_changeSelectedValue'
+            	},
+            	
+            	disabled: Boolean,
+            	address: String,
+            	domain: String,
+            	value: {
+            		type: String,
+            		notify: true
+            	}
+            },
+            
+            observers: ['_getEmail(value)', '_setEmail(address, domain)'],
+
+            _getEmail: function(value) {
+            	var me = this;
+            	
+            	if(!value) {
+            		me.set("address", "");
+	            	me.set("domain", "");
+	            	me.set("selectedValue", "");
+            	} else {
+	            	var valueArr = value.split('@');
+	            	me.set("address", valueArr[0]);
+	            	me.set("domain", valueArr[1]);
+            	}
+            },
+            
+            _setEmail: function(address, domain) {
+            	var me = this;
+
+            	me.set("value", address + "@" + domain);
+            },
+            
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this._changeSelectedValue();
+                }
+            },
+            
+            _changeSelectedValue: function(selectedValue) {
+            	var me = this; 
+            	
+            	if(!selectedValue) {
+            		me.set("selectedValue", "");
+            		me.set("disabled", false);
+            		me.set("value", "");
+            		me.set("domain", "");
+            		this.$.domain.focus();
+            	} else {
+            		me.set("disabled", true);
+            		me.set("domain", selectedValue);
+            	}
+            }
+        });
+    </script>
+</dom-module>

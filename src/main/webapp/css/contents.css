@@ -1,0 +1,82 @@
+@charset "utf-8";
+
+/*~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ 
+2016.07.01 KCM
+E-PROCUREMENT SYSTEM Contents Css
+~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~*/
+
+@import url(main.css);
+
+/* 공통 */
+.mgt5{margin-top : 5px !important;}
+.mgt10{margin-top : 10px !important;}
+.mgt15{margin-top : 15px !important;}
+.mgt17{margin-top : 17px !important;}
+.mgt20{margin-top : 20px !important;}
+.mgt25{margin-top : 25px !important;}
+.mgt30{margin-top : 30px !important;}
+.mgt40{margin-top : 40px !important;}
+.mgt50{margin-top : 50px !important;}
+.mgt70{margin-top : 70px !important;}
+.mgl5{margin-left : 5px;}
+.mgl10{margin-left : 10px !important;}
+.mgl15{margin-left : 15px !important;}
+.mgl18{margin-left : 18px !important;}
+.mgl20{margin-left : 20px !important;}
+.mgl25{margin-left : 25px !important;}
+.mgl30{margin-left : 30px !important;}
+.mgl120{margin-left : 120px !important;}
+.mgl350{margin-left : 350px !important;}
+.mgr5{margin-right : 5px !important;}
+.mgr7{margin-right : 7px !important;}
+.mgr20{margin-right : 20px !important;}
+.mgr55{margin-right : 55px !important;}
+.mgr63{margin-right : 63px !important;}
+.txtC{text-align: center !important;}
+.txtL{text-align: left !important;}
+
+.container_contents{width:100%; background:#fff;width : 1000px; margin : 0 auto; margin-top : 40px; }
+.header{border-bottom : 1px solid #e8e8e8; padding-bottom : 16px;}
+
+/* 메뉴 타이틀 */
+.conts_title{font-size : 21px; font-weight: bold;background-image: url(../img/contents/bullet_menu.png); background-repeat: no-repeat; background-position: 0 8px;padding-left : 16px; color : #686868;}
+
+/* 메뉴 패스 */
+.menu_path{height : 42px; background-color: #f2f2f2; margin : 25px 0 50px 0; padding-left : 22px;}
+.menu_path ul li{float: left;margin : 10px 15px 0 0; }
+.menu_path ul li a{font-size : 16px; margin-right : 7px; margin-top : 1px;}
+.menu_path ul li a:hover{text-decoration: underline;}
+.icon_home{margin : 0 7px 5px 0;}
+select{height : 28px; padding-left : 6px; margin-top : -3px; width : 150px; font-size: 15px; font-weight : bold;}
+option{line-height: 22px;}
+
+/* 메뉴 탭 */
+.menu_tab{margin-top : 47px; border-bottom : 1px solid #919191; height : 36px;}
+.menu_tab li{float: left; border-top : 1px solid #919191; border-left : 1px solid #919191; }
+.menu_tab .last{border-right : 1px solid #919191;}
+.menu_tab li a{font-size : 14px; width : 140px; height : 27px; text-align: center; padding-top : 8px; color : #777;}
+.menu_tab li a:hover{background-color: #f2f2f2; font-weight : bold;font-size : 15px;}
+.cur_menu{background-color: #d4e9cb; font-weight : bold;font-size : 15px !important; color : #707070 !important;}
+
+
+/* 공지사항 리스트 */
+.table {border-collapse:collapse; width:100%; margin-top : 35px;border-top: 2px solid; margin : 0 auto;}
+.table th {border:1px solid #d9d9d9; height:32px; background-color:#f5f5f5; border-top: none; border-left: none; padding : 6px 0;}
+.table td {border:1px solid #d9d9d9; text-align:center; border-left: none; padding: 10px 0 10px 0; }
+.notice_tit{text-align: left !important ; padding-left: 15px !important; }
+.notice_tit a{text-overflow:ellipsis; white-space:nowrap; overflow: hidden; width : 520px;}
+.notice_tit a:hover{color : #848484;}
+.bdn{border-right: none !important; }
+
+/* 공지사항 상세 */
+.bcg{border:1px solid #d9d9d9; background-color:#f5f5f5; border-top: none; border-left: none;}
+.memo{padding: 20px;min-height : 130px;}
+.bdrn2{text-align: left !important ; padding-left: 15px !important;}
+.bdrn{border-right: none !important; text-align: left !important ; padding-left: 15px !important; border-top: none !important;}
+.tableBtn{padding-top: 30px ; text-align: right;}
+.tableBtn a{text-align: center;width : 80px; height : 24px; background-color: #868686; padding-top :5px; font-weight: bold; color : #fff;}
+.tableBtn a:hover{background-color: #959595;} 
+
+/* 컨텐츠 */
+.contents{margin : 30px 0 0 0; min-height : 460px;}
+

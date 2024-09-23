@@ -1,0 +1,151 @@
+<dom-module id="ep-cur-list">
+<!-- 
+/**
+ *
+ *	@description : 통화검색팝업
+ *  <pre>
+ 	클라우드 화 완료
+ * </pre>
+ * @FileName : 
+ */
+-->
+    <style>
+       :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+<!-- 
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+ -->
+ 		<!-- 조회 -->
+        <sc-ajax id="findListPrecisionFormatCur"
+        	url="findListPrecisionFormatCur.do"
+        	body="{{searchParam}}" 
+        	last-response="{{resultList}}"></sc-ajax>
+            
+<!--  
+	************************************************************************************************************
+	* UI Area
+	************************************************************************************************************
+-->
+        <div class="vbox flex">
+			<cc-search-condition-panel on-search="onSelectList" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="코드"></sc-label>
+					<sc-text-field value="{{searchParam.dtlcd}}" on-enter="onSelectList" max-length="36"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+             <sc-grid id="gridPanel" class="flex"	data-provider="{{resultList}}" use-state="false"	use-selection="false"	selection-mode="[[formula('selectionMode')]]"
+             						on-item-click="onDataCellClicked">
+         		<cc-grid-toolbar></cc-grid-toolbar>
+             	<sc-grid-columns>
+             		<sc-data-column data-field="dtlcd"			header-text="코드"		width="100"	style-name="link"></sc-data-column>
+             		<sc-data-column	data-field="dtlcd_nm"		header-text="코드 명"	width="100"></sc-data-column>
+             	</sc-grid-columns>
+             	<sc-grid-fields>
+             		<sc-data-field data-field="prec"></sc-data-field>
+             	</sc-grid-fields>
+             </sc-grid>
+        </div>
+    </template>
+    
+<!--  
+	************************************************************************************************************
+	* Script Area
+	************************************************************************************************************
+-->
+    <script>
+        Polymer({
+            is: "ep-cur-list",
+            properties: {
+            	titleText:{
+                    type: String,
+    				value: I18N.translate('통화 검색')
+    			},
+    			
+            	// 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+                
+                resultList: {
+                	type: Array,
+                	value: function(){
+                		return [];
+                	}
+                },
+                
+                singleSelect: {
+                    type: Boolean,
+                    value: false
+                }
+            },
+            formulas: {
+            	selectionMode: function(){
+            		var me = this;
+            		return (me.get("singleSelect") ? "radio" : "check");
+            	}
+            },
+
+            //load
+			load: function(options){
+				var me = this;
+				me.setOptions(options);
+				me.onSelectList();
+			},
+         	// 자동완성용(UT.autoCompleteObject) find list url
+            getAjaxUrl: function() {
+                var me = this;
+                
+                return me.$.findListPrecisionFormatCur.url;
+            },
+            
+            // 옵션 설정
+            setOptions: function(options) {
+                var me = this;
+                options = options || {};
+                me.set("singleSelect", UT.isBoolean(options.singleSelect) ? options.singleSelect : false);
+                me.set("autoComplete", UT.isBoolean(options.autoComplete) ? options.autoComplete : false);
+                me.applyFormula();
+                if (UT.isObject(options.defaultParam)) {
+                    me.set("searchParam", options.defaultParam);
+                }
+                
+                if (UT.isArray(options.dataRows)) { // 배열 데이터
+                	me.$.gridPanel.setDataProvider(options.dataRows);
+                }
+            },
+            //그리드 데이타 셀 클릭함수
+            onDataCellClicked: function(event){
+            	var me = this, detail = event.detail,
+            	data = detail.data,
+            	item = detail.item,
+            	fieldName = item.dataField,
+            	itemIndex = item.rowIndex;
+            	
+            	if(fieldName === "dtlcd"){
+                    me.fire("selected-item", data);
+        		}
+            	
+            },
+            // 검색(조회)
+            onSelectList: function() {
+                var me = this;
+                UT.request(me.$.findListPrecisionFormatCur);
+            },
+
+             behaviors:[
+                        Polymer.CCAutocompleteBehavior
+                    ]
+        });
+    </script>
+
+</dom-module>

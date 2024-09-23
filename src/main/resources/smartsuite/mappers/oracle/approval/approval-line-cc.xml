@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+APVL: 결재마스터
+APVL_BODY: 결재본문
+ESGAMLK: 업무결재연동
+APVLLN_APVR_PRGS_STS: 결재선
+ -->
+
+<mapper namespace="approval-line-cc">
+	
+	<delete id="deleteApprovalLineCcByApprovalUuid">
+		/* approval-line-cc.deleteApprovalLineCcByApprovalUuid: 수신참조 모두 삭제 */
+		DELETE FROM APVL_RDG
+		 WHERE TEN_ID = #{g.tenant}
+		   AND APVL_UUID = #{p.apvl_uuid}
+	</delete>
+	
+	<insert id="insertApprovalLineCc">
+		/* approval-line-cc.insertApprovalLineCc: 결재선 등록 */
+		INSERT INTO APVL_RDG (
+			TEN_ID
+			, APVL_UUID
+			, RDG_UUID
+			, USR_ID
+			, RDG_TYP_CCD
+			, USR_DEPT_NM
+			, USR_JOBTIT_NM
+			, RMK
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		) VALUES (
+			#{g.tenant}
+			, #{p.apvl_uuid}
+			, #{p.rdg_uuid}
+			, #{p.usr_id}
+			, #{p.rdg_typ_ccd}
+			, #{p.usr_dept_nm}
+			, #{p.usr_jobtit_nm}
+			, #{p.rmk}
+			, 'C'
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+		)
+	</insert>
+	
+	<update id="updateApprovalLineCc">
+		UPDATE APVL_RDG
+		   SET RDG_TYP_CCD = #{p.rdg_typ_ccd}
+		 WHERE TEN_ID = #{g.tenant}
+		   AND APVL_UUID = #{p.apvl_uuid}
+		   AND RDG_UUID = #{p.rdg_uuid}
+	</update>
+	
+	<delete id="removeApprovalLineCc">
+		DELETE
+		  FROM APVL_RDG
+		 WHERE TEN_ID = #{g.tenant}
+		   AND APVL_UUID = #{p.apvl_uuid}
+		   AND RDG_UUID = #{p.rdg_uuid}
+	</delete>
+	
+	<select id="findListApprovalLineCc" resultType="map">
+		SELECT APVL_RDG.APVL_UUID
+		     , APVL_RDG.RDG_UUID
+		     , APVL_RDG.USR_ID
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS USR_NM
+		     , APVL_RDG.RDG_TYP_CCD
+		     , APVL_RDG.RDG_TYP_CCD AS ORIGIN_RDG_TYP_CCD
+		     , APVL_RDG.USR_DEPT_NM
+		     , APVL_RDG.USR_JOBTIT_NM
+		     , USR.POSI_CCD
+		     , DTLCD_MULTLANG.DTLCD_NM AS POSI_NM
+		  FROM APVL_RDG APVL_RDG
+		 INNER JOIN USR USR
+		    ON USR.TEN_ID = APVL_RDG.TEN_ID
+		   AND USR.USR_ID = APVL_RDG.USR_ID
+		  LEFT OUTER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+		    ON DTLCD_MULTLANG.TEN_ID = USR.TEN_ID
+		   AND DTLCD_MULTLANG.DTLCD  = USR.POSI_CCD
+		   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		   AND DTLCD_MULTLANG.CCD    = 'C005'
+		 WHERE APVL_RDG.TEN_ID = #{g.tenant}
+		   AND APVL_RDG.APVL_UUID = #{p.apvl_uuid}
+	</select>
+	
+	<select id="findListApprovalLineCcForReSubmit" resultType="map">
+		SELECT '' AS APVL_UUID
+		     , '' AS RDG_UUID
+		     , APVL_RDG.USR_ID
+		     , CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+		            ELSE USR.USR_NM
+		        END AS USR_NM
+		     , APVL_RDG.RDG_TYP_CCD
+		     , APVL_RDG.USR_DEPT_NM
+		     , APVL_RDG.USR_JOBTIT_NM
+		     , USR.POSI_CCD
+		     , DTLCD_MULTLANG.DTLCD_NM AS POSI_NM
+		  FROM APVL_RDG APVL_RDG
+		 INNER JOIN USR USR
+		    ON USR.TEN_ID = APVL_RDG.TEN_ID
+		   AND USR.USR_ID = APVL_RDG.USR_ID
+		  LEFT OUTER JOIN DTLCD_MULTLANG DTLCD_MULTLANG
+		    ON DTLCD_MULTLANG.TEN_ID = USR.TEN_ID
+		   AND DTLCD_MULTLANG.DTLCD  = USR.POSI_CCD
+		   AND DTLCD_MULTLANG.LANG_CCD = #{g.locale}
+		   AND DTLCD_MULTLANG.CCD    = 'C005'
+		 WHERE APVL_RDG.TEN_ID = #{g.tenant}
+		   AND APVL_RDG.APVL_UUID = #{p.apvl_uuid}
+	</select>
+</mapper>

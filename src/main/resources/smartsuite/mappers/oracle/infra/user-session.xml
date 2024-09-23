@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="user-session">
+
+	<select id="findUserNameAndPassword" resultType="smartsuite.security.userdetails.User">
+		SELECT USR_ID AS USERNAME, PWD AS PASSWORD
+		  FROM USR
+		WHERE USR_ID = #{p}
+		AND TEN_ID = #{g.tenant}
+        AND USR_TYP_CCD ='BUYER'
+		AND  STS != 'D'
+	</select>
+	<select id="findUserNameAndPasswordForSupplier" resultType="smartsuite.security.userdetails.User">
+		SELECT USR_ID AS USERNAME, PWD AS PASSWORD
+		  FROM USR
+		WHERE USR_ID = #{p}
+		AND TEN_ID = #{g.tenant}
+          AND USR_TYP_CCD ='VD'
+		AND  STS != 'D'
+	</select>
+
+	<select id="findUserSessionInfo" parameterType="String"  resultType="map">
+    /* user-session.findUserSessionInfo */
+    SELECT US.USR_ID
+         , US.CO_CD
+         , CASE WHEN 'en_US' = #{g.locale} THEN OG.LOGIC_ORG_NM_EN
+                ELSE OG.LOGIC_ORG_NM
+           END AS COMP_NM
+         , US.USR_NM
+         , US.USR_NM_EN
+         , CASE WHEN 'en_US' = #{g.locale} THEN US.USR_NM_EN
+                ELSE US.USR_NM
+            END AS DISP_USR_NM
+         , US.USR_TYP_CCD
+         , US.POSI_CCD
+		 , (SELECT A.DTLCD_NM FROM DTLCD_MULTLANG A
+			WHERE A.TEN_ID = #{g.tenant} AND A.CCD = 'C005' AND A.DTLCD = US.POSI_CCD
+			AND A.LANG_CCD = #{g.locale} ) AS POSI_NM
+         , US.EMPNO
+         , US.DEPT_CD
+         , DP.DEPT_NM
+         , DP.DEPT_NM_EN
+         , CASE WHEN 'en_US' = #{g.locale} THEN DP.DEPT_NM_EN
+                ELSE DP.DEPT_NM
+            END AS DISP_DEPT_NM
+         , US.VD_CD
+         , US.MOB
+         , US.TEL
+         , US.FAX
+         , US.EML
+         , US.ACCT_EXP_YN
+         , US.ACCT_LCKD_YN
+         , US.PWD_CHG_REQD_YN
+         , US.PRE_LOGIN_DTTM
+         , US.PRE_LOGIN_IP
+         , US.LAST_LOGIN_DTTM
+         , US.LAST_LOGIN_IP
+         , US.USE_YN
+         , US.PWD_INIT_YN
+         , US.PWD_CHG_DTTM
+         , US.EML_RCPT_YN
+         , US.SMS_RCPT_YN
+         , US.TMZ_CCD
+         , US.JOBTIT_CCD
+         , (SELECT A.DTLCD_NM
+              FROM DTLCD_MULTLANG A
+			 WHERE A.TEN_ID = #{g.tenant}
+			   AND A.CCD = 'G012'
+			   AND A.DTLCD = US.JOBTIT_CCD
+			   AND A.LANG_CCD = #{g.locale} ) AS DISP_JOBTIT_NM
+         , US.HOME_SCR_TYP_CCD
+         , US.LBL_SORT_TYP_CCD
+      FROM USR US
+     LEFT OUTER JOIN LOGIC_ORG OG
+        ON US.TEN_ID = OG.TEN_ID
+       AND US.CO_CD = OG.LOGIC_ORG_CD
+       AND OG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+       AND OG.STS != 'D'
+       LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG OMD
+       ON  OG.TEN_ID = OMD.TEN_ID
+       AND OG.LOGIC_ORG_CD = OMD.LOGIC_ORG_CD
+       AND US.DEPT_CD = OMD.DEPT_CD
+      LEFT OUTER JOIN DEPT DP
+        ON US.TEN_ID = DP.TEN_ID
+       AND US.CO_CD = OMD.LOGIC_ORG_CD
+        AND US.DEPT_CD = DP.DEPT_CD
+        AND OMD.DEPT_CD = DP.DEPT_CD
+       AND DP.STS != 'D'
+     WHERE US.TEN_ID = #{g.tenant}
+       AND US.USR_ID = #{p}
+       AND US.STS != 'D'
+    </select>
+
+	<select id="findSupplierUserSessionInfo" parameterType="String"  resultType="map">
+    /* user-session.findSupplierUserSessionInfo */
+    SELECT US.USR_ID
+         , US.CO_CD
+         , CASE WHEN 'en_US' = #{g.locale} THEN OG.LOGIC_ORG_NM_EN
+                ELSE OG.LOGIC_ORG_NM
+           END AS COMP_NM
+         , US.USR_NM
+         , US.USR_NM_EN
+         , CASE WHEN 'en_US' = #{g.locale} THEN US.USR_NM_EN
+                ELSE US.USR_NM
+            END AS DISP_USR_NM
+         , US.USR_TYP_CCD
+         , US.POSI_CCD
+		 , (SELECT A.DTLCD_NM FROM DTLCD_MULTLANG A
+			WHERE A.TEN_ID = #{g.tenant} AND A.CCD = 'C005' AND A.DTLCD = US.POSI_CCD
+			AND A.LANG_CCD = #{g.locale} ) AS POSI_NM
+         , CASE WHEN 'en_US' = #{g.locale} THEN VD.VD_NM_EN
+                ELSE VD.VD_NM END AS VD_NM
+         , VD.ERP_VD_CD
+         , US.EMPNO
+         , US.DEPT_CD
+         , DP.DEPT_NM
+         , DP.DEPT_NM_EN
+         , CASE WHEN 'en_US' = #{g.locale} THEN DP.DEPT_NM_EN
+                ELSE DP.DEPT_NM
+            END AS DISP_DEPT_NM
+         , US.VD_CD
+         , US.MOB
+         , US.TEL
+         , US.FAX
+         , US.EML
+         , US.ACCT_EXP_YN
+         , US.ACCT_LCKD_YN
+         , US.PWD_CHG_REQD_YN
+         , US.PRE_LOGIN_DTTM
+         , US.PRE_LOGIN_IP
+         , US.LAST_LOGIN_DTTM
+         , US.LAST_LOGIN_IP
+         , US.USE_YN
+         , US.PWD_INIT_YN
+         , US.PWD_CHG_DTTM
+         , US.EML_RCPT_YN
+         , US.SMS_RCPT_YN
+         , US.TMZ_CCD
+         , US.JOBTIT_CCD
+         , US.HOME_SCR_TYP_CCD
+         , US.LBL_SORT_TYP_CCD
+      FROM USR US
+     LEFT OUTER JOIN LOGIC_ORG OG
+        ON US.TEN_ID = OG.TEN_ID
+       AND US.CO_CD = OG.LOGIC_ORG_CD
+       AND OG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+       AND OG.STS != 'D'
+       LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG OMD
+       ON  OG.TEN_ID = OMD.TEN_ID
+       AND OG.LOGIC_ORG_CD = OMD.LOGIC_ORG_CD
+       AND US.DEPT_CD = OMD.DEPT_CD
+      LEFT OUTER JOIN DEPT DP
+        ON US.TEN_ID = DP.TEN_ID
+       AND US.CO_CD = OMD.LOGIC_ORG_CD
+        AND US.DEPT_CD = DP.DEPT_CD
+        AND OMD.DEPT_CD = DP.DEPT_CD
+       AND DP.STS != 'D'
+      LEFT OUTER JOIN VD VD
+      ON US.TEN_ID = VD.TEN_ID
+      AND US.VD_CD = VD.VD_CD
+      AND VD.STS != 'D'
+     WHERE US.TEN_ID = #{g.tenant}
+       AND US.USR_ID = #{p}
+       AND US.STS != 'D'
+       AND US.USR_TYP_CCD ='VD'
+    </select>
+
+	<select id="findUserAuthenticationInfo" parameterType="String"  resultType="map">
+		SELECT
+			PWD_INPERR_CNT
+			, PWD_INIT_YN
+			, LAST_LOGIN_DTTM
+			, LAST_LOGIN_IP
+			, ACCT_EXP_YN
+			, ACCT_LCKD_YN
+			, PWD_CHG_REQD_YN
+			, PRE_LOGIN_DTTM
+			, PRE_LOGIN_IP
+		  FROM USR
+		WHERE usr_id = #{p}
+		AND TEN_ID = #{g.tenant}
+	</select>	
+
+	<update id="updateUserAuthenticationFailCountAndAccountLock">
+		UPDATE USR
+			SET PWD_INPERR_CNT = #{p.pwd_inperr_cnt}
+			, ACCT_LCKD_YN = #{p.acct_lckd_yn}
+		WHERE USR_ID = #{p.usr_id}
+		AND TEN_ID = #{g.tenant}
+	</update>
+	
+	<update id="updateUserLoginClientIpAndDate">
+		UPDATE USR
+			SET LAST_LOGIN_IP = #{p.last_login_ip}
+			, LAST_LOGIN_DTTM = #{g.now}
+			, PWD_INPERR_CNT = 0
+		WHERE USR_ID = #{g.username}
+		AND TEN_ID = #{g.tenant}
+	</update>	
+	
+	<select id="findListRoleCodeByLoginUserSession" resultType="org.springframework.security.core.authority.SimpleGrantedAuthority">
+    /* user-session.findListRoleCodeByLoginUserSession */
+        SELECT AA.ROLE_CD AS "ROLE"
+          FROM ( /* user-role   union all   dept-role */
+                 SELECT AURP.ROLE_CD   /* 사용자-역할 */
+                   FROM ROLE_USR AURP
+                  INNER JOIN
+                        ROLE AURH
+                     ON (    AURP.TEN_ID    = AURH.TEN_ID
+                         AND AURP.ROLE_CD   = AURH.ROLE_CD
+                        )
+                  WHERE AURP.TEN_ID     = #{g.tenant}
+                    AND AURP.USR_ID     = #{p.usr_id}
+                    AND AURH.USE_YN     = 'Y'
+                    AND AURP.STS        != 'D'
+                    AND AURH.STS        != 'D'
+                <if test="p.dept_cd != null and p.dept_cd != ''">
+                
+                  UNION ALL
+                 
+                 SELECT DPROLE.ROLE_CD   /* 부서-역할 */
+                   FROM ROLE_DEPT DPROLE
+                  INNER JOIN ROLE AURH
+                     ON (    DPROLE.TEN_ID   = AURH.TEN_ID
+                         AND DPROLE.ROLE_CD  = AURH.ROLE_CD
+                        )
+
+                  WHERE DPROLE.TEN_ID        = #{g.tenant}
+                    AND DPROLE.DEPT_CD       = #{p.dept_cd}
+                    AND AURH.USE_YN        = 'Y'
+                    AND DPROLE.STS           != 'D'
+                    AND AURH.STS           != 'D'
+                    AND EXISTS ( SELECT 1
+                                   FROM DEPT DP
+                                   INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+                                   ON DP.TEN_ID = ODM.TEN_ID
+                                   AND DP.DEPT_CD = ODM.DEPT_CD
+                                  WHERE DP.TEN_ID     = DPROLE.TEN_ID
+                                    AND ODM.LOGIC_ORG_CD     = DPROLE.LOGIC_ORG_CD
+                                    AND DP.DEPT_CD    = DPROLE.DEPT_CD
+                                    AND DP.USE_YN     = 'Y'
+                                    AND DP.STS        != 'D' )
+                </if>
+               ) AA
+         GROUP BY AA.ROLE_CD
+	</select>
+</mapper>

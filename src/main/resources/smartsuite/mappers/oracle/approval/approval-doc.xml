@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+APVL: 결재마스터
+APVL_BODY: 결재본문
+ESGAMLK: 업무결재연동
+APVLLN_APVR_PRGS_STS: 결재선
+ -->
+
+<mapper namespace="approval-doc">
+
+    <insert id="insertApprovalDocument">
+    /* approval-doc.insertApprovalDocument: 결재본문 등록 */
+    INSERT 
+      INTO APVL_BODY (
+           TEN_ID
+         , APVL_UUID
+         , APVL_BODY_CONT
+         , USR_ADD_CONT
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.apvl_uuid}
+         , #{p.apvl_body_cont}
+         , #{p.usr_add_cont}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+
+    <update id="updateApprovalDocument">
+    /* approval-doc.updateApprovalDocument: 결재본문 수정 */
+    UPDATE APVL_BODY
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , APVL_BODY_CONT = #{p.apvl_body_cont}
+         , USR_ADD_CONT = #{p.usr_add_cont}
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </update>
+
+    <delete id="deleteApprovalDocument">
+    /* approval-doc.deleteApprovalDocument: 결재본문 삭제 */
+    DELETE 
+      FROM APVL_BODY
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </delete>
+    
+    <resultMap type="map" id="resultMap-findApprovalDocument">
+        <result property="apvl_body_cont" column="APVL_BODY_CONT"  jdbcType="CLOB" javaType="string" />
+        <result property="usr_add_cont" column="USR_ADD_CONT"  jdbcType="CLOB" javaType="string" />
+    </resultMap>
+    <select id="findApprovalDocument" resultMap="resultMap-findApprovalDocument">
+    /* approval-doc.findApprovalDocument: 결재본문 상세정보 조회 */
+    SELECT TEN_ID
+         , APVL_UUID
+         , APVL_BODY_CONT
+         , USR_ADD_CONT
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+      FROM APVL_BODY
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </select>
+    
+    <select id="findApprovalDocumentForReSubmit" resultMap="resultMap-findApprovalDocument">
+    /* approval-doc.findApprovalDocumentForReSubmit: 재상신용 결재본문 상세정보 조회 */
+    SELECT ''              AS APVL_UUID
+         , APVL_BODY_CONT    AS APVL_BODY_CONT
+         , USR_ADD_CONT    AS USR_ADD_CONT
+      FROM APVL_BODY
+     WHERE TEN_ID  = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </select>
+    
+    <select id="getCountApprovalDocument" resultType="int">
+    /* approval-doc.getCountApprovalDocument: 결재본문을 카운트 */
+    SELECT COUNT(*)
+      FROM APVL_BODY
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </select>
+    
+</mapper>

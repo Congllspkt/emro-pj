@@ -1,0 +1,37 @@
+<sc-link rel="import" href="es-operlink-operorg-list.html"></sc-link>
+<sc-link rel="import" href="es-operlink-list.html"></sc-link>
+
+<dom-module id="em-operlink">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }   
+    </style>
+
+    <template>
+    	 <cc-page-title-bar></cc-page-title-bar>
+         <es-operlink-operorg-list id="operorgList" on-saved-operlink="onSavedOperLink" on-findlist-operlink="onFindListOperLink" class="flex-6"></es-operlink-operorg-list>
+         <sc-splitter split-type="horizontal"></sc-splitter>
+         <es-operlink-list id="operlinkList" class="flex-4"></es-operlink-list>
+    </template>
+    
+    <script>
+        Polymer({
+            is: "em-operlink",
+            
+            // 운영조직 연결정보가 저장됨
+            onSavedOperLink: function(e,data) {
+                var me = this;
+                me.onFindListOperLink(e,data);
+            },
+            
+            // 운영조직 연결정보가 조회됨
+            onFindListOperLink: function(e,data) {
+                var me = this;
+                me.$.operlinkList.load(data);
+            }
+        });
+    </script>
+
+</dom-module>

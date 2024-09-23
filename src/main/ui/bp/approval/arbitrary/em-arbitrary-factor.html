@@ -1,0 +1,83 @@
+<sc-link rel="import" href="es-arbitrary-factor-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-factor-detail.html"></sc-link>
+
+<dom-module id="em-arbitrary-factor">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <cc-page-title-bar></cc-page-title-bar>
+        
+        <div class="hbox flex">
+            <es-arbitrary-factor-list id="list" on-selected-factor="onSelectedFactor" on-deleted-factors="onDeletedFactors" class="flex-5"></es-arbitrary-factor-list>
+
+            <div class="hspace-10"></div>
+
+            <es-arbitrary-factor-detail id="detail" on-saved-factor="onSavedFactor" class="flex-5" disabled$="[[!formula('isSelectedFactor')]]"></es-arbitrary-factor-detail>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-arbitrary-factor",
+
+            properties: {
+                selectedFactor: { // 선택된 전결항목
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+            },
+            
+            formulas: {
+                isSelectedFactor: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedFactor);
+                }
+            },
+            
+            initialized: function() {
+                var me = this;
+                me.$.list.load(); // 전결설정항목 조회
+                me.applyFormula();
+            },
+            
+            // 전결설정항목 선택  
+            onSelectedFactor: function(e, data) {
+                var me = this;
+                
+                me.set("selectedFactor", data);      // 전결설정항목 선택
+                me.$.detail.load(me.selectedFactor); // 전결설정항목 상세정보 로드
+                me.applyFormula();
+            },
+
+            // 전결설정항목 - 목록삭제
+            onDeletedFactors: function() {
+                var me = this;
+                
+                me.set("selectedFactor", {}); // 전결설정항목 초기화
+                me.$.list.load(); // 전결설정항목 조회
+                me.$.detail.clear(); // 전결설정항목 상세정보 초기화
+                me.applyFormula();
+            },
+
+            // 전결설정항목 - 저장완료
+            onSavedFactor: function(e, data) {
+                var me = this;
+                
+                me.$.list.load(); // 전결설정항목 조회
+                
+                me.set("selectedFactor", data);      // 전결설정항목 선택
+                me.applyFormula();
+            }
+        });
+    </script>
+
+</dom-module>

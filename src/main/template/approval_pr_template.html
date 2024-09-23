@@ -1,0 +1,155 @@
+<header>
+    <h2>구매요청품의서</h2>
+    &lt;#if approvalInfo.apvl_docno?? &gt;
+    <h4>( 품의번호 : ${approvalInfo.apvl_docno?default("")} )</h4>
+    &lt;/#if&gt;
+</header>
+<article>
+    <section>
+        <table>
+             <colgroup>
+                <col style="width:18%" />
+                <col style="width:32%" />
+                <col style="width:18%" />
+                <col style="width:32%" />
+            </colgroup>
+            <tr>
+                <th>기안일자</th>
+                <td>${approvalInfo.apvl_rptg_dttm?default("")}</td>
+                <th>기안자</th>
+                <td>[${prInfo.oper_org_cd_nm?default("")}] ${approvalInfo.reg_nm?default("")}</td>
+            </tr>
+        </table>
+    </section>
+    <section>
+        <h3>품의기본정보<span>통화 :  ${prInfo.cur_ccd?default("")}</span></h3>
+        <table>
+            <colgroup>
+                <col style="width:18%" />
+                <col style="width:32%" />
+                <col style="width:18%" />
+                <col style="width:32%" />
+            </colgroup>
+            <tr>
+                <th>제목</th>
+                <td colspan="3">${prInfo.pr_tit?default("")}</td>
+            </tr>
+            <tr>
+                <th>구매요청번호/차수</th>
+                <td>${prInfo.pr_no?default("")} / ${prInfo.pr_revno?default("")}</td>
+                <th>구매유형</th>
+                <td>${prInfo.purc_typ_nm?default("")}</td>
+            </tr>
+            <tr>
+                <th>구매요청부서</th>
+                <td>${prInfo.pr_req_dept_nm?default("")}</td>
+                <th>구매요청 담당자</th>
+                <td>[${prInfo.pr_req_id?default("")}] ${prInfo.pr_req_nm?default("")} ${prInfo.pr_req_phone_no?default("")}</td>
+            </tr>
+            <tr>
+                <th>구매요청유형</th>
+                <td>${prInfo.pr_purp_nm?default("")}</td>
+                <th>구매 요청 합계 금액(KRW)</th>
+                <td class="tr">${prInfo.pr_tot_amt?default("")}</td>
+            </tr>
+        </table>
+    </section>
+    <section>
+        <h3>품의내역<span>통화 : ${prItems[0].cur_ccd}</span></h3>
+        <table class="tc">
+            <colgroup>
+                <col style="width:7%" />
+                <col style="width:12%" />
+                <col style="width:44%" />
+                <col style="width:9%" />
+                <col style="width:14%" />
+                <col style="width:14%" />
+            </colgroup>
+&lt;#if prInfo.purc_typ_ccd == 'MT'&gt;
+            <tr>
+                <th rowspan="2">순번</th>
+                <th>품목코드</th>
+                <th>품목명</th>
+                <th>수량</th>
+                <th>구매요청 단가</th>
+                <th>구매그룹</th>
+            </tr>
+            <tr>
+                <th>구매요청항번</th>
+                <th>규격</th>
+                <th>단위</th>
+                <th>구매요청금액</th>
+                <th>납품요청일</th>
+            </tr>
+            &lt;#list prItems as prItem&gt;
+            <tr>
+                <td rowspan="2">${prItem_index+1}</td>
+                <td>${prItem.disp_item_cd?default("")}</td>
+                <td class="tl">${prItem.item_nm?default("")}</td>
+                <td class="tr">${prItem.item_qty?default("")}</td>
+                <td class="tr">${prItem.pr_price?default("")}</td>
+                <td>${prItem.purc_grp_cd?default("")} ${prItem.purc_grp_nm?default("")}</td>
+            </tr>
+            <tr>
+                <td>${prItem.pr_lno?default("")}</td>
+                <td class="tl">${prItem.spec?default("")}</td>
+                <td>${prItem.unit_cd?default("")}</td>
+                <td class="tr">${prItem.pr_amt?default("")}</td>
+                <td>
+                &lt;#if prItem.rd_date?? &gt;
+                    ${prItem.rd_date[0..3]?default("")}/${prItem.rd_date[4..5]?default("")}/${prItem.rd_date[6..7]?default("")}
+                &lt;/#if&gt;
+                </td>
+            </tr>
+            &lt;/#list&gt;
+&lt;#else&gt;
+            <tr>
+                <th rowspan="3">순번</th>
+                <th>품목코드</th>
+                <th>품목명</th>
+                <th>수량</th>
+                <th>구매요청 단가</th>
+                <th>구매그룹</th>
+            </tr>
+            <tr>
+                <th>구매요청항번</th>
+                <th>규격</th>
+                <th>단위</th>
+                <th>구매요청금액</th>
+                <th>공사 시작 일자</th>
+            </tr>
+            <tr>
+                <th>공사 종료 일자</th>
+                <th colspan="4">수행 장소</th>
+            </tr>
+            &lt;#list prItems as prItem&gt;
+            <tr>
+                <td rowspan="3">${prItem_index+1}</td>
+                <td>${prItem.disp_item_cd?default("")}</td>
+                <td class="tl">${prItem.item_nm?default("")}</td>
+                <td class="tr">${prItem.item_qty?default("")}</td>
+                <td class="tr">${prItem.pr_price?default("")}</td>
+                <td>${prItem.purc_grp_cd?default("")} ${prItem.purc_grp_nm?default("")}</td>
+            </tr>
+            <tr>
+                <td>${prItem.pr_lno?default("")}</td>
+                <td class="tl">${prItem.spec?default("")}</td>
+                <td>${prItem.unit_cd?default("")}</td>
+                <td class="tr">${prItem.pr_amt?default("")}</td>
+                &lt;#if prItem.const_st_dt?? &gt;
+                <td>${prItem.const_st_dt[0..3]?default("")}/${prItem.const_st_dt[4..5]?default("")}/${prItem.const_st_dt[6..7]?default("")}</td>
+                &lt;/#if&gt;
+
+            </tr>
+            <tr>
+                &lt;#if prItem.prd_ed?? &gt;
+                <td>${prItem.prd_ed[0..3]?default("")}/${prItem.prd_ed[4..5]?default("")}/${prItem.prd_ed[6..7]?default("")}</td>
+                &lt;/#if&gt;
+
+                <td colspan="4" class="tl">${prItem.rd_locat?default("")}</td>
+            </tr>
+            &lt;/#list&gt;
+&lt;/#if&gt;
+        </table>
+    </section>
+</article>

@@ -1,0 +1,276 @@
+<!--
+
+사용자검색 자동완성 text field 커스텀 태그
+
+<cc-cur-search value="{{입력 value}}" fieldName" result-value="{{검색 결과 value}}"></cc-cur-search>
+
+1. 주요 Property
+1) value : 해당 텍스트 필드 input value binding
+[string]
+
+2) result-value : 검색 결과 값 binding
+[string] [optional]
+
+
+2. value Proeprty
+1) value-class : 입력 텍스트 필드 크기
+[string] [optional]
+
+2) value-placeholder : 입력 텍스트 필드 placeholder
+[string] [optional]
+
+3) readonly, required, disabled 입력 텍스트 필드 제어
+[boolean] [optional]
+
+
+3. result Value Property
+1) result-class : 결과 텍스트 필드 크기
+[string] [optional]
+
+2) result-placeholder : 결과 텍스트 필드 placeholder
+[string] [optional]
+
+3) result-hidden : 결과 텍스트 필드 숨김 제어
+[boolean] [optional]
+
+
+4. trigger Field Property
+1) disabled-trigger : Trigger Field disabled 제어
+[boolean] [optional]
+
+2) hide-trigger : Trigger Field 숨김 제어
+[boolean] [optional]
+
+-->
+
+<sc-link rel="import" href="ep-cur-list.html"></sc-link>
+<sc-link rel="import" href="ep-cur-description.html"></sc-link>
+
+<dom-module id="cc-cur-search">
+	<!--
+    /**
+     *	@description : 통화 조회 컨포넌트
+     *  클라우드 화 완료
+     *  @FileName :
+     *  변경이력 : [2019. 04. 23] Dhlee 수정
+     */
+    -->
+	<style>
+		:host {
+			display : table;
+		}
+		sc-invalid-tooltip {display:table;}
+		.cc-tooltip{
+			outline: 0;
+		}
+		.cc-tooltip .exclamation:before {
+			content: "\f06a";
+		}
+		.cc-tooltip .exclamation {
+			font: normal normal normal 14px/18px FontAwesome;
+			color: #fe7f0d;
+			position: relative;
+			display: table-cell;
+		}
+		.cc-tooltip .exclamation>div {
+			position: absolute;
+			background: #fff;
+			width: 8px;
+			height: 8px;
+			top: 5px;
+			left: 2px;
+			z-index: -1;
+		}
+		.cc-tooltip .cc-tooltip-message {
+			color: #f0f0f0;
+			font-weight: 700;
+			font-size: 12px;
+			display: table-cell;
+			padding: 0 5px;
+			vertical-align: top;
+		}
+		.exclamation{
+			font: normal normal normal 14px/18px FontAwesome;
+			color: #ef5d5d;
+			position: relative;
+		}
+		.cc-tooltip .exclamation:before {
+			content: "\f06a";
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="field-box tooltip">
+			<sc-text-field  class$="[[valueClass]] value-field"
+							placeholder="[[valuePlaceholder]]"
+							required="[[required]]"
+							disabled="[[disabled]]"
+							readonly="[[readonly]]"
+							value="{{value}}"
+							on-keydown="onKeyDown"
+							on-enter="onSelectCur"
+							aria-label$="[[ariaLabel]]"
+							aria-labelledby$="[[ariaLabelledby]]"
+							aria-describedby$="[[ariaDescribedby]]"
+							max-length="200">
+			</sc-text-field>
+			<div class="hspace-5" hidden="[[hideTrigger]]"></div>
+			<sc-trigger-field trigger-cls="field-search" on-trigger-click="onPopCur" disabled="[[disabledTrigger]]" hide-trigger="[[hideTrigger]]" hidden="[[hideTrigger]]"></sc-trigger-field>
+			<div class="hspace-5" hidden="[[resultHidden]]"></div>
+			<sc-text-field class$="[[resultClass]]" value="{{resultValue}}" placeholder="[[resultPlaceholder]]" hidden="[[resultHidden]]" readonly></sc-text-field>
+			<!--
+            <div class="hspace-5" hidden="{{readonly}}"></div>
+            <div class="cc-tooltip" hidden="{{readonly}}">
+                <span class="exclamation" style="cursor:pointer;" on-click="onShowMessage"></span>
+            </div>
+            -->
+		</div>
+	</template>
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is : 'cc-cur-search',
+
+			behaviors : [
+				Polymer.CCSearchFieldBehavior
+			],
+
+			properties: {
+				ariaLabel:{
+					type: String
+				},
+				ariaLabelledby:{
+					type: String
+				},
+				ariaDescribedby:{
+					type: String
+				},
+
+				// Value Width
+				valueClass: {
+					type: String,
+					value: "w-80"
+				},
+
+				// value Field
+				valueField: {
+					type: String,
+					value: "dtlcd"
+				},
+
+				// result-Value Field
+				resultField : {
+					type : String,
+					value : 'dtlcd_nm'
+				},
+
+				/*
+                valueChangeNoti: {
+                	type: Boolean,
+                	value: true,
+                	notify: true
+                }
+                */
+			},
+
+			// 값 변경시 result값 clear처리
+			valueChanged: function(newValue, oldValue) {
+				var me = this;
+				if(this.clearFlag){
+					this.set("resultValue", "");
+				}
+				this.clearFlag = false;
+				/*
+                if(UT.isEmpty(newValue) || UT.isEmpty(oldValue)){
+                    me.set("valueChangeNoti",true);
+                    me.$.ccToolTip.style.display="none";
+                }else{
+                    me.set("valueChangeNoti",(newValue === oldValue));
+                    me.$.ccToolTip.style.display= (newValue === oldValue) ? "none" : "table";
+                    if(!me.get("valueChangeNoti")){
+                        //hiden 처리
+                        setTimeout(function() { // Code here }, delay)
+                            me.$.ccToolTip.style.display="none";
+                        },5000);
+                    }
+                } */
+				this.fire("change", newValue);
+			},
+
+			// text-field 검색
+			onSelectCur: function(){
+				var me = this;
+
+				if(!me.readonly) {
+					// 자동완성 함수 시작
+					me.createPopup();
+					me.curPopup.show();
+					me.curPopup.getWindowContent().load({
+						defaultParam: {
+							dtlcd: me.value
+						},
+						autoComplete: true
+					});
+				}
+			},
+
+			// 검색버튼 클릭
+			onPopCur: function(){
+				var me = this;
+				me.createPopup();
+				me.curPopup.show();
+				me.curPopup.getWindowContent().load({
+					defaultParam: {
+						dtlcd: me.value
+					},
+				});
+			},
+
+			// Popup 생성
+			createPopup: function(){
+				var me = this;
+				// popup 호출
+				me.curPopup = UT.popup("ep-cur-list", me, 450,500,{
+					// Single Select
+					"selected-item" : function(popup,e){
+						var result = e.detail;
+						// 선택 완료 후 callback
+						if(result){
+							me.clearFlag = false;
+							me.set("value",       result[me.valueField]);   // 코드
+							me.set("resultValue", result[me.resultField]);  // 코드명
+						}
+						popup.close();
+					},
+					// AutoComplete
+					"selected-items" : function(popup,e){
+						var result = e.detail[0];
+						// 선택 완료 후 callback
+						if(result){
+							me.clearFlag = false;
+							me.set("value",       result[me.valueField]);   // 코드
+							me.set("resultValue", result[me.resultField]);  // 코드명
+						}
+						popup.close();
+					}
+				});
+			},
+
+			// 메세지
+			onShowMessage: function(){
+				var me = this;
+				me.curDescriptionPopup = UT.popup("ep-cur-description", me, 250,200);
+				me.curDescriptionPopup.show();
+			},
+		});
+	</script>
+</dom-module>

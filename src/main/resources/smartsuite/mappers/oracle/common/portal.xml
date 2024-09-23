@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="portal">
+
+	<resultMap id="portalMap" type="java.util.HashMap">
+		<result property="ten_id" column="TEN_ID"/>
+		<result property="lyt_typ" column="LYT_TYP"/>
+    	<result property="lyt_srccd" column="LYT_SRCCD" jdbcType="CLOB" javaType="java.lang.String"/>
+	</resultMap>
+	
+	<resultMap id="portalType" type="java.util.HashMap">
+		<result property="id" column="SYS_ATTR_ID" />
+		<result property="value" column="SYS_ATTR_DAT" />
+	</resultMap>
+	
+	<insert id="insertUserLayout">
+		/*  */
+		INSERT INTO USR_PORTL_LYT
+			(
+			      TEN_ID
+			    , USR_ID
+			    , LYT_TYP
+			    , LYT_SRCCD
+			    , REGR_ID
+			    , REG_DTTM
+			)
+	   VALUES
+			(
+			      #{g.tenant}
+			    , #{g.username}
+			    , #{p.lyt_typ}
+		    	, #{p.lyt_srccd}
+			    , #{g.username}
+			    , #{g.now}
+			)
+	</insert>
+	
+	<!-- 사용자 별 설정된 레이아웃을 업데이트 -->
+	<update id="updateUserLayout">
+		/* portal.updateUserLayout */
+		UPDATE USR_PORTL_LYT
+		   SET LYT_SRCCD = #{p.lyt_srccd}
+		   	 , LYT_COL_SIZE = #{p.lyt_col_size}
+		     , MODR_ID = #{g.username}
+		     , MOD_DTTM = #{g.now}
+		 WHERE TEN_ID = #{g.tenant}
+		   AND USR_ID = #{g.username}
+		   AND LYT_TYP = #{p.lyt_typ}
+	</update>
+	
+	<delete id="deleteUserLayout">
+        DELETE
+          FROM USR_PORTL_LYT
+         WHERE TEN_ID = #{g.tenant}
+           AND USR_ID = #{g.username}
+           AND LYT_TYP = #{p.lyt_typ}
+    </delete>
+
+	<select id="findUserLayout" resultMap="portalMap">
+		SELECT TEN_ID
+		     , LYT_TYP
+		     , LYT_SRCCD
+		     , LYT_COL_SIZE
+		  FROM USR_PORTL_LYT
+		 WHERE TEN_ID = #{g.tenant}
+		   AND USR_ID = #{g.username}
+		   AND LYT_TYP = #{p.lyt_typ}
+	</select>
+
+	<select id="findPortalCommonConfig" resultMap="portalType">
+		SELECT
+			*
+		FROM
+			SYS_ATTR
+		WHERE
+			SYS_ATTR_ID='SC-PORTAL'
+	</select>
+
+	<insert id="savePortalCommonConfig">
+		INSERT INTO SYS_ATTR (
+			TEN_ID,SYS_ATTR_ID, SYS_ATTR_DAT
+		) VALUES (
+		    #{g.tenant},
+			'SC-PORTAL',
+			#{p.commonConfig}
+		)
+	</insert>
+	
+	<update id="updatePortalCommonConfig">
+		UPDATE 
+			SYS_ATTR
+		SET
+			SYS_ATTR_DAT=#{p.commonConfig}
+		WHERE
+			SYS_ATTR_ID='SC-PORTAL'
+	</update>
+
+	<select id="findComposableWidgetList" resultType="map"> 
+		SELECT TEN_ID
+             , PORTL_USR_TYP_CCD
+             , PORTLT_ID
+             , SORT
+             , PORTLT_SCR_ATTR
+          FROM PORTLT
+         WHERE TEN_ID = #{g.tenant}
+           AND USE_YN = 'Y'
+           AND PORTLT_ID IN ( SELECT PR.PORTLT_ID
+                             FROM PORTLT_ROLE PR
+                            <choose>
+              					<when test="g.roles != null and g.roles.size() > 0">
+                            		WHERE PR.ROLE_CD IN
+                 					<foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                 					#{role}
+                 					</foreach>
+              					</when>
+              					<otherwise>
+              						WHERE 0 = 1
+              					</otherwise>
+            				</choose> )
+           AND PORTL_USR_TYP_CCD=#{p.portl_usr_typ_ccd}
+    </select>
+    
+</mapper>

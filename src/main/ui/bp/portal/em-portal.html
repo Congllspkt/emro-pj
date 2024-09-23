@@ -1,0 +1,129 @@
+<link rel="import" href="../../smartsuite/portal/sc-portal-loader.html" />
+<dom-module id="em-portal">
+    <style>
+        :host {
+        	@apply(--fit-layout)
+            margin: 0;
+            /* position: relative; */
+            display: block;
+            overflow-y: auto;
+            overflow-x: hidden;
+			background-color: #fff;
+			border:1px solid #f7f7f7;
+        }
+
+        .editModeOn {
+            background-color: #c00c3f !important;
+        }
+
+        sc-portal {
+            background-color: white;
+        }
+
+        #pagination {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            margin-bottom: 5px;
+        }
+
+        sc-portal-pagination {
+            position: relative;
+            left: -50%;
+        }
+    </style>
+
+    <template>
+        <!--<sc-portal class="fit"></sc-portal>-->
+    </template>
+    <script>
+        Polymer({
+            is: "em-portal",
+
+            behaviors: [],
+            
+            properties: {
+                _editMode: {
+                    type: Boolean,
+                    value: false
+                }
+            },
+            
+            initialized: function() {
+           		// home 유형이 지정 되지 않았을 경우, 지정 팝업 호출
+                   if(!SCSessionManager.currentUser.home_scr_typ_ccd) {
+                       var ajax = document.createElement("sc-ajax");
+                       ajax.url = "findListCommonCodeAttributeCode.do";
+                       ajax.body = {
+                           ccd : "C017",
+                           cstr_cnd_cd : "USR_TYP",
+                           cstr_cnd_val: SCSessionManager.currentUser.usr_typ_ccd
+                       };
+                       ajax.addEventListener("response", function(e) {
+                           e.target.removeEventListener('response', arguments.callee);
+                           this._showHomeTypMessageBox(e.detail.response);
+                       }.bind(this));
+                       ajax.generateRequest();
+                   } else {
+                       var scPortal = document.createElement('sc-portal');
+                       this.appendChild(scPortal);
+                   }
+            },
+
+            _showHomeTypMessageBox: function(result) {
+                var messageBox = new SCMessageBox();
+                // 환영합니다. Main화면이 지정되지 않았습니다.</br>아래에서 HOME 유형을 지정해 주세요.
+                var message = "<span>"+ this.translate("STD.COM1002")+" </span><br><br><div id='comboboxField' style='text-align:center'></div>";
+                messageBox._messageElement.innerHTML = message;
+
+                var comboBox = document.createElement('sc-combobox-field');
+                comboBox.id = 'homeTypField';
+                comboBox.items = result;
+                comboBox.displayField="label";
+                comboBox.valueField="data";
+                comboBox.required="true";
+                comboBox.selectedIndex = 0;
+                comboBox.style.width = "150px";
+                comboBox.inputClear = false;
+                messageBox._messageElement.lastElementChild.appendChild(comboBox);
+
+                //var homeTyp = this.$.homeTypField.value();
+                var handler = function(target) {
+                    this._saveUserHomeTyp(target.querySelector('#homeTypField').value);
+                }.bind(this, messageBox);
+
+                messageBox.show({
+                    title: 'HOME 유형 지정',
+                    modal : true,
+                    buttons : 'apply.btn',
+                    handler : handler,
+                    iconCls : null,
+                    autoGrowMessageBox : true
+                })
+            },
+
+            _saveUserHomeTyp: function(data) {
+                var ajax = document.createElement("sc-ajax");
+                ajax.url = "saveUserHomeType.do";
+                ajax.body = {
+                    home_scr_typ_ccd : data
+                };
+                ajax.addEventListener("response", function(e) {
+                    e.target.removeEventListener('response', arguments.callee);
+                    // home 유형은 세션값을 기반으로 하기 때문에 세션 갱신
+                    SCSessionManager._session();
+                    var portal = document.createElement('sc-portal');
+                    this.appendChild(portal);
+                }.bind(this));
+                ajax.generateRequest();
+            },
+
+            refresh: function () { //initialized(처음)에는 안타고 2번 째 Activated 될 때부터 함수가 실행 됨
+                var scPortal = this.querySelector('sc-portal');
+                scPortal.destroy();
+                var newScPortal = document.createElement('sc-portal');
+                this.appendChild(newScPortal);
+            }
+        });
+    </script>
+</dom-module>

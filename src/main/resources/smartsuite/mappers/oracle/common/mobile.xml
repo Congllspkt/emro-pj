@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mobile">
+
+	<select id="getUserInfo" resultType="string">
+   	/* mobile.getUserInfo: 내부 사용자 정보 조회 */	
+		SELECT PWD
+		FROM USR USR
+	   WHERE USR.TEN_ID = #{p.tenant}
+	     AND UPPER(USR.USR_ID) = UPPER(#{p.username})
+	</select>
+
+</mapper>

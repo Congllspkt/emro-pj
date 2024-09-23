@@ -1,0 +1,398 @@
+<sc-link rel="import" href="ep-csr-hndl.html"></sc-link>
+<script src="cc-csr-process-behavior.js"></script>
+
+<!--
+ CSR 등록 및 현황 의 상세 화면입니다.
+
+ 처리이력 구성에 필요한 method 는 cc-csr-process-behavior.js 에서 Polymer.CSRProcessBehavior 로 정의 되어 사용합니다.
+
+ 메모리 관리를 위해 `닫기` 시점에 동적으로 생성한 처리이력 패널을 소멸처리하여 메모리 반환을 최대화합니다.
+ 다만, 해당 화면에서 사용되는 요청내용의 sc-editor 도 소멸처리 하지 않으면 메모리 반환이 되지 않기 때문에
+ 요청내용의 sc-editor 도 동적으로 구성하고 `닫기` 시점에 소멸시킵니다.
+-->
+<dom-module id="es-csr-detail">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <sc-code-group id="codes" init>
+            <sc-code code="C057" value="{{codes.csrTyp}}"></sc-code> <!--csr 요청유형 -->
+            <sc-code code="C055" value="{{codes.csrProgSts}}"></sc-code> <!--csr 진행상태 -->
+            <sc-code code="C056" value="{{codes.csrPrior}}"></sc-code> <!--csr 정렬 -->
+        </sc-code-group>
+
+        <!-- CSR 정보 조회 -->
+        <sc-ajax id="findCSRInfo"
+                 url="findCSRInfo.do"
+                 on-response="completeFindCSRInfo"></sc-ajax>
+
+        <!-- CSR 정보 임시 저장 -->
+        <sc-ajax id="templateSaveCSR"
+                 url="templateSaveCSR.do"
+                 body="{{csrInfo}}"
+                 on-response="completeTempSaveCSR"></sc-ajax>
+
+        <!-- CSR 요청 -->
+        <sc-ajax id="requestCSR"
+                 url="requestCSR.do"
+                 body="{{csrInfo}}"
+                 on-response="completeRequestCSR"></sc-ajax>
+
+        <!-- CSR 회수 -->
+        <sc-ajax id="reCollectCSR"
+                 url="reCollectCSR.do"
+                 body="{{csrInfo}}"
+                 on-response="completeReCallCSR"></sc-ajax>
+
+        <!-- CSR 삭제 -->
+        <sc-ajax id="deleteCSRInfo"
+                 url="deleteCSRInfo.do"
+                 body="{{csrInfo}}"
+                 on-response="completeDeleteCSR"></sc-ajax>
+
+        <cc-sub-title-bar title-text="[[formula('getTitle')]]">
+            <sc-button text="저장" on-click="onTempSaveCSR" hidden="[[!formula('isEditable')]]"></sc-button>
+            <sc-button text="CSR 요청" on-click="onRequestCSR" hidden="[[!formula('isEditable')]]" tooltip="[[translate('STD.COM1011')]]"></sc-button>
+            <sc-button text="삭제" on-click="onDeleteCSR" hidden="[[!formula('delete')]]"></sc-button>
+            <sc-button text="회수" on-click="onReCallCSR" hidden="[[!formula('reCall')]]"></sc-button>
+            <sc-button text="확인 완료" on-click="onSubmitCSR" data-type="CLOSE" hidden="[[!formula('close')]]"></sc-button>
+            <sc-button text="재처리 요청" on-click="onSubmitCSR" data-type="REPROCESS" hidden="[[!formula('reProcess')]]"></sc-button>
+            <sc-button text="닫기" on-click="onClose"></sc-button>
+        </cc-sub-title-bar>
+        <div id="contents" class="flex page">
+            <cc-form-panel collapsible="true" label-width="120">
+                <cc-fieldset>
+                    <sc-label text="요청자 명"></sc-label></th>
+                    <sc-text-field value="{{csrInfo.req_nm}}" readonly="true"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="CSR 담당자 명" hidden="[[!formula('isReceipt')]]"></sc-label></th>
+                    <sc-text-field value="{{csrInfo.chr_nm}}" readonly="true" hidden="[[!formula('isReceipt')]]"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset hidden="[[formula('isNew')]]">
+                    <sc-label text="CSR 번호"></sc-label>
+                    <sc-text-field value="{{csrInfo.csr_no}}" readonly="true"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset hidden="[[formula('isNew')]]">
+                    <sc-label text="CSR 상태"></sc-label>
+                    <sc-combobox-field id="csrProgStsField" value="{{csrInfo.csr_sts_ccd}}" items="{{codes.csrProgSts}}" display-field="label" value-field="data" readonly="true"></sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset hidden="[[formula('isNew')]]">
+                    <sc-label text="요청 일시"></sc-label>
+                    <sc-text-field value="{{csrInfo.req_dttm}}" readonly="true" input-cover="true" format-type="datetime"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset hidden="[[formula('isNew')]]">
+                    <sc-label text="최종 완료 일시"></sc-label><cc-label-tooltip text="{{tooltipText}}"></cc-label-tooltip>
+                    <sc-text-field value="{{csrInfo.csr_prcsg_dttm}}" readonly="true" input-cover="true" format-type="datetime"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="CSR 유형"></sc-label>
+                    <sc-combobox-field display-field="label" value-field="data" items="{{codes.csrTyp}}"
+                                       value="{{csrInfo.csr_typ_ccd}}" placeholder="선택" readonly="[[!formula('isEditable')]]" required="[[formula('isEditable')]]">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="CSR 처리 희망 일시"></sc-label>
+                    <sc-date-field value="{{csrInfo.csr_prcsg_dsd_dttm}}" readonly="[[!formula('isEditable')]]" required="[[formula('isEditable')]]"></sc-date-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="CSR 제목"></sc-label>
+                    <sc-text-field value="{{csrInfo.csr_tit}}" readonly="[[!formula('isEditable')]]" required="[[formula('isEditable')]]" max-length="100"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="CSR 정렬"></sc-label>
+                    <sc-combobox-field display-field="label" value-field="data" items="{{codes.csrPrior}}"
+                                       value="{{csrInfo.csr_prio}}" placeholder="선택" readonly="[[!formula('isEditable')]]">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset column-span="2" id="editorContainer">
+                    <sc-label text="CSR 내용"></sc-label>
+                    <sc-editor hidden="true"></sc-editor>
+                </cc-fieldset>
+            </cc-form-panel>
+
+            <sc-panel title-text="첨부파일" collapsed="[[formula('isUploadPanelCollapsed')]]" collapsible="true">
+                <sc-upload id="uploadPanel" class="h-200" value="{{csrInfo.athg_uuid}}" editable="[[formula('isEditable')]]"></sc-upload>
+            </sc-panel>
+        </div>
+    </template>
+
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: 'es-csr-detail',
+
+            properties: {
+                codes : {
+                    type : Object,
+                    reset: false,
+                    value : function(){
+                        return{
+                            csrTyp: [],
+                            csrProgSts: [],
+                            csrPrior: []
+                        };
+                    }
+                },
+
+                // csr 정보
+                csrInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                // 처리 이력 정보
+                processingInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                currentUser : {
+                    type : Object,
+                    value : function() {
+                        return SCSessionManager.currentUser;
+                    }
+                },
+
+            },
+
+            formulas: {
+                // 신규 여부
+                isNew : function() {
+                    return this.csrInfo.isNew === true;
+                },
+
+                // 나의 csr 여부
+                isMyCSR : function() {
+                    return this.csrInfo.reqr_id === this.currentUser.usr_id;
+                },
+                //수정 가능
+                isEditable : function() {
+                    return this.formula('isNew') || (this.csrInfo.csr_sts_ccd === "CRNG" && this.formula('isMyCSR'));
+                },
+
+                // 접수 여부 : 처리 담당자가 지정되면 접수 이후 프로세스로 판단
+                isReceipt: function() {
+                    return UT.isNotEmpty(this.csrInfo.chr_nm);
+                },
+
+                // 삭제 가능 ( 임시저장 )
+                delete : function() {
+                     return this.csrInfo.csr_sts_ccd === "CRNG" && this.formula('isMyCSR');
+                },
+
+                // 회수 가능 ( 접수대기 )
+                reCall: function(){
+                    return this.csrInfo.csr_sts_ccd === "RCPT_WTG" && this.formula('isMyCSR');
+                },
+
+                // 재처리요청 가능 ( 처리완료, 확인완료 )
+                reProcess: function() {
+                    return (this.csrInfo.csr_sts_ccd ==="PRCSG_CMPLD" || this.csrInfo.csr_sts_ccd ==="CONFM_CMPLD") && this.formula('isMyCSR');
+                },
+
+                // 확인완료 가능 ( 처리완료, 재처리요청 )
+                close: function() {
+                    return (this.csrInfo.csr_sts_ccd === "PRCSG_CMPLD" || this.csrInfo.csr_sts_ccd ==="RPRCSG_REQ") && this.formula('isMyCSR');
+                },
+
+                getTitle : function() {
+                    if(this.formula('isNew')) {
+                        return 'Customer Service Request 등록하기';
+                    }
+                    return 'Customer Service Request 상세보기';
+                },
+
+                /* getProgStsLabel : function() {
+                    return UT.findCodeName(this.codes.csrProgSts, this.csrInfo.csr_sts_ccd);
+                }, */
+
+                // 첨부 파일 패널 닫기 유무 (첨부파일 미존재 시 닫는다.)
+                isUploadPanelCollapsed: function() {
+                    return !this.formula('isEditable') && !this.csrInfo.athg_uuid;
+                }
+            },
+
+            load: function(data){
+                var me = this;
+                // 요청내용의 sc-editor 동적 생성
+                me.createEditorPanel();
+                if(data.isNew === true){
+                    me.set("csrInfo.isNew", data.isNew);
+                    me.set("csrInfo.csr_typ_ccd", "QN"); //단순문의
+                    me.set("csrInfo.reqr_id", me.currentUser.usr_id);
+                    me.set("csrInfo.req_nm", me.currentUser.usr_nm);
+                    me.applyFormula();
+                } else {
+                    me._onFindCSRInfo(data.csr_uuid);
+                }
+            },
+
+            // 상세정보 조회
+            _onFindCSRInfo : function(csrId) {
+                var me = this;
+                me.$.findCSRInfo.body = {
+                    csr_uuid : csrId ? csrId : me.csrInfo.csr_uuid
+                };
+                UT.request(me.$.findCSRInfo);
+            },
+
+            // 상세정보 조회 완료
+            completeFindCSRInfo: function(e, res) {
+                var me = this,
+                    result = res.response;
+                me.set("csrInfo", result.csrInfo);
+                me.applyFormula();
+				
+				var getProgStsLabel = UT.findCodeName(this.codes.csrProgSts, this.csrInfo.csr_sts_ccd);
+				var tooltipText = me.translate("STD.COM1010", "", getProgStsLabel);	// 현재 진행상태 인 {0} 상태로 변경 된 일시 입니다.
+				me.set("tooltipText", tooltipText);
+				
+                me.configureEditorPanel(result.csrInfo);
+                // 처리 이력 생성
+                me.createProcessingList(result.processingList);
+            },
+
+
+            // 저장
+            onTempSaveCSR: function() {
+                var me = this;
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.uploadPanel.upload().then(function(){
+                        me.editorPanel.syncValue();
+                        me.set("csrInfo.csr_cont", me.editorPanel.value);
+                        UT.request(me.$.templateSaveCSR);
+                    });
+                });
+            },
+
+            // 저장 완료
+            completeTempSaveCSR : function(e, res) {
+                var me = this;
+                var result = res.response;
+
+                UT.completeAlert("", function() { // 저장 하였습니다.
+                    me._onFindCSRInfo(result);
+                });
+            },
+
+            // CSR 삭제
+            onDeleteCSR : function() {
+                var me = this;
+
+                UT.confirm("STD.N1300", function() { // 삭제 하시겠습니까?
+                    UT.request(me.$.deleteCSRInfo);
+                });
+            },
+
+            // CSR 삭제 후
+            completeDeleteCSR : function() {
+                var me = this;
+                UT.alert("STD.N2500", function() { // 삭제 하였습니다.
+                    me.onClose();
+                });
+            },
+
+            // CSR요청
+            onRequestCSR: function() {
+                var me = this;
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm(me.translate("STD.COM1003", "", me.translate("요청")), function() { // {요청} 하시겠습니까?
+                    me.$.uploadPanel.upload().then(function(){
+                        me.editorPanel.syncValue();
+                        me.set("csrInfo.csr_cont", me.editorPanel.value);
+                        UT.request(me.$.requestCSR);
+                    });
+                });
+            },
+
+            // 요청 완료
+            completeRequestCSR: function(e, res) {
+                var me = this;
+                var result = res.response;
+
+                UT.alert(me.translate("STD.COM1004", "", me.translate("요청")), function() { // {요청} 하였습니다.
+                    me._onFindCSRInfo(result);
+                });
+            },
+
+            // CSR 회수
+            onReCallCSR: function() {
+                var me = this;
+
+                UT.confirm(me.translate("STD.COM1003", "", me.translate("회수")), function() { // {회수} 하시겠습니까?
+                    UT.request(me.$.reCollectCSR);
+                });
+            },
+
+            // 회수 완료
+            completeReCallCSR: function(e, res) {
+                var me = this;
+                var result = res.response;
+
+                UT.alert(me.translate("STD.COM1004", "", me.translate("회수")), function() { // {회수} 하였습니다.
+                    me._onFindCSRInfo(result);
+                });
+            },
+
+            // 확인 완료 및 재처리 요청
+            onSubmitCSR: function(e) {
+                var me = this;
+                me._openHndlPopup(e.target.dataset.type, e.target.text);
+            },
+
+            _openHndlPopup: function(type, popupTitle) {
+                var me = this;
+                var hndlPopup = UT.popup("ep-csr-hndl", me, 910, 600, {
+                    "submit": function() {
+                        // 처리 이력 초기화
+                        me.resetProcessHistory();
+                        me._onFindCSRInfo(me.csrInfo.csr_uuid);
+                        hndlPopup.close();
+                    }
+                }, {titleText: "CSR "+popupTitle, destroyOnHided:true}); // sc-editor 사용으로 닫기 시 소멸
+                hndlPopup.show();
+                hndlPopup.getWindowContent().load(me.csrInfo, type);
+
+            },
+
+            // 닫기 버튼 클릭 시
+            onClose: function() {
+                var me = this;
+                // 처리 이력 초기화
+                me.resetProcessHistory();
+                me.removeEditorPanel();
+
+                me.fire("show-list");
+                me.reset();
+            },
+
+            behaviors: [
+                Polymer.CSRProcessBehavior
+            ]
+        });
+    </script>
+</dom-module>

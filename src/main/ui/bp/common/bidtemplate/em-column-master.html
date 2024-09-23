@@ -1,0 +1,22 @@
+<sc-link rel="import" href="es-column-master-list.html"></sc-link>
+
+<dom-module id="em-column-master">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<es-column-master-list class="flex"></es-column-master-list>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-column-master'
+		});
+	</script>
+
+
+</dom-module>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="supplier-terms">
+
+    <select id="findListUserTermsAgreeHistory" resultType="map">
+        /* terms.findListUserTermsAgreeHistory : 약관동의 이력 목록 조회*/
+        SELECT TCMA. TERMCND_UUID
+                 ,(CASE WHEN MULT.CTMPL_NM IS NULL
+                            THEN (SELECT CTMPL_NM
+                                  FROM CTMPL_MULTLANG
+                                  WHERE TEN_ID = TCMA.TEN_ID
+                                     AND TCMA.CTMPL_UUID = MULT.CTMPL_UUID
+                                    AND LANG_CCD = 'ko_KR')
+                        ELSE MULT.CTMPL_NM
+                END) AS CTMPL_NM
+             , TCMA.TERMCND_REN_REVNO
+             , VDGL.VD_CD
+             , VDGL.VD_NM
+             , USR.USR_ID
+             , USR.USR_NM
+             , CHTC.TERMCND_CNST_DTTM
+             , CHTC.TERMCND_CNST_YN
+             , CHTC.TERMCND_UUID
+             , CHTC.TERMCND_CNST_UUID
+        FROM TERMCND TCMA
+                 INNER JOIN TERMCND_CNST_HISTREC CHTC
+                            ON CHTC.TEN_ID  = TCMA.TEN_ID
+                                AND CHTC.CTMPL_UUID  = TCMA.CTMPL_UUID
+                                AND CHTC.TERMCND_UUID   = TCMA.TERMCND_UUID
+                 INNER JOIN USR USR
+                            ON USR.TEN_ID  = CHTC.TEN_ID
+                                AND USR.USR_ID  = CHTC.TERMCND_CNST_USR_UUID
+                 LEFT OUTER JOIN CTMPL_MULTLANG MULT
+                                 ON TCMA.TEN_ID = MULT.TEN_ID
+                                     AND TCMA.CTMPL_UUID = MULT.CTMPL_UUID
+                                     AND MULT.LANG_CCD = #{g.locale}
+                 LEFT OUTER JOIN VD VDGL
+                                 ON VDGL.TEN_ID = USR.TEN_ID
+                                     AND VDGL.VD_CD  = USR.VD_CD
+        WHERE CHTC.TEN_ID = #{g.tenant}
+          AND CHTC.CTMPL_UUID = #{p.ctmpl_uuid}
+          AND CHTC.TERMCND_UUID  = #{p.termcnd_uuid}
+        ORDER BY CHTC.TERMCND_CNST_DTTM DESC
+    </select>
+
+</mapper>

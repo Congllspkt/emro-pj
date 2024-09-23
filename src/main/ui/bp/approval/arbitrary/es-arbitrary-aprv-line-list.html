@@ -1,0 +1,411 @@
+<sc-link rel="import" href="ep-arbitrary-aprv-line-detail-list.html"></sc-link>
+
+<dom-module id="es-arbitrary-aprv-line-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-request-group init>
+            <sc-code-group on-response="completeCodeGroup">
+                <sc-code code="G005" value="{{codes.G005}}" ></sc-code> <!-- 결재자 유형 -->
+                <sc-code code="G012" value="{{codes.G012}}" ></sc-code> <!-- 결재자 직책 -->
+                <sc-code code="G008" value="{{codes.G008}}" ></sc-code> <!-- 결재자 직책 -->
+            </sc-code-group>
+        </sc-request-group>
+
+        <sc-ajax id="searchList" url="selectListArbitraryAprvLineWithDetail.do" body="{{searchParam}}" on-response="completeSearchList"> <!-- 목록 조회 -->
+        </sc-ajax>
+
+        <sc-ajax id="saveList" url="saveListArbitraryAprvLine.do" on-response="completeSaveList"> <!-- 목록 저장 -->
+        </sc-ajax> 
+
+        <sc-ajax id="deleteList" url="deleteListArbitraryAprvLine.do" on-response="completeDeleteList"> <!-- 목록 삭제 -->
+        </sc-ajax> 
+
+        <sc-ajax id="resetData" url="resetArbitraryDetailFactor.do" on-response="completeResetData"> <!-- 전결기준조건 초기화 -->
+        </sc-ajax> 
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        
+        <sc-grid id="datagrid" on-item-click="onItemClick" selection-able-function="selectionAble" on-item-edit-end="onItemEditEnd"
+            editable="[[formula('isEditable')]]" use-state="[[formula('isEditable')]]" use-selection="[[formula('isEditable')]]"
+            validation-group="savelist" class="flex">
+            
+            <cc-grid-toolbar title-text="[[titleText]]" i18n-disabled>
+                <sc-button text="추가"               on-click="onAddData"    auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+                <sc-button text="삭제"               on-click="onDeleteList" auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+                <sc-button text="저장"               on-click="onSaveList"   auth-s hidden="[[!formula('isEditable')]]"></sc-button>
+                <sc-button text="전결 조건 입력변수 초기화" on-click="onResetData"  auth-s hidden="[[!formula('isResetable')]]"></sc-button>
+            </cc-grid-toolbar>
+            
+            <sc-grid-columns>
+                <sc-data-column  data-field="dapvl_apvlln_id"  header-text="전결 결재선 아이디" width="120" text-align="center" editable="false" style-name="link"></sc-data-column>
+                <sc-data-column  data-field="dapvl_apvlln_nm"        header-text="전결 결재선 명"     width="200" text-align="left"   editable="true" required="true"></sc-data-column>
+                <sc-checkbox-column data-field="dflt_apvlln_yn" header-text="디폴트 결재선 여부"   width="120" text-align="left"   editable="true" check-value="Y" un-checked-value="N" display-checkbox="false" required="true"></sc-checkbox-column>
+                
+                <sc-group-column header-text="결재/합의/수신" width="430">
+                    <sc-data-column  data-field="aprv_lines_1" header-text="결재" width="200" text-align="left" editable="false" converter="dataConvert"></sc-data-column>
+                    <sc-data-column  data-field="aprv_lines_2" header-text="합의" width="100" text-align="left" editable="false" converter="dataConvert"></sc-data-column>
+                    <sc-data-column  data-field="aprv_lines_3" header-text="수신" width="100" text-align="left" editable="false" converter="dataConvert"></sc-data-column>
+                    <sc-image-column data-field="line_icon"    header-text=" "    width="30"  text-align="left" editable="false" image-cls="search" image-change-function="imageChange"></sc-image-column>
+                </sc-group-column>
+                
+                <sc-data-column data-field="cond_count" header-text="전결 조건 입력변수 개수" width="100" text-align="center" editable="false" data-type="number" format-type="integer"></sc-data-column>
+                
+            </sc-grid-columns>
+            
+            <sc-grid-fields>
+                <sc-grid-field data-field="dapvl_uuid"       data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="dapvl_tbl_id"       data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="apvl_typ_ccd"          data-type="text"></sc-grid-field>
+                <sc-grid-field data-field="aprv_line_details" data-type="object"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-arbitrary-aprv-line-list",
+            properties: {
+                codes: { // 코드 데이터
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            G005: [],
+                            G012: [],
+                            RSPNS_CD_MAP: {},
+                            G008: []
+                        };
+                    }
+                },
+                headerData: { // 선택된 헤더
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                searchParam: { // 조회 조건
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                titleText: {
+                    type: String,
+                    value: ""
+                }
+            },
+
+            observers: ["changedHeaderData(headerData._force_edit_yn)"],
+            
+            changedHeaderData: function() {
+                var me = this;
+                me.applyFormula();
+            },
+            
+            formulas: {
+                isResetable: function() {
+                    var me = this;
+                    return me.headerData.dapvl_crn_sts_ccd === "CRNG" && me.formula("isEditable");
+                },
+                isEditable: function() {
+                    var me = this;
+                    if (UT.isNotEmpty(me.searchParam.dapvl_uuid) && UT.isNotEmpty(me.searchParam.dapvl_tbl_id)) {
+                        return me.headerData.dapvl_crn_sts_ccd === "CRNG" || me.formula("isForceEditable");
+                    } else {
+                        return false;
+                    }
+                },
+                isForceEditable: function() {
+                    var me = this;
+                    return me.headerData.dapvl_crn_sts_ccd === "CNFD" && me.headerData.ended_yn === "N" && me.headerData._force_edit_yn === "Y";
+                }
+            },
+
+            initialized: function() {
+                var me = this;
+                
+                me.set("titleText", me.translate("전결 결재선"));
+                me.applyFormula();
+            },
+            
+            load: function(param) {
+                var me = this;
+                var titleText = me.translate("전결 결재선");
+                
+                me.set("searchParam", param);
+                me.applyFormula();
+                
+                if (UT.isNotEmpty(me.searchParam.dapvl_uuid) && UT.isNotEmpty(me.searchParam.dapvl_tbl_id)) {
+                    titleText += "-" + me.searchParam.dapvl_tbl_id;
+                    me.onSearchList();
+                } else {
+                    me.$.datagrid.setDataProvider([]);
+                }
+                me.set("titleText", titleText);
+            },
+            
+            clear: function() {
+                var me = this;
+                me.set("searchParam", {});
+                me.set("titleText", me.translate("전결 결재선"));
+                me.$.datagrid.setDataProvider([]);
+                me.applyFormula();
+            },
+            
+            // 목록조회
+            onSearchList: function() {
+                var me = this;
+                UT.request(me.$.searchList);
+            },
+
+            // 목록조회 완료
+            completeSearchList: function(e, res) {
+                var me = this;
+                
+                me.$.datagrid.setDataProvider(res.response);
+            },
+            
+            // 추가
+            onAddData: function() {
+                var me = this;
+                var provider = me.$.datagrid.getDataProvider();
+                var basAprvlnYn = provider.getItemSize() === 0 ? "Y" : "N";
+                
+                provider.addItem({
+                    dapvl_uuid: me.searchParam.dapvl_uuid,
+                    dapvl_tbl_id: me.searchParam.dapvl_tbl_id,
+                    apvl_typ_ccd: me.searchParam.apvl_typ_ccd,
+                    dflt_apvlln_yn: basAprvlnYn,
+                    cond_count: 0
+                });
+            },
+            
+            // 목록저장
+            onSaveList: function() {
+                var me = this;
+
+                if (!me.validate("savelist")) {
+                    UT.alert("STD.E0000"); // 유효하지 않은 입력값이 있습니다. 오류 정보를 확인해 주세요.
+                    return;
+                }
+
+                var provider = me.$.datagrid.getDataProvider();
+                var created = provider.getNewItems();
+                var updated = provider.getUpdateItems();
+
+                if (created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // 변경된 내용이 없습니다.
+                    return;
+                }
+                
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveList.body = {
+                        insertAprvLines: created,
+                        updateAprvLines: updated
+                    };
+                    UT.request(me.$.saveList);
+                });
+            },
+
+            // 목록저장 완료
+            completeSaveList: function() {
+                var me = this;
+                UT.completeAlert("", function() { // 요청을 완료 하였습니다
+                    me.fire("saved-aprv-lines");
+                });
+            },
+            
+            // 삭제
+            onDeleteList: function() {
+                var me = this;
+                var provider = me.$.datagrid.getDataProvider();
+                var selected = provider.selectionCheckedItems();
+
+                if (UT.isEmpty(selected)) {
+                    UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // 삭제 하시겠습니까?
+                    var deleted = provider.removeItems();
+                    if (deleted.length > 0) {
+                        me.$.deleteList.body = {
+                            deleteAprvLines: deleted
+                        };
+                        UT.request(me.$.deleteList);
+                    }
+                });
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this;
+                UT.alert("STD.N2500", function() { // 삭제하였습니다
+                    me.fire("deleted-aprv-lines");
+                });
+            },
+
+            // 전결기준조건 초기화
+            onResetData: function() {
+                var me = this;
+
+                UT.confirm("STD.APR2006", function() { // 전결기준조건을 초기화 하시겠습니까?
+                    me.$.resetData.body = {
+                        tableData: me.searchParam
+                    };
+                    UT.request(me.$.resetData);
+                });
+            },
+
+            // 초기화 완료
+            completeResetData: function() {
+                var me = this;
+                UT.alert("STD.APR2007", function() { // 전결기준조건을 초기화 하였습니다
+                    me.fire("saved-aprv-lines");
+                });
+            },
+            
+            onItemClick: function(event) {
+                var me = this;
+                var data = event.detail.data;
+                var item = event.detail.item;
+
+                switch (item.dataField) {
+                case "dapvl_apvlln_id":
+                    if (UT.isNotEmpty(data.dapvl_apvlln_id)) {
+                        me.fire("selected-aprv-line", data);
+                    }
+                    break;
+                case "line_icon":
+                    if (UT.isNotEmpty(data.dapvl_apvlln_id)) {
+                        var addPopup = UT.popup("ep-arbitrary-aprv-line-detail-list", me, '60%', 600, {
+                            "saved-items": function(popup, e) {
+                                me.onSearchList();
+                            },
+                            "close": function(popup, e) {
+                                popup.close();
+                            }
+                        }, {titleText: me.translate("전결 결재선")});
+                        addPopup.show();
+                        addPopup.getWindowContent().load(data, me.headerData);
+                    }
+                    break;
+                default:
+                    break;
+                }
+            },
+            
+            // 삭제 가능 여부
+            selectionAble: function(data) {
+                var me = this;
+                return true;
+                //return data.dflt_apvlln_yn !== "Y";
+            },
+            
+            onItemEditEnd: function(event) {
+                var me = this;
+                var data = event.detail.data;
+                var item = event.detail.item;
+                var provider = event.detail.provider;
+                var newValue = event.detail.newValue;
+
+                switch (item.dataField) {
+                case "dflt_apvlln_yn":
+                    if (newValue === "Y") {
+                        provider.setItemAtBatch(true, function(index, d) {
+                            return {dflt_apvlln_yn: "N"};
+                        });
+                        provider.setCellValue(item.rowIndex, "dflt_apvlln_yn", "Y");
+                    }
+                    break;
+                default:
+                    break;
+                }
+            },
+
+            dataConvert: function(rowIndex, fieldName, data) {
+                var me = this;
+                var lines1 = [];
+                var lines2 = [];
+                var lines3 = [];
+
+                if (UT.isNotEmpty(data.aprv_line_details)) {
+                    var sorted = data.aprv_line_details.sort(function(a, b) {
+                        return a.sort > b.sort ? 1 : a.sort < b.sort ? -1 : 0;
+                    });
+                    for (var i = 0, len = sorted.length; i < len; i++) {
+                        if (sorted[i].apvr_typ_ccd === "APVL") { // 결재
+                            lines1.push(me.filterAprverLine(sorted[i]));
+                        } else if (sorted[i].apvr_typ_ccd === "AG") { // 합의
+                            lines2.push(me.filterAprverLine(sorted[i]));
+                        } else if (sorted[i].apvr_typ_ccd === "REF") { // 수신
+                            lines3.push(me.filterAprverLine(sorted[i]));
+                        }
+                    }
+                }
+                
+                switch (fieldName) {
+                case "aprv_lines_1":
+                    return lines1.join(String.fromCharCode(0x0020, 0x2192, 0x0020)); // " → "
+                case "aprv_lines_2":
+                    return lines2.join(", ");
+                case "aprv_lines_3":
+                    return lines3.join(", ");
+                default:
+                    return null;
+                }
+            },
+            
+            filterAprverLine: function(param){
+            	var me = this;
+            	
+            	if(param.apvr_srch_scop_ccd ==="APPROVER"){
+            		return param.aprver_usr_nm;
+            	}else if(param.apvr_srch_scop_ccd === "INCHARGE"){
+            		var result = me.codes.G008.filter(function(item) {
+                        return item.data === param.apvr_srch_scop_ccd;
+                    });
+            		return result[0].label;
+            	}else{
+            		return me.codes.RSPNS_CD_MAP[param.apvr_jobtit_ccd];
+            	}
+            },
+            imageChange: function(data, item) {
+                var me = this;
+                
+                switch (item.dataField) {
+                case "line_icon":
+                    if (UT.isNotEmpty(data.dapvl_apvlln_id)) {
+                        return "search";
+                    }
+                    break;
+                default:
+                    break;
+                }
+                return null;
+            },
+            
+            completeCodeGroup: function() {
+                var me = this;
+                var map = {};
+                if (UT.isNotEmpty(me.codes.G012)) {
+                    for (var i = 0, len = me.codes.G012.length; i < len; i++) {
+                        var code = me.codes.G012[i];
+                        map[code.data] = code.label;
+                    }
+                }
+                me.set("codes.RSPNS_CD_MAP", map);
+            }
+            
+        });
+    </script>
+
+</dom-module>

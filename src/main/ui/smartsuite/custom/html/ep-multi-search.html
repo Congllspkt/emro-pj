@@ -1,0 +1,131 @@
+<dom-module id="ep-multi-search">
+    <style>
+       :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <div class="vbox flex">
+	        <sc-grid id="gridPanel" class="flex"	use-state="false"	use-selection="false"	editable="true"	use-dummy="false"	column-fit-style="evenFill">
+	        	<sc-toolbar>
+		            <sc-text-field style="width:60px" value="{{rowCount.add}}"></sc-text-field>
+		            <sc-button text="행 추가" on-click="onAddRows" disabled="{{!uiBind.addable}}"></sc-button>
+		            <sc-spacer></sc-spacer>
+		            <sc-button text="적용" on-click="onOk"></sc-button>
+		            <sc-button text="초기화" on-click="onClear"></sc-button>
+	       		 </sc-toolbar>
+	        	<sc-grid-columns>
+	        		<sc-data-column	data-field="item"	header-text="항목"	editable="true"></sc-data-column>
+	        	</sc-grid-columns>
+	        </sc-grid>
+        </div>
+    </template>
+    <script>
+    Polymer({
+            is: "ep-multi-search",
+            properties: {
+            	rowCount: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            max: 200,
+                            init: 100,
+                            add: 10
+                        }
+                    }
+                },
+                
+                uiBind: {
+                    type: Object,
+                    value: function() {
+                        return {
+                        	addable: true
+                        }
+                    }
+                }
+            },
+
+            // 화면 생성 완료
+            initialized: function(){
+                var me = this;
+            },
+            
+            load: function(options){
+            	var me = this;
+            	me.setSelectedValues(options.defaultParam);
+            },
+            
+            setSelectedValues: function(values){
+            	var me = this,provider = me.$.gridPanel.getDataProvider();
+                var  count = UT.isNotEmpty(provider) ? provider.getItemSize() : 0;
+                var rowCount = Math.max(me.get("rowCount.init"), count);
+                var rows = [];
+                if(UT.isNotEmpty(values)){
+                	for (var i = 0; i < rowCount; i++) {
+                    	rows.push({item: values[i]});
+                    }
+                }else{
+                	for (var i = 0; i < rowCount; i++) {
+                    	rows.push({item: ""});
+                    }
+                }
+                if(UT.isNotEmpty(provider)){
+                    provider.removeAll();
+                    provider.addItems(rows);
+                }else{
+                	me.$.gridPanel.setDataProvider(rows);
+                }
+				
+            },
+            
+            // 행추가 버튼
+            onAddRows: function() {
+                var me = this,provider = me.$.gridPanel.getDataProvider();
+                var maxRowCount = me.get("rowCount.max");
+                var addRowCount = me.get("rowCount.add");
+                if (isNaN(addRowCount)) {
+                    return;
+                }
+                var addableCount = maxRowCount - provider.getItemSize();
+                
+                addRowCount = Math.min(parseInt(addRowCount, 10), addableCount);
+                for (var i = 0; i < addRowCount; i++) {
+                    provider.addItem({item: ""});
+                }
+                me.set("uiBind.addable", maxRowCount - provider.getItemSize() > 0);
+            },
+            
+         	// 확인 버튼
+            onOk: function() {
+                var me = this;
+                var all = me.$.gridPanel.getDataProvider().getItems();
+                var items = [];
+
+                for (var i = 0, len = all.length; i < len; i++) {
+                    if (!UT.isEmpty(all[i].item)) {
+                        items.push(all[i].item);
+                    }
+                }
+
+				if(items.length <= 1) {
+					// '{0}'건 이상의 데이터를 입력해야 합니다.
+					UT.alert(me.translate("STD.E1051", null, 2), null, true);
+					return;
+				}
+                
+                me.fire("selected", items);
+            },
+            
+         	// 지우기 버튼
+            onClear: function() {
+                var me = this;
+                var provider = me.$.gridPanel.getDataProvider();
+                provider.setItemAtBatch(true, function(index, data){
+             	   return {item:null};  //리턴되는 데이터가 변경됩니다.
+             	});
+                
+                me.fire("clear");
+            }
+        });
+    </script>
+</dom-module>

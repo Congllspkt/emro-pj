@@ -1,0 +1,32 @@
+<sc-link rel="import" href="./es-error-list.html"></sc-link>
+<sc-link rel="import" href="./es-error-detail.html"></sc-link>
+
+<dom-module id="em-error-management">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <div class="hbox flex">
+            <es-error-list id="list" class="vbox flex-5" on-selected-error="onSelectedError" on-search-list="onSearchList"></es-error-list>
+            <div class="hspace-10"></div>
+            <es-error-detail id="detail" class="vbox flex-5"></es-error-detail>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "em-error-management",
+
+            onSelectedError: function (e, data) {
+                var me = this;
+                me.$.detail.load(data);
+            },
+
+            onSearchList: function (e, data) {
+                var me = this;
+                me.$.detail._errorReset();
+            }
+        })
+    </script>
+</dom-module>

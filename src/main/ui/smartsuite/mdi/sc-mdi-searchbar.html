@@ -1,0 +1,180 @@
+<link rel="import" href="../custom/html/cc-auto-text-field/cc-auto-text-field.html">
+
+<dom-module id="sc-mdi-searchbar">
+    <template>
+        <div class="mdi_srch">
+            <div class="srch_condtion">
+                <a class="tit_srch">[[searchTarget]]</a>
+                <div class="srch_con_list" on-click="onChangeSearchCondition">
+                    <ul>
+                        <li><a id="menu">[[translate('메뉴')]]</a></li>
+                        <!--<li><a id="supplier">[[translate('협력사')]]</a></li>-->
+                    </ul>
+                </div>
+            </div>
+            <div class="wrap_input">
+                <cc-auto-text-field
+                        id="menuAutoTextField"
+                        class="hide-visible"
+                        source="[[menuList]]"
+                        trigger-cls="search"
+                        on-trigger-click="_onTriggerSelect"
+                        on-autocomplete-selected="onMenuAutocompleteSelected">
+                    <template autocomplete-custom-template>
+                        <div on-tap="_onSelect" id$="[[_getSuggestionId(index)]]" class="suggestions"  title="[[getMenuPath(item.tree_nm)]]">
+                            <a>[[item.menu_nm]]</a>
+                            <!--TODO-->
+                            <span class="sg_bc">[[getMenuPath(item.tree_nm)]]</span>
+                        </div>
+                    </template>
+                </cc-auto-text-field>
+
+                <!--TODO-->
+                <!--<cc-auto-text-field
+                        id="supplierAutoTextField"
+                        source="[[supplierList]]"
+                        display-field="supplier_nm"
+                        value-field="supplier_nm"
+                        autofocus="true"
+                        on-autocomplete-selected="onSupplierAutocompleteSelected">
+                    <template autocomplete-custom-template>
+                        <li on-tap="_onSelect" id$="[[_getSuggestionId(index)]]" class="suggestions">
+                            <a>[[item.supplier_nm]]</a>
+                        </li>
+                    </template>
+                </cc-auto-text-field>-->
+            </div>
+        </div>
+    </template>
+
+    <script>
+
+        Polymer({
+            is: "sc-mdi-searchbar",
+
+            properties: {
+                menuList: Object,
+                searchTarget: {
+                    type: String,
+                    value: function () {
+                        return this.translate("메뉴 검색");
+                    }
+                },
+                mdiManager: {
+                	type: Object
+                }
+            },
+
+            attached: function () {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                  //MenuList에서 Menu Item을 선택하는 방법을 주입한다
+                    this.$.menuAutoTextField.queryFn = this._menuQueryFn;
+
+                    // todo
+                    //this.$.supplierAutoTextField.queryFn = this._supplierQueryFn;
+
+                    this._injectComputedBinding();
+                }
+            },
+
+            /**
+             * template element 에 computed binding 을 주입합니다.
+             * @private
+             */
+            _injectComputedBinding : function(){
+                var template = document.querySelector('cc-auto-suggestions');
+                template.getMenuPath = function (treeNm) {
+                    var path = "",
+                        paths = treeNm.split("||");
+                    for(var i = 0; i < paths.length; i++) {
+                        if(paths[i]== "") {
+                            continue;
+                        }
+                        path = (i=== 0 ? "" : path + " > ") +paths[i];
+                    }
+                    return path;
+                };
+            },
+
+            /**
+             * 트리거 클릭 시 suggestion 팝업을 오픈합니다.
+             * @private
+             */
+            _onTriggerSelect: function (event) {
+                var target = event.currentTarget;
+                target.showSuggestions(event);
+            },
+
+            onChangeSearchCondition: function (e) {
+                var me = this,
+                    targetId = e.target.id;
+
+                var allFields = this.querySelectorAll("cc-auto-text-field");
+
+                for(var i=0, len=allFields.length; i<len; i++) {
+                    allFields[i].classList.toggle("hide-visible", true);
+                }
+
+                var targetHandler = {
+                    menu: function () {
+                        me.$.menuAutoTextField.classList.toggle("hide-visible", false);
+                        me.$.menuAutoTextField.focus();
+                    },
+                    supplier: function () {
+                        //... todo
+                    }
+                }
+
+                targetHandler[targetId].call();
+                this.searchTarget = e.target.innerText;
+            },
+
+            // Menu Suggestion List에서 값이 선택됐을 때 호출된다
+            onMenuAutocompleteSelected: function (e, target) {
+                var selectedObj = target.option;
+                if(selectedObj.menu_id) {
+                    this.mdiManager.createWindow(selectedObj.menu_id, this.translate(selectedObj.menu_nm), selectedObj.menu_url);
+                }
+            },
+
+            // Menu List에서 Item을 선택하는 Filtering 함수를 정의
+            _menuQueryFn: function (datasource, query) {
+                var me = this,
+                    menuNodeMap = SCMenuManager.getMenuNodeMap();
+
+                if(query.replace) {
+                    query = query.replace(/ /g, "");
+                }
+
+                return datasource.filter(function (item) {
+
+                    // 메뉴명이 존재하는 최하위메뉴와 트리노드를 갖는 적합한 메뉴만을 대상으로 한다.
+                    if(!item.menu_nm || !item.menu_url || !menuNodeMap[item.menu_id]){
+                        return;
+                    }
+                    var menuName = item.menu_nm.replace(/ /g, "");
+
+                    return (
+                        ((menuName.toLowerCase().indexOf(query) != -1) ||   //문자열 검사
+                            (
+                            	SCLocaleManager.getLocale() === "ko_KR"    //로케일 검사
+                                && me.matchHangulString(menuName, query)    //초성 검사
+                            )
+                        )
+                    );
+                });
+            },
+
+            //hidden이 아닌 첫 번째
+            focus: function () {
+                var autoTextField = this.querySelector('cc-auto-text-field:not([hidden])');
+                if(autoTextField) {
+                    autoTextField.focus();
+                }
+            }
+        });
+    </script>
+</dom-module>

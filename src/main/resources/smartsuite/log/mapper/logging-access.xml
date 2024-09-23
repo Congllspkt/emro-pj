@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="logging-access">
+	<insert id="insertAccessLog">
+		/* insertAccessLog : access log 기록 */
+		INSERT INTO USR_EXEC_HISTREC
+	    <trim prefix="(" suffix=")" suffixOverrides=",">
+	        TEN_ID,
+			USR_EXEC_HISTREC_UUID,
+		    USR_ID,
+			USR_TYP_CCD,
+		    CO_CD,
+			REQ_ST_DTTM,
+			REQ_CMPLD_DTTM,
+			CALL_CLASS,
+			CALL_METH,
+		    MENU_CD,
+			REQR_IP
+	    </trim>
+	    <trim prefix="values (" suffix=")" suffixOverrides=",">
+	        #{p.tenant},
+	        #{p.log_id},
+			#{p.username},
+			#{p.usr_typ_ccd},
+			#{p.co_cd},
+			#{p.access_time},
+			#{p.response_time},
+			#{p.controller_class},
+			#{p.method_name},
+			#{p.menu_code},			
+			#{p.remote_address}
+	  	</trim>
+	</insert>
+	
+	
+	<insert id="insertAttachmentLog">
+		/* insertAccessLog : Attach log 기록 */
+		INSERT INTO ATHF_DNLD_HISTREC
+	    <trim prefix="(" suffix=")" suffixOverrides=",">
+	        TEN_ID,
+			ATHF_DNLD_HISTREC_UUID,
+		    USR_ID,
+			USR_TYP_CCD,
+		    CO_CD,
+			REQ_DTTM,
+			CALL_CLASS,
+			CALL_METH,
+		    MENU_CD,
+			REQR_IP,
+			ATHF_NM,
+			ORIG_ATHF_NM
+	    </trim>
+	    <trim prefix="values (" suffix=")" suffixOverrides=",">
+	        #{p.tenant},
+	        #{g.uuid},
+			#{p.username},
+			#{p.usr_typ_ccd},
+			#{p.co_cd},
+			#{g.now},
+			#{p.controller_class},
+			#{p.method_name},
+			#{p.menu_code},			
+			#{p.remote_address},
+			#{p.att_cd},
+			#{p.att_nm}			
+	  	</trim>
+	</insert>
+	
+	
+	<insert id="insertExportLog">
+		/* insertAccessLog : access log 기록 */
+		INSERT INTO ESEXLOG
+	    <trim prefix="(" suffix=")" suffixOverrides=",">
+	        TEN_ID,
+	        LOG_ID,
+		    USR_ID,
+		    USR_TYP_CCD,
+		    CO_CD,
+		    ACCESS_TIME,
+		    CONTROLLER_CLASS,
+		    METHOD_NAME,
+		    MENU_CODE,		    
+		    REMOTE_ADDRESS,
+		    REMOTE_HOST,
+		    ATT_NM
+	    </trim>
+	    <trim prefix="values (" suffix=")" suffixOverrides=",">
+	        #{p.tenant},
+	        #{g.uuid},
+			#{p.username},
+			#{p.usr_typ_ccd},
+			#{p.co_cd},
+			#{g.now},
+			#{p.controller_class},
+			#{p.method_name},
+			#{p.menu_code},			
+			#{p.remote_address},
+			#{p.remote_host},
+			#{p.file_nm}			
+	  	</trim>
+	</insert>
+	 
+</mapper>

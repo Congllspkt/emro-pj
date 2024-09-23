@@ -1,0 +1,37 @@
+<dom-module id="cc-sub-title-bar">
+    <template>
+        <h4 hidden="[[formula('titleHidden')]]">[[_title]]</h4>
+        <div class="wrap_btn">
+            <content></content>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'cc-sub-title-bar',
+
+            formulas:{
+                titleHidden: function(){
+                    return UT.isEmpty(this._title);
+                }
+            },
+
+            attached: function(){
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    this.applyFormula();
+                }
+            },
+
+            _getTitle: function (titleText, pageTitle) {
+                var title = titleText || "";
+                this.set('_title', this.i18nDisabled ?  title : this.translate(title));
+                return this.i18nDisabled ?  title : this.translate(title);
+            },
+
+            behaviors:[
+                Polymer.CCTitleBarBehavior
+            ]
+        });
+    </script>
+</dom-module>

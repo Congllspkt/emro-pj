@@ -1,0 +1,257 @@
+<sc-link rel="import" href="ep-widget-todo-factors.html"></sc-link>
+<!--
+ * @Desc To-Do widget
+ * @Author eunjoo.chung
+ * @Created 2017-03-30
+ -->
+<dom-module id="sc-widget-todo">
+	<style>
+		:host {
+			@apply(--fit-layout);
+		}
+	</style>
+
+    <template>
+    	<!-- 할일 정보 조회 -->
+    	<sc-ajax id="findTodoInfo"
+    			 url="/portal/widget/findTodoInfo.do"
+    			 body="{{searchParam}}">
+    	</sc-ajax>
+    	
+        <!-- To-Do-->
+<!--         <div class="po_contents"> -->
+<!--         	<h3><span>[[todoGroup.grp_nm]]<i>총 <b>[[todoGroup.tot_cnt]]</b> 건</i></span></h3> -->
+        	<div id="wrap_contents" class="wrap_contents">
+            </div>
+<!--         </div> -->
+    </template>
+
+    <script>
+        Polymer({
+            is: "sc-widget-todo",
+            properties : {
+            	// 조회조건
+            	searchParam : {
+            		type : Object,
+            		value : function() {
+            			return {}
+            		}
+            	},
+            	// 할일 그룹 정보
+            	todoGroup : {
+            		type : Object,
+            		value : function() {
+            			return {}
+            		}
+            	}
+            },
+            listeners: {
+                'refresh-widget': 'refresh'
+            },
+            
+            // 할일 그룹 공통 여부
+			_isCommonGroup : function(commonYn) {
+				var me = this;
+				return (commonYn === "Y");
+			},
+			attached : function() {
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            var me = this;
+					
+					// 포틀릿 파라미터
+					me.set("searchParam.todo_grp_cd", me.portletParam || "COMMON");
+					
+					// 할일 정보 조회
+					me.findTodoInfo();
+		        }
+			},
+			// refresh-widget 시 호출되는 함수
+			refresh: function() {
+				this.findTodoInfo(true);
+			},
+			// 할일 정보 조회
+			findTodoInfo: function(isRefresh) {
+				var me = this;
+				
+				UT.request(me.$.findTodoInfo, function(el, res) {
+					var result = res.response;
+					
+					if(UT.isNotEmpty(result)) {
+						var todoGroup = result.todoGroup,
+							todoList  = result.todoList;
+						
+						if(!isRefresh) {
+							// 할일 그룹 정보
+							me.set("todoGroup", todoGroup);
+							
+							// 공통 할일 그룹이 아닌 경우 항목설정 버튼 추가
+			    			if(UT.isNotEmpty(todoGroup) && !me._isCommonGroup(todoGroup.comm_menu_yn)) {
+								me.makeFactorManageBtn(todoGroup);
+			    			}
+						}
+						
+						var cont = Polymer.dom(me.$.wrap_contents);
+						me.removeAllChild(cont);
+						
+						if(UT.isNotEmpty(todoList) && UT.isArray(todoList)) {
+							if(todoGroup.todo_grp_cd === "APPROVAL") {
+								me.makeApprovalContents(todoList);
+							} else {
+								me.makeToDoContents(todoList);
+							}
+						}
+					}
+				});
+			},
+			removeAllChild : function(el) {
+				var me = this;
+				
+				while(el.firstChild) {
+					var a = el.firstChild.querySelector("a");
+					if(a) me.unlisten(a, "tap", "onItemClick");
+					el.removeChild(el.firstChild);
+				}
+			},
+			// 항목설정 버튼
+			makeFactorManageBtn : function(todoGroup) {
+				var me = this;
+				var titleBar = me.domHost.$.titleBar;
+				
+				if(titleBar && !me.domHost.querySelector("#factorBtn")) {
+					var factorBtn = document.createElement("div");
+					factorBtn.id = "factorBtn";
+					factorBtn.classList.add("factorBtn");
+					factorBtn.classList.add("fa");
+					factorBtn.classList.add("fa-edit");
+					factorBtn.classList.add("sc-widget");
+					
+					me.listen(factorBtn, "tap", "onManageFactors");
+					
+					var closeBtn = me.domHost.$.closeBtn;
+					titleBar.insertBefore(factorBtn, closeBtn);
+				}
+			},
+			// 할일 정보 조회 후 결재 To-Do 화면 구성
+			makeApprovalContents : function(todoList) {
+				var me = this;
+				
+				var div = document.createElement("div");
+				div.classList.add("table_style01");
+				
+				var table = document.createElement("table");
+				
+				var tr, clsNo,
+					totCls = 6,	// 전체 cls 개수 (box_status01 ~ box_status06)
+					leftClsNo = 0,
+					rightClsNo = Math.ceil(totCls/2);
+				
+				for(var i=0; i<todoList.length; i++) {
+					var todo = todoList[i];
+					
+					if(i%2 == 0) {
+						tr = document.createElement("tr");
+						leftClsNo++;
+						clsNo = leftClsNo%totCls;
+					} else {
+						rightClsNo++;
+						clsNo = rightClsNo%totCls;
+					}
+					if(clsNo === 0) {
+						clsNo = totCls;
+					}
+					var className = "box_status0" + clsNo;
+					
+					var th = document.createElement("th");
+					th.innerHTML = me.translate(todo["todoitem_nm"]);
+					
+					var a = me.createAnchorTag(todo, todo["cnt"], className);
+					var td = document.createElement("td");
+					td.appendChild(a);
+					
+					tr.appendChild(th);
+					tr.appendChild(td);
+					
+					if(i%2 == 0) {
+						table.appendChild(tr);
+					}
+				}
+				div.appendChild(table);
+                
+                Polymer.dom(me.$.wrap_contents).appendChild(div);
+				Polymer.dom.flush();
+			},
+			// 할일 정보 조회 후 동적 화면 구성
+			makeToDoContents : function(todoList) {
+				var me = this;
+                
+                var div = document.createElement("div");
+                div.classList.add("todo_style");
+                
+                var ul = document.createElement("ul");
+                ul.id = "todo";
+                
+                for(var i=0; i<todoList.length; i++) {
+					var todo = todoList[i];
+					
+					var a = me.createAnchorTag(todo, (me.translate(todo["todoitem_nm"]) + "<span>" + todo["cnt"] + "</span>"));
+					
+					var li = document.createElement("li");
+					li.appendChild(a);
+					
+					ul.appendChild(li);
+				}
+                div.appendChild(ul);
+                
+                Polymer.dom(me.$.wrap_contents).appendChild(div);
+				Polymer.dom.flush();
+			},
+			createAnchorTag : function(data, text, className) {
+				var me = this;
+				
+				var a = document.createElement("a");
+				if(className) {
+					a.classList.add(className);
+				}
+				a.data = data;
+				a.innerHTML = text;
+				
+				me.listen(a, "tap", "onItemClick");
+				
+				return a;
+			},
+			// 항목 관리 버튼 클릭
+			onManageFactors : function() {
+				var me = this;
+				var title = me.translate(me.get("todoGroup.todo_grp_nm")) + " " + me.translate("할일 목록");
+				
+				// 항목 관리 팝업
+				var factorPopup = UT.popup("ep-widget-todo-factors", me, 500, 400, {"reload" : me.refresh.bind(me)}, {titleText:title, i18nDisabled: true});
+				factorPopup.show();
+				factorPopup.getWindowContent().load(UT.copy(me.get("todoGroup")));
+			},
+			// 할일 항목 클릭 시
+			onItemClick : function(e, detail) {
+				var me = this,
+					data = e.currentTarget.data;
+				
+				var menuCd = data.menu_cd;
+				var menuInfo = me._getMenuInfo(menuCd);
+				
+				if(UT.isNotEmpty(menuInfo)) {
+		            var menuUrl = menuInfo.menu_url;
+		            var params  = data.menu_url_parm || "";
+		            
+		            // 해당 메뉴 생성
+		            MDIUT.createWindow(menuCd, menuInfo.menu_nm, menuUrl+params);
+				}
+			},
+			// 메뉴코드로 메뉴 정보 가져오기
+	        _getMenuInfo : function(menuCd) {
+	            var menuInfo = SCMenuManager.getMenuNode(menuCd);
+	            return menuInfo;
+	        }
+        });
+    </script>
+</dom-module>

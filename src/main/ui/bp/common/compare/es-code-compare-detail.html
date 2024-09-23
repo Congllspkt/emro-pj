@@ -1,0 +1,259 @@
+<dom-module id="es-code-compare-detail">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    
+    	<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+    
+    	<!-- 공통코드(GRP_CD) 조회 -->
+    	<sc-ajax id="findListGrpCd"
+                 url="findListGrpCd.do"
+                 body="{{searchParam}}"
+                 last-response="{{grpCd}}">
+        </sc-ajax>
+        
+        <!-- 공통코드(GRP_CD) 저장 -->
+        <sc-ajax id="saveListGrpCd"
+                 url="saveListGrpCd.do"
+                 on-response="completeSaveListGrpCd">
+        </sc-ajax>
+        
+        <!-- 공통코드(GRP_CD) 삭제 -->
+        <sc-ajax id="deleteListGrpCd"
+                 url="deleteListGrpCd.do"
+                 on-response="completeDeleteListGrpCd">
+        </sc-ajax>
+    
+    	<div class="vbox flex">
+			<cc-search-condition-panel on-search="onFindList" on-enter="onEnter" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="모듈 명"></sc-label>
+					<sc-combobox-field
+							display-field="label" value-field="data"
+							items="[[codes]]" value="{{searchParam.module}}" placeholder="전체">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="공통코드"></sc-label>
+					<sc-text-field value="{{searchParam.grp_cd}}" max-length="30"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="공통코드 명"></sc-label>
+					<sc-text-field value="{{searchParam.as_grp_nm}}" max-length="30"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="상세코드"></sc-label>
+					<sc-text-field value="{{searchParam.as_dtl_cd}}" max-length="30"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="상세코드 명"></sc-label>
+					<sc-text-field value="{{searchParam.as_dtl_nm_kr}}" max-length="30"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+	    	
+        	<sc-grid id="gridPanel" class="flex" editable="[[isEditMode]]" use-state="[[isEditMode]]" use-selection="[[isEditMode]]" use-selection="[[isEditMode]]" data-provider="{{grpCd}}">
+        		<cc-grid-toolbar title-text="공통코드 목록">
+        			<sc-button text="추가" on-click="onClickAdd" 	hidden="[[!isEditMode]]"></sc-button>
+        			<sc-button text="저장" on-click="onClickSave" 	hidden="[[!isEditMode]]"></sc-button>
+        			<sc-button text="삭제" on-click="onClickDelete" 	hidden="[[!isEditMode]]"></sc-button>
+        			<sc-button text="[[formula('modeChangeBtnText')]]" on-click="onClickChangeBtn" auth-s i18n-disabled></sc-button>
+        		</cc-grid-toolbar>
+	            <sc-grid-columns>
+                    <sc-data-column data-field="module"			header-text="모듈 명"				width="80"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="grp_cd"			header-text="공통코드"				width="80"	text-align="center"	item-editable-function="onGrpCdEditable"></sc-data-column>
+                    <sc-data-column data-field="as_grp_nm"		header-text="9.1 공통코드 명"			width="120"	text-align="left"	item-editable-function="onGrpCdEditable"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_cd"		header-text="9.1 상세코드"			width="100"	text-align="center"	item-editable-function="onGrpCdEditable"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_nm_kr"	header-text="9.1 상세코드 명"		    width="150"	text-align="left"	item-editable-function="onGrpCdEditable"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_nm_en"	header-text="9.1 상세코드 명(EN)"		width="200"	text-align="left"	item-editable-function="onGrpCdEditable"></sc-data-column>
+                    <sc-data-column data-field="to_grp_nm_kr"	header-text="10.0 공통코드 명"		width="150"	text-align="left"	editable="[[isEditMode]]"></sc-data-column>
+                    <sc-data-column data-field="to_grp_nm_en"	header-text="10.0 공통코드 명(EN)"	width="200"	text-align="left"	editable="[[isEditMode]]"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_cd"		header-text="10.0 상세코드"			width="100"	text-align="center"	editable="[[isEditMode]]"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_nm_kr"	header-text="10.0 상세코드 명"		width="150"	text-align="left"	editable="[[isEditMode]]"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_nm_en"	header-text="10.0 상세코드 명(EN)"	width="200"	text-align="left"	editable="[[isEditMode]]"></sc-data-column>
+                    <sc-checkbox-column data-field="del_yn"		header-text="삭제 여부"				width="80"	text-align="center"	editable="[[isEditMode]]" display-checkbox="false"></sc-checkbox-column>
+					<sc-date-column data-field="reg_dttm"		header-text="등록 일시"			    width="80"	text-align="center"></sc-date-column>
+					<sc-date-column data-field="mod_dttm"		header-text="수정 일시"			    width="80"	text-align="center"></sc-date-column>
+	            </sc-grid-columns>
+        	</sc-grid>
+			<sc-grid-fields>
+				<sc-grid-field data-field="module_uuid"></sc-grid-field>
+			</sc-grid-fields>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-code-compare-detail',
+            properties: {
+            	// 모듈명
+                codes : {
+        			type : Array,
+        			value : function() {
+        				return [
+        					{data  : "VS", label : "VS"}
+        				  , {data  : "ACCOUNT", label : "ACCOUNT"}
+        				  , {data  : "PRO", label : "PRO"}
+        				  , {data  : "LAW", label : "LAW"}
+        				  , {data  : "SRM", label : "SRM"}
+        				  , {data  : "APRV", label : "APRV"}
+        				  , {data  : "BID", label : "BID"}
+        				  , {data  : "RM", label : "RM"}
+        				  , {data  : "COMM", label : "COMM"}
+        				  , {data  : "MK", label : "MK"}
+        				  , {data  : "WRK", label : "WRK"}
+        				  , {data  : "ECNTR", label : "ECNTR"}
+        				  , {data  : "WF", label : "WF"}
+        				  , {data  : "CMS", label : "CMS"}
+        				  , {data  : "EDOC", label : "EDOC"}
+       				  	];
+        			}
+        		},
+            	// 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                // 조회 결과
+                grpCd: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                isEditMode: {
+                    type: Boolean,
+                    value : false
+                }
+            },
+            
+            formulas: {
+                modeChangeBtnText : function() {
+                    return this.isEditMode ? this.translate('취소') : this.translate("수정");
+                }
+            },
+         	/* 공통코드 editable 제어 : 신규 일 경우만 수정 가능 */
+            onGrpCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+            
+            load: function() {
+            	var me = this;
+            },
+           	/* 조회버튼 클릭 시 */
+            onFindList: function() {
+            	var me = this;
+            	UT.request(me.$.findListGrpCd);
+            },
+            
+            onEnter: function() { 
+            	var me = this;
+            	me.onFindList();
+            },
+            /* 선택 버튼 클릭 시 */
+            onClickChangeBtn: function() {
+            	var me = this;
+                
+            	me.set("isEditMode", !me.isEditMode);
+                me.applyFormula();
+            },
+            /* 추가 버튼 클릭 시  */
+            onClickAdd: function() {
+            	var me = this,
+            		provider = me.$.gridPanel.getDataProvider();
+            	
+            	if(UT.isEmpty(me.searchParam.module)) {
+                    UT.alert(me.translate("STD.E1012",null,me.translate('모듈명')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+	    		
+	    		// 그리드 신규행 추가
+                var row = {
+               		module: me.searchParam.module,    	// 모듈명
+               		grp_cd : "",
+               		as_grp_nm : "",
+               		to_grp_nm_kr : "",
+               		to_grp_nm_en : "",
+               		as_dtl_cd : "",
+               		to_dtl_cd : "",
+               		as_dtl_cd : "",
+               		as_dtl_nm_kr : "",
+               		to_dtl_nm_kr : "",
+               		as_dtl_nm_en : "",
+               		to_dtl_nm_en : "",
+               		del_yn : ""
+                };
+                provider.addItemAt(0,row);
+            },
+            /* 저장 버튼 클릭 시  */
+            onClickSave: function() {
+            	var me = this;
+            	
+            	var provider = me.$.gridPanel.getDataProvider(),
+                	created = provider.getNewItems(),
+                	updated = provider.getUpdateItems();
+            	
+            	if(created.length + updated.length === 0) {
+	                UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+	                return;
+	            }
+            	
+            	UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+	                me.$.saveListGrpCd.body = {
+	                    insertList: created,
+	                    updateList: updated
+	                };
+	                UT.request(me.$.saveListGrpCd);
+	            });
+            },
+            /* 저장 완료  */
+            completeSaveListGrpCd: function() {
+            	var me = this,
+                	message = "STD.N1500"; // 저장하였습니다.
+                	
+				UT.alert(message, function(){
+					me.onFindList();
+				});
+            },
+            /* 삭제 버튼 클릭 시  */
+            onClickDelete: function() {
+            	var me = this,
+	            	message = "STD.N1300", // 삭제 하시겠습니까?
+					provider = me.$.gridPanel.getDataProvider(), 
+					checked = provider.selectionCheckedIndexes();
+            	
+	            if (checked && checked.length > 0) {
+					UT.confirm(message, function() {
+						var deleted = provider.removeItems();
+						if (UT.isNotEmpty(deleted)) {
+							me.$.deleteListGrpCd.body = {
+								deleteList : deleted
+							};
+							UT.request(me.$.deleteListGrpCd);
+						}
+					});
+				} else {
+					UT.alert("STD.N1600");	// 선택된 항목이 없습니다
+				}
+			},
+			/* 삭제 완료  */
+			completeDeleteListGrpCd : function() {
+				var me = this,
+                    message = "STD.N1500";
+					
+				UT.alert(message, function() {
+					me.onFindList();
+				});
+			}
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,22 @@
+<sc-link rel="import" href="es-operunit-list.html"></sc-link>
+
+<dom-module id="em-operunit">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+        <es-operunit-list class="flex"></es-operunit-list>
+    </template>
+    
+    <script>
+        Polymer({
+            is: "em-operunit"
+        });
+    </script>
+
+</dom-module>

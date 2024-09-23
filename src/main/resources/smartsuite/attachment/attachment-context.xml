@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+				http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+				http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+				http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd" 
+	default-lazy-init="false">
+	
+	<import resource="classpath:smartsuite/attachment/attachment-context-common.xml"/>
+	<import resource="classpath:smartsuite/attachment/attachment-context-storage-fs.xml"/>
+
+	<!-- P2P 파일 서비스 Proxy 빈 -->
+ 	<bean id="stdFileService" class="smartsuite.upload.StdFileService">
+ 		<constructor-arg index="0" ref="storageAthfService"></constructor-arg>
+ 		<constructor-arg index="1" ref="storageConnMgr"></constructor-arg>
+ 	</bean>
+	<!-- P2P 파일 서비스 Proxy 빈 -->
+
+</beans>

@@ -1,0 +1,530 @@
+<!--
+* EMRO SMARTsuite v9.1
+* UI Design Update
+* 2022.01.04 
+* Design pjsuny
+ -->
+
+<script src="sc-mdi-manager.js"></script>
+<script src="sc-mdi-history.js"></script>
+<script src="sc-mdi-popup-manager.js"></script>
+<script type="text/javascript">
+	(function(w, d, a){
+		w.__beusablerumclient__ = {
+			load : function(src){
+				var b = d.createElement("script");
+				b.src = src; b.async=true; b.type = "text/javascript";
+				d.getElementsByTagName("head")[0].appendChild(b);
+			}
+		};w.__beusablerumclient__.load(a + "?url=" + encodeURIComponent(d.URL));
+	})(window, document, "//rum.beusable.net/load/b190625e181839u280");
+</script>
+<dom-module id="sc-mdi">
+	<template>
+		<!-- Header Start -->
+		<sc-mdi-header id="mdiHead" hidden$="[[useSinglePage]]" mdi-manager="[[manager]]"
+					   on-side-menu-click="onSideMenuListClick" on-menu-click="onMenuClick" ></sc-mdi-header>
+		<!-- Header End -->
+		
+		<!-- ContainerWrap Start -->
+		<div id="containerWrap" class="container-wrap">
+			<sc-mdi-sidemenu id="mdiSideMenu" mdi-manager="[[manager]]"
+				on-menu-click="onMenuClick" 
+				hidden="[[useSinglePage]]"></sc-mdi-sidemenu>
+			<sc-mdi-content id="mdiContent" mdi-manager="[[manager]]"
+				on-window-activated="onWindowActivated"
+				tabbar-hidden="[[useSinglePage]]"></sc-mdi-content>
+		</div>
+		<!-- ContainerWrap End -->
+		
+	</template>
+	<script>
+
+	SCPreloader.onInitialize(function() {
+		
+		Polymer({
+
+            is: 'sc-mdi',
+
+            behaviors: [
+                Polymer.SCResizableBehavior
+            ],
+            
+            listeners: {
+                'sc-resize': 'onMdiResize',
+                'utilarea-resize': 'onMdiHeaderResize'
+            },
+            
+        	get mdiHead() {
+                return this.$.mdiHead;
+            },
+            
+            get mdiSideMenu() {
+                return this.$.mdiSideMenu;
+            },
+
+            get windowHeight() {
+                return document.documentElement.clientHeight;
+            },
+
+            get windowWidth() {
+                var clientWidth = document.documentElement.clientWidth,
+	                minWidth = this._minWidth.width;
+
+                return this._minWidth.use && (clientWidth < minWidth) ? minWidth : clientWidth;
+            },
+
+            get sidemenuWidth() {
+            	return this.mdiSideMenu.menuClose ? 0 : this.mdiSideMenu.clientWidth;
+            },
+            
+            get startPage() {
+    			return this.manager.startPage;
+    		},
+    		
+    		get userModel() {
+    			return this.manager.userModel;
+    		},
+    		
+    		get menuModel() {
+    			return this.manager.menuModel;
+        	},
+        	
+        	get currentUser() {
+        		return this.manager.currentUser;
+    		},
+    		
+            properties: {
+            	
+            	manager : {
+            		type : Object,
+            		value : function(){
+            			return SCMdiManager;
+            		}
+            	},
+            	
+            	/** MDI 필수 컴포넌트 목록 */
+            	mdiSubLink: {
+            		type : Array,
+            		value : function(){
+            			return [
+            				"ui/smartsuite/mdi/sc-mdi-header.html",
+            				"ui/smartsuite/mdi/sc-mdi-sidemenu.html",
+            				"ui/smartsuite/mdi/sc-mdi-tabbar.html",
+            				"ui/smartsuite/mdi/sc-mdi-content.html",
+            				"ui/smartsuite/mdi/sc-mdi-window.html",
+            				"ui/smartsuite/mdi/sc-mdi-progress.html",
+            				"ui/smartsuite/mdi/sc-mdi-searchbar.html",
+            				"ui/smartsuite/smartsuite-theme/smartsuite-theme.html"
+            			];
+            		}
+            	},
+            	
+                menuPaths : {
+                    type : Object,
+                    value : {}
+                },
+
+				// 로그인 정보
+				loginInfo: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+
+                // 메뉴 개인화 기능 사용 여부 ( true : 사용 )
+                useStorageMenu : {
+                    type: Object,
+                    value : function(){
+                    	return true;
+                    }
+                },
+
+                // 하나의 page만 표시할 경우 사용하는 property
+                useSinglePage : {
+                	type : Object,
+                	value : function(){
+                		return false;
+                	}
+                },
+
+                SCMdiNoticeService:{
+                	type : Object
+                },
+
+                /**
+                 *  어플리케이션의 최소 너비를 지정, 관리합니다.
+                 *
+                 * @type {Object}
+                 */
+	            _minWidth: {
+            	    type : Object,
+		            value : function() {
+            	        return {
+            	            use: false, // 사용여부
+            	            width: 1076 // 최소너비
+	                    }
+		            }
+	            }
+
+            },
+            
+            /** [Ready] MDI의 Sub Module Load */
+			preReady : function(fn){
+				UT.importLinks(this.mdiSubLink, fn);
+			},
+			
+			/** [Ready] 초기화 과정 */
+            ready : function() {
+            	this.preReady(function(){
+                    this._minWidth.use && this.setMinWidth(); // 최소 너비 사용 시, width 적용
+                    SCPreloader.onApplicationComplete(function() {
+                		this.mdiInitialized = true;
+               			this.setMenuList();
+               			this._onReady();
+               			this.fire('mdi-initialized', this, {bubbles : true});
+                   		this.fire('mdi-manager-initialized', this, {bubbles : false});	
+                	}.bind(this));
+                    this.notifyResize();
+            	}.bind(this));
+            },
+            
+            /** [Ready] 포탈 및 메뉴 개인화 */
+            _onReady : function(){
+            	this.hidden = false;
+            	if(this.useSinglePage){
+            		//this.$.mdiContent.activateWindow(this.$.mdiContent.createdWindows[0]);
+            	}
+            	else{
+            		// 1. 비밀번호 변경주기 체크
+                    if(!this.userPopupCheck()) {
+                        return;
+                    }
+                   	this.openStartPage();	
+            	}
+            },
+
+            /** [Event Handler] 좌측 Menu 목록 Visible */
+            onSideMenuListClick: function(e){
+            	this.showSideMenu(e);
+            	this.$.mdiContent.fire("sc-resize");
+            },
+
+            // [Event Handler] left 메뉴 클릭 시
+            onMenuClick: function(event) {
+                if(event.detail.menu_url === undefined || event.detail.menu_url === null){
+                    return;
+                }
+                if(event.detail.popup){
+                	this.createMenuPopup(event.detail);
+                }else{
+                	this.$.mdiContent.createWindow(event.detail.menu_id, event.detail.menu_nm, event.detail.menu_url);
+                }
+            },
+
+            /** [Event Listener Handler] window 사이즈 갱신 */
+            onMdiResize: function(e) {
+            	if(e.target !== this) {
+                    e.stopImmediatePropagation();
+                    return this.notifyResize();
+                }
+                this.mdiResize(this.sidemenuWidth);
+            },
+            
+            /** [MDI] 초기 동작 */
+            openStartPage : function() {
+				/** 1. 로그인 정보 팝업 */
+				SCMdiPopupManager.loginInfoPopup(function(){
+					/** 2. MDI 메뉴 개인화 */
+					this.applyStorageMenus();	
+				}.bind(this));
+            },
+            
+            /** [MDI] Resize */
+            mdiResize: function(sidemenuWidth){
+            	var containerHeight = (this.windowHeight - this.$.mdiHead.mdiHeaderWrapHeight);
+                this.$.containerWrap.style.width = this.windowWidth + 'px';
+                this.$.containerWrap.style.height = containerHeight + 'px';
+                this.mdiChildModulesResize(containerHeight, sidemenuWidth);
+            },
+
+            /** [Side Menu] Show / Hide */
+            showSideMenu: function(e){
+            	this.mdiSideMenu.menuClose = !this.mdiSideMenu.menuClose;
+           		this.mdiResize(this.mdiSideMenu.menuClose ?
+           				0 : this.sidemenuWidth);
+            },
+            
+            /** [MDI Children] Resize */
+            mdiChildModulesResize: function(containerHeight, sidemenuWidth){
+            	if(this.mdiSideMenu.__attached){
+            		this.mdiSideMenu.sideMenuResize(containerHeight, sidemenuWidth);
+            	}
+            	if(this.$.mdiContent.__attached){
+            		this.$.mdiContent._onMdiContentIronResize(containerHeight, this.windowWidth, sidemenuWidth);
+            	}
+            },
+
+            /** [MDI Header] Resize */
+            onMdiHeaderResize: function(){
+            	var utilArea = this.mdiHead.$.headWrap.querySelector('.toolbar');
+                this.mdiHead.$.headWrap.querySelector('.toolbar').hidden = !utilArea.hidden;
+                this._mdiHeaderWrapRect = null;
+                this.notifyResize();
+            },
+
+            /** [MDI Window] 메뉴 활성화 */
+            onWindowActivated: function(event) {
+                var mdiWindow = event.detail;
+                var active_menu_id = mdiWindow.windowId;
+
+                if(mdiWindow.module && UT.isFunction(mdiWindow.module.refresh)) {
+                    mdiWindow.module.refresh();
+				}
+
+                this.$.mdiContent.setMenuPath(this.getMenuPath(active_menu_id));
+
+                var rootMenuNode = SCMenuManager.getRootMenuNode(active_menu_id);
+                if(!rootMenuNode){
+                    return;
+                }
+                var subMenuList = rootMenuNode.sub_menu_list;
+                this.mdiSideMenu.menuName = rootMenuNode.menu_nm;
+                this.mdiSideMenu.selectedItem = this.mdiSideMenu.getMenuNode(active_menu_id);
+            },
+
+            /** [Menu] 트리 구조 정렬 */
+            setMenuList: function(){
+                var hier = new SCHierachicalData();
+                var data = SCMenuManager.getMenuList();  // 메뉴 가져오기
+
+                if(!data){
+                	SCMenuManager.service(this.setMenuList.bind(this));
+                	return;
+                }
+                
+                hier.usingSort = true;
+                var menuNodeMap = {}, 
+                	menuModel = this.menuModel;
+
+                hier.onNodeAppend = function(parentNode, node, parentNodeLevel){
+                	var rootMenuId = "root_"+menuModel.menu_id
+                    	node.level = parentNodeLevel,
+                    	menuDelimeter = "||",
+                    	empty = "";
+                	
+                    if(node[menuModel.menu_id] != null){
+                        menuNodeMap[node[menuModel.menu_id]] = node;
+                    }
+
+                    if(parentNodeLevel === 0){
+                        node[menuModel.tree] = (node[menuModel.menu_id] != null ? node[menuModel.menu_id] : empty);
+                        node[rootMenuId] = node[menuModel.menu_id];
+                        node[menuModel.tree_nm] = (node[menuModel.menu_nm] != null ? node[menuModel.menu_nm] : empty);
+                    }else{
+                        node[menuModel.tree] = parentNode[menuModel.tree] + menuDelimeter +(node[menuModel.menu_id] != null ? node[menuModel.menu_id] : empty);
+                        node[rootMenuId] = parentNode[rootMenuId];
+                        node[menuModel.tree_nm] = parentNode[menuModel.tree_nm] + menuDelimeter +(node[menuModel.menu_nm] != null ? node[menuModel.menu_nm] : empty);
+                    }
+                }.bind(this);
+                
+                var rootKey = "ROOT",
+                	sortKey = "sort_ord",
+                	childrenKey = "sub_menu_list";
+                
+                var treeMenuList = hier.HierachyTransformByKey(data, menuModel.menu_id, menuModel.parent_menu_id, childrenKey, rootKey, sortKey);
+
+                SCMenuManager.setMenuNodeMap(menuNodeMap);
+                SCMenuManager.setTreeMenuList(treeMenuList);
+
+                this.mdiSideMenu.treeMenuList = treeMenuList;
+            },
+
+            /** [Menu] 경로 출력 */
+            getMenuPath : function(windowId) {
+                if(windowId == this.startPage.menu_id) {
+                    this.menuPaths[windowId] = "<b>Home</b>";
+                }
+                try {
+                    if(typeof this.menuPaths[windowId] === "undefined") {
+                        var node = this.mdiSideMenu.getMenuNode(windowId);
+                        var paths = UT.isNotEmpty(node)? node.tree_nm.split("||") : [];
+                        var htmlStr = "Home";
+                        for(var i = 0; i < paths.length; i++) {
+                            if(paths[i] == "") {
+                                continue;
+                            }
+                            // 순서 변경 : AS-IS(구매요청현황 < 구매요청 < Home) -> TO-BE(Home  >  구매요청  >  구매요청현황)
+                            htmlStr = htmlStr + " &nbsp;&gt;&nbsp; " + (i == paths.length -1 ? "<b>" : "") + paths[i] + (i == paths.length -1 ? "</b>" : "")
+                        }
+                        this.menuPaths[windowId] = htmlStr;
+                    }
+                }
+                catch(error) {
+                	console.error(error);
+                }
+
+                return this.menuPaths[windowId];
+            },
+            
+            /** [Function] 개인화 메뉴 오픈 */
+            applyStorageMenus: function() {
+                var _storageMenus = this.getStorageMenus();
+                _storageMenus.unshift(this.startPage);
+
+                for(var i=0, len=_storageMenus.length; i < len; i++) {
+                    var lazy = i!==len-1;
+                    var menu = _storageMenus[i];
+                    if(menu){
+                    	if(menu.popup){
+                        	var me = this;
+                        	this.createMenuPopup(menu);
+                        }else{
+                            if(menu.menu_id && menu.menu_url){
+                            	this.$.mdiContent.createWindow(menu.menu_id, menu.menu_nm, menu.menu_url, lazy);
+                            }
+                        }
+                    }
+                }
+                if(SCSessionManager.isDisableOnSpecifiedDate() &&
+               		moment(new Date()).isBetween(SCSessionManager.getAccountDisableUserNotifyDate(), SCSessionManager.getAccountDisableForSpecifiedDate()) &&
+               		document.cookie.indexOf(this.currentUser[this.userModel.usr_id] + ".accountNotifySkip") == -1) {
+	                this.async(SCMdiPopupManager.accountNotifyPopup, 100);
+                }
+            },
+
+            /** [Function] 메뉴 개인화 정보 가져오기 */
+            getStorageMenus: function() {
+                var storageMenu = [];
+                if(!this.useStorageMenu){
+                    return storageMenu;
+                }
+                this.addEventListener('add-tab-completed', this.setStorageMenu);
+                this.addEventListener('remove-tab-completed', this.setStorageMenu);
+                var _storageMenu = localStorage.getItem('[' + this.currentUser[this.userModel.usr_id] + ']storageMenu');
+                var _storageMenuParse = JSON.parse(_storageMenu) || [];
+
+				var filtered = function (item, allMenuList) {
+                    for (var i = 0, len = allMenuList.length; i < len; i++) {
+                        if (allMenuList[i].menu_id === item) {
+                            storageMenu.push(allMenuList[i]);
+                        }
+                    }
+                };
+
+                for (var i = 0, len = _storageMenuParse.length; i < len; i++) {
+                    filtered(_storageMenuParse[i], SCMenuManager.getMenuList());
+                }
+
+                return storageMenu;
+            },
+
+            /** [Function] 메뉴 개인화 저장 */
+            setStorageMenu: function() {
+                var openMenus = this.querySelectorAll('sc-mdi-tabbar sc-tab');
+                var ids = [];
+                for (var i =0, len=openMenus.length; i<len; i++) {
+                    var id = openMenus[i].dataset.windowId;
+                    if(id != this.startPage.menu_id) {
+                        ids.push(id);
+                    }
+                }
+                localStorage.setItem('['+this.currentUser[this.userModel.usr_id]+']storageMenu', JSON.stringify(ids));
+            },
+
+            /******************************
+             * 비밀번호 변경 주기 체크
+             ******************************/
+            userPopupCheck: function() {
+            	var me = this;
+                //패스워드 만료
+                if(!SCSessionManager.isCredentialsNonExpired()) {
+                	UT.alert(me.translate("STD.MDI1006", null, me.currentUser[this.userModel.usr_nm], SCSessionManager.getPasswordExpiredPeriod()), function() { //{0}님은 {1}개월동안 비밀번호를 변경하지 않았습니다. 비밀번호를 변경해 주시길 바랍니다.
+                		SCMdiPopupManager.changePasswordPopup();
+                    }, true);
+                    return false;
+                }
+                //패스워드 초기화
+                if(!SCSessionManager.isCredentialsNonInitialized()) {
+                	UT.alert(me.translate("STD.MDI1005"), function() { //"임시 비밀번호로 로그인 되었습니다. 비밀번호를 변경해주시길 바랍니다."
+                		SCMdiPopupManager.changePasswordPopup();
+                    }, true);
+                	return false;
+                }
+                //검사완료
+                return true;
+            },
+
+            //**********************************************************
+            //* 즐겨찾기
+            //**********************************************************
+            //즐겨찾기 left 조회 적용
+            toogleFavorite: function(menuCd){
+            	var me = this;
+            	me.mdiSideMenu.toggleFavoriteMenu(menuCd);
+            },
+            reloadFavoriteList: function(list) {
+            	var me = this;
+            	//1. sc mdi favorite List 변경
+        		//2. sc-mdi-sidemenu favorite List 변경
+        		//3. cc-page-title bar 별표 변경
+        		SCFavoriteManager.setFavoritList(list);
+        		me.setSideMenuFavoritList();
+        		var eles = me.querySelectorAll('cc-page-title-bar');
+        		for(var i = 0 , len = eles.length ; i < len ; i++){
+        			eles[i].setFavorite();
+        		}
+            },
+
+            setSideMenuFavoritList : function(){
+				//var data = SCFavoriteManager.getFavoritList();
+				//if(UT.isEmpty(data)){
+                //	SCFavoriteManager.service(this.setSideMenuFavoritList.bind(this));
+				//	return;
+                //}
+            	//this.mdiSideMenu.set("favoritList", SCFavoriteManager.getFavoritList());
+            },
+            
+            createMenuPopup : function(menu){
+                var me = this;
+                me.importLink(menu.menu_url, function () {
+                    var mdiPopup = UT.popup(menu.popup.el, me, menu.popup.width, menu.popup.height, {}, {titleText: menu.popup.title});
+                    mdiPopup.show();
+                    setTimeout(function(){
+                    	(mdiPopup.getWindowContent().load && mdiUserPopup.getWindowContent().load());
+                    	SCLoadMask.hide();
+                    }, 1);
+                });
+            },
+
+            /**
+             * 어플리케이션의 최소 너비 ( min-width ) 를  지정된 width 값으로 적용합니다.
+             *
+             * @private
+             */
+            setMinWidth : function() {
+                this.style.minWidth = this._minWidth.width+"px";
+                document.querySelector("HTML").style.overflowX ="auto";
+			},
+
+            _destroy: function(){
+                clearInterval(this._sessionTimeoutInterval);
+                this.manager.destroy(), this.manager = null;
+            	SCRoleManager.destroy(), SCRoleManager = null;
+            	SCSessionManager.destroy(), SCSessionManager = null;
+            	SCMenuManager.destroy(), SCMenuManager = null;
+            	menuPaths = null;
+            	_sessionTimeout = null;
+            	window.SESSIONTIMEOUT = null;
+            	useStorageMenu = null;
+            	useSinglePage = null;
+            	SCMdiNoticeService = null;
+            	SCHierachicalData = null;
+            	CCHierachicalData = null;
+            }
+        });
+		
+	});        
+	</script>
+</dom-module>

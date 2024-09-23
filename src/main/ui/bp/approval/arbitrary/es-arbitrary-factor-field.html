@@ -1,0 +1,488 @@
+<dom-module id="es-arbitrary-factor-field">
+
+    <style>
+        :host {
+        }
+        .field-set {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .field-set sc-label {
+            line-height: 18px;
+            vertical-align: top;
+        }
+    </style>
+
+    <template>
+
+        <sc-ajax id="dataSource" url="selectListDataSource.do" on-response="completeDataSourceList"></sc-ajax>
+        <sc-ajax id="dialogGridColumn" url="selectListDataSource.do" on-response="creationDialogGrid"></sc-ajax>
+
+        <template is="dom-if" if="[[formula('isInput')]]">
+            <div class="field-set">
+                <sc-label text="[[factor.dapvl_cnd_inpvar_nm]]" class="w-100" i18n-disabled></sc-label>
+                <sc-text-field value="{{_value}}" required="[[formula('isRequired')]]" class="w-200"></sc-text-field>
+            </div>
+        </template>
+    
+        <template is="dom-if" if="[[formula('isCombo')]]">
+            <div class="field-set">
+                <sc-label text="[[factor.dapvl_cnd_inpvar_nm]]" class="w-100" i18n-disabled></sc-label>
+                <sc-combobox-field value="{{_value}}" items="{{codes}}" display-field="[[factor.dapvl_cnd_inpvar_from_nm]]" value-field="[[factor.dapvl_cnd_inpvar_from_id]]"
+                    id="combo" placeholder="{{requiredMessage}}" required="[[formula('isRequired')]]" class="w-200">
+                </sc-combobox-field>
+            </div>
+        </template>
+    
+        <template is="dom-if" if="[[formula('isPopup')]]">
+
+            <div class="field-set">
+                <sc-label text="[[factor.dapvl_cnd_inpvar_nm]]" class="w-100" i18n-disabled></sc-label>
+                <sc-text-field value="{{_value_display}}" required="[[formula('isRequired')]]" class="w-200" trigger-only="true" trigger-cls="search" on-trigger-click="onDialog"></sc-text-field>
+            </div>
+            
+            <sc-dialog id="dialog" title-text="[[factor.dapvl_cnd_inpvar_nm]]" style="width:600px; height:600px; top: 20%;left: 30%" modal="true">
+                <div class="vbox" style="height: 95%;">
+                    <cc-search-container id="searchContainer" on-search="searchDialog">
+                        <div class="field-set">
+                            <sc-label text="[[factor.parm_key]]" class="w-100"></sc-label>
+                            <sc-text-field value="{{dialogParam.key_value}}" class="w-200"></sc-text-field>
+                        </div>
+                        <div class="field-set">
+                            <sc-label text="[[factor.parm_nm]]" class="w-100"></sc-label>
+                            <sc-text-field value="{{dialogParam.nm_value}}" class="w-200"></sc-text-field>
+                        </div>
+                    </cc-search-container>
+                    
+                    <div class="vspace-10"></div>
+                    <sc-grid id="dialog-grid" use-state="false" use-selection="false" class="flex" on-item-click="onDialogItemClick">
+                        <sc-grid-columns>
+                        </sc-grid-columns>
+                    </sc-grid>
+                </div>
+            
+            </sc-dialog>
+            
+        </template>
+    
+        <template is="dom-if" if="[[formula('isGrid')]]">
+            <sc-grid id="datagrid" use-state="false" use-selection="true" class="flex" on-creation-complete="dataGridCreationComplete">
+                <sc-grid-columns>
+                </sc-grid-columns>
+            </sc-grid>
+        </template>
+        
+        <template is="dom-if" if="[[formula('isTreeGrid')]]">
+            <sc-grid id="dataTreeGrid" use-state="false" is-tree="true" use-selection="true" class="flex" on-creation-complete="dataGridCreationComplete"
+            		on-selection-checked="onSelectionChecked">
+                <sc-grid-columns>
+                </sc-grid-columns>
+            </sc-grid>
+        </template>
+        
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-arbitrary-factor-field",
+            properties: {
+                factor: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                codes: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                _value: {
+                    type: String,
+                    value: ""
+                },
+                _value_nm: {
+                    type: String,
+                    value: ""
+                },
+                _value_display: {
+                    type: String,
+                    value: ""
+                },
+                dialogParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                requiredMessage: {
+                	type: String,
+                	value: ""
+                }
+            },
+
+            formulas: {
+                isInput: function() {
+                    var me = this;
+                    return me.factor.scr_typ_ccd === "INPUT";
+                },
+                isCombo: function() {
+                    var me = this;
+                    return me.factor.scr_typ_ccd === "COMBOBOX";
+                },
+                isPopup: function() {
+                    var me = this;
+                    return me.factor.scr_typ_ccd === "POPUP";
+                },
+                isGrid: function() {
+                    var me = this;
+                    return me.factor.scr_typ_ccd === "GRID";
+                },
+                isTreeGrid: function() {
+                    var me = this;
+                    return me.factor.scr_typ_ccd === "TREEGRID";
+                },
+                isRequired: function() {
+                    var me = this;
+                    return me.factor.mand_yn === "Y";
+                }
+            },
+
+            initialized: function(){
+            	var me = this;
+            
+	            if (me.formula("isCombo")) {
+	                me.$.dataSource.body = {
+	                    sql_id: me.factor.sql_id,
+	                    grp_cd: me.factor.grp_cd
+	                };
+	                UT.request(me.$.dataSource);
+	                
+	            } else if (me.formula("isGrid")) {
+	            	me.$.dataSource.body = {
+	                    sql_id: me.factor.sql_id,
+	                    grp_cd: me.factor.grp_cd
+	                };
+	                UT.request(me.$.dataSource);
+	            }else if (me.formula("isTreeGrid")) {
+	            	me.$.dataSource.body = {
+		                    sql_id: me.factor.sql_id,
+		                    grp_cd: me.factor.grp_cd
+		                };
+		                UT.request(me.$.dataSource);
+	            } else if (me.formula("isPopup")) {
+	                var body = {
+	                    sql_id: me.factor.sql_id,
+	                    _page: {
+	                        page: 1,
+	                        size: 1,
+	                        start: 1,
+	                        end: 1
+	                    }
+	                };
+	                if (me.factor.dapvl_cnd_inpvar_ccd === "CMM") {
+	                    body.grp_cd = me.factor.grp_cd;
+	                }
+	                me.$.dialogGridColumn.body = body;
+	                UT.request(me.$.dialogGridColumn);
+	            }
+            },
+            
+            // 데이터 소스 조회 결과 - 공통코드, 그리드 데이터
+            completeDataSourceList: function(e, res) {
+                var me = this;
+                var result = res.response;
+                
+                if (me.formula("isCombo")) {
+                    me.set("codes", result);
+                    if(!me.formula("isRequired")){
+                    	me.set("requiredMessage","전체");
+                    }else{
+                    	me.set("requiredMessage","필수");
+                    }
+                    
+                } else if (me.formula("isGrid")) {
+                    var grid = me.querySelector("#datagrid");
+                    grid.setDataProvider(result);
+                
+                }else if (me.formula("isTreeGrid")) {
+                	var grid = me.querySelector("#dataTreeGrid");
+                    var hier = new CCHierachicalData();
+                    var hierachiDatas = hier.HierachyTransformByKey(result, me.factor.parm_key, me.factor.parnode_parm_key, "children", "ROOT", null, true);
+                    grid.setHierachyDataProvider(hierachiDatas, "children");
+                    
+                } else if (me.formula("isPopup")) {
+                    var grid = me.querySelector("#dialog-grid");
+                    grid.setDataProvider(result);
+                }
+            },
+
+            // 그리드일 경우 데이터 조회
+            searchGrid: function(param) {
+                var me = this;
+
+                if (me.formula("isGrid") || me.formula('isTreeGrid')) {
+                    param.sql_id = me.factor.sql_id;
+                    me.$.dataSource.body = param;
+                    UT.request(me.$.dataSource);
+                }
+            },
+            
+            getParamValue: function() {
+                var me = this;
+                var key = me.factor.parm_key;
+                
+                var value = {};
+                if (!me.formula("isGrid")) {
+                    value[key] = me._value;
+                }
+                return value;
+            },
+            
+            getSaveValue: function() {
+                var me = this;
+
+                if (me.formula("isGrid")) {
+                    var grid = me.querySelector("#datagrid");
+                    var provider = grid.getDataProvider();
+                    var key = me.factor.dapvl_cnd_inpvar_from_id;
+                    var nm = me.factor.dapvl_cnd_inpvar_from_nm;
+                    
+                    var selected = provider.selectionCheckedItems();
+                    if (UT.isEmpty(selected)) {
+                        UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                        return;
+                    }
+                    
+                    var values = [];
+                    for (var i = 0, len = selected.length; i < len; i++) {
+                        values.push({
+                            saveValue: {
+                                dapvl_uuid: me.factor.dapvl_uuid,
+                                dapvl_tbl_id: me.factor.dapvl_tbl_id,
+                                dapvl_cnd_inpvar_uuid: me.factor.dapvl_cnd_inpvar_uuid,
+                                parm_key_val: selected[i][key] || "",
+                                parm_nm_val: selected[i][nm] || ""
+                            },
+                            gridValue: selected[i]
+                        });
+                    }
+                    return values;
+                }else if (me.formula("isTreeGrid")) {
+                    var grid = me.querySelector("#dataTreeGrid");
+                    var provider = grid.getDataProvider();
+                    var key = me.factor.dapvl_cnd_inpvar_from_id;
+                    var nm = me.factor.dapvl_cnd_inpvar_from_nm;
+                    
+                    var selected = provider.selectionCheckedItems();
+                    if (UT.isEmpty(selected)) {
+                        UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                        return;
+                    }
+                    
+                    var values = [];
+                    for (var i = 0, len = selected.length; i < len; i++) {
+                        values.push({
+                            saveValue: {
+                                dapvl_uuid: me.factor.dapvl_uuid,
+                                dapvl_tbl_id: me.factor.dapvl_tbl_id,
+                                dapvl_cnd_inpvar_uuid: me.factor.dapvl_cnd_inpvar_uuid,
+                                parm_key_val: selected[i][key] || "",
+                                parm_nm_val: selected[i][nm] || ""
+                            },
+                            gridValue: selected[i]
+                        });
+                    }
+                    return values;
+                } else if (me.formula("isCombo")) {
+                    var combo = me.querySelector("#combo");
+                    var key = me.factor.dapvl_cnd_inpvar_from_id;
+                    var nm = me.factor.dapvl_cnd_inpvar_from_nm;
+                    return {
+                        dapvl_uuid: me.factor.dapvl_uuid,
+                        dapvl_tbl_id: me.factor.dapvl_tbl_id,
+                        dapvl_cnd_inpvar_uuid: me.factor.dapvl_cnd_inpvar_uuid,
+                        parm_key_val: me._value,
+                        parm_nm_val: combo.selectedItem ? combo.selectedItem[nm] : "",
+                        _param_key: me.factor.parm_key,
+                        _param_nm: me.factor.parm_nm
+                    };
+                } else if (me.formula("isPopup")) {
+                    return {
+                        dapvl_uuid: me.factor.dapvl_uuid,
+                        dapvl_tbl_id: me.factor.dapvl_tbl_id,
+                        dapvl_cnd_inpvar_uuid: me.factor.dapvl_cnd_inpvar_uuid,
+                        parm_key_val: me._value,
+                        parm_nm_val: me._value_nm,
+                        _param_key: me.factor.parm_key,
+                        _param_nm: me.factor.parm_nm
+                    };
+                } else {
+                    return {
+                        dapvl_uuid: me.factor.dapvl_uuid,
+                        dapvl_tbl_id: me.factor.dapvl_tbl_id,
+                        dapvl_cnd_inpvar_uuid: me.factor.dapvl_cnd_inpvar_uuid,
+                        parm_key_val: me._value,
+                        parm_nm_val: "",
+                        _param_key: me.factor.parm_key,
+                        _param_nm: me.factor.parm_nm
+                    };
+                }
+            },
+
+            // 그리드일경우 선택을 해제한다
+            gridClearCheckAll: function() {
+                var me = this;
+                
+                if (me.formula("isGrid")) {
+                    var grid = me.querySelector("#datagrid");
+                    grid.selectionCheckAll(false);
+                }else if(me.formula('isTreeGrid')){
+                	var grid = me.querySelector("#dataTreeGrid");
+                    grid.selectionCheckAll(false);
+                }
+            },
+
+            // 그리드 생성 완료
+            dataGridCreationComplete: function() {
+                var me = this;
+
+                if (me.formula("isGrid")) {
+                    if (UT.isNotEmpty(me.factor._columns)) {
+                        var columns = [];
+                        for (var p in me.factor._columns) {
+                            if (p === "rownum_" || p === "__row_number__") {
+                                continue;
+                            }
+                            var col = document.createElement("sc-data-column");
+                            col.dataField = p;
+                            col.headerText = p;
+                            columns.push(col);
+                        }
+                        columns.reverse();
+                        var grid = me.querySelector("#datagrid");
+                        grid.setColumns(columns);
+                    }
+                }else if(me.formula('isTreeGrid')){
+	                if (UT.isNotEmpty(me.factor._columns)) {
+	                    var columns = [];
+	                    var frontColumn = {};
+	                    for (var p in me.factor._columns) {
+	                        if (p === "rownum_" || p === "__row_number__") {
+	                            continue;
+	                        }
+	                        if( p === me.factor.parnode_parm_key){
+	                        	continue;
+	                        }
+	                        if( p === me.factor.parm_nm){
+	                        	var col = document.createElement("sc-data-column");
+		                        col.dataField = p;
+		                        col.headerText = p;
+		                        frontColumn = col;
+	                        	continue;
+	                        }
+	                        var col = document.createElement("sc-data-column");
+	                        col.dataField = p;
+	                        col.headerText = p;
+	                        columns.push(col);
+	                    }
+	                    //parameter 명칭으로 정한 column이 트리에 첫번째 column이 되도록 변경
+	                    if(UT.isNotEmpty(frontColumn)){
+	                    	columns.push(frontColumn);
+	                    }
+	                    columns.reverse();
+	                    var grid = me.querySelector("#dataTreeGrid");
+	                    grid.setColumns(columns);
+	                }
+                }
+            },
+            
+            //트리그리드 선택처리
+            onSelectionChecked: function(event){
+                var me = this,detail = event.detail,
+                    checked = detail.checked,  //체크하여 변경된값
+                    nodeIndex = detail.nodeIndex;
+                if(checked){
+                	var grid = me.querySelector("#dataTreeGrid");
+                	grid.selectionChild(nodeIndex, checked, true);
+                }
+            },
+            
+            // dialog grid 생성
+            creationDialogGrid: function(e, res) {
+                var me = this;
+                var result = res.response;
+                
+                if (me.formula("isPopup")) {
+                    var columns = [];
+                    var icon = document.createElement("sc-image-column");
+                    icon.singularSource="ui/assets/img/grid/ico_grd_select.png";
+                    icon.textAlign = "center";
+                    icon.dataField = "icon";
+                    icon.width = 30;
+                    columns.push(icon);
+                    
+                    if (UT.isNotEmpty(result)) {
+                        for (var p in result[0]) {
+                            if (p === "rownum_" || p === "__row_number__") {
+                                continue;
+                            }
+                            var col = document.createElement("sc-data-column");
+                            col.dataField = p;
+                            col.headerText = p;
+                            columns.push(col);
+                        }
+                    }
+                    var grid = me.querySelector("#dialog-grid");
+                    grid.setColumns(columns);
+                }
+            },
+
+            onDialog: function() {
+                var me = this;
+                
+                if (me.formula("isPopup")) {
+                    var dialog = me.querySelector("#dialog");
+                    dialog.show();
+                }
+            },
+            
+            searchDialog: function() {
+                var me = this;
+            
+                if (me.formula("isPopup")) {
+                    var body = {};
+                    body.sql_id = me.factor.sql_id;
+                    if (me.factor.dapvl_cnd_inpvar_ccd === "CMM") {
+                        body.grp_cd = me.factor.grp_cd;
+                    }
+                    body[me.factor.parm_key] = me.dialogParam.key_value;
+                    body[me.factor.parm_nm] = me.dialogParam.nm_value;
+                    me.$.dataSource.body = body;
+                    UT.request(me.$.dataSource);
+                }
+            },
+            
+            onDialogItemClick: function(event) {
+                var me = this;
+                var data = event.detail.data;
+                var item = event.detail.item;
+
+                switch (item.dataField) {
+                case "icon":
+                    var dialog = me.querySelector("#dialog");
+                    dialog.close();
+                    me.set("_value", data[me.factor.dapvl_cnd_inpvar_from_id] || "");
+                    me.set("_value_nm", data[me.factor.dapvl_cnd_inpvar_from_nm] || "");
+                    me.set("_value_display", me._value + "::" + me._value_nm);
+                    break;
+                default:
+                    break;
+                }
+            }
+            
+        });
+    </script>
+
+</dom-module>

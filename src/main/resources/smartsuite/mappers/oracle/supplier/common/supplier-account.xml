@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="supplier-account">
+    <select id="findListDormantAccountForAllUser" resultType="map">
+        /* account.findListDormantAccountForAllUser */
+        SELECT A.USR_ID
+             ,A.USR_NM
+             ,A.EML
+             , VDGL.VD_CD
+             , VDGL.VD_NM
+        FROM USR A
+                 INNER JOIN USR_ACCT_SEC_RULE B
+                            ON A.TEN_ID = B.TEN_ID
+                 LEFT OUTER JOIN VD VDGL
+                                 ON VDGL.TEN_ID = A.TEN_ID
+                                     AND VDGL.VD_CD = A.VD_CD
+        WHERE A.TEN_ID = #{g.tenant}
+          AND   A.LAST_LOGIN_DTTM <![CDATA[>=]]> #{p.notic_day}
+          AND   A.LAST_LOGIN_DTTM <![CDATA[<]]> #{p.notic_one_day}
+          AND A.USE_YN  = 'Y'
+    </select>
+
+    <select id="findListDormantAccountForSupplier" resultType="map">
+        /* account.findListDormantAccountForSupplier */
+        SELECT A.USR_ID
+             ,A.USR_NM
+             ,A.EML
+             , VDGL.VD_CD
+             , VDGL.VD_NM
+        FROM USR A
+                 INNER JOIN USR_ACCT_SEC_RULE B
+                            ON A.TEN_ID = B.TEN_ID
+                 LEFT OUTER JOIN VD VDGL
+                                 ON VDGL.TEN_ID = A.TEN_ID
+                                     AND VDGL.VD_CD = A.VD_CD
+        WHERE A.TEN_ID = #{g.tenant}
+          AND   A.LAST_LOGIN_DTTM <![CDATA[>=]]> #{p.notic_day}
+          AND   A.LAST_LOGIN_DTTM <![CDATA[<]]> #{p.notic_one_day}
+          AND A.USE_YN  = 'Y'
+          AND A.USR_TYP_CCD ='VD'
+    </select>
+
+</mapper>

@@ -1,0 +1,158 @@
+<!--
+	******************************************************************************************
+	** @Program-name 	: 공지사항 팝업
+	******************************************************************************************
+-->
+<dom-module id="sc-mdi-notice-popup">
+	<template>
+		<style>
+			:host {
+	            @apply(--vbox-layout);
+	        }
+    	</style>
+		<sc-toolbar>
+			<sc-spacer></sc-spacer>
+			<sc-button text="이전 페이지" on-tap="_onBackNotice" disabled="[[formula('backBtnDisabled')]]"></sc-button>
+			<sc-button text="다음 페이지" on-tap="_onForwardNotice" disabled="[[formula('forwardBtnDisabled')]]"></sc-button>
+		</sc-toolbar>
+
+		<div class="page flex">
+		<cc-form-panel label-width="120" column="1">
+			<cc-fieldset>
+				<sc-label text="제목"></sc-label>
+				[[value.pst_tit]]
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="작성자"></sc-label>
+				[[value.reg_nm]]
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="작성 일자"></sc-label>
+				[[getRegDate(value.reg_dttm)]]
+			</cc-fieldset>
+		</cc-form-panel>
+		<sc-panel title-text="내용" >
+			<sc-editor id="postCont" value="{{value.pst_cont}}" editable="{{editable}}"  remove-source-button="true"  auto-grow="true"></sc-editor>
+		</sc-panel>
+
+		<sc-panel title-text="첨부파일">
+			<sc-upload id="attachNotice" class="h-150" value="{{value.att_file_no}}" editable="{{editable}}"></sc-upload>
+		</sc-panel>
+		</div>
+		<div class="hbox" style="overflow: unset">
+			<sc-spacer></sc-spacer>
+			<sc-checkbox-field label="하루동안 열지 않기"  name="hidden_yn" input-value="{{value.hidden_yn}}" checked-value="Y" un-checked-value="N" on-tap="_onChangeHiddenYn"></sc-checkbox-field>
+		</div>
+	</template>
+	<script>
+	
+	Polymer({
+		is : "sc-mdi-notice-popup",
+		properties : {
+			noticeList: {
+        		type: Array,
+        		value : function(){return [];}
+        	},
+        	value : {
+				type : Object,
+				value : function(){return {};}
+			},
+			editable: {
+				type: Boolean,
+				value: false
+			},
+			// 공지사항 선택 Index값
+			selectedNoticeIndex: {
+                type: Number,
+                value: 0
+            }
+		},
+		formulas:{
+			backBtnDisabled: function(){
+				return (this.selectedNoticeIndex == 0);
+			},
+			forwardBtnDisabled: function(){
+				return (this.selectedNoticeIndex == this.noticeList.length-1);
+			}
+		},
+		attached: function(){
+			if(!this._attachedCalled) {
+	            this._attachedCalled = true;
+	            //한번만 호출되도록 로직작성
+	            this.fire("attached");
+	        }
+		},
+		setNoticeList: function(noticeList){
+			var me = this;
+		
+			me.selectedNoticeIndex = 0;
+			me.set("noticeList", noticeList);
+			me.set("value", noticeList[0]);
+
+			me.applyFormula();
+		},
+		
+		// 뒤로가기 버튼
+		_onBackNotice: function()
+		{
+			var me = this,
+				selected = null;
+			me.selectedNoticeIndex = me.selectedNoticeIndex -1;
+			me.set("value", me.noticeList[me.selectedNoticeIndex]);
+			
+			me.applyFormula();
+		},
+		
+		// 앞으로 가기 버튼
+		_onForwardNotice: function()
+		{
+			var me = this;
+			me.selectedNoticeIndex = me.selectedNoticeIndex +1;
+			me.set("value", me.noticeList[me.selectedNoticeIndex]);
+			
+			me.applyFormula();
+		},
+		
+		_onChangeHiddenYn: function()
+		{
+			var me = this;
+			if (me.value.hidden_yn == "Y") {
+				// 해당 공지사항 ID를 저장한다.
+				me.fire("notice-hidden", {pst_no:me.value.pst_no});
+
+				if(me.noticeList != null){
+					me.noticeList.splice(me.selectedNoticeIndex, 1);
+				}
+
+				if (me.noticeList == null || me.noticeList.length == 0) {
+					me._onPopupClose();
+				}
+				else {
+
+					if (me.selectedNoticeIndex == 0 || me.noticeList.length == 1) {
+						me.selectedNoticeIndex = 0;
+					}
+					else {
+						me.selectedNoticeIndex = me.selectedNoticeIndex -1;
+					}
+					
+					me.set("value", me.noticeList[me.selectedNoticeIndex]);
+					me.set("value.hidden_yn", "N");
+					
+					me.applyFormula();
+				}
+			}
+		},
+		getRegDate: function(date){
+			return SCFormatter.format('datetime', date);
+		},
+		
+		// 닫기
+        _onPopupClose: function() {
+            var me = this;
+            me.fire("close");
+        }
+        
+	});
+	</script>
+</dom-module>

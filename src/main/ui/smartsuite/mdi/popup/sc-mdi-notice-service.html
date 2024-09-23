@@ -1,0 +1,81 @@
+<!--
+	******************************************************************************************
+	** @Program-name 	: 공지사항 팝업
+	******************************************************************************************
+-->
+<script>
+	Polymer({
+	    is: "sc-mdi-notice-service",
+	    properties:{
+	    	noticeList:{
+	    		type: Array,
+	    		notify : true,
+	    		value: function(){
+	    			return [];
+	    		}
+	    	},
+	    	
+	    	parameter:{
+	    		type: Object,
+	    		value: function(){
+	    			return {
+	    				cookieData : this.getCookie()
+	    			};
+	    		}
+	    	},
+	    	
+	    	url:{
+	    		type: String,
+	    		value: "findListNoticeInfo.do"
+	    	}
+	    },
+	    
+	    ready:function(){
+	    	var me = this, 
+	    		request = document.createElement("sc-ajax");
+	    	
+  			request.url = this.url;
+  			request.body = this.parameter;
+  			request.addEventListener("response", function(e) {
+  				e.target.removeEventListener('response', arguments.callee);
+  				me.setNoticeList(e.detail.response);
+  	        });
+  	        request.generateRequest();
+	    },
+	    
+	    setNoticeList: function(noticeList){
+	    	this.set("noticeList", noticeList);
+	    },
+	    
+	    getNoticeList : function()
+		{
+			return this.noticeList;
+		},
+	    
+	    setCookie : function(cName, cValue, expiredays)
+		{
+			var today = new Date();
+		    today.setDate(today.getDate() + expiredays);
+		    document.cookie = "mdi-notice_" + cName + '=' + cValue + '; path=/; expires=' + today.toGMTString() + ';'
+		},
+	    
+	    getCookie : function()
+		{
+			var cookieData = document.cookie;
+            var cookieArr = null;
+            var cookieList = null;
+            if (cookieData != null && cookieData !== "") {
+            	cookieArr = cookieData.split(';');
+            	cookieList = new Array();
+            	cookieArr.forEach(function (element, index) {
+            		cookieObj = {};
+            		var data = element.split('=');
+            		if(data[0].indexOf("mdi-notice_") > -1)
+            			cookieList.push(data[1]);
+                });
+            }
+            return cookieList;
+		},
+	    
+	});
+</script>

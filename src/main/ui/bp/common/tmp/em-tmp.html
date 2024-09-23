@@ -1,0 +1,52 @@
+<sc-link rel="import" href="es-tmp-list.html"></sc-link>
+<sc-link rel="import" href="es-tmp-detail.html"></sc-link>
+
+<dom-module id="em-tmp">
+	<style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+	   		<es-tmp-list id="tmpList" class="flex-4" on-selected-tmp="onSelectedTmp" on-add-tmp="onAddTmp" on-delete-tmp="onDeleteTmp"></es-tmp-list>
+	   		<div class="hspace-10"></div>
+	   		<es-tmp-detail id="tmpDetail" class="flex-6" on-saved-tmp="onSavedTmp"></es-tmp-detail>
+    	</div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-tmp',
+            
+            
+            // 템플릿목록 : 템플릿코드 선택
+            onSelectedTmp: function(e, data){
+                var me = this;
+                me.$.tmpDetail.load(data);
+            },
+
+            // 템플릿목록 : 삭제
+            onDeleteTmp: function(){
+            	var me = this;
+                me.$.tmpDetail.onClear();
+            },
+            
+            // 템플릿목록 : 추가
+            onAddTmp: function(){
+            	 var me = this;
+                 me.$.tmpDetail.onAddTmp();
+            },
+
+            // 템플릿내용 : 저장 완료
+            onSavedTmp: function(){
+                var me = this;
+                me.$.tmpList.onFindList();
+            }
+
+        });
+    </script>
+
+</dom-module>

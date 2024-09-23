@@ -1,0 +1,230 @@
+<dom-module id="es-todo-group-list">
+	<style>
+		:host {
+			@apply(--vbox-layout)
+		}
+	</style>
+	<template>
+		
+		<!-- 코드 조회 -->
+        <sc-code-group>
+            <sc-code code="C016" value="{{codes.usrCls}}" ></sc-code> <!-- 사용자 유형 -->
+        </sc-code-group>
+        
+        <!-- 할일 그룹 목록 조회 -->
+        <sc-ajax id="findListGroup"
+        		 url="findListTodoGroup.do"
+        		 body="{{searchParam}}">
+        </sc-ajax>
+        
+        <!-- 할일 그룹 목록 저장 -->
+        <sc-ajax id="saveListGroup"
+        		 url="saveListTodoGroup.do">
+        </sc-ajax>
+        
+        <!-- 할일 그룹 목록 삭제 -->
+        <sc-ajax id="deleteListGroup"
+        		 url="deleteListTodoGroup.do">
+        </sc-ajax>
+        
+		<!-- 역할 체크 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        
+		<div class="vbox flex">
+        	<cc-sub-title-bar title-text="할일 그룹">
+        	</cc-sub-title-bar>
+
+			<cc-search-condition-panel on-search="onFindListGroup" validation-group="search" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="사용자 유형"></sc-label>
+					<sc-combobox-field id="usrClsCombo" value="{{searchParam.usr_typ_ccd}}" items="{{codes.usrCls}}" display-field="label" value-field="data" required="true"
+									   selected-index="0" on-select="onFindListGroup">
+					</sc-combobox-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+	        
+	        <sc-grid id="groupGridPanel" editable="true" class="flex" validation-group="save"
+	        		 on-item-click="onItemClick">
+                <cc-grid-toolbar>
+                    <sc-button text="추가"	on-click="onAddGroup"		auth-s></sc-button>
+                    <sc-button text="삭제"	on-click="onDeleteGroup"	auth-s></sc-button>
+                    <sc-button text="저장"	on-click="onSaveGroup"		auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column		data-field="todo_grp_cd"	header-text="할일 그룹 코드"	width="150"	text-align="center"	style-name="link"
+                    					item-editable-function="onGrpCdEditable"	editor-maskre="/[a-zA-Z0-9]/"	text-case="upper"	max-length="18"		required="true"></sc-data-column>
+                    <sc-data-column		data-field="todo_grp_nm"	header-text="할일 그룹 명"	width="250"	text-align="left"	editable="true"		max-length="60"		></sc-data-column>
+                    <sc-checkbox-column data-field="comm_menu_yn"	header-text="공통 메뉴 여부"	width="150"	text-align="center"	editable="true"		checked-value="Y"	un-checked-value="N"></sc-checkbox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="usr_typ_ccd"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+	    </div>
+	</template>
+	<script>
+	Polymer({
+		is : 'es-todo-group-list',
+		properties : {
+			searchParam : {
+				type: Object,
+				value: function() {
+					return {}
+				}
+			},
+			codes: {
+                type: Object,
+                value: function() {
+                    return {
+                        usrCls: []
+                    };
+                },
+                reset: false
+            },
+		},
+		initialized : function() {
+			var me = this;
+			
+			// 조회된 코드 필터링
+			var usrCls = me.codes.usrCls, filteredUsrCls = [];
+			if(UT.isArray(usrCls)) {
+				for(var i = 0; i < usrCls.length; i++) {
+	    			var item = usrCls[i];
+	    			if(item["data"] !== "T") {	// 비로그인 제외
+	    				filteredUsrCls.push(item);
+	    			}
+	    		}
+			}
+			me.set("codes.usrCls", filteredUsrCls);
+			me.onFindListGroup();
+		},
+		// 할일 그룹 목록 조회
+		onFindListGroup : function() {
+			var me = this;
+			
+			if(!me.validate("search")) {
+				UT.alert("STD.N2700");
+				return;
+			}
+			UT.request(me.$.findListGroup, function(e, res) {
+				var result = res.response;
+				
+				me.$.groupGridPanel.setDataProvider(result);
+				
+				me.fire("load-groups", {usr_typ_ccd : me.get("searchParam.usr_typ_ccd"), groups : result});
+			});
+		},
+		// 그룹코드 editable 제어 : 신규 일 경우만 수정 가능
+        onGrpCdEditable: function(data, item) {
+            var me = this,
+                provider = me.$.groupGridPanel.getDataProvider();
+            
+            return (provider.getItemState(item.rowIndex) === "created");
+        },
+        // 그리드 itemClick 이벤트
+        onItemClick : function(event){
+        	var me = this,
+	        	data = event.detail.data,
+	        	item = event.detail.item,
+	        	provider = me.$.groupGridPanel.getDataProvider();
+	    	
+        	// 코드 클릭 시 (신규 건 제외)
+	    	if(item.dataField === "todo_grp_cd" && provider.getItemState(item.rowIndex) !== "created") {
+	    		// factor 목록 조회
+	            me.fire("show-factors", UT.copy(data));
+	    	}
+	    },
+        // 그룹 추가
+        onAddGroup: function(){
+            var me = this,
+            	provider = me.$.groupGridPanel.getDataProvider();
+
+	        if(UT.isEmpty(me.searchParam.usr_typ_ccd)){
+	            UT.alert(me.translate("STD.E1012", null, me.translate('사용자 유형')), null, true); //"'{0}'을(를) 선택하십시오"
+	            return;
+	        }
+	
+	        // 그리드 신규행 추가
+	        var row = {
+	            usr_typ_ccd : me.searchParam.usr_typ_ccd,	// 사용자 유형
+	            comm_menu_yn  : "N"
+	        };
+	        provider.addItemAt(0, row);
+	    },
+	    // 그룹 삭제
+	    onDeleteGroup: function() {
+            var me = this,
+	            provider = me.$.groupGridPanel.getDataProvider(),
+	            checked = provider.selectionCheckedIndexes();
+	
+	        if(checked.length === 0) {
+	            UT.alert("STD.N1600");
+	            return;
+	        }
+	
+	        UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?",
+	            var deleted = provider.removeItems();
+	        
+	            if(deleted.length > 0) {
+	                me.$.deleteListGroup.body = {
+	                    deleteList: deleted
+	                };
+	                
+	                UT.request(me.$.deleteListGroup, function() {
+						UT.alert("STD.N2500");	// "삭제 하였습니다."
+						me.onFindListGroup();
+	                });
+	            }
+	        });
+	    },
+	    // 그룹 저장
+	    onSaveGroup: function() {
+	    	var me = this;
+
+            // 저장 유효성 체크
+            if(!me.validate("save")) {
+            	UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                return;
+            }
+            
+            // 그룹코드 중복 체크
+            var provider = me.$.groupGridPanel.getDataProvider(),
+                rows = provider.getItems();
+            
+            var unique_check = {}, message = "";
+            for (var i=0, len = rows.length; i<len; i++) {
+                if(typeof unique_check[rows[i].todo_grp_cd] == "undefined") {
+                    unique_check[rows[i].todo_grp_cd] = 0;
+                } else {
+                    message = me.translate("STD.E1000",null, me.translate('그룹코드')); // "'{0}'에 동일한 값이 존재합니다"
+                    break;
+                }
+            }
+            if(UT.isNotEmpty(message)) {
+            	UT.alert(message, null, true);
+            	return;
+            }
+            
+            var created = provider.getNewItems(),
+                updated = provider.getUpdateItems();
+
+            if(created.length + updated.length === 0) {
+                UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                return;
+            }
+
+            UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                me.$.saveListGroup.body = {
+                    insertList: created,
+                    updateList: updated
+                };
+                UT.request(me.$.saveListGroup, function(){
+					UT.completeAlert();	// 저장하였습니다.
+					// 목록 조회
+					me.onFindListGroup();
+	            });
+            });
+	    }
+	});
+	</script>
+</dom-module>

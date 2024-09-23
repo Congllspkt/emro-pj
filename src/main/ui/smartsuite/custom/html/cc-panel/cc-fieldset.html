@@ -1,0 +1,328 @@
+<dom-module id="cc-fieldset">
+
+    <template>
+			  <content id="labelSlot" select="sc-label"></content>
+			<div style="width:100%;height:100%;" >
+				<content id="contentSlot"></content>
+			</div>
+	</template>
+	<script>
+
+		Polymer({
+    		is: 'cc-fieldset',
+
+			className : 'CCFieldset',
+
+			behaviors: [],
+
+			properties: {
+
+				/** Label 텍스트의 넓이값에 대한 CSS 클래스 맵핑 데이터 */
+				labelWidthCls: {
+					type: String,
+					value: "w-"
+				},
+				labelAlignCls: {
+					type: String,
+					value: "text-align-"
+				},
+
+				/** 검색조건 타입 */
+				parentType: {
+					type: Object,
+					value: function(){
+						return {
+							search: "cc-search-condition-panel",
+							form: "cc-form-panel"
+						};
+					}
+				},
+
+				defaultPaddings: {
+					type: Number,
+					value: function(){
+						return 0;
+					}
+				},
+
+				itemPadding: {
+					type: Number,
+					value: 0,
+					observer : '_onChangedItemPadding'
+				},
+
+				defaultDataFieldContainerCls: {
+					type: String,
+					value: function(){
+						return "field-container";
+					}
+				},
+
+				useBulletContainer: {
+					type: Object,
+					value: false
+				},
+
+				childrenLabelSelectors: {
+					type: String,
+					value: "cc-fieldset>span.sc-label"
+				},
+
+				/** Column Span에 사용될 CSS 클래스 */
+				columnSpanCls: {
+					type: String,
+					value: "column_span--"
+				},
+
+				rowSpanCls: {
+					type: String,
+					value: "row_span--"
+				},
+				/** Column Span */
+				columnSpan: {
+					type: String,
+					observer : 'onChangedColumnSpan'
+				},
+				/** Row Span */
+				rowSpan: {
+					type: String,
+					observer : 'onChangedRowSpan'
+				},
+
+				/** Label 텍스트의 넓이 */
+				labelWidth: {
+					type: String,
+					value: "150",
+					observer: "onChangedLabelWidth"
+				},
+
+				/** Label 텍스트의 좌, 우 배치(left, center, right) */
+				labelAlign: {
+					type: String,
+					value: "left",
+					observer: "onChangedLabelAlign"
+				},
+
+				/** Data 필드의 넓이 */
+				dataWidth: {
+					type: String,
+					value: "100%",
+					observer: "onChangedDataWidth"
+				},
+
+				/** Data 필드의 좌, 우 배치(left, right) */
+				dataAlign: {
+					type: String,
+					value: "left",
+					observer: "onChangedDataAlign"
+				},
+				/** Data 영역의 필드가 다중일때, 수평(horizontal) / 수직(vertical) 배치 여부에 따른 Display 맵핑 정보 */
+				dataArrangementDisplayItems: {
+					type: Object,
+					value: function(){
+						return {
+							horizontal: "inline-flex",
+							vertical: "inline-block"
+						};
+					}
+				},
+				/** Data 영역의 필드가 다중일때, 수평(horizontal) / 수직(vertical) 배치 여부 */
+				dataArrangement: {
+					type: String,
+					value: "horizontal",
+					observer: "onChangedDataArrangement"
+				}
+			},
+
+			listeners: {
+				"changed-label-width":"onChangedLabelWidth",
+				"changed-label-align":"onChangedLabelAlign",
+				"changed-data-width":"onChangedDataWidth",
+				"changed-data-align":"onChangedDataAlign"
+			},
+
+			get _contentContainer() {
+				return this;
+			},
+
+			get _fieldsetChildren() {
+				return this._contentContainer.children;
+			},
+
+			/** [Smartsuite 10] Lable 앞의 Bullet 영역 */
+			get _bulletContainerEls() {
+				return this.querySelectorAll(".bullet-container.sc-label");
+			},
+
+			/** Child 엘리먼트 목록 */
+			get _childrenLabel() {
+				if(!this._childrenLabelEl) {
+					//this._childrenLabelEl = this.querySelector("sc-label>span.sc-label");
+					if(this.children.length != 1){
+						this._childrenLabelEl = this.querySelector("sc-label>span.sc-label");
+					}
+				}
+				return this._childrenLabelEl;
+			},
+
+			get _childrenData() {
+				if(!this._childrenDataEl || this._childrenDataEl.length < 1) {
+						this._childrenDataEl = this.children[1];
+				}
+				return this._childrenDataEl;
+			},
+
+			getLabelWidth: function(_labelWidth){
+				return _labelWidth+"px";
+			},
+
+			ready: function(){
+				var labelSlot = this.$.labelSlot;
+				var contentSlot = this.$.contentSlot;
+				var firstLabel = Polymer.dom(labelSlot).getDistributedNodes();
+				if (firstLabel.length > 1) {
+					var parent = Polymer.dom(contentSlot).parentNode;
+					if (parent) {
+						Polymer.dom(parent).insertBefore(firstLabel[1], contentSlot);
+						if(firstLabel.length  > 2){
+							for(var i=1,len = firstLabel.length;i<len;i++){
+								Polymer.dom(parent).insertBefore(firstLabel[i], contentSlot);
+							}
+						}
+					}
+				}
+				this.setCssClass();
+			},
+
+			attached: function(){
+				if(!this.__isAttached){
+					this.applyStrategyByPanel();
+					this.applyBulletContainer();
+					this.__isAttached = true;
+				}
+			},
+
+			applyStrategyByPanel: function(){
+				if(this.containsCls(this.parentElement, this.parentType.search)){
+					this.addCls(this._contentContainer, "search-condition");
+				}else if(this.containsElOrCls(this.parentElement, this.parentType.form)){
+					this.addCls(this._contentContainer, "form-warp");
+				}
+			},
+
+			/** Label의 Bullet 영역 처리 */
+			applyBulletContainer: function(){
+				if(!this.useBulletContainer){
+					var bulletEls = this._bulletContainerEls;
+					for(var index in bulletEls){
+						bulletEls[index].hidden = true;
+					}
+				}
+			},
+
+			setCssClass: function(){
+				for(var i=1; this._fieldsetChildren && i<this._fieldsetChildren.length; i++){
+					if(this.containsCls(this.parentElement, this.parentType.search)){
+						this.dataFieldCssClass(this._fieldsetChildren[i], this.defaultDataFieldContainerCls); // (2) 수정
+					}
+				}
+			},
+			dataFieldCssClass: function(dataFieldEl, dataFieldContainerCls){ // (3) 추가
+				/** Input 태그가 존재하는 경우 */
+				if(dataFieldEl.querySelector("input")){
+					this.addCls(dataFieldEl, dataFieldContainerCls);
+				}
+			},
+
+			/** CSS 클래스 추가 */
+			addCls: function(el, cls){
+				if(el && cls){
+					el.classList.add(cls);
+				}
+			},
+
+			/** CSS 클래스 삭제 */
+			removeCls: function(el, cls){
+				if(el && cls){
+					el.classList.remove(cls);
+				}
+			},
+
+			/** CSS 클래스 여부 */
+			containsCls: function(el, cls){
+				if(el && cls){
+					return el.classList.contains(cls);
+				}
+			},
+
+			containsElOrCls: function(el, cls){
+				if(el){
+					return el.nodeName.toLowerCase() == cls || el.classList.contains(cls);
+				}
+			},
+
+			_onChangedItemPadding: function(newValue, oldValue){
+			},
+
+			/** Column Span 클래스 추가 */
+			onChangedColumnSpan: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this, this.columnSpanCls+oldValue);
+				}
+				this.addCls(this, this.columnSpanCls+newValue);
+			},
+
+			onChangedRowSpan: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this, this.rowSpanCls+oldValue);
+				}
+				this.addCls(this, this.rowSpanCls+newValue);
+			},
+
+			/** Label 넓이값 변경 */
+			onChangedLabelWidth: function(newValue, oldValue){
+				var labelEl = this._childrenLabel;
+				this.removeCls(labelEl, this.labelWidthCls+oldValue);
+				this.addCls(labelEl, this.labelWidthCls+newValue);
+			},
+
+			/** Label Align 변경 */
+			onChangedLabelAlign: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this, this.labelAlignCls+oldValue);
+				}
+				this.addCls(this, this.labelAlignCls+newValue);
+			},
+
+			onChangedDataWidth: function(newValue, oldValue){
+				var dataEl = this._childrenData;
+				if(dataEl){
+					if(newValue.indexOf("%") >= 0){
+						dataEl && (dataEl.style.width = newValue);
+					}else{
+						dataEl && (dataEl.style.width = newValue+"px");
+					}
+				}
+			},
+
+			/** Data Align 변경 */
+			onChangedDataAlign: function(newValue, oldValue){
+				if(newValue && (this._childrenDataEl != null)){
+					if(newValue == "left"){
+						this.style.justifyContent = "flex-start";
+					}else {
+						this.style.justifyContent = "space-between";
+					}
+				}
+			},
+			onChangedDataArrangement: function(newValue, oldValue){
+				var display = this.dataArrangementDisplayItems[newValue];
+				if(display && UT.isNotEmpty(this._childrenData)){
+					this._childrenData.style.display = display;
+				}
+			}
+			
+	  	});
+	
+	</script>
+</dom-module>

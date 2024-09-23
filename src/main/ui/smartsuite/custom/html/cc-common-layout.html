@@ -1,0 +1,250 @@
+<style is="custom-style">
+	:root {
+	
+		--flex-layout : {
+			display: -ms-flexbox !important;
+      		display: -webkit-flex !important;
+      		display: flex !important;
+		}
+	
+    	--fit-layout: {
+    		display : block;
+			width : 100%;
+			height : 100%;
+            overflow:auto;
+		}
+		
+		--vbox-layout: {
+			@apply(--flex-layout);
+			-ms-flex-direction: column;
+      		-webkit-flex-direction: column;
+      		flex-direction: column;
+      		width : 100%;
+      		height : 100%;
+      		overflow: visible;
+		}
+		
+		--hbox-layout: {
+			@apply(--flex-layout);
+			-ms-flex-direction: row;
+      		-webkit-flex-direction: row;
+      		flex-direction: row;
+      		width : 100%;
+      		height : 100%;
+      		overflow: auto;
+		}
+  	}
+</style>
+<style>
+
+/**
+* 레이아웃
+*/
+.fit {
+	display : block;
+	width : 100%;
+	height : 100%;
+    overflow: auto;
+}
+
+.hbox {
+	display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    -ms-flex-direction: row;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+    overflow: auto;
+}
+
+.vbox {
+	display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    -ms-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    overflow: visible;
+}
+
+sc-container.vbox,sc-container.hbox,sc-panel.vbox,sc-panel.hbox,sc-tab-navigation.vbox,sc-tab-navigation.hbox {
+	display : block;
+	-ms-flex-direction: initial;
+    -webkit-flex-direction: initial;
+    flex-direction: initial;
+	overflow : hidden;
+}
+
+.vbox > div.content-wrap > div.content {
+	display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    -ms-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    overflow: auto !important;
+}
+
+ 
+/*
+IE Bug Fix
+1차 수정  20171215
+http://alm.emro.co.kr/browse/NFCH-2142
+.msie .vbox > *,.msie .hbox > *, .msie .vbox > div.content-wrap > div.content > *, .msie .hbox > div.content-wrap > div.content > * {
+	flex-shrink : 0;
+}
+
+2차 수정 20180423
+http://alm.emro.co.kr/browse/SFNSUPP-1748
+*/
+.msie .vbox > *,.msie .hbox > *, .msie .vbox > div.content-wrap > div.content > *, .msie .hbox > div.content-wrap > div.content > *,
+ .msie sc-pages > * > *, .msie sc-tab-navigation > div.content-wrap > div.content > * > * {
+	flex-shrink : 0;
+}
+
+.hbox > div.content-wrap > div.content {
+	display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    -ms-flex-direction: row;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+    overflow: auto !important;
+}
+
+.flex {
+	-ms-flex: 1 1 0.000000001px;
+    -webkit-flex: 1;
+    flex: 1;
+    -webkit-flex-basis: 0.000000001px;
+    flex-basis: 0.000000001px;
+	width: auto;
+    height: auto;
+}
+
+div.flex:not(.vbox):not(.hbox) {
+    -ms-flex: 1 1 0.000000001px;
+    -webkit-flex: 1;
+    flex: 1;
+    -webkit-flex-basis: 0.000000001px;
+    flex-basis: 0.000000001px;
+    width: auto;
+    height: auto;
+    overflow: auto;
+}
+
+.flex-2 {
+	-ms-flex: 2;
+    -webkit-flex: 2;
+    flex: 2;
+    width: auto;
+    height: auto;
+}
+
+.flex-3 {
+	-ms-flex: 3;
+    -webkit-flex: 3;
+    flex: 3;
+    width: auto;
+    height: auto;
+}
+
+.flex-4 {
+	-ms-flex: 4;
+    -webkit-flex: 4;
+    flex: 4;
+    width: auto;
+    height: auto;
+}
+
+.flex-5 {
+	-ms-flex: 5;
+    -webkit-flex: 5;
+    flex: 5;
+    width: auto;
+    height: auto;
+}
+
+.flex-6 {
+	-ms-flex: 6;
+    -webkit-flex: 6;
+    flex: 6;
+    width: auto;
+    height: auto;
+}
+
+.flex-7 {
+	-ms-flex: 7;
+    -webkit-flex: 7;
+    flex: 7;
+    width: auto;
+    height: auto;
+}
+
+.flex-8 {
+	-ms-flex: 8;
+    -webkit-flex: 8;
+    flex: 8;
+    width: auto;
+    height: auto;
+}
+
+.flex-9 {
+	-ms-flex: 9;
+    -webkit-flex: 9;
+    flex: 9;
+    width: auto;
+    height: auto;
+}
+
+.box {
+	border: 1px solid #C2C2C2;
+	padding : 5px; 
+}
+
+.hbox.pad-5  {
+	padding: 5px;	
+}
+.vbox.pad-5  {
+	padding: 5px;	
+}
+
+/* 상세페이지 */
+.page {
+	padding:0;
+    border-top:1px solid #1e5784;
+    border-bottom:1px solid #1e5784;
+    /*border-radius: 5px;
+    background: #fafafa;*/
+}
+</style>
+<script>
+(function() {
+	var fited = ['fixed', 'fit', 'vbox', 'hbox'],	
+		len = fited.length,
+		isFit = function() {
+			if(this.classList.contains('grow')){
+				return false;
+			}
+			if(this.flexible || this._contentElement.classList.contains('fit')) {
+				return true;
+			}
+			for(var i=0;i<len;i++) {
+				if(this.classList.contains(fited[i])) {
+					return true;
+				}	
+			}
+			return false;
+		};
+		
+	Object.defineProperty(SCContainer.prototype, "_isContentElementFit", {
+		get : isFit
+	});
+	Object.defineProperty(SCPanel.prototype, "_isContentElementFit", {
+		get : isFit
+	});
+	Object.defineProperty(SCTabNavigation.prototype, "_isContentElementFit", {
+		get : isFit
+	})
+}());
+</script>

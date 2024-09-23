@@ -1,0 +1,177 @@
+<!-- 
+/**
+ * 품목 검색을 위한 input field 커스텀 태그
+ *
+ *     <cc-item-search value="{{value}}" multi-value="{{여러개받을value}}" class="w-200"></cc-item-search>
+ *
+ * @element cc-multi-text-field
+ *
+ *
+ * @attribute value 해당 텍스트 필드 input value binding <br>
+ * [string] [optional] 
+ *
+ *
+ * @attribute placeholder placeholder <br>
+ * [string] [optional] 
+ *
+ *  @attribute multi-value 멀티 value<br>
+ * [string] [optional]
+ *
+  *  @attribute multi-check 멀티 체크 초기값 Y or N ,default N<br>
+ * [string] [optional]
+ *
+ */
+-->
+<dom-module id="cc-item-search">
+<!--
+/**
+ *
+ *	@description : 품목코드 검색 custom tag
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName :
+ * @Since 2016. 5. 10.
+ * @변경이력 : [2016. 5. 10.] Yeon-u Kim 최초작성
+ */
+-->
+	<template>
+       <div class="field-box">
+	    	<sc-text-field
+	            class$="[[class]]"
+	            value="{{value}}" placeholder$="[[placeholder]]" maxLength="200" on-enter="onShowItemPopup"
+	            trigger-cls="search" on-trigger-click="onShowItemPopup" hidden="{{uiBind.multiable}}">
+	        </sc-text-field>
+	        <sc-text-field
+	            class$="[[class]]"
+	            value="{{displayValue}}" placeholder$="[[placeholder]]" on-keydown="onKeyDown"
+	            trigger-cls="multi-search" on-trigger-click="onShowItemPopup" hidden="{{!uiBind.multiable}}">
+	        </sc-text-field>
+			<sc-checkbox-field
+	        	label="다중선택"
+	        	style="margin-left:5px"
+	        	input-value="{{multiCheck}}"
+	        	checked-value="Y" un-checked-value="N"
+	        	on-click="onChangeMultiSelect"></sc-checkbox-field>
+        </div>
+	</template>
+	<script>
+	Polymer({
+			is : 'cc-item-search',
+			properties : {
+				operOrgCd : {
+					type : Object
+				},
+				value: {
+                    type: Object,
+                    value : function(){
+                    	return {};
+                    },
+                    notify: true
+                },
+                multiValue: {
+                	type: Array,
+                    value: function() {
+                        return [];
+                    },
+                    notify: true,
+                    observer: "changedValue"
+                },
+                displayValue: {
+                    type: String,
+                    value: ""
+                },
+                multiCheck : {
+					type : Object,
+					value : function(){
+						return "N";
+					},
+					notify:true
+				},
+                userEdit: { // 직접입력 여부
+                    type: Boolean,
+                    value: false
+                },
+                initValue: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                uiBind: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            multiable : false
+                        }
+                    }
+                }
+			},
+			//최초 호출
+			attached : function(){
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		        }
+			},
+			// 값 변경
+            changedValue: function(value) {
+                var me = this;
+                if (UT.isArray(value)) {
+                    var displayValue = "";
+                    if (value[0]) {
+                        displayValue = value[0];
+                        if (value.length > 1) {
+                            displayValue = me.translate("STD.N3100",null,value[0], value.length - 1);	// "{0}외 {1}건"
+                        }
+                    }
+                    me.set("displayValue", displayValue);
+                }
+            },
+            //다중선택 체크 변경
+			onChangeMultiSelect : function(e){
+				var me = this;
+				me.set("uiBind.multiable",me.multiCheck === "Y");
+				me.set("value","");
+				me.set("displayValue", "");
+                me.set("multiValue", []);
+			},
+			onShowItemPopup : function() {
+				var me = this;
+				if (!me.operOrgCd) {
+					UT.alert("STD.N3400"); //'운영조직을 선택하세요.'
+					return false;
+				}
+				//popup에서 필요한 param 셋팅
+				var param = {
+					oorg_cd  : me.operOrgCd,
+					purc_grp_typ_ccd : me.purcGrpTyp,
+					singleSelect : !me.get("uiBind.multiable")
+				};
+
+				UT.popupItemSearch(me, param, function(selectedItems) {
+					if(me.get("uiBind.multiable")) {
+						//선택  처리
+						var itemCds = [];
+						for(var i=0, len=selectedItems.length; i<len; i++){
+							itemCds.push(selectedItems[i].item_cd);
+						}
+						me.set("multiValue", itemCds);
+					} else {
+						var selected = selectedItems[0];
+						me.set("value", selected.item_cd);
+					}
+				});
+			},
+			// 사용자의 keydown
+            onKeyDown: function(e) {
+                var me = this;
+                if(me.get("uiBind.multiable") && !UT.isSpecialKeyDown(e)) {
+                    e.preventDefault();
+                    me.set("value","");
+                    me.set("multiValue", []);
+                }
+            },
+		});
+	</script>
+</dom-module>

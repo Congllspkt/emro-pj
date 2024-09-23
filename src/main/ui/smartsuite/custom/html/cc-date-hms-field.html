@@ -1,0 +1,172 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-year-combo
+    ** Author          : choijh
+    ** Create Date     : 2016.10.27
+    ** History         : 2016.10.27 choijh 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="cc-date-hms-field">
+    <style>
+        :host {
+            display : inline-flex;
+        }
+        #date {
+        	width: var(--cc-date-width, 110px);
+        }
+
+        #time {
+        	width: var(--cc-time-width, 63px);
+        }
+        
+        #time.middle {
+        	width: var(--cc-time-width, 44px);
+        }
+    </style>
+    <template>
+		<sc-date-field 
+			id="date"
+			value="{{value}}" 
+			max-date="{{toDate}}" 
+			format="{{dayFormat}}"
+			required$="[[required]]" 
+			disabled="[[disabled]]" 
+			readonly="[[readonly]]">
+		</sc-date-field>
+		<sc-text-field  
+			id="time" 
+			value="{{time}}" 
+			placeholder="{{placeholder}}"
+			input-mask="{{inputMask}}"
+			required$="[[required]]" 
+			disabled="[[disabled]]" 
+			readonly="[[readonly]]">
+		</sc-text-field>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-date-hms-field",
+			properties : {
+				//__:__:__와 같이 placeholder 표시용
+				placeholder: String,
+				
+				//05:30:22와 같이 inputMask 표시용
+				inputMask: String,
+				
+				//일자 포맷 변경
+				dayFormat: {
+					type: String,
+					value: "YYYY/MM/DD"
+				},
+				
+				//시간 포맷 변경
+				timeFormat: {
+					type: String,
+					value: "HH:mm:ss"
+				},
+				
+				//Time Vaule
+				time: {
+					type: Object,
+					notify: true,
+					observer: "_onChangeTime"
+				},
+				
+				//Date + Time 값
+				value: {
+					type: Object,
+					notify: true,
+					observer: "_onChangeValue"
+				},
+				
+				/*
+				//Date값이 아닌 String값으로 받고싶으면 true 
+				 stringDate: {
+					type: Boolean,
+					value: false
+				}, 
+				
+				
+				//stringDate가 true일 경우 String Format을 지정할 수 있음
+				format: {
+					type: String,
+					value : 'YYYY-MM-DD HH:mm:ss'
+				}
+				
+				*/
+			},
+			
+			//Vaule값을 받으면 Time에 값을 넣어줌
+			_onChangeValue: function(newValue, oldValue) {
+				if(!newValue) {
+					this.time = null;
+					return;
+				}
+				this.time = moment(newValue).format(this.timeFormat);
+			},
+			
+			//Time값을 받으면 Value에 시간 설정
+			//Date + Time의 합쳐진 시간을 String 또는 Date 형식으로 반환 
+			//stringDate를 true로 설정하면 format에 지정된 형식대로 표현 
+			_onChangeTime: function(time) {
+				if(!time) {
+					return;
+				}
+				
+				var stringValue = moment(this.value).format('YYYYMMDD') + 'T' + time.replace(/\:/g, ''); 
+				var toDate = moment(stringValue).toDate();
+				
+				//Invalid Date 일 경우 
+				if(isNaN(toDate.getTime())) {
+					this.value = null;
+					
+				/*
+				//stringDate가 true로 설정됐을 경우 
+				} else if(this.stringDate) {
+					this.value = moment(toDate).format(this.format); 
+				*/
+
+				//Default
+				} else {
+					this.value = toDate;
+				}
+				
+			},
+			
+			//날짜를 입력하면 자동으로 시간을 정각으로 설정
+			_onDateChanged: function(newValue, oldValue) {
+				var timeFormat = moment().format(this.timeFormat);
+				this.time = newValue ? timeFormat.replace(/\d/g, '0') : null;  
+			},
+			
+			attached: function() {
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            
+		            //사용자 입력 포맷에 맞게 현재 시간 변환
+					var timeFormat = moment().format(this.timeFormat);
+					
+					//변환된 시간을 다시 '9', '_'의 문자로 변경하여 입력
+					this.inputMask = timeFormat.replace(/\d/g, '9');	
+					this.placeholder = timeFormat.replace(/\d/g, '_');
+					
+					//짧을 경우 width 제어 
+					if(this.timeFormat.length < 6) {
+						this.toggleClass('middle', true, this.$.time);
+					}
+		        }
+			},
+			
+			_destroy: function() {
+	            this._propertySetter('placeholder', null);
+				this._propertySetter('inputMask', null);
+				this._propertySetter('dayFormat', null);
+				this._propertySetter('timeFormat', null);
+				this._propertySetter('time', null);
+				this._propertySetter('value', null);
+			}
+		});
+	</script>
+
+</dom-module>

@@ -1,0 +1,608 @@
+<dom-module id="es-manual-mgt-list">
+    <style>
+        :host {
+            @apply(--hbox-layout);
+        }
+    </style>
+
+    <template>
+        <!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+        <!-- 공통코드 조회 -->
+        <sc-code-group>
+            <sc-code code="C002" value="{{codes.langCd}}"></sc-code> <!-- 언어코드 -->
+            <sc-code code="C016" value="{{codes.usrCls}}" ></sc-code> <!-- 사용자 유형 -->
+        </sc-code-group>
+
+        <!-- 메뉴 목록 : 조회 -->
+        <sc-ajax id="findListSelectionLanguageManualMenu"
+                 url="findListSelectionLanguageManualMenu.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindList">
+        </sc-ajax>
+
+		<!-- 다국어 메뉴얼 목록 : 조회 -->
+        <sc-ajax id="findListAllLanguageManual"
+                 url="findListAllLanguageManual.do"
+                 body="{{searchLangParam}}">
+        </sc-ajax>
+        
+        <!-- 메뉴얼 정보 : 조회 -->
+        <sc-ajax id="findLastRevisionManualInfo"
+                 url="findLastRevisionManualInfo.do"
+                 body="{{searchDetailParam}}"
+                 on-response="completeFindLastRevisionManualInfo">
+        </sc-ajax>
+
+        <!-- 메뉴얼 정보 : 저장 -->
+        <sc-ajax id="saveManualInfo"
+                 url="saveManualInfo.do"
+                 on-response="completeSaveManualInfo">
+        </sc-ajax>
+
+        <!-- 메뉴얼 정보 : Revision 저장 -->
+        <sc-ajax id="copyPreviousRevisionManualInfo"
+                 url="copyPreviousRevisionManualInfo.do"
+                 on-response="completeSaveManualInfo">
+        </sc-ajax>
+        
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class= "vbox flex-4">
+        	<cc-sub-title-bar title-text="메뉴 목록"></cc-sub-title-bar>
+            <cc-search-condition-panel search-button-hidden="true"  search-condition-cls="label-row" auth-r>
+                <cc-fieldset>
+                    <sc-label text="구분"></sc-label>
+                    <sc-combobox-field selected-index="0"
+                                       items="{{codes.usrCls}}" display-field="label" value-field="data"
+                                       value="{{searchParam.usr_typ_ccd}}"
+                                       on-change="onChangeUsrCls"
+                                       required="true"
+                                       validation-group="search">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="다국어"></sc-label>
+                    <sc-combobox-field placeholder="필수"
+                    items="{{codes.langCd}}" display-field="label" value-field="data"
+                    value="{{searchParam.lang_ccd}}" required="true" on-change="onChangeUsrCls">
+                    </sc-combobox-field>
+                </cc-fieldset>
+            </cc-search-condition-panel>
+
+            <sc-grid id="gridPanel" is-tree="true" class="flex"  use-selection="false" use-state="false"
+                     on-item-click="onItemClick">
+                <cc-grid-toolbar>
+                    <sc-button text="펼침" on-click="onExpandAll" auth-r></sc-button>
+                    <sc-button text="접기" on-click="onCollapseAll" auth-r></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="menu_nm" header-text="메뉴 명" width="250" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="menu_cd" header-text="메뉴 코드" width="100" text-align="center" item-style-function="onStyleMenuCd"></sc-data-column>
+                    <sc-checkbox-column data-field="reg_yn" header-text="작성 여부" width="80" text-align="center" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                    <sc-checkbox-column data-field="mnl_auto_pstg_yn" header-text="자동 게시 여부" width="150" text-align="center" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                    <sc-date-column data-field="mnl_auto_pstg_st_dttm" header-text="자동 게시 시작 일시" width="130" text-align="center" display-format="yyyy/MM/dd"></sc-date-column>
+                    <sc-date-column data-field="mnl_auto_pstg_exp_dttm" header-text="자동 게시 만료 일시" width="130" text-align="center" display-format="yyyy/MM/dd"></sc-date-column>
+                </sc-grid-columns>
+            </sc-grid>
+
+        </div>
+
+        <div class="hspace-10"></div>
+
+        <div class="vbox flex-6">
+         	<!-- <cc-sub-title-bar title-text="[[translate('메뉴얼 현황')]] : [[searchLangParam.menu_nm]]" > -->
+			<cc-sub-title-bar title-text="[[_menuLangTitle]]" i18n-disabled>
+        	</cc-sub-title-bar>
+        	
+        	<sc-grid id="menuLangGridPanel" class="h-150"  use-selection="false" use-state="false"
+                     on-item-click="onMenuLangItemClick">
+                <sc-grid-columns>
+                    <sc-combobox-column data-field="lang_ccd" header-text="언어" width="100" text-align="center" items="{{codes.langCd}}" display-field="label" value-field="data" style-name="link"></sc-combobox-column>
+                    <sc-combobox-column data-field="mnl_typ_ccd" header-text="유형" width="100" text-align="center" items="{{codes.mnlTyp}}" display-field="label" value-field="data"></sc-combobox-column>
+                    <sc-data-column data-field="mnl_revno" header-text="차수" width="80" text-align="right"></sc-data-column>
+                    <sc-data-column data-field="mnl_pstg_revno" header-text="게시 차수" width="170" text-align="right"></sc-data-column>
+                    <sc-checkbox-column data-field="reg_yn" header-text="작성 여부" width="80" text-align="center" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                    <sc-checkbox-column data-field="mnl_auto_pstg_yn" header-text="자동 게시 여부" width="150" text-align="center" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                    <sc-date-column data-field="mnl_auto_pstg_st_dttm" header-text="자동 게시 시작 일시" width="130" text-align="center" display-format="yyyy/MM/dd"></sc-date-column>
+                    <sc-date-column data-field="mnl_auto_pstg_exp_dttm" header-text="자동 게시 만료 일시" width="130" text-align="center" display-format="yyyy/MM/dd"></sc-date-column>
+                </sc-grid-columns>
+            </sc-grid>
+	        
+        	<cc-sub-title-bar title-text="메뉴얼">
+                <sc-button text="미리보기" on-click="onPreView" auth-r></sc-button>
+                <sc-button text="복사" on-click="onSaveInfoRev" auth-s></sc-button>
+                <sc-button text="저장"  on-click="onSaveInfo" auth-s></sc-button>
+        	</cc-sub-title-bar>
+
+            <cc-form-panel validation-group="save" label-width="120">
+                <cc-fieldset>
+                   <sc-label text="언어"></sc-label>
+                   <sc-combobox-field placeholder="필수"
+                                      items="{{codes.langCd}}" display-field="label" value-field="data"
+                                      value="{{searchDetailParam.lang_ccd}}" required="[[formula('isEditable')]]" readonly="true">
+                   </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="유형"></sc-label>
+                    <sc-combobox-field placeholder="선택"
+                                       items="{{codes.mnlTyp}}" display-field="label" value-field="data"
+                                       value="{{searchDetailParam.mnl_typ_ccd}}" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="차수" ></sc-label>
+                    <sc-combobox-field placeholder="선택"
+                                       items="{{codes.mnlRev}}" display-field="label" value-field="data" input-clear="false"
+                                       value="{{searchDetailParam.mnl_revno}}" readonly="[[!formula('isEditable')]]">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="게시 차수"></sc-label>
+                    <sc-combobox-field placeholder="선택"
+                                       items="{{codes.rlsRev}}" display-field="label" value-field="data"
+                                       value="{{searchDetailParam.mnl_pstg_revno}}" readonly="[[!formula('isEditable')]]">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="자동 게시 여부"></sc-label>
+                    <sc-checkbox-field input-value="{{manualInfo.mnl_auto_pstg_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]" on-checkchange="onAutoDispYnCheckChange"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset hidden="[[!formula('isAutoDispY')]]">
+                    <sc-label text="자동 게시 시작 일시"></sc-label>
+                    <sc-period-date-field id="periodDateField" from-value="{{manualInfo.mnl_auto_pstg_st_dttm}}" to-value="{{manualInfo.mnl_auto_pstg_exp_dttm}}"
+                                                  default-from-value="0d" default-to-value="1M" string-date="false" readonly="[[!formula('isEditable')]]"></sc-period-date-field>
+                </cc-fieldset>
+            </cc-form-panel>
+	
+            <div class="vspace-10"></div>
+            
+            <div class="flex">
+	            <div hidden="[[!formula('isHidden')]]" class="vbox flex">
+	                <sc-toolbar>
+	                    <sc-label text="첨부 아이디"></sc-label>
+	                </sc-toolbar>
+	
+	                <sc-upload id="upload" class="h-200" value="{{manualInfo.mnl_athg_uuid}}" editable="true" extension-allow-or-limit="1" extension="pdf" max-total-file-count="1">
+	                </sc-upload>
+	                <div class="vspace-10"></div>
+	                <sc-toolbar>
+	                    <sc-label text="원본 매뉴얼 첨부 아이디"></sc-label>
+	                </sc-toolbar>
+	
+	                <sc-upload id="orgUpload" class="h-250" value="{{manualInfo.orig_mnl_athg_uuid}}" editable="true">
+	                </sc-upload>
+	                <div class="flex"></div>
+	            </div>
+	
+	            <div hidden="[[formula('isHidden')]]" class="vbox flex">
+	                <cc-sub-title-bar title-text="매뉴얼 내용">
+	                </cc-sub-title-bar>
+	                <sc-editor id="editor" value="{{manualInfo.mnl_cont}}" editable="true" class="h-500"></sc-editor>
+	            </div>
+	        </div>
+        </div>
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "es-manual-mgt-list",
+
+            properties: {
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            usrCls: []	// 메뉴구분
+                            ,langCd: []	// 언어
+                            ,mnlTyp: [{data:'HTML', label:'HTML'}, {data:'PDF', label:'PDF'}] // 메뉴얼 유형
+                            ,mnlRev: [] // 메뉴얼 차수
+                            ,rlsRev: [] // 게시차수
+                        };
+                    }
+                },
+                // 메뉴얼 목록 : 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                        	lang_ccd: SCLocaleManager.getLocale()
+                        };
+                    }
+                },
+                
+                _menuLangTitle: {
+                	type: String,
+                	value: ""
+                },
+
+             	// 다국어 메뉴얼 정보 : 조회 조건
+                searchLangParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                
+                // 메뉴얼 정보 : 조회 조건
+                searchDetailParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                // 메뉴얼 정보 : binding object
+                manualInfo: {
+                    type: Object,
+                    value: function() {
+                        return {}
+                    }
+                }
+            },
+
+            observers: ["onChangeMnlTyp(searchDetailParam.mnl_typ_ccd)", "onChangeMnlRev(searchDetailParam.mnl_revno)"],
+
+            formulas: {
+                // 수정 가능 여부
+                isEditable: function() {
+                    return UT.isNotEmpty(this.searchDetailParam.menu_cd) && UT.isNotEmpty(this.searchDetailParam.lang_ccd);
+                },
+                // 메뉴얼 유형에 따른 컨텐츠 hidden 여부
+                // PDF 일 경우 첨부파일
+                // HTML 일 경우 에디터
+                isHidden: function() {
+                    return (this.searchDetailParam.mnl_typ_ccd === "PDF")
+                },
+                isAutoDispY: function(){
+                	return (this.formula('isEditable') && this.manualInfo.mnl_auto_pstg_yn === "Y");
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+                var me = this;
+                me.onFindList();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                var provider = me.$.gridPanel.getDataProvider();
+
+                var childIndexes = provider.getChildIndexes(item.nodeIndex);
+                if(item.dataField === "menu_cd" && (!childIndexes || childIndexes.length === 0)){ // leaf 노드
+                	me.set("_menuLangTitle", me.translate("메뉴얼 정보") + " - " + data.menu_nm + " (" + data.menu_cd + ")");
+                    me.set("searchLangParam", {"menu_cd": data.menu_cd});
+                    me.set("searchDetailParam", me.getPropertyInfo("searchDetailParam").value());
+                    me.set("manualInfo", me.getPropertyInfo("manualInfo").value());
+                    me.applyFormula('isEditable');
+                    me.onSearchLangManualList(false);
+                }
+            },
+
+            onStyleMenuCd: function(data, item){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    childIndexes = provider.getChildIndexes(item.nodeIndex);
+                
+                if(!childIndexes || childIndexes.length === 0){
+                    return {
+                        fontWeight : "bold",
+                        fontColor: "#0e006f"
+                    };
+                }
+            },
+            
+            onMenuLangItemClick: function(event) {
+            	var me = this,
+	                data = event.detail.data,
+	                item = event.detail.item;
+				
+            	if(item.dataField === "lang_ccd") {
+            		me.set("searchDetailParam", me.getPropertyInfo("searchDetailParam").value());
+                	me.set("searchDetailParam", {"menu_cd": data.menu_cd, "lang_ccd": data.lang_ccd, "mnl_revno": null});
+                	me.applyFormula('isEditable');
+                	me.onSearchManualInfo();
+            	}
+            },
+
+            onAutoDispYnCheckChange : function(event) {
+            	var me = this, checked = event.detail;
+                
+                if(!checked){
+                    this.$.periodDateField.reset();
+                }
+                me.applyFormula("isAutoDispY");
+            },
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 메뉴 목록 : 조회
+            onFindList: function() {
+                var me = this;
+
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+				
+                me.set("_menuLangTitle", me.translate("메뉴얼 정보"));
+                me.set("searchLangParam", me.getPropertyInfo("searchLangParam").value());
+                me.set("searchDetailParam", me.getPropertyInfo("searchDetailParam").value());
+        	    me.set("manualInfo", me.getPropertyInfo("manualInfo").value());
+                me.applyFormula('isEditable');
+                
+                UT.request(me.$.findListSelectionLanguageManualMenu);
+            },
+
+            // 메뉴 목록 : 조회 완료
+            completeFindList: function(e, res) {
+                var me = this, result = res.response;
+				
+                var hier = new CCHierachicalData();
+                //계층형 구조로 변경.(data tab에서 데이터 확인)
+                var hierachiDatas = hier.HierachyTransformByKey(result, "menu_cd", "par_menu_cd", "children", "ROOT", null, true);
+        	    me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+            },
+            
+            // 다국어 메뉴얼 목록 조회
+            onSearchLangManualList: function(isReload) {
+            	var me = this;
+            	UT.request(me.$.findListAllLanguageManual, function(e, res) {
+                	me.$.menuLangGridPanel.setDataProvider(res.response);
+                	
+                	if(isReload) {
+                		me.$.menuLangGridPanel.searchItem("lang_ccd", me.get("searchDetailParam.lang_ccd"), 0);
+                	}
+            	});
+            },
+            
+            // 메뉴얼 정보 : 조회
+            onSearchManualInfo: function(){
+                var me = this;
+                me.set("_loadedManualInfo", false);
+                UT.request(me.$.findLastRevisionManualInfo);
+            },
+
+            // 메뉴얼 정보 : 조회 완료
+            completeFindLastRevisionManualInfo: function(e, res){
+                var me = this,
+                    result = res.response,
+                    manualInfo = result.manualInfo;
+
+                me.set("codes.mnlRev", result.mnlRevCombo); // 메뉴얼 차수 콤보 데이터 세팅
+                me.set("codes.rlsRev", result.mnlRevCombo); // 게시차수 콤보 데이터 세팅
+
+                if(manualInfo){
+                    me.set("manualInfo", manualInfo);   				// 메뉴얼관리 정보
+                    me.set("searchDetailParam.mnl_typ_ccd", manualInfo.mnl_typ_ccd); // 메뉴얼 유형
+                    me.set("searchDetailParam.mnl_revno", manualInfo.mnl_revno); // 메뉴얼 차수
+                    me.set("searchDetailParam.mnl_pstg_revno", manualInfo.mnl_pstg_revno); // 게시차수
+                }else{
+                    var item = {
+                        menu_cd		: me.get("searchDetailParam.menu_cd")
+                        ,lang_ccd    : me.get("searchDetailParam.lang_ccd")
+                        ,mnl_typ_ccd	: me.get("searchDetailParam.mnl_typ_ccd")
+                        ,mnl_athg_uuid	: ""
+                        ,mnl_cont	: ""
+                        ,mnl_revno    : null
+                        ,mnl_pstg_revno    : null
+                    };
+                    me.set("manualInfo", item);
+                    me.set("searchDetailParam.mnl_revno", null);
+                    me.set("searchDetailParam.mnl_pstg_revno", null);
+                }
+                me.set("_loadedManualInfo", true);
+            },
+
+            // 메뉴얼 유형 데이터 변경시 처리
+            onChangeMnlTyp: function(mnlTyp) {
+                var me = this;
+                if(mnlTyp){
+                    me.applyFormula('isHidden');
+
+                    if(mnlTyp === "HTML"){
+                        me.$.editor.doContentElementResize();
+                    }
+                    if(mnlTyp === "PDF"){
+                        me.$.upload.doContentElementResize();
+                        me.$.orgUpload.doContentElementResize();
+                    }
+                }
+            },
+
+            // 메뉴얼 Rev(차수) 데이터 변경시 처리
+            onChangeMnlRev: function(mnlRev){
+                var me = this;
+
+                if (!me.get("_loadedManualInfo")) {
+                    return;
+                }
+                
+                if (mnlRev) {
+                    me.onSearchManualInfo();
+                } else if (me.manualInfo && me.manualInfo.mnl_revno) {
+                    me.set("searchDetailParam.mnl_revno", me.manualInfo.mnl_revno);
+                }
+            },
+
+            // 미리보기
+            onPreView: function(e){
+                var me = this;
+
+                if(UT.isEmpty(me.get("searchLangParam.menu_cd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메뉴코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+                if(UT.isEmpty(me.get("searchDetailParam.lang_ccd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('다국어')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                var url = "popupHelpManual.do?menuCd=" + me.get("searchDetailParam.menu_cd") +"&langCd="+me.get("searchDetailParam.lang_ccd");
+                UT.popupJsp(url, this, "80%", "90%", e, {maximizable: true});
+            },
+
+            // 메뉴구분콤보 변경시 이벤트 처리
+            onChangeUsrCls: function(){
+                var me = this;
+
+                me.onFindList();
+            },
+
+            // 펼침
+            onExpandAll:function(){
+                var me = this;
+                me.$.gridPanel.expandAll();
+            },
+
+            // 접기
+            onCollapseAll:function(){
+                var me = this;
+                me.$.gridPanel.collapseAll();
+            },
+
+            // 메뉴얼 저장
+            onSaveInfo: function() {
+                var me = this;
+                var message, buttons;
+                var detailParam = me.get("searchDetailParam");
+
+                if(UT.isEmpty(me.get("searchLangParam.menu_cd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메뉴코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+                if(UT.isEmpty(me.get("searchDetailParam.lang_ccd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('다국어')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 저장 유효성 체크
+                if(!me.validate('save')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                var saveBtnId = "save", 
+                    publishBtnId = "save.and.publish";
+
+                if((!detailParam.mnl_revno && !detailParam.mnl_pstg_revno) || detailParam.mnl_revno != detailParam.mnl_pstg_revno) {
+                    // 현재 차수와 게시차수가 모두 존재하지 않거나 현재 차수와 게시 차수가 다른 경우
+                    // STD.ADM1045 : '게시 버전을 선택하지 않았거나 현재 버전과 다릅니다.<br>현재 버전을 저장 후 게시하려면 '{0}' 버튼을,<br>현재 버전을 게시하지 않고 저장하려면 '{1}' 버튼을 클릭하세요.'
+                    message = me.translate("STD.ADM1045", null, me.translate(publishBtnId), me.translate(saveBtnId)); 
+                    buttons = publishBtnId + "," + saveBtnId + ",cancel";
+                } else {
+                    message = me.translate("STD.N1200");  // 저장 하시겠습니까?
+                    buttons = "yes,no";     // 예, 아니오 confirm
+                }
+
+                UT.messageBox(message, function(id) {
+                    if (id == "yes" || id == saveBtnId) {
+                        me.doSaveManualInfo(false);
+                    } else if (id == publishBtnId) {
+                        me.doSaveManualInfo(true);
+                    }
+                }, true, {buttons: buttons, titleText: me.translate("STD.N1100")});
+            },
+
+            doSaveManualInfo: function(isPost){
+                var me = this;
+                var detailParam = me.get("searchDetailParam") || {};
+                var rlsRev = detailParam.mnl_pstg_revno || null;
+
+                if (isPost) { // 현재 버전 게시 여부
+                    rlsRev = detailParam.mnl_revno ? detailParam.mnl_revno : (me.get("manualInfo.mnl_revno") || 1);
+                }
+                
+                me.set("manualInfo.mnl_typ_ccd", detailParam.mnl_typ_ccd);
+                me.set("manualInfo.mnl_pstg_revno", rlsRev);
+                
+                Promise.all([me.$.upload.upload(), me.$.orgUpload.upload()]).then(function() {
+                    me.$.editor.syncValue();
+                    me.$.saveManualInfo.body = {
+                        manualInfo: me.get("manualInfo")
+                    };
+                    UT.request(me.$.saveManualInfo);
+                })
+            },
+
+            // 저장 완료
+            completeSaveManualInfo: function() {
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+                UT.alert(message, function(){
+                    me.manualInfo.mnl_revno = null;
+                    me.searchDetailParam.mnl_revno = null;
+                    me.onSearchLangManualList(true);
+                    me.onSearchManualInfo();
+                });
+            },
+
+            // 메뉴얼 Revision 저장
+            onSaveInfoRev: function(){
+                var me = this,
+                    message = "STD.N1200"; // 저장 하시겠습니까?
+
+                if(UT.isEmpty(me.get("searchLangParam.menu_cd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메뉴코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+                if(UT.isEmpty(me.get("searchDetailParam.lang_ccd"))){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('다국어')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 저장 유효성 체크
+                if(!me.validate('save') || !me.validate('revision')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                // revision 저장 일 경우 게시차수를 강제하지 않도록 변경
+//                 if(!me.get("searchDetailParam.mnl_pstg_revno")) {
+//                     UT.alert(me.translate("STD.E1012",null,me.translate('Rev.')),null,true); //"'{0}'을(를) 선택하십시오"
+//                     return;
+//                 }
+
+
+                UT.confirm(message, function(){
+                    Promise.all([me.$.upload.upload(), me.$.orgUpload.upload()]).then(function () {
+                        me.set("manualInfo.mnl_typ_ccd", me.get("searchDetailParam.mnl_typ_ccd") );
+                        me.set("manualInfo.mnl_pstg_revno", me.get("searchDetailParam.mnl_pstg_revno") );
+                        
+                        me.$.editor.syncValue();
+                        me.$.copyPreviousRevisionManualInfo.body = {
+                            manualInfo: me.get("manualInfo")
+                        };
+                        UT.request(me.$.copyPreviousRevisionManualInfo);
+                    });
+
+                });
+            }
+
+
+
+        });
+    </script>
+
+</dom-module>

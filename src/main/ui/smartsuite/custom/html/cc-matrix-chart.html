@@ -1,0 +1,787 @@
+<dom-module id="cc-matrix-chart">
+<style>
+ :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+</style>
+<template>
+    <div id="chartContainer" style="height:100%;width:100%;position: absolute;" ></div>
+</template> 
+<script>
+    Polymer({
+        is : 'cc-matrix-chart',
+        behaviors:[
+			Polymer.SCResizableBehavior
+		],
+        listeners:{
+    		'sc-resize':'doContentElementResize'
+    	},
+        properties : {
+        	_initCallBacks :{
+        		type : Object,
+                value : function(){
+                    return [];
+                }
+        	},
+        	simpleMode :{
+        		type : Object,
+        		value : false
+        	},
+        	pointDraggable:{
+        		type : Object,
+				value : true
+        	},
+			chartTitle:{
+				type:Object,
+				value:'Matrix Chart'
+			},
+			axisLabelMode:{
+				type:Object,
+				value:true  
+			},
+			titles : {
+				type:Object,
+				observer:'titlesChaneged'
+			},
+			xAxisRanges:{
+				type:Array,
+				value:[],
+				observer:'xAxisRangesChanged'
+			},
+			yAxisRanges:{
+				type:Array,
+				value:[],
+				observer:'yAxisRangesChanged'
+			},
+			points:{
+				type : Array,
+				value:[],
+				observer :'pointChanged'
+			},
+			rectangleAreas :{
+				type:Array,
+				value:[],
+				observer :'rectangleAreasChanged'
+			},
+			chartLabels:{
+				type:Array,
+				value:[],
+				observer:'chartLabelsChagned'
+			},
+			/*새로 추가된 속성들*/
+			svgGroupCollection :{
+				type: Object,
+				value:function(){
+					return {};
+				}
+			},
+			/*새로 추가된 속성들*/
+			eventCollection :{
+				type: Array,
+				value:function(){
+					return [];
+				}
+			},
+			chartStyles :{
+				type: Object,
+				value: function(){
+					return {
+						areaBorder : {
+							 strokeDasharray : '0',
+							 strokeDashoffset: 0,
+							 strokeWidth: 1, 
+							 stroke: '#ffffff'
+						},
+						areaSelectedBorder:{
+							strokeDasharray : '10 5',
+							stroke : '#000',
+							strokeWidth :2
+						}
+					}
+				}
+			},
+			pointId : {
+				type: String
+			},
+			pointName : {
+				type: String
+			},
+			seriesStyles:{
+				type: Object
+			}
+		},
+		initialized: function(){
+			var me = this;
+			me.chartInitialized = false;
+			me.createMatrixChart();
+		},
+		removeSmartChart: function(){
+			var me =  this;
+			me.$.chartContainer.removeChild(me.$.chartContainer.firstElementChild);
+			me.chartInitialized = false;
+			me.isDragChange = false;
+			me.chart = null;
+		},
+		createMatrixChart : function() {
+			var me = this;
+			if(!me.chart){
+				me.chart = new DLChart.ChartComponent(true, me.$.chartContainer,{
+					    "type": "scatterdata",
+					    "title": me.chartTitle,
+					    "events":{
+					        "onSeriesClicked" : function(chartView,data){
+					           me.onPointClick(data);
+					        }
+					    },
+					    "options":{
+					    	"scatter":{
+					    		"draggable": me.pointDraggable
+					    	},
+					    	"seriesCursor":"move",
+					    	"tooltipDuration": 2000
+					    },
+					    "plotArea": {
+					         "animations": [{
+					            "property": "seriesMask"
+					        }] 
+					    },
+					    "xAxes": {
+					        "title": me.titles.x_title || "",
+					        "baseValue": null,
+					        "grid":{
+					            "styles":{
+					                "line":null
+					            }
+					        },
+					        "tick": {
+					            "labelInterval":2,
+					            "lineLength":0,
+					            "styles":{
+					            	"color":"#fff"	
+					            }
+					        },
+					        "minValue":0,
+					        "maxValue":100
+					    
+					    },
+					    "yAxes": {
+					        "title": me.titles.y_title || "",
+					        "tick": {
+					            "labelCallback":function(){
+					                return me.getMaxTitle();
+					            },
+					            "styles":{
+					            	"color":"#fff"	
+					            },
+					            "labelInterval":2,
+					            "lineLength":0
+					        },
+					        "grid":{
+					            "styles":{
+					                "line":null
+					            }
+					        },
+					        "minValue":0,
+					        "maxValue":100
+					    },
+					    "series": me.getSeriesData(),
+					    "legend": {
+					    	"clickable": false,
+					    	"layoutNeeded": false,
+					        "layout": "horizontal",
+					        "item":{
+					        	"styles": {
+						            "fill": "#fff",
+						            "color":"#fff"
+						        }
+					        },
+					        "marker":{
+					        	"styles": {
+						            "fill": "#fff",
+						            "color": "#fff"
+						        }
+					        },
+					        "styles": {
+					            "border": "#fff",
+					            "paddingLeft": 11,
+					            "paddingRight": 11,
+					            "paddingTop": 5,
+					            "paddingBottom": 5,
+					            "fill": "#fff",
+					            "color":"#fff"
+					        },
+					        "itemStyles":{
+					            "fill": "#fff",
+					            "color": "#fff"
+					        }
+					    }
+					    
+					});
+			}
+			if(me.pointDraggable){
+				me.chart.onSeriesPointDrop =  function(model){
+					  me.isDragChange = true;	
+					  var pointId = model._data.data.id,pLen = me.points.length;
+	                  var newPoint = {},newPoints= [];
+	                  for(var i = 0; i < pLen; i++){
+	                  	var point = me.points[i];
+	                  	var pointKey = me.pointId ? me.pointId : point.sg_cd + (point.vd_cd ? point.vd_cd: "");
+	                  	if(pointId == pointKey){
+	                  		point.x_position = model._data.x;
+	                  		point.y_position = model._data.y;
+	                  		newPoint = point;
+	                  	}
+	                  	newPoints.push(point);
+	                  }
+	                  me.points = newPoints;
+	                  me.fire('drop-point', newPoint);
+					
+			    } 
+			}
+			 
+			me.chartMain = me.chart.chartView();
+			/**
+			 ** TODO 차트쪽에 loaded 이벤트를 추가하여 시점을 보장받고 그릴수 있게한다.
+			 ** requestAnimationFrame 으로 동작하기때문에 한번만 발생할수있도록 수정해야한다.
+			 **/
+			 setTimeout(function(){
+				me.chartDraw();
+				me.chartInitialized = true;
+				me.callInitCallBacks();
+			},400); 
+			
+			
+			
+		},
+		chartDraw: function(){
+			var me = this;
+			me._removeEventListeners();
+			me.areaInTextDraw();
+			me.rectangleAreaDraw();
+			me.xAxisCategoryDraw();
+			me.yAxisCategoryDraw();
+			me.legendDraw();
+			if(me.pointDraggable){
+				me.chartMain._container._domMouse = true	
+			}
+			me._addEventListener(me.chart._container,'click',me.onAreaClick.bind(me));
+		},
+		insertElement : function(parentEle,eleName,props,styles){
+			var me = this;
+			var ele = document.createElementNS(me._svgNamespaceURI,eleName),styleStr = '';
+			if(props && typeof props == "object"){
+				for(var prop in props){
+					var value = props[prop];
+					if(prop == 'textContent'){
+						ele.textContent = value;
+					}else{
+						ele.setAttribute(prop,value);
+					}
+				}
+			}
+			if(styles && typeof styles == "object"){
+				for(var styleName in styles){
+					styleStr += (styleName+":"+styles[styleName]+';');
+				}
+				ele.setAttribute("style",styleStr);
+			}
+			parentEle.insertBefore(ele,parentEle.firstElementChild);
+			return ele;
+		},
+		addElement : function(parentEle,eleName,props,styles){
+			var me = this;
+			var ele = document.createElementNS(me._svgNamespaceURI,eleName),styleStr = '';
+			if(props && typeof props == "object"){
+				for(var prop in props){
+					var value = props[prop];
+					if(prop == 'textContent'){
+						ele.textContent = value;
+					}else{
+						ele.setAttribute(prop,value);
+					}
+				}
+			}
+			if(styles && typeof styles == "object"){
+				me.setStyles(ele,styles);
+			}
+			parentEle.appendChild(ele);
+			return ele;
+		},
+		_addEventListener: function(target,eventName,fn){
+			var me = this;
+			target.addEventListener(eventName,fn);
+			me.eventCollection.push({target:target,eventName:eventName,fn:fn});
+		},
+		_removeEventListeners: function(target,eventName,fn){
+			var me = this,eventInfo;
+			for(var i = 0,len = me.eventCollection.length; i < len; i++){
+				var eventInfo = me.eventCollection[i];
+				eventInfo.target.removeEventListener(eventInfo.eventName,eventInfo.fn);
+			}
+			eventInfo = null;
+			me.eventCollection = [];
+		},
+		setStyles: function(ele,styles){
+			for(var styleName in styles){
+				ele.style[styleName] = styles[styleName]; 
+			}
+		},
+		addTextElement : function(parentEle,props,styles){
+			var me = this;
+			var ele = document.createElementNS(me._svgNamespaceURI,'text'),styleStr = '';
+			if(props && typeof props == "object"){
+				for(var prop in props){
+					var value = props[prop];
+					if(prop == 'textContent'){
+						ele.textContent = value;
+					}else{
+						ele.setAttribute(prop,value);
+					}
+				}
+			}
+		}, 
+		getChartRec: function(){
+			var me = this,
+				chart = me.chartMain,
+				chartBody = chart.bodyView().plotAreaView(),
+			    x = chartBody.x() + chart.bodyView().x(),  
+		        y = chart.bodyView().y(),  
+		    	width = chartBody._width,
+		    	height = chartBody._height;
+		    return {x:x, y:y, width:width, height:height};
+		},
+		get chartSvgEle(){
+			return this.chartMain.$_svgElt;
+		},
+		get _svgNamespaceURI(){
+			var me = this;
+			return me.chartSvgEle.namespaceURI;
+		},
+		//차트내에 사각형 영역을 그린다.
+		rectangleAreaDraw: function(){
+			var me = this;
+			var chartRec = me.getChartRec();
+			var cX = chartRec.x+1,  // chart container 시작점 x포인트
+			    cY = chartRec.y,  // chart container 시작점 y포인트
+			    boxWidth = chartRec.width ,
+			    boxHeight = chartRec.height,
+			    rectangleAreas =  this.rectangleAreas||[],
+			    groupName= 'area';
+			if(me.svgGroupCollection[groupName]){
+				me.$.chartContainer.contains(me.svgGroupCollection[groupName]) && me.chartSvgEle.removeChild(me.svgGroupCollection[groupName]); 
+				delete me.svgGroupCollection[groupName];
+			}
+			var group = me.insertElement(me.chartSvgEle,'g',{name:groupName,zIndex : 2});
+			me.svgGroupCollection[groupName] = group;
+			for(var i = 0,len = rectangleAreas.length; i < len; i++){
+				var data = rectangleAreas[i];
+					var rec = data,
+					x = Number(rec.x),
+					y = Number(rec.y),
+					width = boxWidth* ( Number(rec.width)/100),
+					height = boxHeight * (Number(rec.height)/100);
+					x = (boxWidth* (x/100)) + cX; 
+					y = (boxHeight* ( y/100)) + cY;
+					var areaEle = me.addElement(group,'rect',{
+						x : x,
+						y : y,
+						width : width,
+						height : height
+					},{
+						fill :rec.color ,
+						strokeWidth : 1, 
+						stroke : '#fff'
+					});
+					areaEle.data = data;
+			}
+		},
+		
+		onAreaClick: function(e){
+			var me = this, findArea,
+			    clientX = e.clientX, clientY = e.clientY,
+			    areaGroup = me.svgGroupCollection["area"],
+			    areaGroupChildren = areaGroup.childNodes,
+			    data;
+			for(var i = 0, len = areaGroupChildren.length; i < len; i++){
+				var area = areaGroupChildren[i];
+				var rec = area.getBoundingClientRect();
+				var rangeX = rec.left + rec.width;
+				var rangeY = rec.top + rec.height;
+				if((rec.left <= clientX && clientX <= rangeX) && (rec.top <= clientY && clientY <= rangeY) ){
+					findArea = area;
+					data = findArea.data;
+				}
+				me.setStyles(area,me.chartStyles.areaBorder);
+			}
+			if(findArea){
+				//svg에서는 element위치가 뒤에 있어야 위에표시 된다.
+				areaGroup.appendChild(findArea);
+				me.setStyles(findArea,me.chartStyles.areaSelectedBorder);
+				me.fire('area-click', data);
+			}
+			
+		},
+		//면적내에 label만들기			
+		areaInTextDraw :  function(){
+			var me = this,
+			    chartRec = me.getChartRec(),
+			    cX = chartRec.x,  // chart container 시작점 x포인트
+		   		cY = chartRec.y,  // chart container 시작점 y포인트
+		    	boxWidth = chartRec.width ,
+		    	boxHeight = chartRec.height,
+		    	chartLabels = me.chartLabels || [],
+		    	groupName = "areaText";
+			
+			if(me.svgGroupCollection[groupName]){
+				me.$.chartContainer.contains(me.svgGroupCollection[groupName]) && me.chartSvgEle.removeChild(me.svgGroupCollection[groupName]); 
+				delete me.svgGroupCollection[groupName];
+			}
+			var group = me.insertElement(me.chartSvgEle,'g',{name:groupName});
+			me.svgGroupCollection[groupName] = group;
+			for(var i = 0,len = chartLabels.length; i < len; i++){
+				var data = chartLabels[i],
+					x = Number(data.x_crd),
+					y = Number(data.y_crd),
+				x = (boxWidth* ( x/100))+cX,
+				y = (boxHeight * (y/100))+cY;
+				//데이터상의 좌표는 시작점을 나타내기 때문에 글자의 넓이를 계산하여 가운데 나타나게 한다. 
+				var label  = data.label_nm || data.mat_area_nm;
+				var textWidth = me.getMeasureTextWidth(label,me.chartSvgEle)/2;
+				me.addElement(group,'text',{textContent:label,x: x-textWidth+2,y:y+2})
+			}
+		},
+		//legend 생성(최하단에 생성된다)
+		legendDraw : function(){
+			var me = this;
+			var chartRec = me.getChartRec(),
+			    legendBox = me.chartMain.legendPaneView(),
+			    cCx = chartRec.x,  // chart container 시작점 x포인트
+			    ly = legendBox.y()+20,  // chart container 시작점 y포인트
+		  		pointWidth = 10,
+				labelPadding = 20,
+				pointPadding = 5,
+		    	rectangleArea = me.rectangleAreas || [],
+		    	 groupName = "legend";
+	   		if(me.svgGroupCollection[groupName]){
+	   			me.$.chartContainer.contains(me.svgGroupCollection[groupName]) && me.chartSvgEle.removeChild(me.svgGroupCollection[groupName]);
+	   			delete me.svgGroupCollection[groupName];
+	   		}
+			var group = me.addElement(me.chartSvgEle,'g',{name:groupName});
+			me.svgGroupCollection[groupName] = group;
+			// IE에서 숨김처리를 보장받지 못해 interval 사용
+			var intervalCnt = 0;
+			var hideSvgEltInterval = setInterval(function(){
+				if (legendBox.$_svgElt) {
+					if (legendBox.$_svgElt.style.display == "none"){
+						intervalCnt = null;
+						clearInterval(hideSvgEltInterval);
+					} else {
+						legendBox.$_svgElt.setAttribute("style", "display:none;");
+					}
+				} else if (++intervalCnt >= 10) {
+					intervalCnt = null;
+					clearInterval(hideSvgEltInterval);
+				}
+			}, 1000);
+			legendBox.setVisible(false);
+			
+			var mergeCheckList = [];
+			for(var i = 0,len = rectangleArea.length; i < len; i++){
+				var data = rectangleArea[i];
+				var label = data.area_nm,
+				    labelWidth = me.getMeasureTextWidth(label,me.chartSvgEle);
+				if(mergeCheckList.indexOf(data.mat_area_cd) < 0){
+					mergeCheckList.push(data.mat_area_cd);
+					me.addElement(group,'rect',{
+						x:cCx,
+						y:ly-10,
+						width: pointWidth,
+						height: pointWidth+10
+					},{fill :data.color});
+					cCx = cCx + pointWidth + pointPadding;
+					me.addElement(group,'text',{textContent:label,x:cCx,y:ly+4},{fontWeight:'blod'})
+					cCx = cCx+labelWidth+labelPadding;
+				}
+			}
+		},
+		/* y축 label 만들기 */
+		yAxisCategoryDraw : function(){
+		 	var me= this,
+		 		chartBody = me.chartMain.bodyView(),
+		 		chartRec = me.getChartRec(),
+		 		x = chartRec.x,
+		 		y = chartBody.bottomAxisPane().y()+33,
+		 		height = chartBody.leftAxisPane().height(),
+			 	yAxisRanges = this.yAxisRanges,
+			 	textPadding = 4,
+			 	groupName = "yAxisBox";
+		 	setTimeout(function(){
+		 		//chartBody.leftAxisPane().$_svgElt.style="display:none";
+			},800);  	
+		 	if(me.svgGroupCollection[groupName]){
+		 		me.$.chartContainer.contains(me.svgGroupCollection[groupName]) && me.chartSvgEle.removeChild(me.svgGroupCollection[groupName]); 
+	   			delete me.svgGroupCollection[groupName];
+	   		}
+			var group = me.insertElement(me.chartSvgEle,'g',{name:groupName});
+			me.svgGroupCollection[groupName] = group;
+			var yAxisPoint;
+			for(var i = 0,len = yAxisRanges.length; i < len; i++){
+				var data = yAxisRanges[i];
+				var xp  =Number(data.max_pos);
+				var np = Number(data.min_pos)
+				var abPoint =  ((xp - np)/2) + np; 
+				yAxisPoint = y - (height * (abPoint/100));
+				var labelX = -x+(me.getMeasureTextWidth(data.title,me.chartSvgEle));
+				me.addElement(group,'text',{textContent:data.title,x:Math.abs(labelX), y: yAxisPoint},
+						{fontWeight:'blod',fontSize:'10px',align:'right'})
+			}
+		},
+		/* x축 label 만들기 */
+		xAxisCategoryDraw : function(){
+			var me= this,
+			 	xAxisRanges =  this.xAxisRanges,
+				chartBody = me.chartMain.bodyView(),
+		 		chartRec = me.getChartRec(),
+				sX = chartRec.x, // chart container 시작점 x포인트
+				boxWidth = chartRec.width ,
+				boxHeight = chartRec.height,
+				labelGroupY = chartBody.bottomAxisPane().y(),
+				groupName = "xAxisBox";
+			if(me.chartTitle != null && me.chartTitle.length > 0){
+				labelGroupY = labelGroupY + 50;
+			}else{
+				labelGroupY = labelGroupY + 30;
+			}		
+			if(me.svgGroupCollection[groupName]){
+				me.$.chartContainer.contains(me.svgGroupCollection[groupName]) && me.chartSvgEle.removeChild(me.svgGroupCollection[groupName]); 
+	   			delete me.svgGroupCollection[groupName];
+	   		}
+			var group = me.insertElement(me.chartSvgEle,'g',{name:groupName});
+			me.svgGroupCollection[groupName] = group;
+			for(var i = 0,len= xAxisRanges.length; i < len; i++){
+				var data = xAxisRanges[i];
+				var startx = Number(data.min_pos);
+				var endx = Number(data.max_pos);
+				var textWidth = me.getMeasureTextWidth(data.title,me.chartSvgEle)/2;
+				var x = (boxWidth * ((startx+endx)/100)/2) + sX;
+				
+				me.addElement(group,'text',{textContent:data.title,x: x- textWidth, y: labelGroupY},{fontWeight:'blod',fontSize:'10px'})
+			}
+		},
+		getMaxTitle :  function(){
+			var yAxisRanges =  this.yAxisRanges||[],mLenIndex,titleLength=0;
+			for(var i = 0,len = yAxisRanges.length; i < len; i++){
+				var data = yAxisRanges[i];
+				if(titleLength < data.title.length){
+					mLenIndex = i;
+				}
+				titleLength = data.title.length;
+			}
+			return yAxisRanges[mLenIndex].title;
+		},
+		getMeasureTextWidth : function(text,ele) {
+			if(!text || text.length == 0){
+				return 0;
+			}
+			var textWidth = Polymer.$Element.measureText(text,ele).width || 0;
+			return textWidth;
+		},
+		
+		getSeriesData : function(){
+		 	var me = this,
+		 	    pointId = me.pointId,
+		 	    pointName = me.pointName,
+		 		sereisList = [],
+		 		items = [],
+		 		points = this.points||[];
+			for(var i = 0,len = points.length ; i < len; i++){
+				(function(){
+					var data = points[i];
+					var point = data;
+					if(point.x_position != null && point.y_position != null){
+						items.push([
+							            Number(point.x_position),
+							            Number(point.y_position),
+							            {
+											name : pointName ? point[pointName] : point.sg_nm + (point.vd_nm ? " - " + point.vd_nm : ""),
+											id : pointId ? point[pointId] : point.sg_cd + (point.vd_cd ? point.vd_cd: "")
+							            }
+									]);
+					}
+				})();
+			}
+			var baseSeries = me.getBaseSeries();
+			if(items.length > 0){
+				baseSeries.items = items;
+			}
+			sereisList.push(baseSeries);
+			return sereisList;
+		},
+		getBaseSeries : function(){
+			var me = this;
+			var baseSeries = {
+				visible: false,  
+				styles:{
+					    "fill": "rgb(0, 0, 0)",
+			            "shapeSize": "8",
+			            "shapeName":"circle",
+			            "border": null,
+			            "zIndex":5,
+			            "hover": {
+			            	"border": "#333",
+		                    "fillBrightness": 1.5
+		                }
+				},
+				tooltip: {
+					"text" :"<b>${data.name}</b><br>"+ me.titles.x_title +' : ${x} <br>'+me.titles.y_title +' : ${y}'
+				},
+				label: false,
+				followLegendStyle: true,
+				items: [0,0,{name:''}]
+			};
+			if(me.seriesStyles){
+				me.mixin(baseSeries.styles, me.seriesStyles);
+			}
+			return baseSeries;
+		},
+		
+		// 데이터에따라 별도로 표현한부분을 다시 그린다.(면적,x라벨,y라벨....)
+		chartReDraw : function(chart){
+		 	var me =  this;
+			chart = chart || me.chart;
+			if(me.chartInitialized ){
+    			me.rectangleAreaDraw(chart);
+    			//면적내에 label만들기
+    			me.areaInTextDraw(chart);
+    			//x축 label 만들기
+    			if(me.axisLabelMode){ 
+    				me.xAxisCategoryDraw(chart);
+    			}
+    			//legend 생성
+    			me.legendDraw(chart);
+			} 
+		},
+		// 차트삭제
+		removeChart: function() {
+            var me = this;
+            if(me.chartInitialized && me.chart){
+                me.removeSmartChart();
+            } 
+    	},
+    	
+		
+    	/***********************************
+		 ****  프로퍼티 changed 이벤트들    *********
+		 ***********************************/
+		 
+		titlesChaneged: function(){
+			var me = this;
+			if(me.chartInitialized && me.chartMain && me.chartMain.model()) {
+				var model =  me.chartMain.model();
+				var xAxes = model.xAxes(), yAxes = model.yAxes();
+				
+				if (xAxes && xAxes.length) {
+					xAxes[0].setTitle({text:me.titles.x_title});
+				}
+				if (yAxes && yAxes.length) {
+					yAxes[0].setTitle({text:me.titles.y_title});
+				}
+				model.title().setText(me.chartTitle);
+			}
+		},
+		xAxisRangesChanged : function(){
+			 var me = this;
+			//x축 label 만들기
+			if(me.chartInitialized){
+				me.xAxisCategoryDraw(me.chart);
+			}  
+		},
+		yAxisRangesChanged : function(){
+			var me = this;
+			//y축 label 만들기
+			if(me.chartInitialized){
+				 me.yAxisCategoryDraw();
+			}
+		},
+		pointChanged : function(value){
+			var me = this;
+			if(value){
+				if(this.checkInitCallBacks("pointChanged", arguments) ){
+					if(me.chartInitialized &&  me.chartMain){
+						var chartModel = me.chartMain.model();
+						var series = chartModel.getSeries(0);
+						
+						if(series){
+							var sData = me.getSeriesData();
+							var items = value.length ? sData[0].items : [];
+							series.setVisible(true);
+							series.setItems(items);	
+						}
+					}
+				}
+			}
+		},
+		rectangleAreasChanged :  function(){
+			var me = this;
+			//면적 그리기								
+			if(me.chartInitialized){
+				me.rectangleAreaDraw();
+			} 
+		},
+		chartLabelsChagned : function(){
+			var me = this;
+			//면적내에 label만들기								
+			if(me.chartInitialized){
+				me.areaInTextDraw();
+			}
+		},
+		checkInitCallBacks: function(name, arguments){
+            if(!this.chartInitialized){
+            	if (this._initCallBacks) {
+                	this._initCallBacks.push({fn : name, args : arguments});
+            	}
+                return false;
+            }else{
+                return true;
+            }
+        },
+        callInitCallBacks: function(){
+        	if(this._initCallBacks){
+        		for(var i=0; i<this._initCallBacks.length; ++i){
+                    this[this._initCallBacks[i].fn].apply(this, this._initCallBacks[i].args);
+                }
+        		this._initCallBacks = null;
+        	}
+            
+            
+        },
+		
+		doContentElementResize: function(){
+			this.debounce('_debounceGridResize', this._doContentElementResize, 100);
+		},
+		_doContentElementResize: function(){
+			var me = this;
+			if(me._isDestroyed || !me.chartInitialized || !me.isVisible(true)){
+				return;
+			} 
+			me.chartMain &&	me.chartMain.resize();
+			setTimeout(function(){
+				window.requestAnimationFrame(me.chartDraw.bind(me));	
+			},100);
+		},
+		
+		/*****************************
+		 ****  이벤트   ******************
+		 *****************************/
+		 
+		//포인트 클릭시 이벤트 발생
+		onPointClick : function(data,e){
+			this.fire('point-click',data._data);
+		}
+		
+		
+		
+	});
+</script>
+</dom-module>

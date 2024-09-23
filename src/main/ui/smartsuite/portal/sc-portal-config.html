@@ -1,0 +1,40 @@
+<dom-module id="sc-portal-config"> 
+
+	<template>
+		
+		<sc-pages id="pages" class="fit" selected-index="0" >
+			<template>
+				<vue-grid-layout id="vueGrid" page-id="vueGrid"></vue-grid-layout>
+			</template>
+        </sc-pages>
+	 
+	</template> 
+	
+	<script>
+	        Polymer({
+	            is: 'sc-portal-config',
+	            
+	            nonReusable: true,
+
+	            attached : function(){
+	            	this.async(function(){
+        	            this.$.pages.selectItem(this.$.vueGrid);
+	            	}.bind(this), 1);
+	            },
+	            
+	            /** vue-grid-layout 라이브러리 사용여부 */
+	            hasVueGrid: function(){
+	            	try{
+	        			if(!VueGridLayout){
+	        				return false;
+	        			}else{
+	        				return true;
+	        			}
+	        		}catch(e){
+	        			return false;
+	        		}
+	            }
+	        })
+	</script> 
+
+</dom-module>

@@ -1,0 +1,212 @@
+<dom-module id="ep-zipcode">
+
+    <style>
+       :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+        
+        <sc-ajax id="findListZipCodeByApi" url="findZipcode.do" body="{{findList.param}}" on-response="completeFindList"></sc-ajax>
+        <sc-ajax id="findListZipCodeByDatabase" url="findListZipCodeByDatabase.do" body="{{findList.param}}"	on-response="completeFindListByDB"></sc-ajax>
+        
+        <cc-search-condition-panel column="1" form-cls="label-row" on-search="onFindList" i18n-disabled>
+			<cc-fieldset>
+				<sc-label text="검색어"></sc-label>
+				<sc-text-field value="{{findList.param.srch_word}}" max-length="200" required="true" on-enter="onFindList"
+							   placeholder="도로명/동/읍/면/리/아파트/건물명"></sc-text-field>
+			</cc-fieldset>
+        </cc-search-condition-panel>
+
+        <sc-grid id="gridPanel"	class="flex"	use-state="false"	use-selection="false"
+        							on-item-click="onDataCellClicked"
+        							on-scroll-to-bottom="onScrollToBottom">
+        	<cc-grid-toolbar></cc-grid-toolbar>
+        	<sc-grid-columns>
+        		<sc-data-column data-field="zipno"	header-text="우편번호"		width="80"></sc-data-column>
+        		<sc-data-column	data-field="lnmadres"	header-text="도로명 주소"	width="300"	text-align="left"	style-name="link"></sc-data-column>
+        		<sc-data-column	data-field="rnadres"		header-text="지번 주소"		width="300"	text-align="left"	style-name="link"></sc-data-column>
+        		<sc-data-column	data-field="enadres"		header-text="영문 주소"		width="300"	text-align="left"></sc-data-column>
+        	</sc-grid-columns>
+        </sc-grid>
+    </template>
+    
+    <script>
+    Polymer({
+            is: "ep-zipcode",
+            properties: {
+            	titleText: {
+            		type: Object,
+            		value: function(){
+            			return "주소 검색";
+            		}
+            	},
+                findList: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            param: {}
+                        };
+                    }
+                }
+            },
+
+            // 화면 생성 완료
+            initialized: function(){
+                var me = this;
+            },
+            load: function(param){
+            	var me = this;
+            	var data = UT.copy(param);
+            	if(UT.isNotEmpty(data)){
+            		var apiTyp = data.api_typ || "DB";
+            		me.set("findList.param.api_typ",apiTyp);
+            	}
+            },
+            //그리드 데이타 클릭함수
+            onDataCellClicked: function(event){
+            	var me = this, detail = event.detail,
+            	data = detail.data,
+            	item = detail.item,
+            	fieldName = item.dataField,
+            	itemIndex = item.rowIndex;
+            	
+            	if (fieldName === "lnmadres") {
+                    me.fire("selected-items", [{
+                        pst_no: data.zipno,
+                        addr: data.lnmadres,
+                        enaddr: data.enadres
+                    }]);
+                    me.onClose();
+                } else if (fieldName === "rnadres") {
+                    me.fire("selected-items", [{
+                        pst_no: data.zipno,
+                        addr: data.rnadres,
+                        enaddr: data.enadres
+                    }]);
+                    me.onClose();
+                }
+            },
+            //그리드 스크롤이 마지막에 올때 호출
+            onScrollToBottom: function(){
+            	var me = this;
+            	var apiTyp = me.get("findList.param.api_typ") || "API"; 
+                if(apiTyp === "DB"){
+                	me.findListPaging(me.$.findListZipCodeByDatabase,{total_field_nm: "total_row"});
+                }else{
+                	me.onMoreFindList();
+                }
+            },
+
+            // 검색 페이지 정보 초기화
+            initSrchPage: function() {
+                var me = this;
+                me.set("findList.param.srch_page", 0);
+                me.set("findList.param.total_page", 1);
+                me.$.gridPanel.getDataProvider().removeAll();
+            },
+            
+            // 검색(조회)
+            onFindList: function() {
+                var me = this;
+                
+                if(!me.validate()){
+                	UT.alert("STD.E0000");
+                	return;
+                }
+                me.initSrchPage();
+                var apiTyp = me.get("findList.param.api_typ") || "API"; 
+                if(apiTyp === "DB"){
+                	me.findListPaging(me.$.findListZipCodeByDatabase);
+                }else{
+                	me.onMoreFindList();
+                }
+            },
+
+            // 다음 페이지
+            onMoreFindList: function() {
+                var me = this;
+                var srchPage = (me.get("findList.param.srch_page") || 0) + 1;
+                var totalPage = me.get("findList.param.total_page") || 1;
+                if (srchPage <= totalPage) {
+                    me.set("findList.param.srch_page", srchPage);
+                    UT.request(me.$.findListZipCodeByApi);
+                }
+            },
+            
+            // 검색(조회) 완료
+            completeFindList: function(e, res) {
+                var me = this;
+				var data = res.response.newaddresslistresponse || res.response.detaillistresponse || {};
+				if (UT.isObject(data.cmmmsgheader) && data.cmmmsgheader.returncode === "00") {
+					me.set("findList.param.total_page", data.cmmmsgheader.totalpage);
+					var list = data.newaddresslistareacdsearchall || data.newaddresslistareacd || data.detaillistareacd || [];
+					if(!UT.isArray(list)) {
+						me.$.gridPanel.getDataProvider().addItem(list);
+					}else{
+						me.$.gridPanel.getDataProvider().addItems(list);
+					}
+				}
+            },
+            
+            findListPaging: function (ajax, options) {
+                var me = this, provider = me.$.gridPanel.getDataProvider();
+
+                options = options || {};
+
+                // 현재 그리드에 조회된 데이터 개수
+                var itemCount = provider.getItemSize() || 0;
+
+                var rowCnt = 0;
+                //조회 조건이 변경되면 다시 처음부터 재조회
+                if(!me.paramChanged && UT.isNotEmpty(options)) {
+                    // 데이터 전체 건수
+                    rowCnt = provider.getCellValue(0, options.total_field_nm);
+                } else {
+                    provider.removeAll(); //조회조건이 변경되었을 때 기존의 데이터 삭제
+				}
+                me.paramChanged = false;
+
+                // 현재 그리드에 조회된 건수가, 데이터 전체 건수를 초과하면 return
+                if(rowCnt && rowCnt <= itemCount) {
+                    return;
+                }
+
+                // 페이지당 가져올 데이터 개수
+                var limit = 200;
+
+                // 현재 페이지
+                var page = (itemCount / limit) + 1;
+
+                // 데이터를 가져올 범위값(시작, 끝)
+                ajax.body.start_row = itemCount + 1;
+                ajax.body.end_row = limit * page;
+
+                UT.request(ajax);
+            },
+            
+            completeFindListByDB: function(el,res){
+            	var me = this, provider = me.$.gridPanel.getDataProvider();
+
+                if(provider.getItemSize() === 0) {
+                    me.$.gridPanel.setDataProvider(res.response);
+                } else {
+                    provider.addItems(res.response);
+                }
+            },
+            
+            //clear
+            clear: function(){
+            	var me = this;
+            	me.reset();
+            },
+            //닫기
+            onClose: function() {
+                var me = this;
+                me.fire("close");
+                me.reset();
+            }
+        });
+    </script>
+</dom-module>

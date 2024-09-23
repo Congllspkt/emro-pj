@@ -1,0 +1,440 @@
+<dom-module id="es-item-req-modify-detail">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<sc-request-group id="codes" init>
+			<sc-ajax url="findListOperationOrganizationByUser.do"
+					 body="IO"
+					 content-type="text/plain"
+					 last-response="{{codes.oorgCd}}">
+			</sc-ajax>
+		</sc-request-group>
+		
+		<!-- 품목등록 조회 -->
+		<sc-ajax id="findInfoModifyItemReq"
+				 url="findInfoModifyItemReq.do"
+				 body="{{searchParam}}"
+				 on-response="completeFindInfoModifyItemReq">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax id="saveInfoModifyItemReq"
+				 url="saveInfoModifyItemReq.do"></sc-ajax>
+
+		<cc-auth-checker check-list="auth-s"></cc-auth-checker>
+
+        <cc-page-title-bar title-text="품목 변경 요청">
+			<sc-button text="저장" hidden="[[!formula('isEditable')]]" on-click="onSave" data-args="CRNG" auth-s></sc-button>
+			<sc-button text="변경 요청" hidden="[[!formula('isEditable')]]" on-click="onSave" data-args="APVL_REQG" auth-s></sc-button>
+			<sc-button text="닫기" on-click="onClose"></sc-button>
+        </cc-page-title-bar>
+		
+		<div class="flex page">
+			<cc-form-panel title-text="요청자 정보" >
+				<cc-fieldset>
+					<sc-label text="요청자 부서"></sc-label>
+					<div class="field-box">
+						<sc-label text="{{itemInfo.reqr_comp}}" readonly="true" i18n-disabled></sc-label> /
+						<sc-label text="{{itemInfo.reqr_dept}}" readonly="true" i18n-disabled></sc-label>
+					</div>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="요청자"></sc-label>
+					<div class="field-box">
+						<sc-label text="{{itemInfo.reqr_id}}" readonly="true" i18n-disabled></sc-label> /
+						<sc-label text="{{itemInfo.reqr_nm}}" readonly="true" i18n-disabled></sc-label>
+					</div>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="요청자 연락처"></sc-label>
+					<sc-label text="{{itemInfo.reqr_phone}}" i18n-disabled></sc-label>
+				</cc-fieldset>
+			</cc-form-panel>
+			
+			<cc-form-panel title-text="검토자 정보" collapsible="true" hidden="[[!formula('isRejectOrApproved')]]">
+				<cc-fieldset>
+					<sc-label text="검토 부서"></sc-label>
+					<div class="field-box">
+						<sc-label text="{{itemInfo.apvr_comp}}" i18n-disabled></sc-label>
+						/
+						<sc-label text="{{itemInfo.apvr_dept}}" i18n-disabled></sc-label>
+					</div>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="검토자"></sc-label>
+					<div class="field-box">
+						<sc-label text="{{itemInfo.apvr_id}}" i18n-disabled></sc-label>
+						/
+						<sc-label text="{{itemInfo.apvr_nm}}" i18n-disabled></sc-label>
+					</div>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="검토자 연락처"></sc-label>
+					<sc-label text="{{itemInfo.apvr_phone}}" i18n-disabled></sc-label>
+				</cc-fieldset>
+				
+				<cc-fieldset column-span="2" hidden="[[!formula('isReject')]]">
+					<sc-label text="반려 사유"></sc-label>
+					<sc-textarea-field value="{{itemInfo.item_reg_req_ret_rsn}}" readonly="true"></sc-textarea-field>
+				</cc-fieldset>
+			</cc-form-panel>
+			
+			<cc-form-panel title-text="변경 요청 내용" validation-group="itemInfo">
+				<cc-fieldset column-span="2">
+					<sc-label text="내용"></sc-label>
+					<sc-textarea-field value="{{itemInfo.item_chg_req_cont}}" max-length="1000" readonly="[[!formula('isEditable')]]"></sc-textarea-field>
+				</cc-fieldset>
+			</cc-form-panel>
+			
+			<cc-form-panel title-text="품목 정보" column="2">
+				<cc-fieldset column-span="2">
+					<sc-label text="품목 코드"></sc-label>
+					<sc-text-field value="{{itemInfo.item_cd}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목 명"></sc-label>
+					<sc-text-field value="{{itemInfo.item_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목 명 영문"></sc-label>
+					<sc-text-field value="{{itemInfo.item_nm_en}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset column-span="2">
+					<sc-label text="유사어"></sc-label>
+					<sc-text-field value="{{itemInfo.item_simword}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="제조사 명"></sc-label>
+					<sc-text-field value="{{itemInfo.mfgr_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="모델 번호"></sc-label>
+					<sc-text-field value="{{itemInfo.mdl_no}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목분류1 명"></sc-label>
+					<sc-text-field value="{{itemInfo.itemcat_lvl_1_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목분류2 명"></sc-label>
+					<sc-text-field value="{{itemInfo.itemcat_lvl_2_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목분류3 명"></sc-label>
+					<sc-text-field value="{{itemInfo.itemcat_lvl_3_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목분류4 명"></sc-label>
+					<sc-text-field value="{{itemInfo.itemcat_lvl_4_nm}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="UOM"></sc-label>
+					<div class="field-box">
+						<sc-text-field value="{{itemInfo.uom_ccd}}" readonly="true" class='w-80'></sc-text-field>
+						<sc-label text="{{itemInfo.uom_nm}}" i18n-disabled></sc-label>
+					</div>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="품목 규격"></sc-label>
+					<sc-label text="{{itemInfo.item_spec}}" i18n-disabled></sc-label>
+				</cc-fieldset>
+				
+				<cc-fieldset column-span="2">
+					<sc-label text="비고"></sc-label>
+					<sc-label text="{{itemInfo.rmk}}" i18n-disabled></sc-label>
+				</cc-fieldset>
+			</cc-form-panel>
+			
+			<cc-form-panel form-cls="label-column" style="margin-top:5px;">
+				<cc-fieldset>
+					<sc-label text="첨부파일"></sc-label>
+					<sc-upload id="fileUpload" class="h-200" value="{{itemInfo.athg_uuid}}" editable="false"></sc-upload>
+				</cc-fieldset>
+				
+				<cc-fieldset>
+					<sc-label text="이미지 파일"></sc-label>
+					<sc-upload id="imgUpload" class="h-200" value="{{itemInfo.img_athg_uuid}}" image-only="true" view-type="thumbnail" editable="false"></sc-upload>
+				</cc-fieldset>
+			</cc-form-panel>
+			
+			<sc-grid id="oorgGridPanel" class="h-300" collapsible="true"
+					 editable="false"
+					 use-state="false"
+					 use-selection="false"
+					 data-provider="{{oorgList}}">
+				<cc-grid-toolbar title-text="운영조직">
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-combobox-column data-field="oorg_cd" header-text="운영조직" width="200" display-field="logic_org_nm" value-field="oorg_cd" items="{{codes.oorgCd}}"></sc-combobox-column>
+					<sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="120" text-align="center" checked-value="Y" un-checked-value="N"
+										editable="true" display-box="true" display-checkbox="false" hide-unchecked-mark="true" item-style-function="onItemStyleFunction"></sc-checkbox-column>
+					<sc-checkbox-column data-field="bpa_yn" 	header-text="BPA 여부"		width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
+					<sc-checkbox-column data-field="mult_vd_yn" header-text="멀티 협력사 여부"	width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
+					<sc-checkbox-column data-field="qta_subj_yn" 	header-text="쿼터 여부"	width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
+					<sc-checkbox-column data-field="tl_yn" 		header-text="Touchless 여부"	width="120" editable="true"	 checked-value="Y" un-checked-value="N" display-checkbox="false"></sc-checkbox-column>
+					<sc-checkbox-column data-field="qta_yn" 	header-text="쿼터 대상 여부"		width="120" editable="true"	 checked-value="Y" un-checked-value="N" display-checkbox="false"></sc-checkbox-column>
+				</sc-grid-columns>
+			</sc-grid>
+		</div>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-item-req-modify-detail',
+
+            properties: {
+				codes: {
+					type: Object,
+					reset : false,
+					value: function() {
+						return {
+							oorgCd: []
+						};
+					}
+				},
+                // 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+
+                // 품목 정보 binding 객체
+                itemInfo: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+
+                // 배정속성
+                asgnAttrList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+				
+				isChanged: {
+					type: Boolean,
+					value: false
+				},
+				
+				oorgList: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				}
+            },
+            formulas: {
+                isEditable: function () {
+                    var me = this;
+                    var progSts = me.get("itemInfo.item_reg_req_sts_ccd");
+
+                    // 작성중 or 반려 or 품목마스터 변경요청할 경우
+                    return (progSts === "CRNG" || progSts === "RET" || !progSts);
+                },
+                isReject: function () {
+                    var me = this;
+                    var progSts = me.get("itemInfo.item_reg_req_sts_ccd");
+                    return progSts === "RET";
+                },
+				isEditableAndReject: function() {
+					var me = this;
+					var progSts = me.get("itemInfo.item_reg_req_sts_ccd");
+					return (me.formula('isEditable') && progSts === "RET");
+				},
+				isApproved: function () {
+					var me = this;
+					var progSts = me.get("itemInfo.item_reg_req_sts_ccd");
+					return progSts === "APVD";
+				},
+				isRejectOrApproved: function() {
+					var me = this;
+					return me.formula('isReject') || me.formula('isApproved');
+				},
+				isExistPro: function() {
+					return SCModuleManager.exist('pro');
+				}
+            },
+
+            //load
+            load: function (param) {
+                this.findInfoModifyItemReq(param);
+            },
+            // 품목정보 조회
+			findInfoModifyItemReq: function (param) {
+                var me = this;
+
+                if(param) {
+                    me.set("searchParam", param);
+                }
+
+                UT.request(me.$.findInfoModifyItemReq);
+            },
+
+            // 조회 후 callback
+            completeFindInfoModifyItemReq : function (e, res) {
+                var me = this;
+
+                if(res.response) {
+                    // 세션 정보
+                    var curUser = SCSessionManager.currentUser;
+
+                    var result = res.response;
+
+                    if(result.itemInfo) {
+                        var modifyInfo = result.itemInfo;
+                        modifyInfo.reqr_comp = curUser.comp_nm;
+                        modifyInfo.reqr_id = curUser.usr_id;
+                        modifyInfo.reqr_phone = curUser.tel;
+						if(SCMdiManager.locale == 'ko_KR') {
+							modifyInfo.reqr_dept = curUser.dept_nm;
+							modifyInfo.reqr_nm = curUser.usr_nm;
+						} else {
+							modifyInfo.reqr_dept = curUser.dept_nm_en;
+							modifyInfo.reqr_nm = curUser.usr_nm_en;
+						}
+
+                        me.set("itemInfo", modifyInfo);
+
+                        me.applyFormula();
+                    }
+					
+					if(result.oorgList) {
+						me.set("oorgList", result.oorgList);
+					}
+
+                    if(result.asgnAttrList) {
+                        me.set("asgnAttrList", result.asgnAttrList);
+                    }
+                }
+
+            },
+
+            // 저장버튼 클릭
+            // onSave: function () {
+            //     var me = this;
+            //     me.doSave("CRNG");
+            // },
+			//
+            // // 변경요청 버튼 클릭
+            // onChgReq: function () {
+            //     var me = this;
+            //     me.doSave("APVL_REQG");
+            // },
+
+            //저장
+			onSave: function (e) {
+                var me = this;
+				var progSts = e.target.dataset.args;
+				
+                var message = "";
+                if(progSts) {
+                    me.set("itemInfo.item_reg_req_sts_ccd", progSts);
+                }
+
+                // 필수값 체크
+                if(!me.validate('itemInfo')) {
+                    UT.alert("STD.E0000");
+                    return;
+                }
+				
+				//oorgList 세팅
+				var provider = me.$.oorgGridPanel.getDataProvider();
+				var oorgList = provider.filterItems({use_yn : "Y"});
+
+                // request body에 데이타 셋팅
+                me.$.saveInfoModifyItemReq.body = {
+                    reqInfo: me.get("itemInfo")
+                    , asgnAttrList: me.get("asgnAttrList")
+					, oorgList : oorgList
+                };
+
+				switch(progSts) {
+					case "APVL_REQG":
+						// STD.N1210 = 요청하시겠습니까?
+						message = "STD.N1210";
+						break;
+					case "APVD":
+						// STD.N1106 = 승인하시겠습니까?
+						message = "STD.N1106";
+						break;
+					case "RET":
+						// STD.N3000 = 반려하시겠습니까?
+						message = "STD.N3000";
+						break;
+					default:
+						// STD.N1200 = 저장하시겠습니까?
+						message = "STD.N1200";
+				}
+                UT.confirm(message || "STD.N1200", function () {
+                    Promise.all([me.$.fileUpload.upload(), me.$.imgUpload.upload()]).then(function () {
+                        UT.request(me.$.saveInfoModifyItemReq, function(e, res) {
+							var result = res.response;
+							if(result.resultStatus == "E") {
+								var message = result.resultMessage;
+								UT.alert(message);
+								return;
+							} else {
+								me.set("isChanged", true);
+								if(UT.isObject(result) && result.resultStatus === "S") {
+									if(progSts == "APVL_REQG") {
+										UT.completeAlert("등록 요청");
+										me.onClose();
+									} else {
+										UT.completeAlert("등록 승인");
+										me.findInfoModifyItemReq();
+									}
+								} else {
+									//저장실패
+									UT.alert("STD.E9999");
+								}
+							}
+						});
+                    });
+                });
+            },
+
+			//닫기
+			onClose: function () {
+				var me = this;
+				me.fire("close", me.get("isChanged"));
+				me.reset();
+			},
+			
+			////////////////////////////////////
+			//////////////oorgList//////////////
+			////////////////////////////////////
+			// 인쇄컬럼 배경색 지정
+			onItemStyleFunction: function(data, item) {
+				var me = this;
+				
+				if(item.dataField == "use_yn") {
+					return {"background": "#FFFFFF"};
+				}
+			}
+        });
+	</script>
+ </dom-module>

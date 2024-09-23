@@ -1,0 +1,72 @@
+<sc-link rel="import" href="es-operorguser-org-list.html"></sc-link>
+<sc-link rel="import" href="es-operorguser-dept-list.html"></sc-link>
+<sc-link rel="import" href="es-operorguser-user-list.html"></sc-link>
+
+<dom-module id="em-operorguser">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <cc-page-title-bar></cc-page-title-bar>
+        <div class="hbox flex">
+            <es-operorguser-org-list id="operorgList" title-text="조직현황" on-selected-operorg="onSelectedOperationOrganization" class="flex-5"></es-operorguser-org-list>
+            <div class="hspace-5"></div>
+            <sc-tab-navigation id="tabNavi" class="flex-5">
+                <es-operorguser-user-list id="operUserList" title-text="사용자" on-saved-user="onSavedUser"></es-operorguser-user-list>
+                <es-operorguser-dept-list id="operDeptList" title-text="부서" on-saved-dept="onSavedDept" ></es-operorguser-dept-list>
+            </sc-tab-navigation>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "em-operorguser",
+
+            // 운영조직 선택
+            onSelectedOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.operUserList.load(data); // 운영단위/회사코드 전달
+                me.$.operDeptList.load(data); // 운영단위/회사코드 전달
+            },
+
+            // 운영조직 검색
+            onFoundOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.load(data); // 운영단위/회사코드 전달
+                //me.$.tabNavi.selectItem(me.$.operorgList);
+            },
+
+            // 조직 탭에서 선택된 조직을 운영조직으로 추가
+            onAddToOperationOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.onAddList(data); // 운영조직으로 추가
+            },
+
+            // <- 를 통해 사용자가 운영조직을 선택 할 수 있도록 진행
+            onAppendOperationOrganizationByLogicOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.onAddList(data);
+            },
+            // -> 를 통해 사용자가 운영조직을 삭제할때
+            onDeleteOperationOrganizationByLogicOrganization: function(e, data) {
+                var me = this;
+                me.$.operorgList.onDeleteList(data);
+            },
+
+            // 사용자 추가 저장
+            onSavedUser: function() {
+                var me = this;
+                me.$.operorgList.onFindList();
+            },
+            onSavedDept: function() {
+                var me = this;
+                me.$.operorgList.onFindList();
+            }
+        });
+    </script>
+
+</dom-module>

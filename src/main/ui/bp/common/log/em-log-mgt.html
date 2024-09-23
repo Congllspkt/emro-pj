@@ -1,0 +1,28 @@
+<sc-link rel="import" href="es-access-log.html"></sc-link>
+<sc-link rel="import" href="es-attachment-log.html"></sc-link>
+<sc-link rel="import" href="es-export-log.html"></sc-link>
+
+<dom-module id="em-log-mgt">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+        <sc-tab-navigation class="flex">
+            <es-access-log id="accessLog" title-text="시스템 로그"></es-access-log>
+            <es-attachment-log id="attachmentLog" title-text="파일 다운로드 로그"></es-attachment-log>
+            <es-export-log id="exportLog" title-text="엑셀 다운로드 로그"></es-export-log>
+        </sc-tab-navigation>
+    </template>
+    
+    <script>
+        Polymer({
+            is : 'em-log-mgt'
+        });
+    </script>
+
+
+</dom-module>

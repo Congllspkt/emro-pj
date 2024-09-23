@@ -1,0 +1,21 @@
+<sc-link rel="import" href="es-jobuser-list.html"></sc-link>
+
+<dom-module id="em-jobuser">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+        <es-jobuser-list></es-jobuser-list>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-jobuser'
+        });
+    </script>
+
+</dom-module>

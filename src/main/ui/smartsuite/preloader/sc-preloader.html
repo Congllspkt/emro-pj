@@ -1,0 +1,33 @@
+<sc-link rel="import" href="../custom/module-elements.html"></sc-link>
+<sc-link rel="import" href="sc-preloader-resources-link.html"></sc-link>
+<script type="text/javascript" src="sc-preloader-behavior.js"></script>
+<script>
+
+	(function(window, document) {
+		var PRELOADER = Object.create(HTMLElement.prototype),
+			thisDoc = document._currentScript.ownerDocument,
+			thatDoc = document;
+		
+		PRELOADER.debugMode = false;
+		
+		/** Step 1. Main Module 리소스 준비 (MDI, SDI) */
+		PRELOADER.preinitialize = function(){
+			this.readyMainModuleResources();
+		};
+		
+		/** Step 2. Business Module 리소스 준비 (EM-, ES-) */
+		PRELOADER.initialize = function(){
+			this.readyBusinessModuleResources();
+		};
+		
+		/** Step 3 : Application 준비 완료 */
+		PRELOADER.applicationComplete = function(){
+		};
+		
+		/** SCPreloader 인스턴스 생성(on preloader-behavior.js) */
+		window.SCPreloader = newPreloaderInstance.call(this, PRELOADER, thisDoc, thatDoc);
+
+	}(window, document));
+
+</script>
+

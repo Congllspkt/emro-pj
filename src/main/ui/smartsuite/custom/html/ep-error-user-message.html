@@ -1,0 +1,87 @@
+<dom-module id="ep-error-user-message">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+
+        ul.error_desc {
+            padding-left: 20px;
+            list-style: circle;
+        }
+        ul.error_desc li {
+            list-style: circle;
+        }
+    </style>
+    <template>
+        <sc-ajax id="updateError"
+                 url="updateError.do"
+                 body="{{searchParam}}"
+                 on-response="onUpdateCompletedError">
+        </sc-ajax>
+
+        <cc-page-title-bar>
+            <sc-button text="에러 전송" on-click="onSend"></sc-button>
+        </cc-page-title-bar>
+
+        <div class="vbox flex">
+            <sc-label text="에러가 발생했습니다. 관리자에게 에러 발생 정보를 알려주세요." style="color:red;" i18n-disabled></sc-label>
+            <br>
+            <sc-label text="어떤 업무를 하시다가 에러가 발생했는지 상세히 말씀해주시면 더 신속하게 대응할 수 있습니다." i18n-disabled></sc-label>
+
+            <sc-textarea-field value="{{searchParam.usr_err_msg}}" required="true" style="height:150px;" max-length="250"></sc-textarea-field>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "ep-error-user-message",
+            properties: {
+                titleText: {
+                    type: String,
+                    value: function () {
+                        return "에러발생정보전송"
+                    }
+                },
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                basicInfo: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                dependenciesJar: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                html: {
+                    type: String,
+                    value: function() {
+                        return "";
+                    }
+                },
+            },
+
+            load: function (err_uuid) {
+                var me = this;
+                me.set("searchParam.err_uuid", err_uuid);
+            },
+
+            onSend: function () {
+                var me = this;
+                UT.request(me.$.updateError);
+            },
+
+            onUpdateCompletedError: function () {
+                var me = this;
+                UT.alert("STD.N1500", null, true);
+                me.fire("send-error-user-message");
+            }
+        });
+    </script>
+</dom-module>

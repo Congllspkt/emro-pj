@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+
+
+
+				http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+       default-lazy-init="true">
+	
+	
+	<util:properties id="mybatisConfigurationProperties">
+		<prop key="dialectClass">smartsuite.mybatis.dialect.OracleDialect</prop>
+	</util:properties>
+
+	<bean id="sqlSessionFactory"
+		class="smartsuite.mybatis.ReconfigurableSqlSessionFactoryBean"
+		p:configurationProperties-ref="mybatisConfigurationProperties"
+		p:configLocation="classpath:mybatis.xml"
+		p:dataSource-ref="dataSource">
+		<property name="mapperLocations">
+			<array>
+				<!-- R&D 외 mapper -->
+				<value>classpath*:smartsuite/mappers/oracle/**/**/*.xml</value>
+				<!-- R&D mapper -->
+				<value>classpath*:smartsuite/**/mapper/oracle/*.xml</value>
+			</array>
+		</property> 
+	</bean>
+		
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+		<constructor-arg index="1" value="BATCH" />
+	</bean>
+	
+	<!-- Logging 제외  (use actualDataSource) -->
+	<bean id="noLoggingSqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:configurationProperties-ref="mybatisConfigurationProperties"
+		p:configLocation="classpath:mybatis.xml"
+		p:dataSource-ref="actualDataSource">
+		<property name="mapperLocations">
+			<array>
+				<value>classpath:smartsuite/log/mapper/oracle/*.xml</value>
+			</array>
+		</property>
+	</bean>
+	<bean id="noLoggingSqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="noLoggingSqlSessionFactory" />
+		<constructor-arg index="1" value="BATCH" />
+	</bean>
+		
+</beans>

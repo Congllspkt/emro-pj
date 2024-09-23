@@ -1,0 +1,362 @@
+<script src="../../../js/webRootPath.js"></script>
+<script src="sc-mdi-manager.js"></script>
+<script src="sc-mdi-history.js"></script>
+<link rel="import" href="sc-mdi-topmenu.html">
+<link rel="import" href="sc-mdi-sidemenu.html">
+<link rel="import" href="sc-mdi-tabbar.html">
+<link rel="import" href="sc-mdi-content.html">
+<link rel="import" href="sc-mdi-window.html">
+<link rel="import" href="sc-mdi-progress.html">
+
+<dom-module id="sc-nosession-mdi">
+	<template>
+		<div id="headWrap">
+			<!-- # UtilArea S -->
+			<div class="toolbar">
+				<div class="mdiLogo buyer"></div>
+				<div class="spacer"></div>
+				<div class="mdi_lan">
+					<a>[[_selectLocaleName(avaiableLocales, currentLocale)]]</a>
+					<div class="lan_list">
+						<ul>
+							<template id="localeList" is="dom-repeat" items="{{avaiableLocales}}" as="locale" filter="_onLocaleFilter">
+								<li><a on-click="_onChangeLocale">[[translate(locale.displayName)]]</a></li>
+							</template>
+						</ul>
+					</div>
+				</div>
+			</div>
+			<!--UtilArea E-->
+			<!-- # GnbArea S-->
+			<div class="gnbBar">
+				<sc-mdi-topmenu id="mdiTopMenu" on-menu-click="_onTopMenuClick"></sc-mdi-topmenu>
+			</div>
+			<!--GnbArea E-->
+		</div>
+
+		<!-- @ ContainerWrap S-->
+		<div id="containerWrap" class="containerWrap">
+			<div>
+			</div>
+			<sc-mdi-sidemenu id="mdiSideMenu" hidden="true"></sc-mdi-sidemenu>
+			<!--<sc-mdi-splitter id="mdiSplitter"></sc-mdi-splitter>-->
+			<sc-mdi-content id="mdiContent" on-window-activated="_onWindowActivated" tabbar-hidden="true"></sc-mdi-content>
+		</div>
+		<!--ContainerWrap E-->
+	</template>
+	<script>
+
+	SCPreloader.onInitialize(function() {
+		
+		Polymer({
+
+            is: 'sc-nosession-mdi',
+
+            behaviors: [
+                Polymer.SCResizableBehavior
+            ],
+
+            properties: {
+				currentLocale : {
+					type : String,
+					value : SCLocaleManager.getLocale()
+				},
+            	
+				avaiableLocales: {
+                    type: Array,
+                    value : function() {
+                    	return SCLocaleManager.onReady(function() {
+                    		this.avaiableLocales = SCLocaleManager.getAvaiableLocales();
+                    	}.bind(this));
+                    }
+                },
+
+                menuPaths : {
+                    type : Object,
+                    value : {}
+                },
+
+                // 타임 아웃 설정
+                _sessionTimeout :{
+                    type: Number,
+                    value : (("number" === typeof window.SESSIONTIMEOUT && window.SESSIONTIMEOUT > 0) ? window.SESSIONTIMEOUT  : (1000 * 60 * 30)) //30분
+                },
+
+                // 포탈 정보
+                startPage : {
+                    type: Object,
+                    value : function() {
+                        return {
+                            menu_id : "PORTAL",
+							menu_nm : "PORTAL",
+							menu_url : "ui/bp/developer/guide/datahandling/em-data-search-guide.html"
+						}
+					}
+                },
+            },
+            
+            listeners: {
+                'sc-resize': '_onMdiIronResize',
+                'utilarea-resize': '_onUtilAreaResize'
+            },
+
+            get mdiHeaderWrapHeight() {
+                if(!this._mdiHeaderWrapRect) {
+                    this._mdiHeaderWrapRect = this.$.headWrap.getBoundingClientRect();
+                }
+                return this._mdiHeaderWrapRect.height;
+            },
+            
+            get mdiHeaderWrapBoundingHeight() {
+                this._mdiHeaderWrapRect = this.$.headWrap.getBoundingClientRect();
+                return this._mdiHeaderWrapRect.height;
+            },
+            
+            get windowHeight() {
+                return document.documentElement.clientHeight;
+            },
+
+            get windowWidth() {
+                return document.documentElement.clientWidth;
+            },
+
+            _selectLocaleName : function(locales, locale) {
+                var me = this, selectLocale = {};
+                for(var i = 0,len = locales.length ; i<len ; i++){
+                    if(locales[i]["locale"] === locale){
+                        selectLocale = locales[i];
+                        break;
+                    }
+                }
+                return this.translate(selectLocale.displayName);
+            },
+
+            // window 사이즈 갱신
+            _onMdiIronResize: function() {
+                var containerHeight = (this.windowHeight - this.mdiHeaderWrapHeight);
+                this.$.containerWrap.style.width = this.windowWidth + 'px';
+                this.$.containerWrap.style.height = containerHeight + 'px';
+                this.$.mdiContent._onMdiContentIronResize(containerHeight, this.windowWidth, 0);
+            },
+            
+            _onUtilAreaResize: function(){
+            	var utilArea = this.$.headWrap.querySelector('.toolbar');
+            	this.$.headWrap.querySelector('.toolbar').hidden = !utilArea.hidden;            	
+            	this.mdiHeaderWrapBoundingHeight;
+            	this._onMdiIronResize();
+            },
+
+            // top 메뉴 클릭 시
+            _onTopMenuClick: function(event){
+                if(typeof event.detail === 'undefined'){
+                    return;
+                }
+                // 최상위 메뉴 일 경우
+                if((event.detail.menu_url === undefined || event.detail.menu_url === null)  && event.detail.level === 0){
+                    var rootMenuNode = this.$.mdiTopMenu.getRootMenuNode(event.detail.menu_id);
+                    if(this.$.mdiSideMenu.rootMenuId != rootMenuNode.menu_id) {
+                        this.$.mdiSideMenu.rootMenuId = rootMenuNode.menu_id;
+                        this.$.mdiSideMenu.treeMenuList = rootMenuNode.sub_menu_list ? rootMenuNode.sub_menu_list : [];
+                        this.$.mdiSideMenu.menuName = event.detail.menu_nm;
+                    }
+                } else if(event.detail.menu_url === undefined || event.detail.menu_url === null){
+
+                } else {
+                     this.$.mdiContent.createWindow(event.detail.menu_id, event.detail.menu_nm, event.detail.menu_url);
+                }
+            },
+
+         	// 현재 laguage 에 해당 하는 유저명
+            _currentUserNm : function(user, locale) {
+                var key = 'usr_nm';
+                if(locale !== 'ko_KR'){
+                    key = 'usr_nm_en';
+				}
+                return user[key];
+			},
+
+            // 모듈 활성화
+            _onWindowActivated: function(event) {
+                var active_menu_id = event.detail.windowId;
+
+                // 본인 이외의 메뉴는 삭제
+                var otherMenus = this.$.mdiContent.$.mdiPages.querySelectorAll('sc-mdi-window:not([window-id="'+active_menu_id+'"])');
+                if(otherMenus.length > 0) {
+                    for (var i = 0, len = otherMenus.length; i < len; i++) {
+                        if(otherMenus[i].id === this.startPage.menu_id){
+                            continue;
+						}
+                        this.$.mdiContent.removeWindow(otherMenus[i].id);
+                    }
+				}
+
+                this.$.mdiContent.setMenuPath(this.getMenuPath(active_menu_id));
+                
+                var rootMenuNode = this.$.mdiTopMenu.getRootMenuNode(active_menu_id);
+                if(!rootMenuNode){
+                    return;
+                }
+                var subMenuList = rootMenuNode.sub_menu_list;
+                this.$.mdiSideMenu.menuName = rootMenuNode.menu_nm;
+                
+                //최상위의 sub menu 가 없는 메뉴
+                /*if(rootMenuNode && !subMenuList){
+                    this.$.mdiSideMenu.treeMenuList =[];
+                    return;
+                }*/
+                if(subMenuList && this.$.mdiSideMenu.rootMenuId != rootMenuNode.menu_id) {
+                    this.$.mdiSideMenu.rootMenuId = rootMenuNode.menu_id;
+                    this.$.mdiSideMenu.treeMenuList = subMenuList;
+                }
+                this.$.mdiSideMenu.selectedItem = this.$.mdiSideMenu.getMenuNode(active_menu_id);
+                this.$.mdiTopMenu.currentEl = this.$.mdiTopMenu.querySelector("#"+ rootMenuNode.menu_id);
+            },
+
+            // 메뉴 데이터
+            setTopMenuList: function(){
+                var hier = new SCHierachicalData();
+                var data = SCLocaleManager.getMenuList();
+                
+                hier.usingSort = true;
+                var menuNodeMap = {};
+
+                hier.onNodeAppend = function(parentNode, node, parentNodeLevel){
+                    node.level = parentNodeLevel;
+                    if(node['menu_id'] != null){
+                        menuNodeMap[node['menu_id']] = node;
+                    }
+
+                    if(parentNodeLevel === 0){
+
+                        node['tree'] = (node['menu_id'] != null ? node['menu_id'] : '');
+                        node['root_menu_id'] = node['menu_id'];
+                        node['tree_nm'] = (node['menu_nm'] != null ? node['menu_nm'] : '');
+                    }else{
+                        node['tree'] = parentNode['tree'] + '||' +(node['menu_id'] != null ? node['menu_id'] : '');
+                        node['root_menu_id'] = parentNode['root_menu_id'];
+                        node['tree_nm'] = parentNode['tree_nm'] + '||' +(node['menu_nm'] != null ? node['menu_nm'] : '');
+                    }
+                };
+                var treeMenuList = hier.HierachyTransformByKey(data, "menu_id", "parent_menu_id", "sub_menu_list", "ROOT", "sort_ord");
+
+                SCLocaleManager.setMenuNodeMap(menuNodeMap);
+                SCLocaleManager.setTreeMenuList(treeMenuList);
+                
+                this.$.mdiTopMenu.treeMenuList = treeMenuList;
+                //this._onTopMenuClick({detail:treeMenuList[0]});
+
+            },
+
+            getMenuPath : function(windowId) {
+                if(windowId == this.startPage.menu_id) {
+                    this.menuPaths[windowId] = "<b>Home</b>";
+                }
+                try {
+                    if(typeof this.menuPaths[windowId] === "undefined") {
+                        var node = this.$.mdiTopMenu.getMenuNode(windowId);
+                        var paths = UT.isNotEmpty(node) ? node.tree_nm.split("||") : [];
+                        var htmlStr = "Home";
+                        for(var i = 0; i < paths.length; i++) {
+                            if(paths[i] == "") {
+                                continue;
+                            }
+                            htmlStr = (i == paths.length -1 ? "<b>" : "") + paths[i] + (i == paths.length -1 ? "</b>" : "") + " &nbsp;&lt;&nbsp; " + htmlStr;
+                        }
+                        this.menuPaths[windowId] = htmlStr;
+                    }
+                }
+                catch(error) {
+                	console.error(e);
+                }
+                
+                return this.menuPaths[windowId];
+            },
+            _onLocaleFilter: function(item){
+            	var me = this;
+            	return (item.locale != SCLocaleManager.getLocale());
+            },
+            //locale 변경
+            _onChangeLocale: function(e){
+            	var me = this,
+            	locale = e.model.locale.locale;
+            	
+            	if(locale != SCLocaleManager.getLocale()) {
+                    UT.confirm("STD.MDI1004", function() { // "언어를 변경하시겠습니까? 페이지가 새로고침 됩니다."
+                        var ajax = new SCAjax();
+                        ajax.url = 'i18n/saveI18nLocale.do';
+                        ajax.params = {locale : locale};
+                        ajax.addEventListener('response', function(event) {
+                            ajax.removeEventListener('response', arguments.callee);
+                            me.reload();
+                        });
+                        ajax.request();
+                    });
+                }
+            },
+
+            /******************************
+             * 로그아웃
+             ******************************/
+            _onLogout : function() {
+                UT.confirm("STD.MDI1001", function() { // "로그아웃 하시겠습니까?"
+                    this.logout();
+                }.bind(this), function () {
+                    this.$$('.logout > sc-button').focus();
+                }.bind(this));
+            },
+
+            logout : function() {
+            	if(this._invalidSession) {
+            		location.href = getWebRootPath();
+            		//location.href = "/";
+            	}
+            	else {
+	                document.getElementById('logoutForm').submit();
+            	}
+            },
+
+            /******************************
+             * 타임 아웃
+             ******************************/
+            _onSessionTimer: function() {
+                $.ajax('sessionTimeUpdate.do', $.extend(false, SCPreloader.ajaxSettings(), {
+                	data : JSON.stringify({})
+                })).then(this._doSessionTimer.bind(this));
+            },
+
+            _doSessionTimer : function() {
+                if(this._sessionTimeoutInterval) {
+                    clearInterval(this._sessionTimeoutInterval);
+                }
+                this._timeout = this._sessionTimeout;
+                this._sessionTimeoutInterval = setInterval(function() {
+                	this._timeout -= 1000;
+                	if(this._timeout <= 0) {
+                		clearInterval(this._sessionTimeoutInterval);
+                        UT.alert([this.translate("STD.MDI1002",null, (this._sessionTimeout / 1000 / 60) ) ], function() { // "{0} 분동안 사용하지 않아 로그아웃 됩니다."
+                        	this._invalidSession = true;
+                            this.logout();
+                        }, true);
+                	}
+                }.bind(this), 1000);
+            },
+
+			_openStartPage: function() {
+                var menu = this.startPage;
+                SCMenuManager.startPage = menu; // 역할체크 회피를 위한 manager 에 등록
+                this.$.mdiContent.createWindow(menu.menu_id, menu.menu_nm, menu.menu_url, false);
+            },
+
+            ready : function() {
+            	SCMdiManager.onReady(function() {
+            		this.mdiInitialized = true;
+            		this.setTopMenuList();
+                    this._openStartPage();
+            		this.fire('mdi-initialized', this, {bubbles : false});
+            		this.fire('mdi-manager-initialized', this, {bubbles : false});
+            	}.bind(this));
+            }
+        });
+	});        
+	</script>
+</dom-module>

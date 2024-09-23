@@ -1,0 +1,24 @@
+.sc-wrap-btn .btn_srch{background:#a4242a;}
+.sc-wrap-btn .btn_srch:hover{background:#e7262e;}
+cc-page-title-bar .wrap_btn sc-button{background:#a4242a;}
+cc-page-title-bar .wrap_btn sc-button:hover{background:#e7262e;}
+
+/* 영역컨트롤 버튼 */
+cc-grid-toolbar .wrap_btn sc-button{background: #f58023;}
+cc-grid-toolbar .wrap_btn sc-button:hover{background: #d15d00;}
+sc-button {background:#f58023;}
+sc-button:hover {background:#d15d00;}
+cc-sub-title-bar .wrap_btn sc-button:hover {background:#d15d00;}
+cc-sub-title-bar .wrap_btn sc-button {background:#f58023;}
+cc-grid-toolbar .wrap_btn sc-button {background:#f58023;}
+cc-grid-toolbar .wrap_btn sc-button:hover {background:#d15d00;}
+scheduler-sub-title-bar .scheduler-wrap-btn sc-button{background-color: #f58023 !important;}
+scheduler-sub-title-bar .scheduler-wrap-btn sc-button:hover{background-color:#d15d00 !important;}
+scheduler-grid-toolbar .scheduler-wrap-btn sc-button:hover{background-color: #d15d00 !important;}
+.smartsuite-calendar-add-group-popup-0 .borderPlus.smartsuite-calendar-add-group-popup{background: #f58023 !important;}
+.smartsuite-calendar-add-group-popup-0 .borderPlus.smartsuite-calendar-add-group-popup:HOVER {background-color: #d15d00 !important;}
+.smartsuite-calendar-add-schedule-popup .groupParent > sc-button{background: #f58023 !important;}
+.smartsuite-calendar-add-schedule-popup .groupParent > sc-button:hover{background-color:#d15d00 !important;}
+.smartsuite-calendar-add-schedule-popup .borderPlus{background: #f58023 !important;}
+.smartsuite-calendar-add-schedule-popup .borderPlus:hover{background-color: #d15d00 !important;}
+.grid-container{border-top:1px solid #444545;}

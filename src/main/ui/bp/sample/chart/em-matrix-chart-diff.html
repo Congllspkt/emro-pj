@@ -1,0 +1,134 @@
+<dom-module id="em-chart-diff">
+
+<style>
+:host {
+@apply(--layout-vertical);
+@apply(--layout-flex);
+}
+.row-1 {
+@apply(--layout-horizontal);
+@apply(--layout-flex);
+}
+.row-2 {
+@apply(--layout-horizontal);
+@apply(--layout-flex);
+}
+</style>
+
+<template>
+	<sc-panel title-text="SRM(matrix) - 차별화 차트">
+			<cc-matrix-chart id="matrixChart" 
+							 titles="{{titles}}" 
+							 x-axis-ranges="{{xAxisRanges}}" 
+							 y-axis-ranges="{{yAxisRanges}}"
+							 points="{{points}}"
+							 rectangle-areas="{{rectangleAreas}}"
+							 chart-labels="{{chartLabels}}"
+							 on-point-click="onPointClick"
+							 on-area-click="onAreaClick">
+			
+			</cc-matrix-chart>
+		</sc-panel>
+</template>
+
+<script>
+Polymer({
+	is: 'em-chart-diff',
+	properties : {
+			titles:{
+				type:Object,
+				value :{
+					 x_title :"협력사평가등급",
+					 y_title :"관계유형세분화"
+				}
+			},
+			xAxisRanges:{
+				type:Array,
+			 	value : [
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"25",max_sco :"70",min_pos :"0",min_sco :"0",oper_org_sn :"10010",rng_cls :"D",sys_id :"EMRO",title :"D",xy_cls :"X"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"50",max_sco :"85",min_pos :"25",min_sco :"70",oper_org_sn :"10010",rng_cls :"C",sys_id :"EMRO",title :"C",xy_cls :"X"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"100",max_sco :"100",min_pos :"75",min_sco :"90",oper_org_sn :"10010",rng_cls :"A",sys_id :"EMRO",title :"A",xy_cls :"X"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"75",max_sco :"90",min_pos :"50",min_sco :"85",oper_org_sn :"10010",rng_cls :"B",sys_id :"EMRO",title :"B",xy_cls :"X"}
+ 				]
+			},
+			yAxisRanges:{
+				type:Array,
+			 	value : [
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"67",max_sco :"66.67",min_pos :"33",min_sco :"33.33",oper_org_sn :"10010",rng_cls :"C",sys_id :"EMRO",title :"협업적(C)",xy_cls :"Y"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"100",max_sco :"100",min_pos :"67",min_sco :"66.67",oper_org_sn :"10010",rng_cls :"S",sys_id :"EMRO",title :"전략적(S)",xy_cls :"Y"},
+					{co_cd :"C4100",lang_ccd :"ko_KR",mat_typ_cd :"DIFF",max_pos :"33",max_sco :"33.33",min_pos :"0",min_sco :"0",oper_org_sn :"10010",rng_cls :"T",sys_id :"EMRO",title :"거래중심적(T)",xy_cls :"Y"}
+ 				]
+			},
+			points:{
+				type : Array,
+				value : [
+						{bg_col :"#feb0a5",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"A",mat_area_nm :"전략",mat_typ_cd :"DIFF", oper_org_sn :"10010",sort_ord :"1",sys_id :"EMRO",x_axis_rng_cls :"A",y_axis_rng_cls :"S"},
+						{bg_col :"#f98271",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"B",mat_area_nm :"협업",mat_typ_cd :"DIFF",  oper_org_sn :"10010",sort_ord :"2",sys_id :"EMRO",x_axis_rng_cls :"B",y_axis_rng_cls :"S"},
+						{bg_col :"#b3eaf0",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"C",mat_area_nm :"개선",mat_typ_cd :"DIFF",  oper_org_sn :"10010",sort_ord :"3",sys_id :"EMRO",x_axis_rng_cls :"A",y_axis_rng_cls :"C"},
+						{bg_col :"#8ecfd6",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"D",mat_area_nm :"거래유지",mat_typ_cd :"DIFF", oper_org_sn :"10010",sort_ord :"4",sys_id :"EMRO",x_axis_rng_cls :"B",y_axis_rng_cls :"C"},
+						{bg_col :"#ffdf81",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"E",mat_area_nm :"퇴출",mat_typ_cd :"DIFF",oper_org_sn :"10010",sort_ord :"5",sys_id :"EMRO",x_axis_rng_cls :"C",y_axis_rng_cls :"S"},
+						{bg_col :"#ffdf81",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"E",mat_area_nm :"퇴출",mat_typ_cd :"DIFF",  oper_org_sn :"10010",sort_ord :"6",sys_id :"EMRO",x_axis_rng_cls :"C",y_axis_rng_cls :"C"},
+						{bg_col :"#B4FBFF",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"F",mat_area_nm : "",mat_typ_cd :"DIFF",  oper_org_sn :"10010",sort_ord :"7",sys_id :"EMRO",x_axis_rng_cls :"A",y_axis_rng_cls :"T"},
+						{bg_col :"#B4FBFF",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"F",mat_area_nm :"",mat_typ_cd :"DIFF",oper_org_sn :"10010",sort_ord :"8",sys_id :"EMRO",x_axis_rng_cls :"B",y_axis_rng_cls :"T"} ,
+						{bg_col :"#c5d1da",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"G",mat_area_nm : "",  mat_typ_cd :"DIFF",oper_org_sn :"10010",sort_ord :"9",sys_id :"EMRO",x_axis_rng_cls :"C",y_axis_rng_cls :"T"},
+						{bg_col :"#ffdf81",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"E",mat_area_nm :"퇴출",mat_typ_cd :"DIFF", oper_org_sn :"10010",sort_ord :"10",sys_id :"EMRO",x_axis_rng_cls :"D",y_axis_rng_cls :"S"},
+						{bg_col :"#ffdf81",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"E",mat_area_nm :"퇴출",mat_typ_cd :"DIFF",  oper_org_sn :"10010",sort_ord :"11",sys_id :"EMRO",x_axis_rng_cls :"D",y_axis_rng_cls :"C"},
+						{bg_col :"#c5d1da",co_cd :"C4100",editstatus :"",editstatusname :"",mat_area_cd :"G",mat_area_nm : "",mat_typ_cd :"DIFF",oper_org_sn :"10010",sort_ord :"12",sys_id :"EMRO",x_axis_rng_cls :"D",y_axis_rng_cls :"T"}
+				]
+			},
+			rectangleAreas :{
+				type:Array,
+				value:[
+				    {area_nm:"협업",    color:"#f98271",    height:"33",    mat_area:"BS",    mat_area_cd:"B",    width:"25",    x:"50",    x_max_sco:"90",    x_min_sco:"85",    y:"0",    y_max_sco:"100",    y_min_sco:"66.67"},
+				    {area_nm:"",  color:"#B4FBFF",    height:"33",    mat_area:"BT",    mat_area_cd:"F",    width:"25",    x:"50",    x_max_sco:"90",    x_min_sco:"85",    y:"67",    y_max_sco:"33.33",    y_min_sco:"0"},
+				    {area_nm:"",  color:"#B4FBFF",    height:"33",    mat_area:"AT",    mat_area_cd:"F",    width:"25",    x:"75",    x_max_sco:"100",    x_min_sco:"90",    y:"67",    y_max_sco:"33.33",    y_min_sco:"0"},
+				    {area_nm:"", color:"#c5d1da",    height:"33",    mat_area:"DT",    mat_area_cd:"G",    width:"25",    x:"0",    x_max_sco:"70",    x_min_sco:"0",    y:"67",    y_max_sco:"33.33",    y_min_sco:"0"}, 
+				    {area_nm:"퇴출",    color:"#ffdf81",    height:"33",    mat_area:"CS",    mat_area_cd:"E",    width:"25",    x:"25",    x_max_sco:"85",    x_min_sco:"70",    y:"0",    y_max_sco:"100",    y_min_sco:"66.67"},
+				    {area_nm:"",   color:"#c5d1da",    height:"33",    mat_area:"CT",    mat_area_cd:"G",    width:"25",    x:"25",    x_max_sco:"85",    x_min_sco:"70",    y:"67",    y_max_sco:"33.33",    y_min_sco:"0"},
+				    {area_nm:"개선",    color:"#b3eaf0",    height:"34",    mat_area:"AC",    mat_area_cd:"C",    width:"25",    x:"75",    x_max_sco:"100",    x_min_sco:"90",    y:"33",    y_max_sco:"66.67",    y_min_sco:"33.33"},
+				    {area_nm:"전략",    color:"#feb0a5",    height:"33",    mat_area:"AS",    mat_area_cd:"A",    width:"25",    x:"75",    x_max_sco:"100",    x_min_sco:"90",    y:"0",    y_max_sco:"100",    y_min_sco:"66.67"},
+				    {area_nm:"퇴출",    color:"#ffdf81",    height:"34",    mat_area:"CC",    mat_area_cd:"E",    width:"25",    x:"25",    x_max_sco:"85",    x_min_sco:"70",    y:"33",    y_max_sco:"66.67",    y_min_sco:"33.33"},
+				    {area_nm:"퇴출",    color:"#ffdf81",    height:"34",    mat_area:"DC",    mat_area_cd:"E",    width:"25",    x:"0",    x_max_sco:"70",    x_min_sco:"0",    y:"33",    y_max_sco:"66.67",    y_min_sco:"33.33"},
+				    {area_nm:"퇴출",    color:"#ffdf81",    height:"33",    mat_area:"DS",    mat_area_cd:"E",    width:"25",    x:"0",    x_max_sco:"70",    x_min_sco:"0",    y:"0",    y_max_sco:"100",    y_min_sco:"66.67"},  
+				    {area_nm:"거래유지",    color:"#8ecfd6",    height:"34",    mat_area:"BC",    mat_area_cd:"D",    width:"25",    x:"50",    x_max_sco:"90",    x_min_sco:"85",    y:"33",    y_max_sco:"66.67",    y_min_sco:"33.33"}
+				
+				]
+			},
+			chartLabels :  {
+				type:Array,
+				value:[
+				       {co_cd :"C4100",    label_info_sn :"1",    mat_area_nm :"전략A",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"88",    y_crd :"16.65"},
+				       {co_cd :"C4100",    label_info_sn :"2",    mat_area_nm :"협업A",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"88",    y_crd :"49"},
+				       {co_cd :"C4100",    label_info_sn :"3",    mat_area_nm :"개선",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"24.5",    y_crd :"33.3"},
+				       {co_cd :"C4100",    label_info_sn :"5",    mat_area_nm :"전략B",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"62",    y_crd :"16.65"},
+				       {co_cd :"C4100",    label_info_sn :"6",    mat_area_nm :"협업B",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"62",    y_crd :"49"},
+				       {co_cd :"C4100",    label_info_sn :"7",    mat_area_nm :"거래유지",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"74.5",    y_crd :"82"},
+				       {co_cd :"C4100",    label_info_sn :"8",    mat_area_nm :"퇴출",    mat_typ_cd :"DIFF",    oper_org_sn :"10010",    sys_id :"EMRO",    x_crd :"24.5",    y_crd :"82"}
+		        ]
+			}
+	},
+	attached: function() {
+		var chart = this.$.matrixChart;
+		/** (차트생성시 유의할점)
+		*1. chart는 생성될 div를 지정하여 해당 div안에 그려지기때문에 attached 시점 이후에  생성해야합니다.
+		*2. titles, xAxisRanges, yAxisRanges, points, rectangleAreas,chartLabels 의 데이터를 셋팅(조회)한 후에 생성해야합니다.
+		*
+		*/
+			chart.createMatrixChart();
+	},
+	
+	//포인트 클릭시 이벤트 처리
+	onPointClick : function(event,data){
+		console.log('event : ' ,event);
+		console.log('data  : ' ,data);
+	},
+	
+	//영역 클릭시 이벤트 처리
+	onAreaClick :  function(event,data){
+		console.log('event : ' ,event);
+		console.log('data  : ' ,data);
+	},
+});
+</script>
+
+</dom-module>

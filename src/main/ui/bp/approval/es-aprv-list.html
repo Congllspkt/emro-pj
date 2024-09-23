@@ -1,0 +1,331 @@
+<dom-module id="es-aprv-list">
+	
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		
+		<!-- 목록 조회 -->
+		<sc-ajax id="findList" url="findListApproval.do" body="{{searchParam}}"></sc-ajax>
+		
+		<sc-ajax id="findErrCont" url="findApprovedErrorContext.do"></sc-ajax>
+		<!-- 일괄 승인 -->
+		<sc-ajax id="batchApproval" url="batchApproveProcess.do"></sc-ajax>
+		
+		<!-- 공통코드 -->
+		<sc-code-group id="codes">
+			<sc-code code="G002" value="{{codes.aprvStsCd}}"></sc-code> <!-- 결재상태코드 -->
+			<sc-code code="G003" value="{{codes.aprvTypCd}}"></sc-code> <!-- 결재 유형 코드 -->
+			<sc-code code="G006" value="{{codes.aprvErrCd}}"></sc-code> <!-- 결재결과처리코드 -->
+		</sc-code-group>
+		
+		<cc-auth-checker check-list="auth-r"></cc-auth-checker>
+		
+		<cc-page-title-bar></cc-page-title-bar>
+		
+		<cc-search-condition-panel on-search="onFindList" validation-group="search" auth-r>
+			<cc-fieldset>
+				<sc-label text="결재 유형"></sc-label>
+				<sc-combobox-field value="{{searchParam.apvl_typ_ccd}}" items="{{codes.aprvTypCd}}" display-field="label" value-field="data"
+								   placeholder="전체">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 상신 일시"></sc-label>
+				<sc-period-date-field from-value="{{searchParam.from_rpt_dt}}" to-value={{searchParam.to_rpt_dt}}
+									  default-from-value="-1M" string-date="false"></sc-period-date-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="최종 결재 일시"></sc-label>
+				<sc-period-date-field from-value="{{searchParam.from_last_aprv_dt}}" to-value="{{searchParam.to_last_aprv_dt}}" string-date="false"></sc-period-date-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재상태"></sc-label>
+				<sc-combobox-field value="{{searchParam.apvl_sts_ccd}}" items="{{codes.aprvStsCd}}" display-field="label" value-field="data"
+								   placeholder="전체" readonly="[[formula('isCrntAprvempChecked')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 제목"></sc-label>
+				<sc-text-field value="{{searchParam.apvl_tit}}" on-enter="onFindList"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재자 명"></sc-label>
+				<sc-text-field value="{{searchParam.line_usr_nm}}" on-enter="onFindList" placeholder="결재자 명"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 번호"></sc-label>
+				<cc-multi-text-field value="{{searchParam.apvl_docno}}" multi-value="{{searchParam.aprv_docnos}}" title="결재 번호" on-enter="onFindList"></cc-multi-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="결재 대상만"></sc-label>
+				<sc-checkbox-field input-value="{{searchParam.curr_apvr_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel" class="flex" editable="true" on-item-click="onDataCellClicked" use-state="false"
+				 use-selection="true"
+				 selection-able-function="selectionAbleFn">
+			<cc-grid-toolbar>
+				<sc-button text="일괄 결재" on-click="onShowDialog"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-combobox-column data-field="apvl_sts_ccd" header-text="결재 상태" width="100" items="{{codes.aprvStsCd}}"
+									display-field="label" value-field="data"></sc-combobox-column>
+				<sc-group-column header-text="결재 결과" width="180">
+					<sc-combobox-column data-field="apvl_res_ccd" header-text="상태" width="120" items="{{codes.aprvErrCd}}"
+										display-field="label" value-field="data"></sc-combobox-column>
+					<sc-image-column data-field="btn_errcont" header-text="오류 내용" width="100" text-align="center" image-change-function="onImageChange"></sc-image-column>
+				</sc-group-column>
+				<sc-combobox-column data-field="apvl_typ_ccd" header-text="결재 유형" width="150" items="{{codes.aprvTypCd}}"
+									display-field="label" value-field="data"></sc-combobox-column>
+				<sc-data-column data-field="apvl_docno" header-text="결재 번호" width="120" style-name="link"></sc-data-column>
+				<sc-data-column data-field="apvl_revno" header-text="차수" width="50"></sc-data-column>
+				<sc-data-column data-field="apvl_tit" header-text="결재 제목" width="300" text-align="left"></sc-data-column>
+				<sc-data-column data-field="usr_nm" header-text="상신자" width="100"></sc-data-column>
+				<sc-date-column data-field="apvl_rptg_dttm" header-text="결재 상신 일시" width="100"></sc-date-column>
+				<sc-date-column data-field="fnl_apvl_dttm" header-text="최종 결재 일시" width="100"></sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="apvl_uuid" data-type="text"></sc-grid-field>
+				<sc-grid-field data-field="curr_apvr_yn" data-type="text"></sc-grid-field>
+				<sc-grid-field data-field="apvr_id" data-type="text"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+		
+		<!-- 일괄결재 - 의견입력 dialog -->
+		<sc-dialog id="dialog_aprvreceipt_aprv_opinion" title="결재 의견 입력" title-align="left" style="width:400px;" modal="true">
+			<sc-toolbar>
+				<sc-label text="결재 의견"></sc-label>
+				<sc-spacer></sc-spacer>
+				<sc-button text="일괄 결재" on-click="onApproveApprovals" data-args="APVD"></sc-button>
+				<!-- <sc-button text="일괄반려"	on-click="onRejectApprovals"	data-args="B"></sc-button> -->
+			</sc-toolbar>
+			<table class="tb-form">
+				<tr>
+					<td>
+						<sc-textarea-field id="apvl_opn" style="height:150px" maxLength="500"></sc-textarea-field>
+					</td>
+				</tr>
+			</table>
+		</sc-dialog>
+		
+		<!-- 오류내용 dialog -->
+		<sc-dialog id="dialog_aprvreceipt_aprv_errcont" title="오류 내용" title-align="left" style="width:600px;" modal="true">
+			<table class="tb-form">
+				<tr>
+					<td>
+						<sc-textarea-field id="apvl_err_cont" style="height:350px" readonly="true"></sc-textarea-field>
+					</td>
+				</tr>
+			</table>
+		</sc-dialog>
+	</template>
+	
+	<script>
+		Polymer({
+			is: "es-aprv-list",
+			properties: {
+				searchParam: {
+					type: Object,
+					value: function() {
+						return {
+							isFromPortal: false,
+							curr_apvr_yn: "Y"
+						}
+					}
+				},
+				codes: {
+					type: Object,
+					value: function() {
+						return {
+							aprvStsCd: [],
+							aprvTypCd: [],
+							aprvErrCd: []
+						};
+					},
+					reset: false
+				}
+			},
+			
+			observers: [
+				"onCrntAprvempYnChange(searchParam.curr_apvr_yn)"
+			],
+			
+			formulas: {
+				isCrntAprvempChecked: function() {
+					return (this.searchParam.curr_apvr_yn === 'Y');
+				}
+			},
+			initialized: function() {
+				var me = this;
+				
+			},
+			load: function(param) {
+				var me = this;
+				
+				if(UT.isNotEmpty(param)) {
+					// 컴포넌트 별 default 값이 셋팅되어 있을 수 있으므로 파라미터로 넘어온 값만 셋팅한다.
+					for(var key in param) {
+						if(param.hasOwnProperty(key)) {
+							// me.get("searchParam")[key] = param[key];
+							var paramKey = "searchParam." + key;
+							me.set(paramKey, param[key]);
+						}
+					}
+					me.set("searchParam.isFromPortal", true);
+				}
+				me.onFindList();
+			},
+			onDataCellClicked: function(e) {
+				var me   = this,
+					item = e.detail.item,
+					data = e.detail.data;
+				if(item.dataField === "apvl_docno") {
+					var sessionUser = SCSessionManager.getCurrentUser();
+					if(data.apvr_id !== sessionUser.usr_id) {
+						UT.popupApproval(me, {apvl_uuid: data.apvl_uuid, apvl_sts_ccd: data.apvl_sts_ccd, dpty_aprv_yn: "Y", apvr_id: data.apvr_id}, function(aprvSts) {
+							me.onFindList();
+						});
+					} else {
+						UT.popupApproval(me, {apvl_uuid: data.apvl_uuid, apvl_sts_ccd: data.apvl_sts_ccd, dpty_aprv_yn: "N"}, function(aprvSts) {
+							me.onFindList();
+						});
+					}
+				} else if(item.dataField === "btn_errcont" && data["apvl_res_ccd"] === "APVL_RES_PRCSG_ERR") {
+					
+					me.$.findErrCont.body = {apvl_uuid: data["apvl_uuid"]};
+					
+					UT.request(me.$.findErrCont, function(e, res) {
+						var result = res.response;
+						me.$.apvl_err_cont.value = result.apvl_err_cont;
+						me.$.dialog_aprvreceipt_aprv_errcont.show();
+					});
+				}
+			},
+			
+			onCrntAprvempYnChange: function(newValue) {
+				var me = this;
+				if(newValue === 'Y')
+					me.set('searchParam.apvl_sts_ccd', 'PRGSG');
+				else
+					me.set('searchParam.apvl_sts_ccd', '');
+				me.applyFormula('isCrntAprvempChecked');
+			},
+			
+			// 검색(조회)
+			onFindList: function() {
+				var me = this;
+				
+				if(!me.validate('search')) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				
+				UT.request(me.$.findList, function(e, res) {
+					var result = res.response;
+					
+					me.$.gridPanel.setDataProvider(result);
+					
+					// portal에서 연 경우, sc-period-date-field의 defaultFromValue, defaultToValue 값 바인딩이 async 하게 되므로 따로 처리
+					if(me.get("searchParam.isFromPortal")) {
+						me.set("searchParam.isFromPortal", false);
+						
+						me.set("searchParam.from_rpt_dt", null);
+						me.set("searchParam.to_rpt_dt", null);
+					}
+				});
+			},
+			
+			// 그리드 selection-able-function
+			selectionAbleFn: function(data) {
+				return (data["apvl_sts_ccd"] === 'PRGSG' && data["curr_apvr_yn"] === 'Y' && data["apvl_res_ccd"] !== 'APVL_RES_PRCSG_PRGSG');
+			},
+			
+			// grid image column 데이터에 따른 icon 처리
+			onImageChange: function(data, item) {
+				if(data["apvl_res_ccd"] === "APVL_RES_PRCSG_ERR") {
+					return "link";
+				} else {
+					return null;
+				}
+			},
+			
+			// 일괄결재 dialog
+			onShowDialog: function() {
+				var me = this;
+				
+				var provider     = me.$.gridPanel.getDataProvider(),
+					checkedItems = provider.selectionCheckedItems();
+				
+				if(checkedItems.length === 0) {
+					UT.alert("STD.N1600");	//"선택된 항목이 없습니다."
+					return;
+				}
+				
+				me.$.apvl_opn.value = "";	//결재의견 초기화
+				me.$.dialog_aprvreceipt_aprv_opinion.show();
+			},
+			onApproveApprovals: function(e) {
+				var me         = this,
+					resultCode = e.target.dataset.args;
+				
+				var provider     = me.$.gridPanel.getDataProvider(),
+					checkedItems = provider.selectionCheckedItems();
+				
+				var aprvIds = [];
+				for(var i = 0; i < checkedItems.length; i++) {
+					var checkedItem = checkedItems[i];
+					aprvIds.push(checkedItem.apvl_uuid);
+				}
+				
+				UT.confirm("STD.APR1015", function() {	//"선택된 결재요청 건들을 일괄 승인하시겠습니까?"
+					me.$.batchApproval.body = {
+						aprv_ids: aprvIds,
+						checked_items: checkedItems,
+						apvl_res_ccd: resultCode,
+						apvl_opn: apvl_opn.value
+					};
+					
+					UT.request(me.$.batchApproval, function(e, res) {
+						var result = res.response, status = result.resultStatus;
+						
+						var msg = null;
+						if(status === "S") {
+							msg = me.translate("STD.APR1016");		//"시스템에 의해 결재 후처리가 진행되어 승인건 수에 따라 일정시간 소요됩니다."
+						} else if(status === "INVALID_STATUS_ERR") {
+							var resultData    = result.resultData,
+								invalids      = resultData.invalid_datas || [],
+								notExists     = resultData.not_exist_datas || [],
+								validCnt      = resultData.valid_cnt,
+								nonExcutedCnt = invalids.length + notExists.length;
+							
+							/*
+							 * STD.E9400 : "유효한 상태가 아니거나 상태가 변경되어 요청을 수행할 수 없습니다."
+							 * STD.APR1017 : "유효한 상태가 아니거나 상태가 변경된 {0}건을 제외하고<br/>일괄 결재 승인처리 요청을 완료하였습니다."
+							 */
+							msg = (validCnt === 0) ? me.translate("STD.E9400") : me.translate("STD.APR1017", null, nonExcutedCnt);
+						}
+						
+						if(UT.isNotEmpty(msg)) {
+							UT.alert(msg, function() {
+								me.onFindList();
+								me.onDialogClose();
+							}, true);
+						} else {
+							UT.alert("STD.E9999");
+						}
+					});
+				});
+			},
+			onDialogClose: function() {
+				var me = this;
+				me.$.dialog_aprvreceipt_aprv_opinion.close();
+			}
+		});
+	</script>
+
+</dom-module>

@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-bidtemplate-master-list.html"></sc-link>
+<sc-link rel="import" href="es-bidtemplate-master-info.html"></sc-link>
+
+<dom-module id="em-bidtemplate-master">
+    <style>
+        :host {
+			@apply(--fit-layout);
+        }
+    </style>
+    
+	<template>
+		<sc-pages id="pages" selected="0" class="fit">
+			<es-bidtemplate-master-list id="list" on-show-detail="onShowDetail"></es-bidtemplate-master-list>
+			<template>
+				<es-bidtemplate-master-info id="masterInfo" on-show-list="onShowList" ></es-bidtemplate-master-info>
+			</template>
+		</sc-pages>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-bidtemplate-master',
+
+			onShowDetail : function(e, data){
+				var me = this;
+				me.$.pages.selectItem(me.$.masterInfo);
+				me.$.masterInfo.load(data);
+			},
+
+			onShowList: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.list);
+				this.$.list.onSearch(data);
+			}
+		});
+	</script>
+
+
+</dom-module>

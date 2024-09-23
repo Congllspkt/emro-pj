@@ -1,0 +1,37 @@
+<sc-link rel="import" href="es-multi-lang-mgt-list.html"></sc-link>
+<sc-link rel="import" href="es-multi-lang-mgt-detail.html"></sc-link>
+
+<dom-module id="em-multi-lang-mgt">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+        <div class="hbox flex">
+            <es-multi-lang-mgt-list class="flex" on-key-select="onKeySelect" on-search="_resetDetail"></es-multi-lang-mgt-list>
+            <div class="hspace-10"></div>
+            <es-multi-lang-mgt-detail class="flex" id="multiLangMgtDetail"></es-multi-lang-mgt-detail>
+        </div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-multi-lang-mgt',
+
+            onKeySelect: function(event){
+                var me = this;
+                me.$.multiLangMgtDetail.load(event.detail);
+            },
+
+            _resetDetail: function(event){
+                var me = this;
+                me.$.multiLangMgtDetail.reset();
+            }
+        });
+    </script>
+
+</dom-module>

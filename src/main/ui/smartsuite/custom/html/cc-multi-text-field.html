@@ -1,0 +1,165 @@
+<sc-link rel="import" href="ep-multi-search.html" lazy></sc-link>
+<!-- 
+/**
+ * 복수 검색을 위한 input field 커스텀 태그
+ *
+ *     <cc-multi-text-field value="{{value}}" multi-value="{{여러개받을value}}" class="w-200" title="결재번호"></cc-multi-text-field>
+ *
+ * @element cc-multi-text-field
+ *
+ * @attribute value 해당 텍스트 필드 input value binding <br>
+ * [string] [optional] 
+ *
+ * @attribute placeholder placeholder <br>
+ * [string] [optional] 
+ *
+ * @attribute title 다이얼로그 팝업 제목 <br>
+ * [string] [optional]
+ *
+ *  @attribute multi-value 멀티 value<br>
+ * [string] [optional]
+ *
+ */
+-->
+<dom-module id="cc-multi-text-field">
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <template>
+        <sc-text-field
+            class$="[[class]]" trigger-cls="multi-search"
+            value="{{value}}" placeholder$="[[placeholder]]" max-length="200"
+            disabled="[[disabled]]" required="[[required]]" readonly="[[readonly]]"
+            on-trigger-click="onTriggerClick">
+        </sc-text-field>
+    </template>
+    <script>
+        Polymer({
+            is: 'cc-multi-text-field',
+            properties: {
+                value: {
+                    type: String,
+                    value : "",
+                    notify: true,
+                    observer: "onChangeValue"
+                },
+                multiValue: {
+                	type: Array,
+                    value: function() {
+                        return [];
+                    },
+                    notify: true,
+                    observer: "onChangeMultiValue"
+                },
+                title: {
+                	type: String,
+                	value: function(){
+                		return "";
+                	}
+                },
+                splitType: {
+                    type : String,
+                    value: ','
+                },
+                disabled: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                required: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                readonly: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+            },
+
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+
+                    var value = this.get('value');
+                    var multiValue = this.get('multiValue');
+                    if(value) {
+                        this.onChangeValue(value);
+                    } else if(multiValue) {
+                        this.onChangeMultiValue(multiValue);
+                    }
+                }
+            },
+
+            onTriggerClick: function(){
+                var me = this;
+                me.showDialog();
+            },
+            
+            // 다이얼로그 보이기
+            showDialog: function() {
+                var me = this;
+                
+               	var multiSearchPopup = UT.popup("ep-multi-search", me, 500, 600, {
+           		 	"selected" : function(popup, e){
+           		 		popup.close();
+           		 		var values = e.detail;
+           		 		if(values.length > 0) {
+                            me.set("multiValue", e.detail);
+                        } else {
+                            me.set("value", "");
+                        }
+                    },
+                    "clear" : function(popup, e){
+                        me.set("value", "");
+                    }
+                }, {titleText: me.get("title")});
+                multiSearchPopup.show();
+                multiSearchPopup.getWindowContent().load({defaultParam: me.get("multiValue")});
+            },
+
+            // Value Change Event
+            onChangeValue: function(value){
+                var me = this;
+
+                if(me._attachedCalled) {
+                    var splitType = me.get("splitType");
+                    var multiValue = me.get('multiValue') || [];
+                    var values = [];
+
+                    if (value && value.indexOf(splitType) > -1) {
+                        var splitValues = value.split(splitType);
+
+                        for (var i in splitValues) {
+                            var replaceValue = splitValues[i].replace(/(^\s*)|(\s*$)/g, "");
+                            values.push(replaceValue);
+                        }
+                    }
+
+                    if (values.toString() !== multiValue.toString() && value !== multiValue.toString()) {
+                        // Set 시 Reference가 다르기 때문에 ChangeEvent 발생
+                        me.set("multiValue", values);
+                    }
+                }
+            },
+            
+            // Multi Value Change Event
+            onChangeMultiValue: function(value) {
+                var me = this;
+                var splitType = me.get("splitType");
+
+                if(me._attachedCalled && Array.isArray(value) && value.length > 0) {
+                    // Set 시 값이 다를 경우 ChangeEvent 발생
+                    me.set("value", value.join(splitType));
+                }
+            }
+        });
+    </script>
+</dom-module>

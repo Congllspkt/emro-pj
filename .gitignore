@@ -1,0 +1,17 @@
+/bin/
+/target/
+/.settings/
+
+# Eclipse Core      
+/.project
+
+# JDT-specific (Eclipse Java Development Tools)     
+/.classpath
+
+context.xml
+
+# IntelliJ
+/.idea
+/*.iml
+
+/profiles/dev/webapp/META-INF/context.xml

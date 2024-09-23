@@ -1,0 +1,75 @@
+<!--
+ * @Desc quick Link widget
+ * @Author eunjoo.chung
+ * @Created 2017-03-30
+ -->
+
+<dom-module id="sc-widget-quick-link">
+    <template>
+        <style>
+            :host {
+               @apply(--vbox-layout);		
+            }
+        </style>
+
+        <!-- Quick Link-->
+<!--         <div class="po_contents"> -->
+        	<!--<h3><span>Quick Link</span></h3>-->
+        	<div class="wrap_contents full_scroll">
+            	<div class="q_link">
+                    <ul>
+	                    <li>
+		                    <a href="">
+			                    <img src="../img/ico_q_link01.png" alt="" />
+			                    <span>사용자매뉴얼</span>
+		                    </a>
+	                    </li>
+	                    <li>
+		                    <a href="">
+			                    <img src="../img/ico_q_link02.png" alt="" />
+			                    <span>공동인증서안내</span>
+	                    	</a>
+	                    </li>
+	                    <li>
+		                    <a href="">
+			                    <img src="../img/ico_q_link03.png" alt="" />
+			                    <span>구매담당자안내</span>
+	                    	</a>
+	                    </li>
+	                    <li>
+		                    <a href="">
+			                    <img src="../img/ico_q_link04.png" alt="" />
+			                    <span>구매프로세스</span>
+		                    </a>
+	                    </li>
+                    </ul>
+                </div>
+                <div class="contact">
+                	<ul>
+	                    <li>
+	                    	<dl>
+	                        <dt>시스템 관련 문의</dt>
+	                        <dd>1588-1234</dd>
+	                        </dl>
+	                    </li>
+	                    <li>
+	                    	<dl>
+	                        <dt>협력사 관련 문의</dt>
+	                        <dd>1588-6789</dd>
+	                        </dl>
+	                    </li>
+                    </ul>
+                </div>
+            </div>
+<!--         </div> -->
+        <!-- //Quick Link-->
+    </template>
+    
+    <script>
+    Polymer({
+        is: "sc-widget-quick-link"
+    })
+    </script>
+
+</dom-module>
+

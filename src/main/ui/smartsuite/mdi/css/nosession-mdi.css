@@ -1,0 +1,794 @@
+@charset "utf-8";
+
+.wrap_form input.btn_login {background:#d31144; height:55px; border:0; color:#fff; font-size:21px; font-weight:bold; cursor:pointer; width:100%; transition:background .2s}
+.wrap_form input.btn_login:hover {background:#940027;}
+
+
+sc-nosession-mdi {
+	display : block;
+	position : absolute;
+	width : 100%;
+	height : 100%;
+}
+
+/* util toolbar */
+sc-nosession-mdi .toolbar {
+	display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+	-ms-flex-direction: row;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+	-ms-flex-pack: start;
+    -webkit-justify-content: flex-start;
+    justify-content: flex-start;
+	-ms-flex-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+	
+	background-color : #fff;
+	padding : 0 0 0 15px;
+	height: 34px;
+	vertical-align:middle;
+	border-bottom:0;
+}
+
+sc-nosession-mdi .toolbar > * {
+	margin-left : 10px;
+	font-size : 12px;
+	font-weight : bold;
+}
+
+sc-nosession-mdi .toolbar .mdiLogo {
+	width: 230px;
+	height :30px;
+	background:url("../img/logo_buyer.png") no-repeat left center;
+	display : inline-block;
+	margin: auto;
+	top: 0;
+	bottom: 0;
+}
+
+sc-nosession-mdi .toolbar .mdiLogo.buyer {
+	background-image: url("../img/logo_buyer.png");
+}
+
+sc-nosession-mdi .toolbar .mdiLogo.supplier {
+	background-image: url("../img/logo_supplier.png");
+}
+
+sc-nosession-mdi .toolbar .label a {
+	color : #000;
+	height : 20px;
+	font-size : 14px; font-weight:normal;
+}
+sc-nosession-mdi .toolbar .label span {font-weight:bold;}
+
+sc-nosession-mdi .spacer {
+	display : block;
+	-ms-flex: 1 1 auto;
+	-webkit-flex: 1 1 auto;
+	flex: 1 1 auto;
+}
+
+sc-nosession-mdi .timer {
+	position : relative;
+	height : 18px; line-height:18px; vertical-align:middle;
+	border-radius : 10px;
+	padding : 3px 10px 3px 30px;
+	font-size:15px;
+	font-weight : bold;
+	color : #000;
+	cursor : pointer;
+	background:#fff url("../img/ico_clock.png") no-repeat 5px 3px;
+}
+
+sc-nosession-mdi .timer:hover {
+	background:#f2f2f2 url("../img/ico_clock.png") no-repeat 5px 3px;
+}
+
+/*** sc-mdi-searchbar ***/
+sc-nosession-mdi .mdi_srch {position:relative; border:1px solid #1e5784; border-radius:20px; width:300px; height:18px; line-height:18px; padding:1px 0 1px 10px;}
+sc-nosession-mdi .mdi_srch div {display:inline-block; float:left; vertical-align:top;}
+
+sc-nosession-mdi .mdi_srch div.wrap_input {position:relative;}
+sc-nosession-mdi .mdi_srch div.wrap_input [field][focused]>.field-container {box-shadow: none}
+sc-nosession-mdi .mdi_srch div.wrap_input sc-text-field {width:192px; vertical-align:top; background-color:transparent;}
+sc-nosession-mdi .mdi_srch div.wrap_input sc-text-field .field-container {border:0;display:inline-flex;}
+
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions sc-listbox {display:none;width:200px; box-sizing:border-box; overflow-y:auto; border:1px solid #1e5784; border-top:1px solid #f1f1f1; position:absolute; top:19px; left:-5px; z-index:10;}
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions .suggestions {border-bottom:1px solid #f1f1f1;width:100%;box-sizing:border-box;padding:8px 5px 8px 10px}
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions .suggestions:hover {background:#f7f7f7;}
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions .suggestions.active {background:#f7f7f7;}
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions .suggestions a {display:inline-block; font-size:12px; font-weight:bold; color:#000; line-height:17px; box-sizing:border-box;overflow: hidden;text-overflow: ellipsis;white-space: nowrap; width:100%}
+sc-nosession-mdi .mdi_srch div.wrap_input  cc-auto-suggestions .suggestions .sg_bc {display:inline-block;font-size:9px; font-weight:normal; color:#777;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;width:100%}
+
+sc-nosession-mdi .mdi_srch div.srch_condtion {position:relative; width:90px; margin-right:5px}
+sc-nosession-mdi .mdi_srch div.srch_condtion a {display:inline-block; font-size:12px; font-weight:bold; color:#000; line-height:17px; width:100%; box-sizing:border-box;}
+sc-nosession-mdi .mdi_srch div.srch_condtion .tit_srch {padding:1px 25px 1px 5px; width:90px; background:url("../img/bul_mdi_srch.png") no-repeat center right; color:#777;}
+sc-nosession-mdi .mdi_srch div.srch_condtion .srch_con_list {visibility:hidden;}
+sc-nosession-mdi .mdi_srch div.srch_condtion ul {position:absolute; top:19px; background:#fff; width:88px; z-index:10; border:1px solid #1e5784; border-top:0;}
+sc-nosession-mdi .mdi_srch div.srch_condtion div a {padding:3px 5px;}
+sc-nosession-mdi .mdi_srch div.srch_condtion div a:hover {background:#f7f7f7; width:100%;}
+sc-nosession-mdi .mdi_srch div.srch_condtion:hover > div.srch_con_list {visibility:visible}
+
+
+sc-nosession-mdi .mdi_lan {position:relative; border-radius:5px; border:1px solid #ebebeb; width:80px; height:22px; line-height:20px; box-sizing:border-box;}
+sc-nosession-mdi .mdi_lan:hover {border:1px solid #1e5784;}
+sc-nosession-mdi .mdi_lan a {display:inline-block;  background:#ebebeb url("../img/buls_mdi.png") no-repeat 62px -294px; font-size:12px; font-weight:bold; color:#000; width:78px; padding:0 25px 0 10px; border-radius:5px; box-sizing:border-box;} 
+sc-nosession-mdi .mdi_lan .lan_list {visibility:hidden;}
+sc-nosession-mdi .mdi_lan .lan_list ul {position:absolute; top:18px; left:-1px; background:#ebebeb; width:78px; z-index:100000; border:1px solid #1e5784; padding-top:5px; border-top:0; border-radius:0 0 5px 5px;}
+sc-nosession-mdi .mdi_lan .lan_list li a {padding:0 10px; line-height:22px; background:#fff; width:100%; border-radius:0; border-top:1px solid #ccc; box-sizing:border-box;}
+sc-nosession-mdi .mdi_lan .lan_list li:last-of-type a {border-radius:0 0 5px 5px;}
+sc-nosession-mdi .mdi_lan .lan_list li a:hover {background:#f7f7f7;}
+sc-nosession-mdi .mdi_lan:hover > div.lan_list {visibility:visible}
+
+
+sc-nosession-mdi .lan .field-container {border:0; background:#f7f7f7; border-radius:10px;}
+sc-nosession-mdi .lan .field-container input {background:transparent}
+
+sc-nosession-mdi .toolbar .i18n {
+	width : 80px;
+}
+
+/* MDI Top Functions 2017-03-09 */
+#headWrap {position:relative;}
+#headWrap .toolbar .top_func {height:30px;}
+#headWrap .toolbar .top_func li {width:30px; height:30px; float:left}
+#headWrap .toolbar .top_func sc-button, #headWrap .toolbar .top_func smartsuite-notice #alertIcon, #headWrap .toolbar .top_func a {background:transparent url("../img/icons_func.png") no-repeat; padding:0; width:30px; height:30px;transition:background .2s; cursor:pointer}
+#headWrap .toolbar .top_func smartsuite-notice a, #headWrap .toolbar .top_func .info-btn, #headWrap .toolbar .top_func .logout a {display:inline-block;}
+#headWrap .toolbar .top_func .info-btn {background-position:6px 3px;}
+#headWrap .toolbar .top_func .info-btn:hover {background-position:-44px 3px;}
+#headWrap .toolbar .top_func .notice .num {
+	background-color: red;
+	color: white;
+	position: absolute;
+	font-size: 1px;
+	margin-left: 13px;
+	border-radius: 11px;
+	width: 16px;
+	height: 16px;
+	text-align: center;
+	line-height: 1.8;
+}
+#headWrap .toolbar .top_func smartsuite-notice #alertIcon{background-position:6px -46px;}
+#headWrap .toolbar .top_func smartsuite-notice #alertIcon:hover {background-position:-44px -46px;}
+#headWrap .toolbar .top_func .logout sc-button {background-position:6px -97px;}
+#headWrap .toolbar .top_func .logout sc-button:hover {background-position:-44px -97px;}
+
+/*** menu bar*/
+sc-nosession-mdi .gnbBar {
+	position: relative;
+	width: 100%;
+	height: 31px;
+	background-color : #152b3c;
+	vertical-align : middle;
+	border-top:1px solid #152b3c;
+	border-bottom:1px solid #152b3c; 
+}
+
+sc-nosession-mdi sc-mdi-topmenu {
+	left: 0;
+	height: 31px;
+	display: inline-block;
+	position: absolute;
+	right: 0;
+}
+
+sc-nosession-mdi sc-mdi-topmenu img {display:none}/* img 태그 없애고 없앨것 */
+
+sc-nosession-mdi .topMenuListDiv{
+	position: absolute !important;
+	left: 29px;
+	right: 93px;
+	line-height:31px;
+}
+
+sc-nosession-mdi .mdiTopMenu{
+	overflow:hidden;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 13px;
+	color: #ffffff;
+	white-space:nowrap;
+}
+
+sc-nosession-mdi sc-mdi-topmenu .mdiTopMenu > li {
+	position:relative;
+	display: inline-block;
+	margin:0;
+	cursor:pointer;
+}
+
+sc-nosession-mdi sc-mdi-topmenu .mdiTopMenu > li span {
+	display:inline-block;
+	font-size:14px;
+	font-weight:bold;
+	padding:0 15px;
+	color: #fff;
+	border-left: 1px solid #152b3c;
+}
+
+sc-nosession-mdi sc-mdi-topmenu .mdiTopMenu > li:hover a span,
+sc-nosession-mdi sc-mdi-topmenu .mdiTopMenu > .selected a span {background:#fff; color: #000 !important; line-height:31px;}
+
+/* GNB Sub Menu : sc-nosession-mdi 생략 */
+sc-nosession-mdi .topSubMenuListDiv ul{
+	position: absolute;
+	left: 100%;
+	min-width: 170px;
+	margin: 0;
+	font-size: 12px;
+	font-weight:bold;
+	z-index:99999;
+	color: #ffffff;
+	padding: 0 0;
+	background: #ffffff;
+	border: 1px solid #152b3c;
+	border-top:0;
+}
+sc-nosession-mdi .topSubMenuListDiv ul ul {border-top:1px solid #152b3c; margin-top:-1px;}
+
+sc-nosession-mdi .topSubMenuListDiv li {  background: #fff;  border-bottom:1px solid #dbdbdb; /*padding-right:20px;*/  }
+sc-nosession-mdi .topSubMenuListDiv li:hover {background:#e8f5fa}
+sc-nosession-mdi .topSubMenuListDiv li:hover > a{background-color:#e8f5fa;}
+
+sc-nosession-mdi .topSubMenuListDiv li.expandable {background:url("../img/buls_mdi.png") no-repeat right -93px;}
+sc-nosession-mdi .topSubMenuListDiv li.expandable:hover {background:#e8f5fa url("../img/buls_mdi.png") no-repeat right -143px;}
+sc-nosession-mdi .topSubMenuListDiv li.expandable:hover > a {background-color:#e8f5fa}
+
+sc-nosession-mdi .topSubMenuListDiv li a {
+	display: block;
+	height: 24px;
+	padding: 0 7px 0 15px;
+	list-style: none;
+	line-height: 24px;
+	background:url("../img/buls_mdi.png") no-repeat 7px 11px;
+}
+sc-nosession-mdi .topSubMenuListDiv li a:hover {background:url("../img/buls_mdi.png") no-repeat 7px 11px;}
+sc-nosession-mdi .topSubMenuListDiv li:last-child {border-bottom:none;}
+sc-nosession-mdi .topSubMenuListDiv li a, sc-nosession-mdi .topSubMenuListDiv li span {display:inline-block; color:#000; height:23px;}
+sc-nosession-mdi .topSubMenuListDiv li ul li a {font-weight:normal; background:#fff url("../img/buls_mdi.png") no-repeat 7px -38px; box-sizing:border-box;}
+sc-nosession-mdi .topSubMenuListDiv li ul li a:hover {background:#e8f5fa url("../img/buls_mdi.png") no-repeat 7px -38px;}
+sc-nosession-mdi .topSubMenuListDiv .expanded > ul > li > a > img,
+sc-nosession-mdi .topSubMenuListDiv > ul > li > a > img {
+	float:right;
+	margin-right:7px;
+	margin-top:8px;
+	vertical-align:middle;
+}
+
+/* scroll button을 계속 누르고 있을 경우 모바일에서는 Native Tooltip(복사, 붙여넣기, 전체선택 등)를 안보여주기 위한 */
+sc-nosession-mdi sc-mdi-topmenu #topMenuRightScroll, sc-nosession-mdi sc-mdi-topmenu #topMenuLeftScroll,
+sc-nosession-mdi sc-mdi-tabbar #leftScroller, sc-nosession-mdi sc-mdi-tabbar #rightScroller {
+	user-select: none;
+	-webkit-user-select:none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+/* Top Menu Scroll : sc-mdi-topmenu 생략 */
+sc-nosession-mdi .topMenuLeftScroll {
+	display: table;
+	position:absolute;
+	top: 0px;
+	right: 62px;
+	width:30px;
+	height:31px;
+	cursor:pointer;
+	border-left:1px solid rgba(255,255,255,0.2);
+}
+sc-nosession-mdi .topMenuLeftScroll span {
+	display: table-cell;
+	background:#152b3c url("../img/glys_topmenu.png") no-repeat 10px 9px;
+}
+sc-nosession-mdi .topMenuLeftScroll span:hover {background:#1e5784 url("../img/glys_topmenu.png") no-repeat 10px 9px;}
+
+sc-nosession-mdi .topMenuRightScroll {
+	display: table;
+	position:absolute;
+	top: 0px;
+	right:31px;
+	width:30px;
+	height:31px;
+	cursor: pointer;
+	border-left:1px solid rgba(255,255,255,0.2);
+}
+sc-nosession-mdi .topMenuRightScroll span {
+	display: table-cell;
+	background:#152b3c url("../img/glys_topmenu.png") no-repeat 11px -41px;
+}
+sc-nosession-mdi .topMenuRightScroll span:hover {background:#1e5784 url("../img/glys_topmenu.png") no-repeat 11px -41px;}
+
+/** utilArea */
+sc-nosession-mdi .utilAreaUp {
+	display: table;
+	position:absolute;
+	top: 0px;
+	right:0px;
+	width:30px;
+	height:32px;
+	cursor: pointer;
+	border-left:1px solid rgba(255,255,255,0.2);
+}
+sc-nosession-mdi .utilAreaUp span {
+	display: table-cell;
+	display: table-cell;
+	background:#152b3c url("../img/glys_topmenu.png") no-repeat 7px -93px;
+}
+sc-nosession-mdi .utilAreaUp span:hover {background:#1e5784 url("../img/glys_topmenu.png") no-repeat 7px -93px;}
+
+sc-nosession-mdi .utilAreaDown {
+	display: table;
+	position:absolute;
+	top: 0px;
+	right:0px;
+	width:30px;
+	height:32px;
+	cursor: pointer;
+	border-left:1px solid rgba(255,255,255,0.2);
+}
+sc-nosession-mdi .utilAreaDown span {
+	display: table-cell;
+	display: table-cell;
+	background:#152b3c url("../img/glys_topmenu.png") no-repeat 7px -143px;
+}
+sc-nosession-mdi .utilAreaDown span:hover {background:#1e5784 url("../img/glys_topmenu.png") no-repeat 7px -143px;}
+
+/* mdi manual */
+sc-nosession-mdi .mdiManual {
+	float:right
+}
+sc-nosession-mdi .mdiManual sc-button {
+	height:15px;
+	font-weight:bold;
+}
+sc-nosession-mdi .mdi-manual-btn {
+	padding: 2px 10px 2px 10px;
+	background-color: #cfdbe2;
+	border-color: gray;
+	border-radius: 12px;
+	font-size: 12px;
+	color: gray;
+}
+
+sc-nosession-mdi .mdi-bookmark-btn {
+	padding: 4px 10px 0 10px;
+	background-color: #cfdbe2;
+	border-color: gray;
+	border-radius: 10px;
+	font-size: 14px;
+	color: gray;
+}
+
+/* mdi left menu*/
+sc-nosession-mdi .containerWrap {
+	display : block;
+	position : relative;
+	overflow : hidden;
+}
+
+sc-mdi-sidemenu {
+	position : relative;
+	display : block;
+	float : left;
+}
+
+sc-mdi-sidemenu .sideWrap {
+	background: #fff;
+	width : 200px;
+	height : 100%;
+}
+
+sc-mdi-sidemenu .leftTabArea {
+	overflow:hidden;
+	positioN:relative;
+	height:30px;
+	background:#eff4f8;
+	height:40px;
+	border-right : 1px solid #1e5784;
+	border-bottom:1px solid #ddd;
+}
+
+sc-mdi-sidemenu .sideMenuTit {
+	float: left;
+	display:inline-block; height:40px; line-height:40px; padding-left:11px;
+}
+
+sc-mdi-sidemenu .sideMenuTit span {
+	font-size:16px;
+	font-weight:bold;
+	color:#000; }
+
+sc-mdi-sidemenu .leftCloseBtn {
+	position:absolute; right:1px; top:9px;
+
+
+}
+sc-mdi-sidemenu .leftCloseBtn span {
+	display:inline-block; background:url("../img/icons_sidebar.png") no-repeat -48px -45px; width:20px; height:23px; opacity:0.5; cursor:pointer;
+}
+sc-mdi-sidemenu .leftCloseBtn span:hover {opacity:1;}
+
+sc-mdi-sidemenu .menuList {
+	overflow-x : hidden;
+	overflow-y : auto;
+	height : 100%;
+	border-right:1px solid #1e5784;
+}
+
+sc-mdi-sidemenu .lnbMenu {
+	margin: 0;
+	padding: 0;
+}
+sc-mdi-sidemenu .lnbMenu li a {
+	overflow:hidden;
+	display:block;
+	width:100%;
+	height:28px;
+	line-height:28px;
+	background:#fff;
+	border-bottom:1px solid #ddd;
+}
+
+sc-mdi-sidemenu .lnbMenu li .selected a {
+	font-weight:bold!important;
+}
+
+sc-mdi-sidemenu .lnbMenu li a span {
+	overflow: hidden;
+	float:left;
+	width: 160px;
+	line-height:28px;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size:13px;  /* 2016.10.20 CMK (Left 메뉴)*/
+	font-weight:normal; /* 2016.10.20 CMK (Left 메뉴)*/
+	color:#000; /* 2016.10.07 CMK (Left 메뉴)*/
+	vertical-align:middle;
+	padding-left:13px;
+	cursor:pointer;
+}
+sc-mdi-sidemenu .lnbMenu li a:hover {background:#e8f5fa;}
+
+sc-mdi-sidemenu .lnbMenu li a img {
+	float:right;
+	margin-right:15px;
+	margin-top:13px;
+	vertical-align:middle;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth {
+	margin: 0;
+	padding: 0;
+	border-bottom:1px solid #dbdbdb;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth ul{
+	margin: 0;
+	padding: 0;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li{
+	background:#fbfcfc;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li a {
+	width:200px;
+	height:25px;
+	border:0;
+	background:#fbfcfc;
+	cursor:pointer;
+	margin-left:15px;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li a span {
+	overflow: hidden;
+	width:150px;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size:12px;
+	background:url("../img/bult_3grey.png") no-repeat 0 11px;
+	padding-left:8px;
+	line-height:25px;
+	cursor:pointer;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li a img {
+	margin-right:32px;
+}
+
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li a:hover span {font-weight:bold;}
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li ul li a{
+	width:180px;
+	padding-left:20px;
+}
+sc-mdi-sidemenu .lnbMenu .selected a span {font-weight:bold; background:url("../img/buls_mdi.png") no-repeat 5px -190px;}
+sc-mdi-sidemenu .lnbMenu li ul.lnb2depth li.selected a span {font-weight:bold; background:url("../img/buls_mdi.png") no-repeat 0 -242px;}
+sc-mdi-sidemenu .lnb-closed {
+	display: none;
+}
+
+sc-bc {display:block; text-align:right; height:11px; line-height:7px; font-size:11px; margin:5px 10px 1px 10px; letter-spacing:-0.05em}
+sc-bc b {font-weight:bold;}
+
+/* mdi content */
+sc-mdi-content {
+	position : relative;
+	display : block;
+	padding : 0;
+	float : left;
+}
+
+sc-mdi-content > sc-pages {
+	position : relative;
+	background-color : #fff;
+	border-top : none;
+	box-sizing : border-box;
+}
+
+/* MDITab */
+sc-mdi-tabbar .mdiTabsDiv {
+	position:relative;
+	height:24px;   /*2016.12.09 CMK 
+	background:#fff;  2016.10.10 CMK */
+	border-bottom: none; /* 2016.10.10 CMK */
+	border-left: none; /* 2016.10.10 CMK */
+	margin:0;
+	background:#e7e9eb url('../img/tab_bg.png') repeat-x 0 23px;
+}
+sc-mdi-tabbar .mdiTabsDiv .hide{
+	display : none;
+}
+
+sc-mdi-tabbar .tooltip {
+	display: block;
+	position: absolute;
+	background: #616161;
+	border-radius: 2px;
+	opacity: 0.8;
+	font-size: 12px;
+	color: #fff;
+	line-height: 1;
+	padding: 8px;
+	z-index: 1002;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .tabContainer {
+	overflow:hidden;
+	position: absolute !important;
+	border-left:none !important;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs {
+	min-height: 23px;
+}
+
+/* 임의 추가 S */
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs ul{
+	overflow:hidden;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs ul li{
+	float:left;
+}
+
+sc-mdi-tabbar sc-tabbar div.content > sc-tab:first-child{
+	border-left: 1px solid #152b3c;
+	margin-left : 0px;
+}
+
+sc-mdi-tabbar sc-tabbar div.content > sc-tab[active]:first-child{
+	border-left: 1px solid #152b3c;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs sc-tab {
+	background:#e7e9eb;
+	border-left:1px solid #152b3c;
+	border-right:1px solid #152b3c;
+	font-weight:normal;
+	color:#777;
+	padding:2px 20px 0 10px;
+	line-height:21px;
+	border-radius: 0;
+	white-space: nowrap;
+	font-size: 12px;
+	border-bottom:1px solid #152b3c; vertical-align:top;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs sc-tab div {position:absolute; right:0}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs sc-tab[active] {
+	background:#fff;
+	border:none;
+	border-top:2px solid #44a6cf;
+	border-left:1px solid #152b3c;
+	border-right:1px solid #152b3c;
+	font-weight:normal;
+	border-radius:0;
+	font-size: 12px;
+	color:#000;
+	padding:0 20px 0 10px;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs sc-tab img,
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs sc-tab[active] img { /* 임의로 .sc-tab으로 변경 */
+	vertical-align:top;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .mdiTabs .scroller {
+	display : none;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .scroller {
+	font: normal normal normal 20px FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	text-align: center;
+	cursor: pointer;
+	/*color : #000;
+	opacity: .6;*/
+}
+
+sc-mdi-tabbar .mdiTabsDiv .right-scroller {
+	border-bottom-left-radius: 2px;
+}
+
+sc-mdi-tabbar .mdiTabsDiv .left-scroller:before {
+	content: "\f104"; /* 2016.10.10 CMK */
+}
+
+sc-mdi-tabbar .mdiTabsDiv .right-scroller:before {
+	content: "\f105"; /* 2016.10.10 CMK */
+}
+
+sc-mdi-tabbar .mdiTabsDiv .tabScrollLeft {
+	display: table;
+	position:absolute;
+	left:0;
+	height:22px;
+	width:18px;
+	background:#454545;
+	opacity:.8;
+	cursor:pointer;
+	border-top-right-radius: 2px;
+	border-bottom-right-radius: 2px;
+	margin-top:3px;
+}
+sc-mdi-tabbar .mdiTabsDiv .tabScrollLeft span {
+	display: table-cell;
+	vertical-align: middle;
+	font: normal normal normal 14px/16px FontAwesome;
+	text-align: center;
+	color:#fff;
+}
+sc-mdi-tabbar .mdiTabsDiv .tabScrollLeft span:before {
+	content: "\f137";
+}
+
+sc-mdi-tabbar .mdiTabsDiv .scroller-disabled{
+	/*opacity: .25!important;*/
+	visibility: hidden;
+}
+
+sc-mdi-tabbar #mdiTabToolbar sc-toolbar {
+	background: inherit;
+} 
+
+sc-mdi-tabbar .mdi-tools{
+	display: inline-block;
+	width: 30px !important;
+	height: 23px;
+	cursor: pointer;
+}
+
+/* 2016.10.11 CMK (우측 메뉴 리스트 버튼) */
+sc-mdi-tabbar .mdi-tools-tabList {
+	font: normal normal normal 14px/16px FontAwesome;
+	background-repeat : no-repeat;
+	background-position : center center;
+	text-align: center;
+}
+sc-mdi-tabbar .mdi-tools-tabList:before{content:"\f0c9";}
+sc-mdi-tabbar .tabListDiv ul{
+	position:fixed;
+	top:90px;
+	right:30px;
+	width: 170px;
+	margin: 0;
+	font-size: 12px;
+	font-weight:bold;
+	z-index:99999;
+	background:#fff;
+	border:1px solid #152b3c;
+}
+sc-mdi-tabbar .tabListDiv li {border-bottom:1px solid #dbdbdb}
+sc-mdi-tabbar .tabListDiv li a {display:inline-block; background:url("../img/buls_mdi.png") no-repeat 7px -38px; height:24px; width:170px; padding:0 10px 0 15px; line-height: 24px; color:#000; box-sizing:border-box;}
+sc-mdi-tabbar .tabListDiv li a:hover {background:#e8f5fa url("../img/buls_mdi.png") no-repeat 7px -38px}
+
+sc-mdi-tabbar .mdiTabToolbar {position: absolute;overflow:hidden; margin-right:0; height:24px; margin: 0; padding: 0; right : 0; top:-1px;border-bottom:1px solid #152b3c;}
+sc-mdi-tabbar .mdiTabToolbar > sc-toolbar{padding:0; margin: 0;height: 24px;}
+sc-mdi-tabbar .mdiTabToolbar li {float:left;width:30px; height:23px; line-height:23px; vertical-align:middle; color:#152b3c; background:#e7e9eb; border-left:1px solid rgba(21,43,60,0.2); cursor: pointer;}
+sc-mdi-tabbar .mdiTabToolbar li:first-child {border-left:1px solid #152b3c}
+sc-mdi-tabbar .mdiTabToolbar li:hover {background:#cfd9e3;}
+sc-mdi-tabbar .mdiTabToolbar .mdi-tools-closeall {background:#e7e9eb url('../img/btn_tabcloseall.png') no-repeat center 5px;}
+sc-mdi-tabbar .mdiTabToolbar .mdi-tools-closeall:hover {background:#cfd9e3 url('../img/btn_tabcloseall.png') no-repeat center 5px;}
+
+/*sc-mdi-tabbar .mdi-tools-sethelp:before{content:"\f013";}
+sc-mdi-tabbar .mdi-tools-sethelp:hover{color : #616161;}
+sc-window .mdi-tools-showhelp:before{content:"\f128";}
+sc-window .mdi-tools-sethelp:before{content:"\f013";}*/
+
+/*  mdi window */
+sc-mdi-window {
+	display : block;
+	position : relative;
+	padding : 3px 10px 5px;
+}
+
+/* sc-mdi-splitter */
+sc-mdi-splitter {
+	font : normal normal normal 14px/1 FontAwesome;
+	width : 8px;
+	max-width : 8px;
+	height : 100%;
+	background-color:#dcdcdc;
+	cursor : col-resize;
+	position: relative;
+	float: left;
+	display : table;
+	text-align:center;
+}
+
+sc-mdi-splitter > div {
+	display: table-cell;
+	vertical-align: middle;
+}
+
+sc-mdi-splitter > div:before {
+	content : "\f142"; color:gray;
+}
+
+/* Side bar */
+sc-nosession-mdi .leftSplitter {width:30px;}
+.leftSplitter aside {background:#1e5784; width:30px; height:100%; min-height:100%; font-size:0; position:absolute; top:0; bottom:0}
+.leftSplitter aside li {background:#1e5784; border-bottom:1px solid rgba(255,255,255,0.2);}
+.leftSplitter aside li:hover {background:#1e7ab2}
+.leftSplitter aside li a {position:relative; display:inline-block; height:40px; width:30px; background:url("../img/icons_sidebar.png") no-repeat;}
+.leftSplitter aside li:nth-child(1) a {height:23px; opacity:.5; background-position:8px -45px;}
+.leftSplitter aside li:hover:nth-child(1) a {opacity:1;}
+.leftSplitter aside li:nth-child(2) a {background-position:7px -138px}
+.leftSplitter aside li:nth-child(3) a {background-position:6px -189px}
+.leftSplitter aside li:nth-child(4) a {background-position:5px -241px}
+.leftSplitter aside li:nth-child(5) a {background-position:6px -288px}
+.leftSplitter aside li:nth-child(6) a {background-position:6px -337px}
+.leftSplitter aside li.favor:before, .leftSplitter aside li.link:before {display:block;  content:""; position:absolute; left:30px; border-top:7px solid transparent;  border-left:7px solid #1e7ab2; border-bottom:7px solid transparent; z-index:11; }
+.leftSplitter aside li.favor:before {top:38px}
+.leftSplitter aside li.link:before {top:78px}
+.leftSplitter aside .wrap_sb_content {visibility:hidden; position:absolute; top:0; bottom:0; left:30px; width:280px; overflow:hidden; background:rgba(255,255,255,0.95); padding:10px 20px; -webkit-box-shadow:4px 0 7px #999; -moz-box-shadow:4px 0 7px #999; box-shadow:4px 0 7px #999; box-sizing:border-box; transition:width 0.3s ease; width:0;  z-index:10}
+.leftSplitter aside .wrap_sb_content h2 {font-size:23px; height:30px; line-height:26px; border-bottom:1px solid #828282; color:#000; white-space:nowrap; letter-spacing:-1px;}
+.leftSplitter aside .wrap_sb_content ul {width:240px;}
+.leftSplitter aside .wrap_sb_content li {position:relative; vertical-align:middle; padding:0; background:none;}
+.leftSplitter aside .wrap_sb_content li a {display:inline-block; background:none; vertical-align:top; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; opacity:1}
+.leftSplitter aside .wrap_sb_content li a:hover {background:none}
+.leftSplitter aside .wrap_sb_content li:hover:before {display:none;}
+.leftSplitter aside li.select {background:#1e7ab2}
+.leftSplitter aside li.select > .wrap_sb_content {visibility:visible; width:280px;}
+.leftSplitter aside .fav_content li {border-bottom:1px solid #dbdbdb; height:28px;}
+.leftSplitter aside .fav_content li a {font-size:12px; color:#000; font-weight:bold; width:210px; padding:6px 0; box-sizing:border-box; opacity:1}
+.leftSplitter aside .fav_content li a:hover {color:#d31144; text-decoration:underline;}
+.leftSplitter aside .fav_content li span {display:inline-block; position:absolute; right:0; width:30px; height:28px; background:url(../img/ico_sb_delete.png) no-repeat center; opacity:.5; cursor:pointer;}
+.leftSplitter aside .fav_content li span:hover {opacity:1;}
+.leftSplitter aside .link_content li {float:left; margin-top:10px; background:#fff; white-space:nowrap;}
+.leftSplitter aside .link_content li:nth-child(even) {margin-left:10px;}
+.leftSplitter aside .link_content li a {font-size:12px; color:#000; font-weight:bold; width:115px; height:90px; padding:6px 0; border:1px solid #ddd; box-sizing:border-box; opacity:1; text-align:center;}
+.leftSplitter aside .link_content li a:hover {border:1px solid #d31144;}
+.leftSplitter aside .link_content li a:before {color:#000; font : normal normal normal 35px/40px FontAwesome; display:block; text-align:center; margin:5px 0;}
+.leftSplitter aside .link_content li:nth-child(1) a:before {content : "\f029";}
+.leftSplitter aside .link_content li:nth-child(2) a:before {content : "\f02d";} 
+.leftSplitter aside .link_content li:nth-child(3) a:before {content : "\f040";} 
+.leftSplitter aside .link_content li:nth-child(4) a:before {content : "\f0ae";} 

@@ -1,0 +1,668 @@
+<sc-link rel="import" href="ep-column-list.html"></sc-link>
+<sc-link rel="import" href="ep-group-column-list.html"></sc-link>
+<sc-link rel="import" href="ep-column-common-code-list.html"></sc-link>
+
+<dom-module id="es-sheet-master-info">
+	<!--
+        ******************************************************************************************
+        ** @Program-name    : BID SheetMaster Info 관리 - Column header 설정
+        ** @Description     :
+        ** @Author          : GaRam, Choi
+        ** @Create Date     : 2020.07.31
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<sc-code-group>
+				<sc-code code="BID001" value="{{codes.columnType}}" ></sc-code> <!-- 컬럼 타입 -->
+				<sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+				<sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+				<sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+			</sc-code-group>
+			<sc-ajax id="findListFormatterForCombobox" url="findListFormatterForCombobox.do" last-response="{{codes.formatterList}}"> </sc-ajax><!-- 전체 formatter 목록 -->
+		</sc-request-group>
+
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findSheetColumnHeadersDialog"
+				url="findSheetColumnHeadersDialog.do"
+				body="{{searchParam}}"
+				on-response="completeFindList">
+		</sc-ajax>
+
+		<sc-ajax
+				id="findSheetColumnHeadersInfo"
+				url="findSheetColumnHeaders.do"
+				body="{{searchParam}}"
+				on-response="completeFindListSheetHeaders">
+		</sc-ajax>
+
+
+		<!-- 저장 -->
+		<sc-ajax
+				id="saveListSheetColumns"
+				url="saveListSheetColumns.do"
+				on-response="completeSaveInfo">
+		</sc-ajax>
+
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteListSheetColumnInfo"
+				url="deleteListSheetColumnInfo.do"
+				on-response="completeDeleteInfo">
+		</sc-ajax>
+
+
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+
+		<sc-grid id="columnsGridPanel" class="flex" editable="true" on-item-click="onGridItemClick"
+				 use-selection="true"
+				 use-state="false">
+			<cc-grid-toolbar>
+				<sc-button text="위로"   on-click="onUpListUser"    auth-a></sc-button>
+				<sc-button text="아래로" on-click="onDownListUser"  auth-a></sc-button>
+				<sc-button text="미리보기" on-click="onPopupColumns"></sc-button>
+				<sc-button text="저장" on-click="onColumnSave"></sc-button>
+				<sc-button text="삭제" on-click="onDelete"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="col_cd" header-text="컬럼 코드" width="150" text-align="left" editable="false"></sc-data-column>
+				<sc-data-column data-field="col_nm" header-text="컬럼 이름" width="150" text-align="left" editable="true"></sc-data-column>
+				<sc-data-column data-field="sort_ord" header-text="정렬 순서" width="150" text-align="right" editable="false"></sc-data-column>
+				<sc-combobox-column data-field="col_typ_cd" header-text="컬럼 타입" display-field="label" value-field="data" editable="false" items="{{codes.columnType}}"></sc-combobox-column>
+				<sc-combobox-column data-field="col_fmt_typ" header-text="컬럼 포맷 타입" display-field="data" value-field="data" editable="true" items="{{codes.formatterList}}"  item-editable-function="itemDecimalFunction"></sc-combobox-column>
+				<sc-data-column data-field="col_len" data-type="number"	 header-text="컬럼 길이" width="150" text-align="right" editable="true"></sc-data-column>
+				<sc-data-column data-field="point_len" data-type="number"	 header-text="소수점 자리수" width="150" text-align="right" editable="true" item-editable-function="itemDecimalFunction"></sc-data-column>
+				<sc-combobox-column data-field="point_cal_typ" header-text="소수점 포맷팅" display-field="label" value-field="data" item-editable-function="itemDecimalFunction" editable="true" items="{{codes.precHndlTyp}}"></sc-combobox-column>
+				<sc-group-column header-text="그룹 코드" width="200">
+					<sc-data-column data-field="grp_cd"  width="180" text-align="right" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+					<sc-image-column  data-field="btn_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+				</sc-group-column>
+				<sc-group-column header-text="대 그룹 코드" width="140">
+					<sc-data-column data-field="hd_grp_cd"  width="120" text-align="left" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+					<sc-image-column  data-field="hd_grp_cd_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+				</sc-group-column>
+				<sc-group-column header-text="공통코드 코드" width="200">
+					<sc-data-column data-field="common_cd"  width="180" text-align="right" editable="true" item-editable-function="commonCodeEditableFunction" ></sc-data-column>
+					<sc-image-column  data-field="common_code_select" width="20"  text-align="center" image-change-function="onCommonCodeImageChange"></sc-image-column>
+				</sc-group-column>
+				<sc-combobox-column data-field="field_align" header-text="field 정렬" display-field="label" value-field="data" editable="true" items="{{codes.fieldAlign}}"></sc-combobox-column>
+				</sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field	data-field="col_id"	></sc-grid-field>
+				<sc-grid-field	data-field="sheet_id"	></sc-grid-field>
+				<sc-grid-field	data-field="sheet_col_id"	></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+		
+
+		<sc-dialog id="columnListDialog"  class="vbox flex" title-text="컬럼 목록" title-align="left" style="width:1200px;height:300px" modal="true">
+			<!-- 기본컬럼 -->
+			<template id="defaultColumnsTemplate">
+				<sc-grid-columns id="defaultColumns">
+
+				</sc-grid-columns>
+			</template>
+		
+			<!-- 그리드 패널 -->
+			<sc-grid id="gridPanel" editable="true">
+				<cc-grid-toolbar>
+					<sc-button text="조회" on-click="onFindList"></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+
+				</sc-grid-columns>
+			</sc-grid>
+		</sc-dialog>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "es-sheet-master-info",
+			behaviors : [
+				Polymer.Templatizer
+			],
+			properties : {
+				codes: {
+					type : Object,
+					reset : false,
+					value : function() {
+						return {
+							currencyCodeList: [],
+							formatterList: []
+						}
+					}
+				},
+
+
+				// 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				},
+
+				groupColumnSearch:{
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+
+				titleText : {
+					type: String,
+					value : ""
+				},
+
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+
+			},
+			load : function(data) {
+				var me = this;
+
+				me.set("titleText",data.sheet_nm);
+				me.set("searchParam",UT.copy(data));
+
+				me.$.findSheetColumnHeadersInfo.body = data;
+				UT.request(me.$.findSheetColumnHeadersInfo);
+			},
+
+
+
+			onFindList : function(){
+
+				var me = this;
+				me.$.findSheetColumnHeadersInfo.body = me.searchParam;
+				UT.request(me.$.findSheetColumnHeadersInfo);
+			},
+
+
+
+			// 데이터 조회 후 처리
+			completeFindList : function(e, res) {
+				var me = this,
+						result = res.response,
+						headerListMap = result.headerListMap,
+						headerGroupListMap = result.headerGroupListMap,
+						headerDepthGroupListMap = result.headerDepthGroupListMap;
+
+
+				me.$.columnListDialog.show();
+				// 기본컬럼
+				var columns = UT.templateColumns(this, '#defaultColumnsTemplate', '#defaultColumns');
+
+				var groupColumns =[];
+				var headerGroupColumns =[];
+
+				//2Depth 그룹 컬럼이 있을 경우
+				if(headerDepthGroupListMap.length > 0){
+					for(var i=0; i<headerDepthGroupListMap.length; i++) {
+						var item = headerDepthGroupListMap[i];
+
+						var headerText = item["col_nm"];	// 동적컬럼 headerText
+						var colCd = item["col_cd"];	// 동적컬럼 col_cd
+						var headerGroupColumn = me.createGroupColumn(headerText,colCd);
+						headerGroupColumn.editable = true;
+						headerGroupColumns.push(headerGroupColumn);
+					}
+				}
+
+				//그룹 컬럼이 있을 경우
+				if(headerGroupListMap.length > 0){
+					for(var i=0; i<headerGroupListMap.length; i++) {
+						var item = headerGroupListMap[i];
+
+						var headerText = item["col_nm"];	// 동적컬럼 headerText
+						var colCd = item["col_cd"];	// 동적컬럼 col_cd
+						var groupColumn = me.createGroupColumn(headerText,colCd);
+						groupColumn.editable = true;
+						groupColumns.push(groupColumn);
+					}
+				}
+
+
+
+				// 조회결과
+				if(headerListMap.length > 0) {
+
+					for(var i=0; i<headerListMap.length; i++) {
+						var item = headerListMap[i];
+
+						var headerText = item["col_nm"];	// 동적컬럼 headerText
+						var dataField = item["sheet_col_id"];	// 동적컬럼 dataField
+						var grpCd = item["grp_cd"];
+						var headerGrpCd = item["hd_grp_cd"];
+						var fieldAlign = item["field_align"];
+
+						if(UT.isNotEmpty(headerGrpCd) && UT.isNotEmpty(grpCd)){
+
+							for(var a=0; a<headerGroupColumns.length; a++) {
+								var headerGroupItem = headerGroupColumns[a];
+								var headerGroupColCd = headerGroupItem["col_cd"];
+
+								if(UT.isNotEmpty(headerGroupColCd) && headerGroupColCd == headerGrpCd){
+									for(var a=0; a<groupColumns.length; a++) {
+										var groupItem = groupColumns[a];
+										var groupColCd = groupItem["col_cd"];
+
+										if(UT.isNotEmpty(groupColCd) && groupColCd == grpCd){
+											var groupColumnItem = groupItem;
+											if(UT.isNotEmpty(groupColumnItem)){
+												var column = me.createColumn(dataField, headerText, 150, fieldAlign, true);
+												column.editable = false;
+												headerGroupItem.appendChild(groupColumnItem);
+												groupColumnItem.appendChild(column);
+												columns.push(headerGroupItem);
+											}
+										}
+									}
+								}
+							}
+
+						}else if(UT.isNotEmpty(grpCd)){
+
+							for(var a=0; a<groupColumns.length; a++) {
+								var groupItem = groupColumns[a];
+								var groupColCd = groupItem["col_cd"];
+
+								if(UT.isNotEmpty(groupColCd) && groupColCd == grpCd){
+									var groupColumnItem = groupItem;
+									if(UT.isNotEmpty(groupColumnItem)){
+										var column = me.createColumn(dataField, headerText, 150, fieldAlign, true);
+										column.editable = false;
+										groupColumnItem.appendChild(column);
+										columns.push(groupColumnItem);
+									}
+								}
+							}
+						}else{
+							// 동적컬럼 생성
+							var column = me.createColumn(dataField, headerText, 150, fieldAlign, true);
+
+							column.editable = false;
+
+							columns.push(column);
+						}
+					}
+				}
+
+
+				me.$.gridPanel.setColumns(columns);		// column 셋팅
+
+			},
+
+			// 그룹 컬럼 생성
+			createGroupColumn: function(headerText,colCd) {
+				var grpCol = document.createElement("sc-group-column");
+				grpCol.col_cd = colCd;
+				grpCol.headerText = headerText;
+				grpCol.i18nDisabled = true;
+				grpCol.width        = "300";
+				return grpCol;
+			},
+
+
+			// 컬럼 생성
+			createColumn : function(dataField, headerText, width, textAlign, i18nDisabled) {
+				var column = document.createElement("sc-data-column");
+				column.dataField    = dataField;
+				column.headerText   = headerText;
+				column.width        = width || "100";
+				column.textAlign    = textAlign || "center";
+				column.i18nDisabled = i18nDisabled || "false";
+				return column;
+			},
+
+
+
+			onPopupColumns : function () {
+				var me = this;
+				me.$.gridPanel.setDataProvider([]);
+				me.$.findSheetColumnHeadersDialog.body = me.searchParam;
+				UT.request(me.$.findSheetColumnHeadersDialog);
+			},
+
+
+			completeFindListSheetHeaders : function(e,res){
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider(res.response);
+			},
+
+
+
+			onSelectColumns : function (data) {
+				var me = this;
+
+				if(!me.checkDup(data.detail)){
+					var dataProvider = me.$.columnsGridPanel.getDataProvider();
+					var sheetInfo = me.get("searchParam");
+
+					for(var i=0; i<data.detail.length; i++) {
+						var selected = data.detail[i];
+
+						var addRow = {
+							col_id : selected.col_id,
+							col_cd : selected.col_cd,
+							col_nm : selected.col_nm,
+							col_typ_cd : selected.col_typ_cd,
+							col_len : selected.col_len,
+							point_len : selected.point_len,
+							point_cal_typ : selected.point_cal_typ,
+							grp_cd : selected.grp_cd,
+							hd_grp_cd : selected.hd_grp_cd,
+							common_cd : selected.common_cd,
+							field_align : selected.field_align,
+							use_yn : selected.use_yn,
+							sheet_id : sheetInfo.sheet_id
+						};
+						dataProvider.addItem(addRow);
+					}
+					me.resetSortOrd();
+				}else{
+					UT.alert("STD.N1900"); // 중복
+				}
+			},
+
+			checkDup : function(selectedList){
+				var me = this;
+				var newList = selectedList;
+				var existList = me.$.columnsGridPanel.getDataProvider().getItems() || [];
+				for(var i=0; i<newList.length; i++){
+					for(var j=0; j<existList.length; j++){
+						if(newList[i].col_cd == existList[j].col_cd){
+							// 중복시 true
+							return true;
+						}
+					}
+				}
+				// 미중복시 false
+				return false;
+			},
+
+
+			onColumnSave : function(){
+				var me = this;
+				// 데이터 유효성 확인
+				if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}
+
+				var provider = me.$.columnsGridPanel.getDataProvider(),
+						created = provider.getNewItems(),
+						updated = provider.getUpdateItems();
+
+				if(created.length + updated.length === 0) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+
+				UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+					me.$.saveListSheetColumns.body = {
+						insertList: created,
+						updateList: updated
+					};
+
+					UT.request(me.$.saveListSheetColumns);
+				});
+			},
+
+
+			completeSaveInfo : function(e,res){
+				var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onFindList();
+				});
+			},
+
+			onShowList: function () {
+			 var me = this;
+			 me.fire("show-list");
+			},
+
+			onDelete: function(){
+				var me = this,provider = me.$.columnsGridPanel.getDataProvider();
+				var item = provider.selectionCheckedItems();
+				var sheetInfo = me.get("searchParam");
+
+				if(item.length === 0) {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				} else {
+					UT.confirm("STD.N1300", function () {	// 삭제 하시겠습니까?
+						me.$.deleteListSheetColumnInfo.body = {
+							deleteItem : item
+						};
+						UT.request(me.$.deleteListSheetColumnInfo);
+					});
+				}
+			},
+
+			completeDeleteInfo : function(e,res){
+				var me = this;
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.onFindList();
+					me.$.columnListDialog.hide();
+				});
+			},
+
+
+
+
+
+
+			onGridItemClick : function(e) {
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+				var data = e.detail.data;
+				var item = e.detail.item;
+
+				// col_typ_cd 는 변경 될 수 있음.
+				if(item.dataField === "btn_select" && !(data.col_typ_cd == 'GROUPCODE')){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "hd_grp_cd_select" && !(data.col_typ_cd == 'GROUPCODE') && (UT.isNotEmpty(data.grp_cd))){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"hd_grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "common_code_select" && (data.col_typ_cd == 'COMBOBOX')){
+
+					var commonPopup = UT.popup("ep-column-common-code-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"common_cd" : selected.grp_cd});
+							commonPopup.close();
+						}
+					}, {titleText: this.translate("공통 코드 검색")});
+
+					commonPopup.show();
+					commonPopup.getWindowContent().load();
+				}
+
+			},
+
+			onImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] != "GROUPCODE"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+			itemEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "grp_cd":
+						return data.col_typ_cd != "GROUPCODE";
+					case "hd_grp_cd":
+						return (data.col_typ_cd != "GROUPCODE" && UT.isNotEmpty(data.grp_cd));
+					default:
+						return false;
+				}
+			},
+
+			onCommonCodeImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] == "COMBOBOX"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+			commonCodeEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "common_cd":
+						return data.col_typ_cd == "COMBOBOX";
+					default:
+						return false;
+				}
+			},
+			itemDecimalFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "point_len":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "point_cal_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "col_fmt_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					default:
+						return false;
+				}
+			},
+
+
+			// 위로
+			onUpListUser: function() {
+				var me = this,
+						grid = me.$.columnsGridPanel,
+						provider = me.$.columnsGridPanel.getDataProvider();
+
+				var checked = provider.selectionCheckedIndexes();
+				if (checked.length > 0) {
+					for (var i = 0, len = checked.length; i < len; i++) {
+						var currentIndex = checked[i],
+								upIndex = currentIndex - 1;
+
+						provider.moveRow(currentIndex,upIndex);
+						grid.selectionCheck(upIndex,true);
+						grid.selectionCheck(currentIndex,false);
+					}
+				}
+
+				me.resetSortOrd();
+			},
+			// 아래로
+			onDownListUser: function() {
+				var me = this,
+						grid = me.$.columnsGridPanel,
+						provider = me.$.columnsGridPanel.getDataProvider();
+				var checked = provider.selectionCheckedIndexes();
+				if (checked.length > 0) {
+					var itemSize = provider.getItemSize();
+					for (var i = checked.length -1; i >= 0; i--) {
+						var nextParlSize = 0;
+						var currentIndex = checked[i],
+								downIndex = currentIndex + 1;
+
+						provider.moveRow(currentIndex,downIndex);
+						grid.selectionCheck(downIndex,true);
+						grid.selectionCheck(currentIndex,false);
+
+					}
+				}
+
+				me.resetSortOrd();
+			},
+
+			resetSortOrd: function() {
+				var me = this,
+						provider = me.$.columnsGridPanel.getDataProvider();
+				var i = 0;
+				provider.setItemAtBatch(true, function(index, data){
+					i++;
+					return {"sort_ord" : i};
+				}, {visibleOnly:true});
+			},
+
+		});
+	</script>
+
+</dom-module>

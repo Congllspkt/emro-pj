@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="item-req">
+	<select id="findListItemReq" resultType="map">
+		/* item-req.findListItemReq : 품목등록요청 목록 조회 */
+		SELECT
+			REQ.TEN_ID /*시스템 아이디 */
+			, REQ.ITEM_REG_REQ_NO /*등록 요청 번호 */
+			, REQ.REQ_TYP_CCD /*요청 유형 */
+			, REQ.ITEM_CD /*품목 코드 */
+			, CASE WHEN 'en_US' = #{g.locale} THEN REQ.ITEM_NM_EN
+					ELSE REQ.ITEM_NM
+				END AS DISP_ITEM_NM
+			, REQ.ITEM_NM /*품목 명 */
+			, REQ.ITEM_NM_EN
+			, REQ.ITEM_SIMWORD
+			, REQ.ITEM_SPEC /*규격 */
+			, REQ.UOM_CCD
+			, REQ.ITEMCAT_LVL_1_CD /*분류1 코드 : 품목분류1 */
+			, REQ.ITEMCAT_LVL_2_CD /*분류2 코드 : 품목분류2 */
+			, REQ.ITEMCAT_LVL_3_CD /*분류3 코드 : 품목분류3 */
+			, REQ.ITEMCAT_LVL_4_CD /*분류4 코드 : 품목분류4 */
+			, REQ.ITEMCAT_LVL_5_CD
+			, REQ.ATHG_UUID
+			, REQ.IMG_ATHG_UUID
+			, REQ.MFGR_NM /*제조사 명 */
+			, REQ.MDL_NO /*모델 번호 */
+			, REQ.RMK
+			, REQ.REQR_ID /*요청자 아이디 */
+			, REQ.REQ_DTTM /*요청 일시 */
+			, REQ.APVR_ID
+			, REQ.APVD_DTTM
+			, REQ.ITEM_REG_REQ_RET_RSN
+			, REQ.ITEM_REG_REQ_STS_CCD /*진행 상태 T:임시저장,P:요청,C:승인,B:반려 */
+			, REQ.STS
+			, REQ.REGR_ID
+			, REQ.REG_DTTM
+			, REQ.MODR_ID
+			, REQ.MOD_DTTM
+			,(
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT1.ITEMCAT_NM_EN
+						ELSE CAT1.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT1
+				WHERE CAT1.TEN_ID = REQ.TEN_ID
+				AND CAT1.ITEMCAT_CD = REQ.ITEMCAT_LVL_1_CD
+				AND CAT1.STS != 'D'
+			) AS ITEMCAT_LVL_1_NM /* 품목분류1명 */
+			,(
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT2.ITEMCAT_NM_EN
+						ELSE CAT2.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT2
+				WHERE CAT2.TEN_ID = REQ.TEN_ID
+				AND CAT2.ITEMCAT_CD = REQ.ITEMCAT_LVL_2_CD
+				AND CAT2.STS != 'D'
+			) AS ITEMCAT_LVL_2_NM /* 품목분류2명 */
+			,(
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT3.ITEMCAT_NM_EN
+						ELSE CAT3.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT3
+				WHERE CAT3.TEN_ID = REQ.TEN_ID
+				AND CAT3.ITEMCAT_CD = REQ.ITEMCAT_LVL_3_CD
+				AND CAT3.STS != 'D'
+			) AS ITEMCAT_LVL_3_NM /* 품목분류3명 */
+			,(
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT4.ITEMCAT_NM_EN
+						ELSE CAT4.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT4
+				WHERE CAT4.TEN_ID = REQ.TEN_ID
+				AND CAT4.ITEMCAT_CD = REQ.ITEMCAT_LVL_4_CD
+				AND CAT4.STS != 'D'
+			) AS ITEMCAT_LVL_4_NM /* 품목분류4명 */
+			, CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+					ELSE USR.USR_NM
+				END AS REQR_NM /*요청자*/
+		FROM ITEM_REG_REQ_EDU REQ
+		LEFT OUTER JOIN USR USR
+		ON USR.TEN_ID = REQ.TEN_ID
+		AND USR.CO_CD = #{g.comp_cd}
+		AND USR.USR_ID = REQ.REQR_ID
+		AND USR.STS != 'D'
+		WHERE REQ.TEN_ID = #{g.tenant}
+		AND REQ.STS != 'D'
+		<!-- 분류 -->
+		<if test="p.itemcat_lvl_1_cd != null and p.itemcat_lvl_1_cd != &quot;&quot;">
+			AND REQ.ITEMCAT_LVL_1_CD = #{p.itemcat_lvl_1_cd}
+		</if>
+		<if test="p.itemcat_lvl_2_cd != null and p.itemcat_lvl_2_cd != &quot;&quot;">
+			AND REQ.ITEMCAT_LVL_2_CD = #{p.itemcat_lvl_2_cd}
+		</if>
+		<if test="p.itemcat_lvl_3_cd != null and p.itemcat_lvl_3_cd != &quot;&quot;">
+			AND REQ.ITEMCAT_LVL_3_CD = #{p.itemcat_lvl_3_cd}
+		</if>
+		<if test="p.itemcat_lvl_4_cd != null and p.itemcat_lvl_4_cd != &quot;&quot;">
+			AND REQ.ITEMCAT_LVL_4_CD = #{p.itemcat_lvl_4_cd}
+		</if>
+		<!-- 등록요청일자 -->
+		<if test="p.from_date != null">
+			AND REQ.REG_DTTM &gt;= #{p.from_date}
+		</if>
+		<if test="p.to_date != null">
+			<bind name="toDatePattern" value="g.getPlusDays(p.to_date,1)"/>
+			AND REQ.REG_DTTM <![CDATA[<]]> #{toDatePattern}
+		</if>
+		<!-- 요청자 -->
+		<if test="p.reqr_id != null and p.reqr_id != &quot;&quot;">
+			AND REQ.REQR_ID = UPPER(#{p.reqr_id})
+		</if>
+		<!-- 요청자 -->
+		<if test="p.reqr_nm != null and p.reqr_nm != &quot;&quot;">
+			<bind name="reqNmPattern" value="'%' + p.reqr_nm + '%'"/>
+			AND (UPPER(USR.USR_NM) LIKE UPPER(#{reqNmPattern}) OR UPPER(USR.USR_NM_EN) LIKE UPPER(#{reqNmPattern}) )
+		</if>
+		<!-- 품목코드 -->
+		<choose>
+			<when test="p.item_cds != null and p.item_cds.size() != 0">
+				AND REQ.ITEM_CD IN
+				<foreach close=")" collection="p.item_cds" item="item_cd" open="(" separator=",">
+					#{item_cd}
+				</foreach>
+			</when>
+			<otherwise>
+				<if test="p.item_cd != null and p.item_cd != &quot;&quot;">
+					<bind name="itemCdPattern" value="'%' + p.item_cd + '%'"/>
+					AND UPPER(REQ.ITEM_CD) LIKE UPPER(#{itemCdPattern})
+				</if>
+			</otherwise>
+		</choose>
+		<!-- 품목명 -->
+		<if test="p.item_nm != null and p.item_nm != &quot;&quot;">
+			<bind name="itemNmPattern" value="'%' + p.item_nm + '%'"/>
+			AND (UPPER(REQ.ITEM_NM) LIKE UPPER(#{itemNmPattern}) OR UPPER(REQ.ITEM_NM_EN) LIKE UPPER(#{itemNmPattern}))
+		</if>
+		<!-- 등록요청번호 -->
+		<choose>
+			<when test="p.item_reg_req_nos != null and p.item_reg_req_nos.size() != 0">
+				AND REQ.ITEM_REG_REQ_NO IN
+				<foreach close=")" collection="p.item_reg_req_nos" item="item_reg_req_no" open="(" separator=",">
+					#{item_reg_req_no}
+				</foreach>
+			</when>
+			<otherwise>
+				<if test="p.item_reg_req_no != null and p.item_reg_req_no != ''">
+					<bind name="regReqNoPattern" value="'%' + p.item_reg_req_no + '%'"/>
+					AND UPPER(REQ.ITEM_REG_REQ_NO) LIKE UPPER(#{regReqNoPattern})
+				</if>
+			</otherwise>
+		</choose>
+		<!-- 진행상태 -->
+		<if test="p.item_reg_req_sts_ccd != null and p.item_reg_req_sts_ccd != &quot;&quot;">
+			AND REQ.ITEM_REG_REQ_STS_CCD = #{p.item_reg_req_sts_ccd}
+		</if>
+		ORDER BY REQ.MOD_DTTM DESC
+	</select>
+	<select id="findInfoItemReq" resultType="map">
+		/* item-req.findInfoItemReq :품목 등록 요청 상세 */
+		SELECT
+			REQ.TEN_ID          /*시스템 아이디 */
+			, REQ.ITEM_REG_REQ_NO      /*등록 요청 번호 */
+			, REQ.REQ_TYP_CCD         /*요청 유형 */
+			, REQ.ITEM_CD         /*품목 코드 */
+			, REQ.ITEM_NM         /*품목 명 */
+			, REQ.ITEM_NM_EN      /*품목 영문 명 */
+			, REQ.ITEM_SIMWORD         /*동의어 */
+			, REQ.ITEM_SPEC            /*규격 */
+			, REQ.UOM_CCD     /*기본 단위 코드 */
+			, (
+				SELECT
+					DL.DTLCD_NM
+				FROM DTLCD CD
+				INNER JOIN DTLCD_MULTLANG DL
+				ON CD.TEN_ID   = DL.TEN_ID
+				AND CD.CCD   = DL.CCD
+				AND CD.DTLCD   = DL.DTLCD
+				AND DL.LANG_CCD = #{g.locale}
+				WHERE CD.TEN_ID   = #{g.tenant}
+				AND CD.CCD   = 'C007'
+				AND CD.USE_YN   = 'Y'
+				AND CD.DTLCD   = REQ.UOM_CCD
+			) AS UOM_NM
+			, REQ.ITEMCAT_LVL_1_CD        /*분류1 코드 */
+			, REQ.ITEMCAT_LVL_2_CD        /*분류2 코드 */
+			, REQ.ITEMCAT_LVL_3_CD        /*분류3 코드 */
+			, REQ.ITEMCAT_LVL_4_CD        /*분류4 코드 */
+			, REQ.ITEMCAT_LVL_5_CD        /*분류5 코드 */
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT1.ITEMCAT_NM_EN
+						ELSE CAT1.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT1
+				WHERE CAT1.TEN_ID  = REQ.TEN_ID
+				AND CAT1.ITEMCAT_CD = REQ.ITEMCAT_LVL_1_CD
+			) AS ITEMCAT_LVL_1_NM			/* 품목분류1명 */
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT2.ITEMCAT_NM_EN
+						ELSE CAT2.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT2
+				WHERE CAT2.TEN_ID  = REQ.TEN_ID
+				AND CAT2.ITEMCAT_CD = REQ.ITEMCAT_LVL_2_CD
+			) AS ITEMCAT_LVL_2_NM 		/* 품목분류2명 */
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT3.ITEMCAT_NM_EN
+						ELSE CAT3.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT3
+				WHERE CAT3.TEN_ID  = REQ.TEN_ID
+				AND CAT3.ITEMCAT_CD = REQ.ITEMCAT_LVL_3_CD
+			) AS ITEMCAT_LVL_3_NM 		/* 품목분류3명 */
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN CAT4.ITEMCAT_NM_EN
+						ELSE CAT4.ITEMCAT_NM
+					END
+				FROM ITEMCAT CAT4
+				WHERE CAT4.TEN_ID  = REQ.TEN_ID
+				AND CAT4.ITEMCAT_CD = REQ.ITEMCAT_LVL_4_CD
+			) AS ITEMCAT_LVL_4_NM 		/* 품목분류4명 */
+
+			, REQ.ATHG_UUID          /*첨부 번호 */
+			, REQ.IMG_ATHG_UUID	    /*이미지 첨부 번호 */
+	
+			, REQ.MFGR_NM	    /*제조사 명 */
+			, REQ.MDL_NO	        /*모델 번호 */
+
+			, REQ.RMK	            /*비고 */
+			, REQ.ITEM_REG_REQ_RET_RSN
+			, REQ.ITEM_REG_REQ_STS_CCD		/*진행 상태 T:임시저장,P:요청,C:승인,B:반려*/
+			, REQ.STS
+			, REQ.REGR_ID
+			, REQ.REG_DTTM
+			, REQ.MODR_ID
+			, REQ.MOD_DTTM
+
+			, REQ.REQR_ID	        /*요청자 아이디 */
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+						ELSE USR.USR_NM
+					END
+				FROM USR USR
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+				AND USR.CO_CD = #{g.co_cd}
+				AND USR.USR_ID  = REQ.REQR_ID
+				AND USR.STS != 'D'
+			) AS REQR_NM		/*요청자*/
+			, (
+				SELECT
+					USR.TEL
+				FROM USR USR
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+				AND USR.CO_CD = #{g.co_cd}
+				AND USR.USR_ID  = REQ.REQR_ID
+				AND USR.STS != 'D'
+			) AS REQR_PHONE		/*요청자*/
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN ORG.LOGIC_ORG_NM_EN
+						ELSE ORG.LOGIC_ORG_NM
+					END
+				FROM USR USR
+				LEFT OUTER JOIN LOGIC_ORG ORG /* 조직*/
+				ON ORG.TEN_ID     = USR.TEN_ID
+				AND ORG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+				AND ORG.LOGIC_ORG_CD     = USR.CO_CD
+				AND ORG.USE_YN       = 'Y'
+				AND ORG.STS != 'D'
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+				AND USR.USR_ID  = REQ.REQR_ID
+			) AS REQR_COMP
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+						ELSE DEPT.DEPT_NM
+					END
+				FROM USR USR
+				LEFT OUTER JOIN DEPT DEPT
+				ON DEPT.TEN_ID     = USR.TEN_ID
+				AND DEPT.DEPT_CD    = USR.DEPT_CD
+				AND DEPT.STS != 'D'
+				LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+				on DEPT.TEN_ID         = ODM.TEN_ID
+				AND DEPT.DEPT_CD        = ODM.DEPT_CD
+				AND ODM.LOGIC_ORG_TYP_CCD  = 'COMPANY'
+				AND ODM.LOGIC_ORG_CD       = USR.CO_CD
+				AND ODM.STS          != 'D'
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+				AND USR.USR_ID  = REQ.REQR_ID
+			) AS REQR_DEPT
+			, REQ.REQ_DTTM
+			, REQ.APVR_ID
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+						ELSE USR.USR_NM
+					END
+				FROM USR USR
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+		  		AND USR.CO_CD = #{g.co_cd}
+		  		AND USR.USR_ID  = REQ.APVR_ID
+		  		AND USR.STS != 'D'
+			) AS APVR_NM		/*승인자명*/
+			, (
+				SELECT
+					USR.TEL
+				FROM USR USR
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+		  		AND USR.CO_CD = #{g.co_cd}
+		  		AND USR.USR_ID  = REQ.APVR_ID
+		  		AND USR.STS != 'D'
+			) AS APVR_PHONE		/*요청자*/
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN ORG.LOGIC_ORG_NM_EN
+						ELSE ORG.LOGIC_ORG_NM
+						END
+				FROM USR USR
+				LEFT OUTER JOIN LOGIC_ORG ORG /* 조직*/
+				ON ORG.TEN_ID     = USR.TEN_ID
+				AND ORG.LOGIC_ORG_TYP_CCD = 'COMPANY'
+				AND ORG.LOGIC_ORG_CD     = USR.CO_CD
+				AND ORG.USE_YN       = 'Y'
+				AND ORG.STS != 'D'
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+		 		AND USR.USR_ID  = REQ.APVR_ID
+			) AS APVR_COMP
+			, (
+				SELECT
+					CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+						ELSE DEPT.DEPT_NM
+					END
+				FROM USR USR
+				LEFT OUTER JOIN DEPT DEPT
+				ON DEPT.TEN_ID     = USR.TEN_ID
+				AND DEPT.DEPT_CD    = USR.DEPT_CD
+				AND DEPT.STS != 'D'
+				LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+				ON DEPT.TEN_ID         = ODM.TEN_ID
+				AND DEPT.DEPT_CD        = ODM.DEPT_CD
+				AND ODM.LOGIC_ORG_TYP_CCD  = 'COMPANY'
+				AND ODM.LOGIC_ORG_CD       = USR.CO_CD
+				AND ODM.STS          != 'D'
+				WHERE USR.TEN_ID  = REQ.TEN_ID
+		  		AND USR.USR_ID  = REQ.APVR_ID
+			) AS APVR_DEPT
+			, REQ.APVD_DTTM
+		FROM ITEM_REG_REQ_EDU REQ
+		WHERE REQ.TEN_ID     = #{g.tenant}
+		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+	</select>
+	<select id="findListItemAsgnAttrByItemIattrRegReq" resultType="map">
+		/* item-req.findListItemAsgnAttrByItemIattrRegReq : 요청된 분류 기반으로 배정된 속성 조회 */
+		SELECT
+		    REQ.TEN_ID
+			, REQ.IATTR_GRP_CD
+			, REQ.IATTR_CD
+			, REQ.IATTR_UUID
+			, GRPG.ASGD_IATTR_NM
+			, GRPG.ASGD_IATTR_NM_EN
+			, GRPG.ASGD_IATTR_NM
+			, GRPG.IATTR_UOM_USE_YN
+			, GRPG.MAND_YN
+			, GRPG.DAT_TYP_CCD
+			, GRPG.INP_VAL_LEN
+			, GRPG.DFLT_VAL
+			, GRPG.LIST_SHOW_YN
+			, IATTR.IATTR_NM
+			, IATTR.IATTR_NM_EN
+			, ITEMCAT.SCR_DSPY_ORD
+			, ITEMCAT.ITEMCAT_CD
+			, ITEMCAT.ITEMCAT_LVL
+			, ITEMCAT.RMK
+			, ITEMCAT.IH_ITEMCAT_LVL
+			, GRP.IATTR_GRP_NM
+			, GRP.IATTR_GRP_NM_EN
+			, CASE WHEN 'en_US' = #{g.locale} THEN GRP.IATTR_GRP_NM_EN
+			    ELSE GRP.IATTR_GRP_NM
+			    END DISP_IATTR_GRP_NM
+			, ITEMCAT.USE_YN
+			, IATTR.EXPLN_TYP_CCD
+			, IATTR.IATTR_UOM_CLS_CCD
+			, IATTR.COMM_YN
+			, IATTR.LOV_INP_VAL
+			, IATTR.INP_VAL_ST
+			, IATTR.INP_VAL_ED
+			, IATTR.INP_VAL_SAMP
+			, REQ.IATTR_INP_VAL
+			, REQ.IATTR_UOM_CCD
+		FROM ITEM_IATTR_REG_REQ_EDU REQ
+		INNER JOIN ITEMCAT_IATTR ITEMCAT
+		ON ITEMCAT.TEN_ID = REQ.TEN_ID
+		AND ITEMCAT.ITEMCAT_CD = REQ.ITEMCAT_CD
+		AND ITEMCAT.IATTR_GRP_CD = REQ.IATTR_GRP_CD
+		AND ITEMCAT.IATTR_CD = REQ.IATTR_CD
+		AND ITEMCAT.IATTR_UUID = REQ.IATTR_UUID
+		AND ITEMCAT.STS != 'D'
+		INNER JOIN IATTR_GRPG GRPG
+		ON GRPG.TEN_ID = ITEMCAT.TEN_ID
+		AND GRPG.IATTR_GRP_CD = ITEMCAT.IATTR_GRP_CD
+		AND GRPG.IATTR_CD = ITEMCAT.IATTR_CD
+		AND GRPG.IATTR_UUID = ITEMCAT.IATTR_UUID
+		AND GRPG.STS != 'D'
+		INNER JOIN IATTR_GRP GRP
+		ON GRP.TEN_ID = GRPG.TEN_ID
+		AND GRP.IATTR_GRP_CD = GRPG.IATTR_GRP_CD
+		AND GRP.STS != 'D'
+		INNER JOIN IATTR IATTR
+		ON IATTR.TEN_ID = GRP.TEN_ID
+		AND IATTR.IATTR_CD = GRPG.IATTR_CD
+		AND IATTR.STS != 'D'
+		WHERE REQ.TEN_ID = #{g.tenant}
+		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+		AND REQ.STS != 'D'
+		AND ITEMCAT.USE_YN = 'Y'
+		ORDER BY ITEMCAT.SCR_DSPY_ORD, GRPG.IATTR_GRP_CD
+	</select>
+	<delete id="deleteItemOorgRegReq">
+		/* item-req.deleteItemOorgRegReq : 품목 운영조직 등록 요청 삭제 */
+		DELETE FROM ITEM_OORG_REG_REQ
+		WHERE TEN_ID  = #{g.tenant}
+		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+		AND OORG_CD = #{p.oorg_cd}
+	</delete>
+	<delete id="deleteItemRegReq">
+		/* item-req.deleteItemRegReq : 품목 등록 요청 삭제 */
+		DELETE FROM ITEM_REG_REQ_EDU
+		WHERE TEN_ID  = #{g.tenant}
+		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+	</delete>
+	<select id="checkExistedItemRegReq" resultType="int">
+		/* item-req.checkExistedItemRegReq : 결재 요청중이거나 작성중인 데이터가 있는 지 확인 */
+		SELECT
+				CAST(COUNT(ITEM_REG_REQ_NO) AS NUMERIC) AS CNT  FROM ITEM_REG_REQ_EDU
+		WHERE TEN_ID = #{g.tenant}
+		AND ITEM_REG_REQ_NO != #{p.item_reg_req_no}
+		AND ITEM_CD = #{p.item_cd}
+		AND ITEM_REG_REQ_STS_CCD IN ('CRNG', 'APVL_REQG') /* 작성중, 결재 요청중 */
+		AND STS != 'D'
+	</select>
+	<select id="checkExistedApvdAndReqg" resultType="int">
+		/* item-req.checkExistedApvdAndReqg : 결재 요청중이거나 승인 중인 데이터가 있는 지 확인 */
+		SELECT
+				CAST(COUNT(ITEM_REG_REQ_NO) AS NUMERIC) AS CNT  FROM ITEM_REG_REQ_EDU
+		WHERE TEN_ID = #{g.tenant}
+		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+		AND ITEM_REG_REQ_STS_CCD IN ('APVL_REQG', 'APVD') /* 결재 요청중, 승인 */
+		AND STS != 'D'
+	</select>
+	<select id="findCntProgressingItemRegReq" resultType="int">
+		/* item-req.findCntProgressingItemRegReq : 진행중인 품목등록요청 데이터 확인 */
+		SELECT
+				CAST(COUNT(ITEM_REG_REQ_NO) AS NUMERIC) AS CNT  FROM ITEM_REG_REQ
+		WHERE TEN_ID = #{g.tenant}
+		AND ITEM_CD = #{p.item_cd}
+		AND ITEM_REG_REQ_STS_CCD IN ('CRNG', 'APVL_REQG') /* 작성중, 승인요청중 */
+		AND STS != 'D'
+	</select>
+	<select id="findInfoItemRegReq" resultType="map">
+		/* item-req.findInfoItemRegReq : 품목 등록 요청 상세 */
+		SELECT
+			REQ.TEN_ID	        /*시스템 아이디*/
+			, REQ.ITEM_REG_REQ_NO      /*등록 요청 번호*/
+			, REQ.REQ_TYP_CCD         /*요청 유형*/
+			, REQ.ITEM_CD         /*품목 코드*/
+			, REQ.ITEM_NM	        /*품목 명*/
+			, REQ.ITEM_NM_EN	    /*품목 영문 명*/
+			, REQ.ITEM_SIMWORD	        /*동의어*/
+			, REQ.ITEM_SPEC	        /*규격*/
+			, REQ.UOM_CCD	    /*기본 단위 코드*/
+			, REQ.ITEMCAT_LVL_1_CD	    /*분류1 코드*/
+			, REQ.ITEMCAT_LVL_2_CD        /*분류2 코드*/
+			, REQ.ITEMCAT_LVL_3_CD        /*분류3 코드*/
+			, REQ.ITEMCAT_LVL_4_CD        /*분류4 코드*/
+			, REQ.ITEMCAT_LVL_5_CD        /*분류5 코드*/
+			, REQ.SG_CD           /*소싱그룹 코드*/
+			, REQ.ATHG_UUID          /*첨부 번호*/
+			, REQ.IMG_ATHG_UUID      /*이미지 첨부 번호*/
+			, REQ.DWG_NO      /*도면 번호*/
+			, REQ.MFGR_CD        /*제조사 코드*/
+			, REQ.MFGR_NM        /*제조사 명*/
+			, REQ.MDL_NO          /*모델 번호*/
+			, REQ.HS_NO           /*HS 번호*/
+			, REQ.REP_ITEM_CD_YN       /*대표 코드 여부*/
+			, REQ.RMK             /*비고*/
+			, REQ.REQR_ID          /*요청자 아이디*/
+			, REQ.REQ_DTTM          /*요청 일시*/
+			, REQ.APVR_ID         /*승인자 아이디*/
+			, REQ.APVD_DTTM         /*승인 일시*/
+			, REQ.ITEM_REG_REQ_RET_RSN	/*반려 사유*/
+			, REQ.ITEM_REG_REQ_STS_CCD        /*진행 상태 T:임시저장,P:요청,C:승인,B:반려*/
+			, REQ.STS             /*상태 T:작성,P:요청:R:검토,C:승인,B:반려,F:종료*/
+			, REQ.REGR_ID          /*등록자 아이디*/
+			, REQ.REG_DTTM          /*등록 일시*/
+			, REQ.MODR_ID          /*수정자 아이디*/
+			, REQ.MOD_DTTM	        /*수정 일시*/
+			, (
+				SELECT
+					CONCAT(CONCAT(REQ.APVR_ID, ' / ')
+					, (CASE WHEN 'en_US' = #{g.locale} THEN USR_NM_EN
+					ELSE USR_NM
+					END ))
+				FROM USR
+				WHERE TEN_ID  = REQ.TEN_ID
+				AND CO_CD = #{g.co_cd}
+				AND USR_ID  = REQ.APVR_ID
+				AND STS != 'D'
+			) AS APVR_NM
+		FROM ITEM_REG_REQ_EDU REQ
+		WHERE REQ.TEN_ID = #{g.tenant}
+		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+	</select>
+	
+	<resultMap id="resultMap-findDuplicate" type="map">
+		<result column="CNT" javaType="integer" property="cnt"/>
+		<result column="ITEM_CD" javaType="string" property="item_cd"/>
+	</resultMap>
+	<select id="checkItemMasterDuplicate" resultMap="resultMap-findDuplicate">
+		/* item-common.checkItemMasterDuplicate : 품목 마스터 정보 중복 확인 */
+		SELECT
+		    COUNT(1) AS CNT
+			, MAX(ITEM_CD) AS ITEM_CD
+		FROM ITEM
+		WHERE ITEM_NM = #{p.item_nm}
+		<if test="p.item_cd != null and p.item_cd != &quot;&quot;">
+			AND ITEM_CD != #{p.item_cd}
+		</if>
+		<choose>
+			<when test="p.item_spec != null and p.item_spec != &quot;&quot;">
+				AND ITEM_SPEC = #{p.item_spec}
+			</when>
+			<otherwise>
+				AND ITEM_SPEC IS NULL
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="p.mdl_no != null and p.mdl_no != &quot;&quot;">
+				AND MDL_NO = #{p.mdl_no}
+			</when>
+			<otherwise>
+				AND MDL_NO IS NULL
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="p.mfgr_nm != null and p.mfgr_nm!= &quot;&quot;">
+				AND MFGR_NM = #{p.mfgr_nm}
+			</when>
+			<otherwise>
+				AND MFGR_NM IS NULL
+			</otherwise>
+		</choose>
+	</select>
+	<insert id="insertItem">
+		/* item-common.insertItem : 품목마스터 insert */
+		INSERT INTO ITEM (
+			TEN_ID						/*시스템 아이디*/
+			, ITEM_CD					/*품목 코드*/
+			, REQ_ITEM_CD				/*요청 품목 코드*/
+			, ITEM_REG_REQ_NO			/*등록요청번호*/
+			, ITEM_NM					/*품목 명*/
+			, ITEM_NM_EN				/*품목 영문 명*/
+			, ITEM_SIMWORD				/*유사어*/
+			, ITEM_SPEC					/*규격*/
+			, UOM_CCD					/*기본 단위 코드*/
+			, ITEMCAT_LVL_1_CD			/*분류1 코드*/
+			, ITEMCAT_LVL_2_CD			/*분류2 코드*/
+			, ITEMCAT_LVL_3_CD			/*분류3 코드*/
+			, ITEMCAT_LVL_4_CD			/*분류4 코드*/
+			, ITEMCAT_LVL_5_CD			/*분류5 코드*/
+			, SG_CD						/*소싱그룹 코드*/
+			, ATHG_UUID					/*첨부 번호*/
+			, IMG_ATHG_UUID				/*이미지 첨부 번호*/
+			, DWG_NO					/*도면 번호*/
+			, MFGR_CD					/*제조사코드*/
+			, MFGR_NM					/*제조사 명*/
+			, MDL_NO					/*모델 번호*/
+			, HS_NO						/*HS 번호*/
+			, REP_ITEM_CD_YN			/*대표코드*/
+			, USE_YN					/*사용 여부*/
+			, RMK						/*비고*/
+			, STS						/*상태*/
+			, REGR_ID					/*등록자 아이디*/
+			, REG_DTTM					/*등록 일시*/
+			, MODR_ID					/*수정자 아이디*/
+			, MOD_DTTM					/*수정 일시*/
+		) VALUES (
+			#{g.tenant}					/*시스템 아이디*/
+			, #{p.item_cd}				/*품목 코드*/
+			, #{p.req_item_cd}			/*요청 품목 코드*/
+			, #{p.item_reg_req_no}		/*등록요청번호*/
+			, #{p.item_nm}				/*품목 명*/
+			, #{p.item_nm_en}			/*품목 영문 명*/
+			, #{p.item_simword}			/*유사어*/
+			, #{p.item_spec}			/*규격*/
+			, #{p.uom_ccd}				/*기본 단위 코드*/
+			, #{p.itemcat_lvl_1_cd}		/*분류1 코드*/
+			, #{p.itemcat_lvl_2_cd}		/*분류2 코드*/
+			, #{p.itemcat_lvl_3_cd}		/*분류3 코드*/
+			, #{p.itemcat_lvl_4_cd}		/*분류4 코드*/
+			, #{p.itemcat_lvl_5_cd}		/*분류5 코드*/
+			, #{p.sg_cd}				/*소싱그룹 코드*/
+			, #{p.athg_uuid}			/*첨부 번호*/
+			, #{p.img_athg_uuid}		/*이미지 첨부 번호*/
+			, #{p.dwg_no}				/*도면 번호*/
+			, #{p.mfgr_cd}				/*제조사코드*/
+			, #{p.mfgr_nm}				/*제조사명*/
+			, #{p.mdl_no}				/*모델 번호*/
+			, #{p.hs_no}				/*HS 번호*/
+			, #{p.rep_item_cd_yn}		/*대표코드*/
+			, 'Y'						/*사용여부*/
+			, #{p.rmk}					/*비고*/
+			, 'C'						/*상태*/
+			, #{g.username}				/*등록자 아이디*/
+			, #{g.now}					/*등록 일시*/
+			, #{g.username}				/*수정자 아이디*/
+			, #{g.now}					/*수정 일시*/
+		)
+	</insert>
+	<insert id="insertItemOorg">
+		/* item-common.insertItemOorg : 품목 운영조직 INSERT */
+		INSERT INTO ITEM_OORG (
+			TEN_ID
+			, OORG_CD
+			, ITEM_CD
+			, ITEM_LDTM
+			, QTA_YN
+			, TL_YN
+			, RMK
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		) VALUES (
+			#{g.tenant}
+			, #{p.oorg_cd}
+			, #{p.item_cd}
+			, CAST(#{p.item_ldtm} AS FLOAT  )
+			, #{p.qta_yn}
+			, #{p.tl_yn}
+			, #{p.rmk}
+			, 'C'
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+		)
+	</insert>
+	
+</mapper>

@@ -1,0 +1,161 @@
+<!--
+ * @Desc 포탈 엘리먼트
+ * @Author dmwon
+ * @Created 2017-06-20
+ -->
+
+<dom-module id="vue-grid-portlet-manager"> 
+
+	<script>
+		Polymer({
+			is: 'vue-grid-portlet-manager',
+			
+			get portalPath(){
+            	return  SCPortalLocation.portalPath;
+            },
+			
+			get portletPath(){
+            	return  SCPortalLocation.portletPath;
+            },
+            
+            get iconImagePath(){
+            	return  SCPortalLocation.iconImagePath;
+            },
+			
+			properties: {
+				commonConfig: {
+					type: Object
+				}
+			},
+			
+			/** 모든 포틀릿 생성. es-portlet-mgt-list.html에서 설정된 값이 여기로 들어옴 */
+			createPortletAll: function(portletSchemaList){
+            	var me = this, 
+            		portlet = {}, 
+            		closable = {},
+            		portletList = [],
+            		portletInfo = {},
+            		vueGridLayout = me.getVueGridLayout();
+            	
+	        	for(var i=0; i<portletSchemaList.length; i++){
+	        		portlet		= portletSchemaList[i];
+	        		portletInfo	= vueGridLayout.getWidget(portlet.type, portlet.title);
+	        		if(this.commonConfig && this.commonConfig.use_userlayout === 'N') {
+	        			closable = 'N';
+	        		} else {
+	        			closable = (!portletInfo) ? 'Y' : portletInfo.closeable;
+	        		}
+	        		
+	        		portletList.push(me.addPortlet({
+	        			uuid			: portlet.uuid,
+	        			param			: portlet.param,
+	        			closeable		: closable,
+	    	        	headable		: !portletInfo ? 'Y' : portletInfo.headable,
+	    	        	displayHeader	: !portletInfo ? 'Y' : portletInfo.display_header,
+	    	        	portletLoc		: portlet.portletLoc,
+	        			height			: portlet.height,
+	        			portletIdx		: portlet.portletIdx,
+	        			title			: portlet.title,
+	        			type			: portlet.type,
+	        			layoutIdx		: i,
+	        			refreshable		: portlet.refreshable
+	        		}));
+	        	}
+	        	return portletList;
+			},
+			
+			/** 포틀릿 생성 */
+			addPortlet: function (portletSchema) {
+            	var me = this,
+                    portlet = this.createPortlet(portletSchema);
+            	
+            	me.addListener(portlet);
+                return me.createPortletContent(portlet, portletSchema); 
+			},
+			
+			/** 포틀릿 리스너 등록 */
+			addListener: function(portlet){
+				portlet.removeEventListener('onClose', this.onPortletClose);
+            	portlet.addEventListener('onClose', this.onPortletClose.bind(this));
+			},
+			
+			/** 포틀릿 생성. sc-widget에 vue-grid-layout-behavior의 getPortletContainerSchema에서 생성된 값을 넣어줌 */
+			createPortlet: function (portletSchema) {
+                var me = this,
+                    portlet = document.createElement('sc-widget');
+
+                portlet.layoutIdx = portletSchema.layoutIdx;
+                portlet.setAttribute('id',  portletSchema.uuid);
+                portlet.setAttribute('label', portletSchema.label);
+                portlet.setAttribute('title', portletSchema.title);
+                portlet.setAttribute('type', portletSchema.type);
+                portlet.setAttribute('refreshable', portletSchema.refreshable);
+                portlet.style.width = "100%"; /* ('style', "height:200px;width:100%;"); */
+                portlet.style.height = "100%";
+                
+                if(this.commonConfig && this.commonConfig.use_userlayout === 'N') {
+                	portlet.setAttribute('fixed-widget', '');
+                }
+
+                // 기존 시스템과 동일 동작을 위하여 undefined도 Y로 여김
+                if(this.parentElement.layoutTarget === undefined) { // layoutTarget은 config에만 있음
+                	if(portletSchema.displayHeader === 'N')
+                    	portlet.setAttribute('hide-header', '');
+                    
+    				if (portletSchema.headable === 'N')
+    					portlet.setAttribute('mouseover-head', '');
+    				
+    				if (portletSchema.closeable === 'N')
+    					portlet.setAttribute('disable-close', '');	
+                }
+				
+				this.importPortletHTML(portletSchema.portletLoc, portletSchema.type, true);
+				Polymer.dom.flush();
+				return portlet;
+			},
+			
+			/** 포틀릿 컨텐츠 생성 */
+			createPortletContent: function (portlet, portletSchema) {
+				var content = document.createElement(portletSchema.type);
+				content.setAttribute('widget-id', portletSchema.uuid);
+				content.widgetID = portletSchema.uuid;
+				content.portletParam = portletSchema.param;
+				content.style.display = 'inline';
+				portlet.setContent(content);
+				portlet.setAttribute('vue-grid-item-idx', portletSchema.layoutIdx);
+				return portlet;
+			},
+			
+            /** (Main Dom) VueGridLayout */
+            getVueGridLayout: function(){
+            	return this.domHost;
+            },
+			
+            /** 포틀릿 컨텐츠 호출 */
+			importPortletHTML: function (portletLoc, portletType, includeProperty) {
+				if(portletLoc === undefined || portletLoc === '') {
+					portletLoc = this.getContextPath() +'/' + this.portletPath + portletType; 
+				}else if(portletLoc.indexOf("ui/lib/") >= 0){
+					/** 경로 변경(ui/lib -> ui/smartsuite) */
+					portletLoc = portletLoc.replace("ui/lib/", this.portalPath);
+				}
+				this.importLink(portletLoc + '/' + portletType + '.html');
+			},
+			
+			/** Context Path */
+			getContextPath: function() {
+				var hostIndex = location.href.indexOf( location.host ) + location.host.length;
+				return location.href.substring( hostIndex, location.href.indexOf('/', hostIndex + 1) );
+			},
+			
+			/** 포틀릿 닫기 */
+			onPortletClose: function(e){
+				this.fire('portlet-close', e.currentTarget);
+			},
+			
+			_destroy: function(){
+			}
+		
+		});
+	</script> 
+</dom-module>

@@ -1,0 +1,53 @@
+<sc-link rel="import" href="es-vendor-user-list.html"></sc-link>
+<sc-link rel="import" href="es-vendor-user-info.html"></sc-link>
+<sc-link rel="import" href="es-vendor-user-role.html"></sc-link>
+
+<dom-module id="em-vendor-user">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<es-vendor-user-list id="userList" on-find-userinfo="onFindUserinfo"  on-clear="onClear" class="flex"></es-vendor-user-list>
+			<div class="hspace-10"></div>
+			<sc-tab-navigation id="tabNavi"  class="flex">
+				<es-vendor-user-info id="userInfo" title-text="정보" on-find-userinfo="onFindUserinfo"  on-find-user-list="onFindUserList"></es-vendor-user-info>
+				<es-vendor-user-role id="userRole" title-text="역할" ></es-vendor-user-role>
+			</sc-tab-navigation>
+		</div>
+
+	</template>
+
+	<script>
+		Polymer({
+			is : 'em-vendor-user',
+			onFindUserinfo : function(e, data) {
+				var me = this;
+				me.$.userInfo.load(data);
+				me.$.userRole.load(data);
+			},
+
+
+			// 사용자 현황 : 조회 시 사용자 정보 초기화
+			onClear : function() {
+				var me  = this;
+				me.$.userInfo.clear();
+				me.$.userRole.clear();
+
+				me.$.tabNavi.selectItem(me.$.userInfo);
+			},
+
+			// 사용자 정보 저장 후 사용자 현황 재조회
+			onFindUserList: function() {
+				var me  = this;
+				me.$.userList.onReFindList();
+			}
+		});
+	</script>
+
+
+</dom-module>

@@ -1,0 +1,995 @@
+<sc-link rel="import" href="ep-column-list.html"></sc-link>
+<sc-link rel="import" href="es-bid-template.html"></sc-link>
+<sc-link rel="import" href="ep-sheettemplate-headers-list.html"></sc-link>
+<sc-link rel="stylesheet" type="text/css" href="dynamic/template-form.css"></sc-link>
+<link rel="import" href="dynamic/es-page-task-view.html"></link>
+<sc-link rel="import" href="../../shared/ep-vendor-list.html"></sc-link>
+
+<sc-link rel="import" href="ep-group-column-list.html"></sc-link>
+<sc-link rel="import" href="ep-column-common-code-list.html"></sc-link>
+
+<dom-module id="es-bidtemplate-master-info">
+	<!--
+        ******************************************************************************************
+        ** @Program-name    : bid template Info 관리
+        ** @Description     :
+        ** @Author          : GaRam, Choi
+        ** @Create Date     : 2020.07.31
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<sc-code-group>
+				<sc-code code="BID001" value="{{codes.columnType}}" ></sc-code> <!-- 컬럼 타입 -->
+				<sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+				<sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+				<sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+			</sc-code-group>
+			<sc-ajax id="findListFormatterForCombobox" url="findListFormatterForCombobox.do" last-response="{{codes.formatterList}}"> </sc-ajax><!-- 전체 formatter 목록 -->
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findListBidTemplateSheet"
+				url="findListBidTemplateSheet.do"
+				body="{{searchParam}}"
+				on-response="completeFindList">
+		</sc-ajax>
+
+		<sc-ajax
+				id="findSheetTemplateListDiaLog"
+				url="findListBidTemplateSheet.do"
+				body="{{searchParam}}"
+				on-response="completeFindListDialog">
+		</sc-ajax>
+
+		<sc-ajax
+				id="findSheetColumnHeaders"
+				url="findSheetColumnHeaders.do"
+				body="{{searchParam}}"
+				on-response="completeFindListDialog">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax
+				id="saveBidTemplateSheetColumns"
+				url="saveBidTemplateSheetColumns.do"
+				on-response="completeSaveInfo">
+		</sc-ajax>
+
+
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteTemplateSheetDataAll"
+				url="deleteTemplateSheetDataAll.do"
+				on-response="completeDeleteInfo">
+		</sc-ajax>
+
+		<sc-ajax
+				id="confirmBidTemplateAll"
+				url="confirmBidTemplateAll.do"
+				on-response="completeConfirmTemplate">
+		</sc-ajax>
+
+
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+
+		<cc-page-title-bar title-text="{{titleText}}">
+			<!--<sc-button text="BidTemplate 확정" on-click="onConfirmBidTemplateY" auth-r hidden="[[!formula('hidden')]]"></sc-button>
+			-->
+			<sc-button text="시트 추가" on-click="onPopupSheetTemplate" auth-r hidden="[[!formula('hidden')]]"></sc-button>
+			<sc-button text="목록" on-click="onShowList" auth-r></sc-button>
+		</cc-page-title-bar>
+
+		<!-- header info [END]-->
+		<sc-tabbar id="templateTabBar"  on-item-select="ontemplateTabSelected" class="template-tab-bar"  style="min-height: 23px"></sc-tabbar>
+
+
+
+		<sc-dialog id="columnListDialog"  class="vbox flex" title-text="Sheet Template 컬럼 목록" title-align="left" style="width:900px;height:500px" modal="true">
+			<cc-page-title-bar>
+				<sc-button text="시트 선택" on-click="onSelectSheetHeaderColumns"  hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="컬럼 추가" on-click="onSelectColumns"  hidden="[[!formula('hidden')]]"></sc-button>
+				<sc-button text="저장" on-click="onColumnSave"  hidden="[[!formula('hidden')]]"></sc-button>
+			</cc-page-title-bar>
+			<table class="tb-form">
+				<colgroup>
+					<col style="width:100px;">
+					<col>
+				</colgroup>
+				<tr>
+					<th>
+						<sc-label text="Sheet 이름"></sc-label>
+					</th>
+					<td>
+						<sc-text-field id="sheet_template_nm" class="h-100" max-length="1000"></sc-text-field>
+					</td>
+				</tr>
+			</table>
+			<sc-grid id="columnsGridPanel" class="flex" editable="true"
+					 use-selection="true" on-item-click="onGridItemClick"
+					 use-state="false">
+				<cc-grid-toolbar>
+					<sc-button text="추가" on-click="onAdd"></sc-button>
+					<sc-button text="삭제" on-click="onDelete"></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="col_cd" header-text="컬럼 코드" width="150" text-align="left" editable="false"></sc-data-column>
+					<sc-data-column data-field="col_nm" header-text="컬럼 이름" width="150" text-align="left" editable="true"></sc-data-column>
+					<sc-data-column data-field="sort_ord" header-text="정렬 순서" width="150" text-align="right" editable="true"></sc-data-column>
+					<sc-combobox-column data-field="col_typ_cd" header-text="컬럼 타입" display-field="label" value-field="data" editable="false" items="{{codes.columnType}}"></sc-combobox-column>
+					<sc-combobox-column data-field="col_fmt_typ" header-text="컬럼 포맷 타입" display-field="data" value-field="data" editable="true" items="{{codes.formatterList}}"  item-editable-function="itemDecimalFunction"></sc-combobox-column>
+					<sc-data-column data-field="col_len" data-type="number"	 header-text="컬럼 길이" width="150" text-align="right" editable="true"></sc-data-column>
+					<sc-data-column data-field="point_len" data-type="number"	 header-text="소수점 자리수" width="150" text-align="right" editable="true" item-editable-function="itemDecimalFunction"></sc-data-column>
+					<sc-combobox-column data-field="point_cal_typ" header-text="소수점 포맷팅" display-field="label" value-field="data" editable="true" item-editable-function="itemDecimalFunction" items="{{codes.precHndlTyp}}"></sc-combobox-column>
+					<sc-group-column header-text="그룹 코드" width="200">
+						<sc-data-column data-field="grp_cd"  width="180" text-align="right" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+						<sc-image-column  data-field="btn_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+					</sc-group-column>
+					<sc-group-column header-text="대 그룹 코드" width="140">
+						<sc-data-column data-field="hd_grp_cd"  width="120" text-align="left" editable="true" item-editable-function="itemEditableFunction" ></sc-data-column>
+						<sc-image-column  data-field="hd_grp_cd_select" width="20"  text-align="center" image-change-function="onImageChange"></sc-image-column>
+					</sc-group-column>
+					<sc-group-column header-text="공통코드 코드" width="200">
+						<sc-data-column data-field="common_cd"  width="180" text-align="right" editable="true" item-editable-function="commonCodeEditableFunction" ></sc-data-column>
+						<sc-image-column  data-field="common_code_select" width="20"  text-align="center" image-change-function="onCommonCodeImageChange"></sc-image-column>
+					</sc-group-column>
+					<sc-combobox-column data-field="field_align" header-text="field 정렬" display-field="label" value-field="data" editable="true" items="{{codes.fieldAlign}}"></sc-combobox-column>
+				</sc-grid-columns>
+
+				<sc-grid-fields>
+					<sc-grid-field	data-field="col_id"	></sc-grid-field>
+					<sc-grid-field	data-field="sheet_id"	></sc-grid-field>
+					<sc-grid-field	data-field="sheet_nm"	></sc-grid-field>
+					<sc-grid-field	data-field="sheet_col_id"	></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</sc-dialog>
+
+		<sc-pages id="templateViewPages"></sc-pages>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "es-bidtemplate-master-info",
+			behaviors : [
+				Polymer.Templatizer
+			],
+			properties : {
+				codes: {
+					type : Object,
+					reset : false,
+					value : function() {
+						return {
+							currencyCodeList: []
+						}
+					}
+				},
+
+
+				// 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				},
+
+				titleText : {
+					type: String,
+					value : ""
+				},
+
+				dataList: {
+					type: Object,
+					value: function(){
+						return [
+							{id:"new",nm:"new Template"}
+						];
+					}
+				},
+                tabProperties:{
+                    type: Object,
+                    value: function(){
+                        return {
+                            tabTitle:  "sheet_nm",
+                            moduleUrl: "form_url",
+                            tabId :    "templ_sheet_id",
+							params :"param"
+                        }
+                    }
+                },
+
+                /*
+				   taskPool 오브젝트 속성
+					uiUrl: import를 위한 화면 정보 ,
+					tabElement: 탭엘리먼트(lazy속성을 사용하기위한 껍데기정도..),
+					module: 탭화면에 보여지는 모듈,
+				*/
+                taskPool : {
+                    type : Array,
+                    value :function(){
+                        return  [];
+                    },
+                    reset: false
+                },
+
+				is_new : {
+                	type: Boolean,
+					value: false
+				},
+
+				sheetTemplateInfo: {
+					type: Object,
+					value: function(){
+						return {
+							sheet_nm:""
+						};
+					}
+				},
+
+				codes:{
+					type: Object,
+					reset: false,
+					value : function(){
+						return {
+							columnType : [],
+							fieldAlign : [],
+							precHndlTyp : [],
+							C022 : []
+						};
+					}
+				}
+			},
+			listeners: {
+				"templateTabBar.click": "mdiTabClickHandler"
+			},
+			formulas: {
+				hidden: function () {
+					return this.hiddenButton;
+				}
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+
+			},
+			load : function(data) {
+				var me = this;
+				me.templateTabInit();
+
+				if(null != data){
+					me.set("titleText",data.templ_nm);
+					me.set("searchParam",data);
+					me.set("sheetTemplateInfo",data);
+
+					if(UT.isNotEmpty(data.confirm_yn) && data.confirm_yn == 'Y'){
+						me.set("hiddenButton",false);
+					}else{
+						me.set("hiddenButton",true);
+					}
+					me.applyFormula("hidden");
+
+
+					me.$.findListBidTemplateSheet.body = data;
+				}
+
+				UT.request(me.$.findListBidTemplateSheet);
+			},
+
+
+
+			onFindList : function(){
+
+				var me = this;
+				me.$.findListBidTemplateSheet.body = me.searchParam;
+				UT.request(me.$.findListBidTemplateSheet);
+			},
+
+
+
+			// 데이터 조회 후 처리
+			completeFindList : function(e, res) {
+				var me = this,
+						result = res.response;
+
+				//confirm_yn
+				me.taskPool = [];
+
+
+				if(result.length > 0){
+
+					for(var a=0;  a < result.length; a++ ){
+
+						var defaultTabInfo = {};
+						defaultTabInfo["sord_ord"]  = a;
+						defaultTabInfo["templ_sheet_id"]  = result[a].templ_sheet_id;
+						defaultTabInfo["sheet_nm"]  = result[a].sheet_nm == null? "" : result[a].sheet_nm;
+						defaultTabInfo["form_url"]  = "ui/bp/common/bidtemplate/es-bid-template.html";
+						defaultTabInfo[me.tabProperties.tabId ]  = result[a].templ_sheet_id;
+						defaultTabInfo["param"]  = result[a];
+						me.templateAppendTab([defaultTabInfo]);
+
+						if(a == result.length -1){
+							me.templateLastItemSelect([defaultTabInfo]);
+						}
+
+					}
+
+					me.set("hiddenButton",false);
+					me.applyFormula("hidden");
+				}else{
+					if(result.length == 0){
+						me.set("hiddenButton",true);
+						me.applyFormula("hidden");
+						me.addtemplate(me.getDefaultTab());
+
+						me.templatePageInit();
+					}
+				}
+
+			},
+
+
+			onPopupColumns : function () {
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider([]);
+				me.$.findSheetTemplateListDiaLog.body = me.searchParam;
+				UT.request(me.$.findSheetTemplateListDiaLog);
+			},
+
+
+			onPopupSheetTemplate : function(e,res){
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider([]);
+				me.$.sheet_template_nm.value = "";
+				me.set("sheetTemplateInfo.templ_sheet_id",UT.generateUUID());
+				me.$.columnListDialog.show();
+			},
+
+
+			//BidTemplate를 확정처리한다.
+			onConfirmBidTemplateY : function(e,res){
+				var me = this;
+
+				UT.confirm("STD.BID0014", function() { //BidTemplate를 확정처리 하시겠습니까? 확정처리 시 수정이 불가능합니다.
+
+					me.$.confirmBidTemplateAll.body = {
+						sheetInfo : me.get("sheetTemplateInfo")
+					};
+
+					UT.request(me.$.confirmBidTemplateAll);
+				});
+
+
+			},
+
+
+			completeFindListDialog : function(e,res){
+				var me = this;
+
+				var dataProvider = me.$.columnsGridPanel.getDataProvider();
+
+				for(var i=0; i<res.response.length; i++) {
+					var selected = res.response[i];
+
+					var addRow = {
+						col_id : selected.col_id,
+						col_cd : selected.col_cd,
+						col_nm : selected.col_nm,
+						col_typ_cd : selected.col_typ_cd,
+						col_fmt_typ : selected.col_fmt_typ,
+						col_len : selected.col_len,
+						point_len : selected.point_len,
+						sort_ord : selected.sort_ord,
+						point_cal_typ : selected.point_cal_typ,
+						grp_cd : selected.grp_cd,
+						hd_grp_cd : selected.hd_grp_cd,
+						common_cd : selected.common_cd,
+						field_align : selected.field_align,
+						use_yn : selected.use_yn,
+						sheet_id : selected.sheet_id,
+						sheet_nm : selected.sheet_nm
+					};
+					var sheetNm = selected.sheet_nm;
+
+					dataProvider.addItemAt(i,addRow);
+				}
+				me.$.sheet_template_nm.value = sheetNm;
+				me.$.columnListDialog.show();
+			},
+			completeConfirmTemplate : function(e,res){
+				var me = this;
+
+				me.templateTabInit();
+				me.onFindList();
+			},
+
+
+
+
+
+			onSelectSheetHeaderColumns : function () {
+				var me = this;
+				me.$.columnsGridPanel.setDataProvider([]);
+				var columnsPopup = UT.popup("ep-sheettemplate-headers-list", me, "900", "700", {
+					"selected-item": function (popup, e) {
+						var selected = e.detail;
+						me.$.findSheetColumnHeaders.body = selected;
+						UT.request(me.$.findSheetColumnHeaders);
+
+						columnsPopup.hide();
+					}
+				}, {titleText: "Sheet Header Column Template 검색"});
+
+				columnsPopup.show();
+				columnsPopup.getWindowContent().load({});
+			},
+
+
+			onSelectColumns : function () {
+				var me = this;
+
+				var columnsPopup = UT.popup("ep-column-list", me, "900", "700", {
+					"selected-items": function (popup, e) {
+						if(!me.checkDup(e.detail)){
+							var dataProvider = me.$.columnsGridPanel.getDataProvider();
+							var sheetInfo = me.get("searchParam");
+
+							for(var i=0; i<e.detail.length; i++) {
+								var selected = e.detail[i];
+
+								var addRow = {
+									templ_sheet_col_id : selected.col_id,
+									col_cd : selected.col_cd,
+									col_nm : selected.col_nm,
+									col_typ_cd : selected.col_typ_cd,
+									col_len : selected.col_len,
+									point_len : selected.point_len,
+									point_cal_typ : selected.point_cal_typ,
+									grp_cd : selected.grp_cd,
+									hd_grp_cd : selected.hd_grp_cd,
+									common_cd : selected.common_cd,
+									field_align : selected.field_align,
+									use_yn : selected.use_yn,
+									sheet_id : sheetInfo.sheet_id
+								};
+								dataProvider.addItemAt(i,addRow);
+							}
+
+							columnsPopup.hide();
+						}else{
+							UT.alert("STD.BID0010"); //중복된 컬럼이 있습니다. 중복된 컬럼은 추가 할 수 없습니다.
+						}
+					}
+				}, {titleText: this.translate("컬럼 검색")});
+
+				columnsPopup.show();
+				columnsPopup.getWindowContent().load({});
+			},
+
+			checkDup : function(selectedList){
+				var me = this;
+				var newList = selectedList;
+				var existList = me.$.columnsGridPanel.getDataProvider().getItems() || [];
+				for(var i=0; i<newList.length; i++){
+					for(var j=0; j<existList.length; j++){
+						if(newList[i].col_cd == existList[j].col_cd){
+							// 중복시 true
+							return true;
+						}
+					}
+				}
+				// 미중복시 false
+				return false;
+			},
+
+
+			onColumnSave : function(){
+				var me = this;
+				// 데이터 유효성 확인
+				if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}
+
+				var provider = me.$.columnsGridPanel.getDataProvider(),
+						created = provider.getNewItems(),
+						updated = provider.getUpdateItems();
+
+				if(created.length + updated.length === 0) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+
+				UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+				    var sheet_nm = me.$.sheet_template_nm.value;
+
+				    me.set("sheetTemplateInfo.sheet_nm",sheet_nm);
+
+					me.$.saveBidTemplateSheetColumns.body = {
+						insertList: created,
+						updateList: updated,
+						sheetInfo : me.get("sheetTemplateInfo")
+					};
+
+					UT.request(me.$.saveBidTemplateSheetColumns);
+				});
+			},
+
+
+			completeSaveInfo : function(e,res){
+				var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.templateTabInit();
+					me.onFindList();
+					me.$.columnListDialog.close();
+				});
+			},
+
+			completeDeleteInfo : function(e,res){
+				var me = this;
+
+				UT.alert("STD.N2500", function(){ // 저장하였습니다.
+					me.templateTabInit();
+					me.onFindList();
+				});
+			},
+
+			onShowList: function () {
+			 var me = this;
+			 me.fire("show-list");
+			},
+
+            getDefaultTab: function(){
+				var me = this;
+                var defaultTabInfo = {};
+                defaultTabInfo["sord_ord"]  = 0;
+                defaultTabInfo["templ_sheet_id"]  = "templatedefaultid";
+                defaultTabInfo["sheet_nm"]  = "시트를 추가해주세요.";
+                defaultTabInfo["form_url"]  = "ui/bp/common/bidtemplate/es-bid-template.html";
+                defaultTabInfo[me.tabProperties.tabId ]  = "$basic";
+                return defaultTabInfo;
+            },
+
+            //template에 따른 동적탭 생성.
+            templateAppendTab: function(templateList){
+                var me = this,
+                    module,
+                    tabBar = me.$.templateTabBar,
+                    tabChildElement,  len , templateInfo;
+                if(!templateList){
+                    return;
+                }
+                //me.isReset = true;
+                for(var i = 0, len = templateList.length; i < len; i++){
+                    templateInfo = templateList[i];
+                    me.createTabView(templateInfo);
+
+                }
+                //me.templateLastItemSelect(templateInfo);
+            },
+
+            //tab에 사용할 엘리먼트를 생성한다. 활성화 되는 순산 module를 import하기때문에 껍데기를 만드는 정도이다.
+            createTabView: function(templateInfo){
+                var me = this,
+                    taskPoolInfo = me.hastemplateTabChildElement(templateInfo[me.tabProperties.tabId]);
+                me.addtemplate(templateInfo);
+                var createHandler = function() {
+                    var tabViewElement =  document.createElement("es-page-task-view");
+                    tabViewElement.taskName  = templateInfo[me.tabProperties.tabTitle];
+                    tabViewElement.taskId    = templateInfo[me.tabProperties.tabId];
+                    tabViewElement.moduleUrl = templateInfo[me.tabProperties.moduleUrl];
+                    tabViewElement.params = templateInfo[me.tabProperties.params];
+                    me.listen(tabViewElement, 'template-execute-completed', me.onTemplateExecuteCompleted.bind(me));
+                    me.listen(tabViewElement, 'template-task-loaded-init', me.taskLoadedInit.bind(me));
+                    me.listen(tabViewElement, 'reset-find-tabbar', me.reSetFindTabbar.bind(me));
+					me.listen(tabViewElement, 'reset-all-find', me.reSetAllFind.bind(me));
+
+                    Polymer.dom(me.$.templateViewPages).appendChild(tabViewElement);
+                    //풀등록
+                    me.taskPool.push({
+                        uiUrl : templateInfo[me.tabProperties.moduleUrl],
+                        tabId : templateInfo[me.tabProperties.tabId],
+                        view  : tabViewElement
+                    });
+                }
+
+                if(taskPoolInfo == null){
+                    createHandler();
+                }else{
+                    taskPoolInfo.view.taskName  = templateInfo[me.tabProperties.tabTitle];
+                    taskPoolInfo.view.params =  me.getTaskParam(templateInfo);
+                }
+            },
+
+
+
+			reSetFindTabbar : function(e, detail){
+
+				var me = this;
+				if(UT.isObject(e.detail.sheetInfo) && UT.isNotEmpty(e.detail.sheetInfo.sheet_nm)){
+					me.$.templateTabBar.querySelector('sc-tab[data-tab-id="'+e.detail.sheetInfo.templ_sheet_id+'"]').text = e.detail.sheetInfo.sheet_nm;
+				}
+			},
+
+			reSetAllFind : function(e, detail){
+
+				var me = this;
+				me.templateTabInit();
+				me.onFindList();
+			},
+
+			hastemplateTabChildElement: function(tabId){
+                var me = this, poolInfo;
+                var poolInfo = me.taskPool.filter(function(item){
+                    if(item.tabId == tabId){
+                        return true;
+                    }
+                });
+                if(poolInfo.length == 0){
+                    return  null;
+                }
+                return poolInfo[0];
+            },
+
+
+            addtemplate: function(newUserTaskInfo){
+                var me = this;
+                me.addTab(newUserTaskInfo);
+
+            },
+
+			//탭을 구성하기전에 초기화한다.
+			templateTabInit: function(){
+				var me = this;
+				var module,
+						tabar = me.$.templateTabBar,
+						contents = Polymer.dom(tabar).queryDistributedElements('*');
+				for(var i = 0,len = contents.length; i < len; i++){
+					Polymer.dom(tabar).removeChild(contents[i]);
+					//contents[i].hidden = true;
+				}
+				Polymer.dom.flush();
+
+			},
+			templatePageInit: function(){
+				var me = this;
+				var module,
+						viewPage = me.$.templateViewPages,
+						contents = Polymer.dom(viewPage).queryDistributedElements('*');
+				for(var i = 0,len = contents.length; i < len; i++){
+					Polymer.dom(viewPage).removeChild(contents[i]);
+					//contents[i].hidden = true;
+				}
+				Polymer.dom.flush();
+
+			},
+
+            //scTab을  생성하고 tabar에 탭을 추가한다.
+            addTab: function(newUserTaskInfo){
+                var me = this,
+                    newTab = document.createElement('sc-tab');
+                newTab.classList.add("template-tab-bar");
+
+                newTab.text = newUserTaskInfo[me.tabProperties.tabTitle];
+
+
+				var sheetInfo = me.get("searchParam");
+
+				if(UT.isNotEmpty(sheetInfo.confirm_yn) && sheetInfo.confirm_yn == 'Y'){
+
+				}else{
+					if(newUserTaskInfo.templ_sheet_id != "$basic") newTab.closable = "true";
+				}
+
+                newTab.setAttribute('data-tab-id', newUserTaskInfo[me.tabProperties.tabId]);
+                newTab.setAttribute('data-tab-module-url', newUserTaskInfo[me.tabProperties.moduleUrl]);
+
+                Polymer.dom(me.$.templateTabBar).appendChild(newTab);
+                Polymer.dom.flush();
+            },
+
+            /*
+			* 탭에서 flow를 실행한후에  이벤트를 발생시킬때 실행된다.
+			* template목록을 다시 다시 조회해서 다음 flow가 보여준느 기능을 한다.
+			*/
+            onTemplateExecuteCompleted: function(e, detail){
+                var me = this;
+                var param  = e.detail;
+                if(!UT.isEmpty(param)){
+                    me.searchParam.templ_sheet_id = param.templ_sheet_id;
+                    me.searchParam.templ_id = param.templ_id;
+                }
+                me.taskLoadedInit();
+                //me.onFindList();
+            },
+
+            taskLoadedInit: function(e){
+                var me = this,
+                    allInit = !e,
+                    targetView = !allInit ? e.target: null ;
+                me.taskPool.forEach(function(item){
+                    if(allInit || item.view.module != targetView){
+                        item._loaded = false;
+                        item.view.module && item.view.module.reset();
+                    }
+                });
+            },
+
+            //각각의 task에서 사용할 파라미터를 가져온다.
+            getTaskParam: function(taskInfo){
+                var me = this,
+                    moduleParam = UT.copy(me.get("searchParam"));
+                moduleParam.templ_sheet_id = taskInfo.templ_sheet_id;
+
+                return moduleParam;
+            },
+
+			templateLastItemSelect: function(templateInfo){
+				var me = this;
+
+				me.$.templateTabBar.selectItem(me.$.templateTabBar.lastItem);
+				me.activateTaskView(templateInfo[me.tabProperties.tabId]);
+			},
+
+			//탭 클릭시 발생하는 이벤트. 선택한 탭에 해당하는 task를 보여준다.
+			ontemplateTabSelected: function(e){
+				var me = this,
+						tabId = e.detail.item.dataset.tabId,
+						tabItem  = me.$.templateTabBar.querySelector('sc-tab[data-tab-id="'+tabId+'"]');
+				me.$.templateTabBar.selectItem(tabItem);
+				me.activateTaskView(tabId);
+			},
+
+			//동적으로 생성된 tab들의 소멸자를 호출한다.
+			_destroy: function(){
+				var me = this;
+				//동적으로 생성된 tab들의 destory함수들을 호출해 준다.
+
+				for(var i = 0, len = me.taskPool.length; i < len; i++){
+					var poolInfo = me.taskPool[i];
+					if(poolInfo.view.module != null){ //
+						me.unlisten(poolInfo.view,'template-execute-completed', me.onTemplateExecuteCompleted);
+						me.unlisten(poolInfo.view, 'template-task-loaded-init', me.taskLoadedInit.bind(me));
+					}
+					poolInfo.view.destroy();
+					poolInfo.view = null; //참조관계 제거. tabElement는 tabNavi에 의해 제거됨
+					poolInfo = null;
+				}
+				me.set('taskPool', null);
+			},
+
+			//탭,그리드에서 task선택시 해당하는 화면을 보여준다.
+			activateTaskView: function(tabId){
+				var me = this, pageItem, poolInfo, tabItem,
+						pages = me.$.templateViewPages;
+				poolInfo = me.hastemplateTabChildElement(tabId);
+				if(poolInfo){
+					pageItem = poolInfo.view;
+					if(pageItem.module == null){
+						pageItem.loadModule();
+						poolInfo._loaded = true;
+					}else if(!poolInfo._loaded){
+						pageItem.callModuleLoadFunction();
+						poolInfo._loaded = true;
+					}
+					pages.selectItem(pageItem);
+				}
+			},
+
+			onAdd : function(){
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+
+				var row = {};
+
+				provider.addItemAt(0, row);
+			},
+			onDelete: function(){
+				var me = this,provider = me.$.columnsGridPanel.getDataProvider();
+				var checked = provider.selectionCheckedItems();
+
+				if(checked.length === 0) {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				} else {
+					UT.confirm("STD.N1300", function() {	// "삭제 하시겠습니까?"
+						provider.removeItems(true);	// 그리드에서 체크된 데이터를 지워준다. getRemoveItems에서 지워진 데이터를 가져올 수 있다.
+					});
+				}
+			},
+
+			//Sheet 처리된 닫기 클릭 시
+			mdiTabClickHandler: function(event) {
+				if(event.target.tagName == "SPAN") {
+					var me = this;
+					var templSheetId = event.target.parentElement.getAttribute("data-tab-id");
+
+
+					UT.confirm("STD.BID0006", function(){ //Sheet를 정말 삭제하시겠습니까?
+						var sheetInfo = {templ_sheet_id : templSheetId};
+
+						me.$.deleteTemplateSheetDataAll.body = {
+							sheetInfo : sheetInfo
+						};
+
+						UT.request(me.$.deleteTemplateSheetDataAll);
+
+						var tab = UT.closest(event.target.parentElement, 'sc-tab');
+						event.stopPropagation();
+						Polymer.dom.flush();
+
+						tab.destroy();
+					});
+				}
+			},
+
+			onImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] != "GROUPCODE"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+
+
+
+
+
+			onGridItemClick : function(e) {
+				var me = this;
+				var provider = me.$.columnsGridPanel.getDataProvider();
+				var data = e.detail.data;
+				var item = e.detail.item;
+
+				// col_typ_cd 는 변경 될 수 있음.
+				if(item.dataField === "btn_select" && !(data.col_typ_cd == 'GROUPCODE')){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "hd_grp_cd_select" && !(data.col_typ_cd == 'GROUPCODE') && (UT.isNotEmpty(data.grp_cd))){
+
+					me.set("groupColumnSearch.col_typ_cd","GROUPCODE");
+					me.set("groupColumnSearch.col_cd","");
+					me.set("groupColumnSearch.col_nm","");
+
+					var columnsPopup = UT.popup("ep-group-column-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"hd_grp_cd" : selected.col_cd});
+							columnsPopup.close();
+						}
+					}, {titleText: "그룹 컬럼 검색"});
+
+					columnsPopup.show();
+					columnsPopup.getWindowContent().load(me.get("groupColumnSearch"));
+				}else if(item.dataField === "common_code_select" && (data.col_typ_cd == 'COMBOBOX')){
+
+					var commonPopup = UT.popup("ep-column-common-code-list", me, "900", "700", {
+						"selected-items": function (popup, e) {
+
+							var selected = e.detail[0];
+							provider.setItemAt(item.rowIndex, {"common_cd" : selected.grp_cd});
+							commonPopup.close();
+						}
+					}, {titleText: this.translate("공통 코드 검색")});
+
+					commonPopup.show();
+					commonPopup.getWindowContent().load();
+				}
+
+			},
+
+			onImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] != "GROUPCODE"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+
+			itemEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "grp_cd":
+						return data.col_typ_cd != "GROUPCODE";
+					case "hd_grp_cd":
+						return (data.col_typ_cd != "GROUPCODE" && UT.isNotEmpty(data.grp_cd));
+					default:
+						return false;
+				}
+			},
+
+			onCommonCodeImageChange:function(data, item){
+				var me = this;
+				if(data["col_typ_cd"] == "COMBOBOX"){
+					return "search";
+				}else{
+					return "";
+				}
+			},
+			commonCodeEditableFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "common_cd":
+						return data.col_typ_cd == "COMBOBOX";
+					default:
+						return false;
+				}
+			},
+
+			itemDecimalFunction: function(data, item) {
+				var me = this;
+
+				switch (item.dataField) {
+					case "point_len":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "point_cal_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					case "col_fmt_typ":
+						return (data.point_cal_typ != "3" && data.col_typ_cd == "INT");
+					default:
+						return false;
+				}
+			},
+
+		});
+	</script>
+
+</dom-module>

@@ -1,0 +1,71 @@
+<sc-link rel="import" href="es-sp-board-popup-list.html"></sc-link>
+<sc-link rel="import" href="es-sp-board-popup-detail.html"></sc-link>
+
+<dom-module id="ep-sp-board-popup">
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+    </style>
+
+    <template>
+        <sc-pages id="pages" selected="0" class="fit">
+            <es-board-popup-list id="boardList" on-show-board-detail="onShowBoardDetail"></es-board-popup-list>
+            <template>
+                <es-board-popup-detail id="boardDetail" on-show-boardlist="onShowBoardList"></es-board-popup-detail>
+            </template>
+        </sc-pages>
+    </template>
+
+    <script>
+        Polymer({
+            is : 'ep-sp-board-popup',
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+                var me = this;
+
+                // bbd_uuid 전달
+                var param = {
+                    bbd_uuid : this.params.bbd_uuid,
+                    pst_no : this.params.pst_no
+                };
+
+                if(param.pst_no){
+                    me.async(function(){
+                        me.$.pages.selectItem(me.$.boardDetail);
+                        me.$.boardDetail.load(param);
+                    });
+                }else {
+                    me.$.boardList.load(param);
+                }
+
+
+            },
+
+            // 게시판 목록 -> 게시판 상세
+            onShowBoardDetail: function(e, data){
+                var me = this;
+
+                me.$.pages.selectItem(me.$.boardDetail);
+                me.$.boardDetail.load(data);
+            },
+
+            // 게시판 상세 -> 게시판 목록
+            onShowBoardList: function(e, data) {
+                // 게시판 목록화면 이동
+                var me = this;
+                me.$.pages.selectItem(me.$.boardList);
+                me.$.boardList.load(data);
+            }
+
+
+        });
+    </script>
+
+
+</dom-module>

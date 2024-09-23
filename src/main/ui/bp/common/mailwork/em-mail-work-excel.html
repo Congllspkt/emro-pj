@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-mail-work-excel-list.html"></sc-link>
+<sc-link rel="import" href="es-mail-work-excel-form.html"></sc-link>
+
+<dom-module id="em-mail-work-excel">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <cc-page-title-bar></cc-page-title-bar>
+        <div class="hbox flex">
+            <es-mail-work-excel-list id="list" on-selected-excel="onFindExcel" class="flex-4"></es-mail-work-excel-list>
+            <div class="hspace-10"></div>
+            <es-mail-work-excel-form id="form" on-update-excel-info="onSaveExcelList" title-text="이메일 EXCEL 양식" class="flex-6"></es-mail-work-excel-form>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-mail-work-excel',
+
+
+            onFindExcel: function(e, data){
+                var me = this;
+                me.$.form.load(data);
+            },
+
+
+            onSaveExcelList: function(){
+                var me = this;
+                me.$.list.onSearch();
+            }
+
+        });
+    </script>
+
+</dom-module>

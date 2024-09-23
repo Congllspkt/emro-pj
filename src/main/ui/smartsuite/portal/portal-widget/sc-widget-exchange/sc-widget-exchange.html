@@ -1,0 +1,189 @@
+<link rel="import" href="../sc-widget-content-behavior.html"/>
+
+<dom-module id="sc-widget-exchange">
+<!-- 
+/**
+ *
+ *	@description : 환율 리스트 위젯
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @Since 2017. 12. 19.
+ * @변경이력 : [2017. 12. 19.] Yeon-u Kim 최초작성
+ */
+-->
+	<style>
+		:host {
+          @apply(--fit-layout);
+        }
+	</style>
+	
+	<template>
+	<!-- ajax 선언 부 -->
+		<sc-ajax auto id="protocolGetSetting" url="../portal/findWidgetProperties.do" body$='{"wdgt_id":"[[widgetId]]"}'
+                 handle-as="json"	on-response="_onGetSetting" method="post"
+                 contentType="application/json">
+        </sc-ajax>
+		<sc-ajax id="findListExchange"
+            url="../portal/widget/findListExchange.do"
+            on-response="completeFindListExchange">
+        </sc-ajax>
+        <sc-ajax id="updateListExchange"
+            url="../portal/widget/updateListExchange.do"
+            on-response="completeUpdateExchange">
+        </sc-ajax>
+        
+        <!-- 환율 정보-->
+<!--         <div class="po_contents"> -->
+<!--             <h3><span>환율 정보<i>[[formula('headerText')]]</i></span></h3> -->
+            <div class="wrap_contents">
+                <div class="table_style02">
+                	<table id="exchcont">
+	                    <colgroup>
+		                    <col style="width:30%" />
+		                    <col style="width:25%" />
+		                    <col style="width:25%" />
+		                    <col style="width:20%" />
+	                    </colgroup>
+	                    <tr>
+		                    <th>[[translate('통화')]]</th>
+		                    <th>[[translate('매매 기준 율')]]</th>
+		                    <th>[[translate('전일 대비')]]</th>
+		                    <th>[[translate('등락 율')]]</th>
+	                    </tr>
+                    </table>
+               </div>
+           </div>
+<!--         </div> -->
+	</template>
+	<script>
+	Polymer({
+			is : 'sc-widget-exchange',
+			/**
+			* BehaviorWidgetContent 는  widgetContent Behavior입니다.
+			*
+			* @polymerBehavior BehaviorWidgetContent
+			**/
+			behaviors: [BehaviorWidgetContent,
+			            Polymer.CCModuleBehavior],
+			
+			get portletPath(){
+            	return  SCPortalLocation.portletPath;
+            },
+            
+            get imagePath(){
+            	return  SCPortalLocation.imagePath;
+            },
+			            
+			properties : {
+				 searchParam: {
+	                    type: Object,
+	                    value: {}
+	                },
+	                responseResult: Array,
+	                _opened: Boolean
+			},
+			formulas: {
+				headerText : function(){
+					var me = this;
+	            	var list = me.get('responseResult');
+	            	var currentDate = UT.formatDate(new Date(),"yyyy/MM/dd");
+	            	var headerText = currentDate + " " + me.translate('STD.EXC002',null,'10','5');
+	            	if(UT.isEmpty(list)){
+	            		headerText = currentDate + " " +me.translate('STD.EXC001');
+	            	}
+	            	return headerText;
+				}
+			},
+			//초기화함수
+            _onGetSetting: function () {
+                this.refresh();
+            },
+            initialized: function(){
+            	//this.refresh();
+            },
+            //위젯 리셋시 호출되는 함수
+            refresh: function() {
+            	var me = this;
+            	UT.request(me.$.findListExchange);
+            },
+            completeFindListExchange: function(el,res){
+            	var me = this,
+            		result = res.response;
+            	
+            	me.set("responseResult", result);
+            	
+            	if(UT.isNotEmpty(result)) {
+	            	for(var i=0; i<result.length; i++) {
+	            		var data = result[i];
+	            		
+	            		var img = document.createElement("img");
+	            		img.src = this.imagePath+"ico_flag_" + (data["cur_unit"]).toLowerCase() + ".png";
+	            		img.alt = "";
+	            		
+	            		var td1 = document.createElement("td");
+	            		td1.innerHTML = img.outerHTML + me.translate(data["cur_unit_nm"]) + " " + data["cur_unit"];
+	            		
+	            		var td2 = document.createElement("td");
+	            		td2.innerHTML = data["deal_bas_r"];
+	            		
+	            		var td3 = document.createElement("td");
+	            		var diff = data["diff_deal_bas_r"];
+	            		if(diff) {
+		            		td3.innerHTML = diff;
+		            		
+		            		var cls = "same";
+		            		if(diff < 0)
+		            			cls = "down";
+		            		else if(diff > 0)
+		            			cls = "up";
+		            			
+		            		td3.classList.add(cls);
+		            		
+		            		var img_td3 = document.createElement("img");
+		            		img_td3.src = this.imagePath+"ico_currency_" + cls + ".png";
+		            		img_td3.alt = "";
+		            		
+		            		td3.appendChild(img_td3);
+	            		}
+	            		
+	            		var td4 = document.createElement("td");
+	            		var diffRate = data["diff_rate_deal_bas_r"];
+	            		if(diffRate) {
+		            		td4.innerHTML = diffRate + "%";
+		            		
+		            		var cls = "same";
+		            		if(diffRate < 0)
+		            			cls = "down";
+		            		else if(diffRate > 0)
+		            			cls = "up";
+		            			
+		            		td4.classList.add(cls);
+		            		
+		            		var img_td4 = document.createElement("img");
+		            		img_td4.src = this.imagePath+"ico_currency_" + cls + ".png";
+		            		img_td4.alt = "";
+		            		
+		            		td4.appendChild(img_td4);
+	            		}
+	            		
+	            		var tr = document.createElement("tr");
+	            		tr.appendChild(td1);
+	            		tr.appendChild(td2);
+	            		tr.appendChild(td3);
+	            		tr.appendChild(td4);
+	            		
+	            		Polymer.dom(me.$.exchcont).appendChild(tr);
+	            	}
+            	}
+            	
+            	me.applyFormula();
+            },
+            
+			/************************************************** 
+			 * 버튼 이벤트
+			 **************************************************/
+		});
+	</script>
+</dom-module>

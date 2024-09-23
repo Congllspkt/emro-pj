@@ -1,0 +1,112 @@
+<script>
+	Polymer.VueGridLayoutConfigBehavior = {
+		nonReusable: true,
+		
+		listeners: {
+			'widget-into-vuegrid-completed' : 'onWidgetIntoVueGridCompleted',
+           	'portlet-container-completed' : 'onPortletContainerCompleted',
+           	'portlet-loaded' : 'onPortletLoaded',
+           	'find-user-layout' : 'onFindDefaultLayout',
+           	'save-user-layout' : 'onSaveDefaultLayout'
+        },
+        
+        properties : {
+        	// 구분이 바뀌었을 때
+			layoutTarget: {
+				type: Object,
+				observer: '_onChangeLayoutTarget'
+			},
+			// 현재 레이아웃
+			currentLayout : {
+				type: Object,
+				value: function() {
+					return {};
+				}
+			}
+        },
+        
+        /** 구분이 바뀌었을 때, 기존의 아이템을 모두 지운다. */
+        _onChangeLayoutTarget: function() {
+        	if(this.layout) {
+        		this.vue.removeAllItemWithoutSaveEvent();
+        	}
+        },
+        
+        /** 포틀릿 기본 레이아웃 조회 완료 핸들러 */
+        onFindDefaultLayoutCompleted: function(e){
+        	var me = this, portletSchemaList = [];
+        	if(typeof me.layout == "string"){
+        		me.layout = JSON.parse(me.layout)
+        	}
+            if(me.layout && me.layout.lyt_srccd) {
+                portletSchemaList = JSON.parse(me.layout.lyt_srccd);
+            } else {
+                portletSchemaList = me.getWidgets();
+            }
+
+
+//
+//        	if(me.layout && me.layout.lyt_srccd){
+//        		me.currentLayout = JSON.parse(me.layout.lyt_srccd);
+//
+//				if(Polymer.$Util.isArray(me.currentLayout)){
+//					me.currentLayout[this.layoutTarget] = JSON.parse(me.layout.lyt_srccd);
+//        		}
+//
+//        		/** 개인화 정보가 있을 경우 */
+//        		if(me.currentLayout[this.layoutTarget]) {
+//        			portletSchemaList = me.currentLayout[this.layoutTarget];
+//        		}else {
+//        			portletSchemaList = me.getWidgets();
+//        		}
+//        	} else {
+//           		/** 개인화 정보가 없으면 */
+//               	portletSchemaList = me.getWidgets();
+//           	}
+//
+        	/** 위젯 매니저에 해당 목록 등록 */
+        	me.$.widgetManager.setUseWidgets(portletSchemaList);
+        	
+        	/** Vue Grid Layout 생성 */
+        	if(!this.vue) {
+        		me.createPortletContainerOnVueGrid(portletSchemaList);
+        	} else {
+        		me.setPortletSchemaList(portletSchemaList);
+        		//me.addAllItemsWithoutSave(portletSchemaList);
+        	}        	
+        },
+        
+        /**  */
+        addAllItemsWithoutSave: function(portletSchemaList) {
+        	for(var i = 0; i < portletSchemaList.length; i++) {
+        		var portletSchema = portletSchemaList[i];
+        		this.vue.addItemUsingPortletSchemaWithoutSave(portletSchema);
+        	}
+        },
+        
+        /** 포틀릿(개인화) 저장 */
+        onSaveDefaultLayout: function(){
+        	var me = this, index = 0,
+        		portletContainerSchemaList = me.getPortletContainerSchemaList(),
+        		laytSrc = [];
+        	
+        	for(var i=0; i<portletContainerSchemaList.length; i++){
+        		me.insert(laytSrc, portletContainerSchemaList[i]);
+        	}
+        	
+//        	if(!me.currentLayout) {
+//        		me.currentLayout = {};
+//        	}
+//        	me.currentLayout[this.layoutTarget] = laytSrc;
+        	
+        	me.portletStateful = {
+        		lyt_srccd: JSON.stringify(laytSrc),
+                portl_usr_typ_ccd : me.layoutTarget.usr_typ_ccd,
+                home_scr_typ_ccd : me.layoutTarget.home_scr_typ_ccd,
+               	lyt_typ: me.getAttribute('page-id')
+           	};
+              
+           	me.$.saveDefaultLayout.generateRequest();
+        }
+	};
+</script>

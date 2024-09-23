@@ -1,0 +1,505 @@
+<dom-module id="es-menufunc-info">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <sc-ajax id="findListMenuFunc"
+                 url="findListMenuFunc.do"
+                 body="{{searchParam}}"
+                 last-response="{{funcList}}">
+        </sc-ajax>
+
+        <sc-ajax id="saveMenuFunc"
+                 url="saveListMenuFunc.do"
+                 on-response="completeSaveMenuFunc">
+        </sc-ajax>
+
+        <sc-ajax id="deleteListMenuFunc"
+                 url="deleteListMenuFunc.do"
+                 on-response="completeDeleteListMenuFunc">
+        </sc-ajax>
+
+        <sc-ajax id="findListMenuUrl"
+                 url="findListMenuPattern.do"
+                 body="{{searchParam}}"
+                 last-response="{{funcUrlList}}">
+        </sc-ajax>
+
+        <sc-ajax id="saveListMenuUrl"
+                 url="saveListMenuUrl.do"
+                 on-response="completeSaveListMenuUrl">
+        </sc-ajax>
+
+        <sc-ajax id="deleteListMenuUrl"
+                 url="deleteListMenuUrl.do"
+                 on-response="completeDeleteListMenuUrl">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="vbox page">
+            <div class="desc-box" hidden="[[!formula('isMenuCodeBinding')]]">
+                <p class="sub-text">
+					<!-- 메뉴에서 사용할 액션 코드를 추가해주세요. -->
+                    <span class="label-emphasis" data-tooltip-text$="[[translate('STD.ADM1073')]]">[[searchParam.menu_cd]] : [[searchParam.menu_nm]]<span class="tooltip"></span></span>
+                </p>
+                <!-- <p class="sub-text">메뉴에서 사용할 액션 코드를 추가해주세요.<br><span hidden="[[!formula('filterVisible')]]">자주사용되는 액션 코드는 아래의 버튼으로 간편하게 추가할 수 있습니다.</span></p> -->
+				<!-- 자주 사용되는 액션 코드를 버튼으로 간편하게 추가할 수 있습니다. -->
+                <div class="filterBar" hidden="[[!formula('filterVisible')]]" data-tooltip-text$="[[translate('STD.ADM1074')]]">
+                    <button type="button" class="filter_type" aria-pressed="false" on-click="onFilterClick"
+                        hidden="[[isContainRead]]" data-type="R">[[translate('조회 기능 추가')]]
+                    </button>
+                    <button type="button" class="filter_type" aria-pressed="false" on-click="onFilterClick"
+                        hidden="[[isContainSave]]" data-type="S">[[translate('저장 기능 추가')]]
+                    </button>
+                </div>
+            </div>
+            <div class="desc-box" hidden="[[formula('isMenuCodeBinding')]]">
+                <p class="sub-text">[[translate('STD.ADM1072')]]</p>
+            </div>
+            <sc-grid id="funcGridPanel" class="h-200" editable="true" data-provider="{{funcList}}"
+                selection-able-function="onSelectionAbleFunction">
+                <cc-grid-toolbar hidden="[[!formula('isMenuCodeBinding')]]">
+                    <sc-button text="추가" on-click="onAddMenuFunc" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteMenuFunc" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveMenuFunc" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="act_cd" header-text="액션 코드" width="200"
+                        item-editable-function="onFuncCdEditable" required="true" validator-type="nospace"
+                        max-length="18"></sc-data-column>
+                    <sc-data-column data-field="act_nm" header-text="액션 명" width="200" text-align="left"
+                        editable="true"></sc-data-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="menu_cd"></sc-grid-field>
+                    <sc-grid-field data-field="use_count_role_func" data-type="number"></sc-grid-field>
+                    <sc-grid-field data-field="use_count_func_url" data-type="number"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+
+            <div class="desc-box" hidden="[[!formula('isMenuCodeBinding')]]">
+                <table style="width: 100%">
+                    <colgroup>
+                        <col class="w-80">
+                        <col>
+                        <col class="w-80">
+                        <col>
+                        <col>
+                    </colgroup>
+                    <tr>
+                        <th>
+                            <sc-label text="명"></sc-label>
+                        </th>
+                        <td>
+                            <sc-combobox-field items="{{funcList}}" display-field="act_nm" value-field="act_cd"
+                                value="{{setUrlParam.act_cd}}"></sc-combobox-field>
+                        </td>
+                        <th>
+                            <sc-label text="유형 URL"></sc-label>
+                        </th>
+                        <td>
+                            <sc-text-field value="{{setUrlParam.menu_act_url}}"></sc-text-field>
+                        </td>
+                        <td>
+                            <button type="button" class="filter_type" style="padding-bottom: 3px; min-width: 80px;"
+                                on-click="applySetUrlFunc">[[translate('일괄 적용')]]</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <sc-grid id="funcUrlGridPanel" class="h-400" editable="true" data-provider="{{funcUrlList}}">
+                <cc-grid-toolbar title-text="액션/URL" hidden="[[!formula('isMenuCodeBinding')]]">
+                    <sc-button text="추가" on-click="onAddMenuUrl" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteMenuUrl" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveMenuUrl" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-combobox-column data-field="act_cd" header-text="액션 명" width="120" text-align="center"
+                        editable="true" display-field="act_nm" value-field="act_cd" items="{{funcList}}">
+                    </sc-combobox-column>
+                    <sc-data-column data-field="menu_act_url" header-text="메뉴 액션 URL" width="200" text-align="left"
+                        editable="false" validator-type="nospace" max-length="100"
+                        item-editable-function="onCallPatrnEditable" required="true"
+                        editor-maskre="/[a-zA-Z0-9.]/" hangul-restrict="true"></sc-data-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field data-field="menu_cd" data-type="text"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'es-menufunc-info',
+
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                funcList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                funcUrlList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                isContainRead: {
+                    type: Boolean,
+                    value: false
+                },
+                isContainSave: {
+                    type: Boolean,
+                    value: false
+                },
+                setUrlParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                }
+            },
+
+            formulas: {
+                isMenuCodeBinding: function () {
+                    return UT.isNotEmpty(this.get("searchParam.menu_cd"));
+                },
+
+                filterVisible: function () {
+                    return this.formula('isMenuCodeBinding') && (!this.isContainRead || !this.isContainSave);
+                }
+            },
+
+            load: function (data) {
+                var me = this;
+                me.set('searchParam', data);
+                me._findListMenuFunc(1);
+
+            },
+
+            // 액션 코드 목록 조회 시 수행할 로직
+            _findListMenuFunc: function (n) {
+                var me = this;
+                me.clearFilterBar();
+                UT.request(me.$.findListMenuFunc, function () {
+                    me._checkGridData();
+                    me.applyFormula();
+                    if (n === 1) {
+                        me._findListMenuFuncUrl();
+                    }
+                });
+            },
+
+            _findListMenuFuncUrl: function () {
+                var me = this;
+                UT.request(me.$.findListMenuUrl, function(){
+                    //액션 코드에 선택에 대한 selection-able 변경을 위한 조회
+                    UT.request(me.$.findListMenuFunc);
+                });
+            },
+
+            // 액션 코드 포함 유무 체크
+            _checkGridData: function () {
+                var provider = this.$.funcGridPanel.getDataProvider(),
+                    items = provider.getItems();
+
+                for (var i = 0; i < items.length; i++) {
+                    if (items[i].act_cd === "R") {
+                        this.set('isContainRead', true);
+                        continue;
+                    }
+                    if (items[i].act_cd === "S") {
+                        this.set('isContainSave', true);
+                        continue;
+                    }
+                }
+
+            },
+
+            onFilterClick: function (e) {
+                var me = this, el = e.target,
+                    pressed = el.getAttribute("aria-pressed") == "true";
+                el.setAttribute("aria-pressed", pressed ? "false" : "true");
+
+                var provider = me.$.funcGridPanel.getDataProvider(),
+                    type = el.dataset.type,
+                    code = {
+                        S: "저장",
+                        R: "조회"
+                    };
+
+                if (!pressed) {
+                    provider.addItem({
+                        act_cd: type,
+                        act_nm: code[type],
+                        menu_cd: this.searchParam.menu_cd
+                    })
+                } else {
+                    provider.removeItemAtBatch(true, function (index, data) {
+                        if (data.act_cd === type) {
+                            return true;
+                        }
+                    });
+                }
+            },
+
+            clearFilterBar: function () {
+                var me = this;
+                me.set('isContainRead', false);
+                me.set('isContainSave', false);
+
+                var filterBtn = me.querySelectorAll('.filter_type');
+                for (var i = 0, len = filterBtn.length; i < len; i++) {
+                    filterBtn[i].setAttribute('aria-pressed', false);
+                }
+            },
+
+            onFuncCdEditable: function (data, item) {
+                var me = this,
+                    provider = me.$.funcGridPanel.getDataProvider();
+
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+            onCallPatrnEditable: function (data, item) {
+                var me = this,
+                    provider = me.$.funcUrlGridPanel.getDataProvider();
+
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+
+            // 메뉴코드 추가
+            onAddMenuFunc: function () {
+                var me = this,
+                    provider = me.$.funcGridPanel.getDataProvider();
+
+                provider.addItem({
+                    menu_cd: this.searchParam.menu_cd
+                });
+            },
+
+            // 메뉴코드 저장
+            onSaveMenuFunc: function () {
+                var me = this,
+                    provider = me.$.funcGridPanel.getDataProvider();
+
+                if (!me.validate()) {
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                var inserts = provider.getNewItems();
+                var updates = provider.getUpdateItems();
+                if (inserts.length < 1 && updates.length < 1) {
+                    UT.alert('STD.N1700');
+                    return;
+                }
+
+                var items = provider.getItems(),
+                    unique_check = {};
+                for (var i = 0, len = items.length; i < len; i++) {
+                    if (typeof unique_check[items[i].act_cd] == "undefined") {
+                        unique_check[items[i].act_cd] = 0;
+                    } else {
+                        UT.alert("STD.N1900"); // 중복 데이터가 있습니다.
+                        return false;
+                    }
+                }
+
+                UT.confirm("STD.N1200", function () { // 저장 하시겠습니까?
+                    var inserts = provider.getNewItems(),
+                        updated = provider.getUpdateItems();
+                    me.$.saveMenuFunc.body = {
+                        insertMenuFuncList: inserts,
+                        updateMenuFuncList: updated
+                    };
+                    UT.request(me.$.saveMenuFunc);
+                });
+            },
+
+            // 메뉴코드 저장 완료
+            completeSaveMenuFunc: function () {
+                var me = this;
+
+                me._findListMenuFunc();
+                me.fire('change-info', me.get('searchParam'));
+                UT.completeAlert(); // 저장 하였습니다.
+            },
+            // 메뉴액션 코드 삭제
+            onDeleteMenuFunc: function () {
+                var me = this,
+                    message = "STD.N1300", // 삭제 하시겠습니까?
+                    provider = me.$.funcGridPanel.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+                if (checked && checked.length > 0) {
+                    UT.confirm(message, function () {
+                        var deleted = provider.removeItems();
+                        if (UT.isNotEmpty(deleted)) {
+                            me.$.deleteListMenuFunc.body = {
+                                deleteMenuFuncList: deleted
+                            };
+                            UT.request(me.$.deleteListMenuFunc);
+                        }
+                    });
+                }
+                else {
+                    UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                }
+            },
+            // 삭제 완료
+            completeDeleteListMenuFunc: function () {
+                var me = this;
+
+                me._findListMenuFunc();
+                me.fire('change-info', me.get('searchParam'));
+                UT.alert("STD.N2500"); // 삭제하였습니다.
+            },
+            onSelectionAbleFunction: function (data) {
+                // data= row의 data
+                if ((UT.isEmpty(data.use_count_role_func) || data.use_count_role_func < 1) && (UT.isEmpty(data.use_count_func_url) || data.use_count_func_url < 1)) {
+                    return true;  //체크 가능
+                } else {
+                    return false;  //체크불가능
+                }
+            },
+            // 액션/URL 추가
+            onAddMenuUrl: function () {
+                var me = this,
+                    provider = me.$.funcUrlGridPanel.getDataProvider();
+
+                provider.addItemAt(0, { menu_cd: me.get("searchParam.menu_cd") });
+            },
+            // 액션/URL 저장
+            onSaveMenuUrl: function () {
+                var me = this,
+                    grid = me.$.funcUrlGridPanel;
+                provider = grid.getDataProvider();
+
+                if (!grid.validate()) {
+                    UT.alert('STD.E0000');
+                    return;
+                }
+
+                if(me.get("searchParam.menu_cd").indexOf("ADM") > -1){
+                    if(!Polymer.$Array.find(SCSessionManager.userDetails.authorities,function(role) { return role.authority == 'SA100' })){
+                        UT.alert("STD.ADM1070");		//관리자 권한은 일반 관리자가 수정할 수 없습니다.
+                        return;
+                    }
+                }
+
+                var inserts = provider.getNewItems();
+                var updates = provider.getUpdateItems();
+                if (inserts.length < 1 && updates.length < 1) {
+                    UT.alert('STD.N1700');
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function () {
+                    me.$.saveListMenuUrl.body = {
+                        menuInfo: me.get("searchParam"),
+                        insertList: inserts,
+                        updateList: updates
+                    }
+
+                    UT.request(me.$.saveListMenuUrl);
+                });
+
+            },
+            // 액션/URL 저장 후처리
+            completeSaveListMenuUrl: function (e, res) {
+                var me = this,
+                    response = res.response;
+
+                me._findListMenuFuncUrl();
+                me.fire('change-info', me.get('searchParam'));
+                
+                if(response.resultStatus === 'U'){
+                    UT.alert('STD.E9100'); // 중복된 데이터가 존재합니다.
+                }else if(response.resultStatus === 'D'){
+                    UT.alert(me.translate('STD.N2010',null , response.resultData.dupleCnt),null, true); // 중복 데이터 {0}건 제외 후 추가하였습니다.
+                }else{
+                    UT.completeAlert(); // 저장 하였습니다.
+                }
+            },
+            // 액션/URL 삭제
+            onDeleteMenuUrl: function () {
+                var me = this,
+                    grid = me.$.funcUrlGridPanel,
+                    provider = grid.getDataProvider();
+                var checked = provider.selectionCheckedItems();
+
+                if (checked.length == 0) {
+                    UT.alert("STD.N1600")
+                    return;
+                }
+
+                UT.confirm('STD.N1300', function () {
+                    if (checked.length > 0) {
+                        me.$.deleteListMenuUrl.body = {
+                            deleteList: checked
+                        };
+                        UT.request(me.$.deleteListMenuUrl);
+                    }
+                });
+            },
+            // 액션/URL 삭제 후처리
+            completeDeleteListMenuUrl: function (e, res) {
+                var me = this;
+                me._findListMenuFuncUrl();
+                me.fire('change-info', me.get('searchParam'));
+                UT.alert("STD.N2500"); // 삭제하였습니다.
+            },
+            //초기화
+            clear: function () {
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+            applySetUrlFunc: function () {
+                var me = this,
+                    grid = me.$.funcUrlGridPanel,
+                    provider = grid.getDataProvider();
+                var funcCd = me.get("setUrlParam.act_cd");
+                var callPtrn = me.get("setUrlParam.menu_act_url");
+
+                var rowIndexes = provider.filterIndexes(function (data) {
+                    return UT.isEmpty(data.act_cd);
+                });
+
+                if (UT.isEmpty(rowIndexes)) {
+                    UT.alert(me.translate('STD.ADM1067'));		//적용할 호출 URL이 없습니다.
+                    return;
+                } else if (UT.isEmpty(funcCd)) {
+                    UT.alert(me.translate('STD.ADM1068'));		//적용할 액션 코드를 선택해주세요.
+                    return;
+                } else if (UT.isEmpty(callPtrn)) {
+                    UT.alert(me.translate('STD.ADM1069'));		//적용할 액션 코드를 선택해주세요.
+                    return;
+                }
+
+                provider.setItemAtBatch(true, function (index, data) {
+                    if (UT.isEmpty(data.act_cd) && data.menu_act_url.indexOf(callPtrn) > -1) {
+                        return { act_cd: funcCd };
+                    }
+                }, { visibleOnly: true });
+                
+                me.set("setUrlParam",{});
+            }
+
+
+        })
+    </script>
+</dom-module>

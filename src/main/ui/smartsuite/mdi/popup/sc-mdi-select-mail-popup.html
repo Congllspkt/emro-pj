@@ -1,0 +1,137 @@
+<dom-module id="sc-mdi-select-mail-popup">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+		<sc-code-group>
+			<sc-code code="C002" value="{{codes.C002}}"></sc-code> <!-- 언어 -->
+			<sc-code code="C082" value="{{codes.C082}}"></sc-code> <!-- 이메일 업무 유형 -->
+			<!--<sc-code code="C083" value="{{codes.C083}}"></sc-code>--> <!-- 이메일 수신 대상 -->
+		</sc-code-group>
+		
+		<sc-ajax id="searchReceiptSubjectEmail"
+				 url="searchReceiptSubjectEmail.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}"></sc-ajax>
+		
+		<sc-ajax id="updateExceptEmail"
+				 url="updateExceptEmail.do"></sc-ajax>
+		
+		<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r validation-group="searchGroup" label-width="130">
+			<cc-fieldset>
+				<sc-label text="업무 유형"></sc-label>
+				<sc-combobox-field value="{{searchParam.task_typ_ccd}}" items="{{codes.C082}}" value-field="data" display-field="label" placeholder="전체"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="언어"></sc-label>
+				<sc-combobox-field value="{{searchParam.locale}}" items="{{codes.C002}}" value-field="data" display-field="label" required="true"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="이메일 템플릿 아이디"></sc-label>
+				<sc-text-field value="{{searchParam.eml_tmpl_cd}}" on-enter="onSearch"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="이메일 템플릿 명"></sc-label>
+				<sc-text-field value="{{searchParam.ctmpl_nm}}" on-enter="onSearch"></sc-text-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel"
+				 class="flex"
+				 data-provider="{{resultList}}"
+				 use-selection="false"
+				 editable="true">
+			<cc-grid-toolbar>
+				<sc-button text="저장" on-click="onSave"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-combobox-column data-field="task_typ_ccd" header-text="업무 유형" width="80" display-field="label" value-field="data" items="{{codes.C082}}"></sc-combobox-column>
+				<sc-data-column data-field="rmk" header-text="설명" width="350" text-align="left"></sc-data-column>
+				<sc-checkbox-column data-field="xcept_yn" header-text="제외 여부" width="85"  editable="true"></sc-checkbox-column>
+				<!--<sc-combobox-column data-field="rcpt_subj_ccd" header-text="수신자" width="80" display-field="label" value-field="data"  items="{{codes.C083}}"></sc-combobox-column>-->
+				<sc-data-column data-field="eml_tmpl_cd" header-text="이메일 템플릿 아이디" width="200"></sc-data-column>
+				<sc-data-column data-field="ctmpl_nm" header-text="이메일 템플릿 명" width="400" text-align="left"></sc-data-column>
+			</sc-grid-columns>
+			<sc-grid-fields></sc-grid-fields>
+		</sc-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-mdi-select-mail-popup',
+ 			behaviors: [
+                Polymer.CCModuleBehavior
+            ],
+			properties: {
+				codes:{
+					type: Object,
+					reset: false,
+					value: function() {
+						return {
+							C002: [],
+							C082: [],
+							/*C083: []*/
+						};
+					},
+				},
+				resultList: {
+					type: Array,
+					value: function(){
+						return [];
+					}
+				},
+				
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				}
+			},
+			load: function() {
+				this.set("searchParam.locale", SCMdiManager.locale);
+				this.onSearch();
+			},
+			
+			onSearch: function(){
+				if(!this.validate('searchGroup')){
+					UT.alert("STD.E9000");
+					return;
+				}
+				UT.request(this.$.searchReceiptSubjectEmail);
+			},
+			
+			onSave: function() {
+				var me = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					updateItems = provider.getUpdateItems();
+				
+				if(updateItems.length === 0) {
+					UT.alert("STD.N1700"); // 변경된 내용이 없습니다.
+					return;
+				}
+				
+				UT.confirm("STD.N1200", function() {  //저장하시겠습니까?
+					me.$.updateExceptEmail.body={
+						updateItems: updateItems
+					}
+					UT.request(me.$.updateExceptEmail, function(e, res) {
+						UT.completeAlert(); // 저장이 완료되었습니다.
+						UT.request(me.$.searchReceiptSubjectEmail);
+					});
+				})
+			},
+			
+            onClose: function () {
+                var me = this;
+
+                me.reset();
+                me.fire("close");
+            },
+        });
+    </script>
+</dom-module>

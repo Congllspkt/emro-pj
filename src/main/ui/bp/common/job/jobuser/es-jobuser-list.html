@@ -1,0 +1,380 @@
+<sc-link rel="import" href="../../../shared/ep-user-list.html"></sc-link>
+
+<dom-module id="es-jobuser-list">
+
+	<style>
+		:host {
+			@apply (--hbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<!-- 공통 코드 조회 -->
+			<sc-code-group>
+				<sc-code code="C010" value="{{codes.C010}}"></sc-code> <!-- 구매 그룹 유형 -->
+			</sc-code-group>
+			<sc-ajax id="comboAllCompanyList" url="findListCompanyCodeForCombobox.do" last-response="{{codes.allCompanyList}}"> </sc-ajax><!-- 전체 회사 목록 -->
+		</sc-request-group>
+
+		<!-- 구매 그룹 유형목록 조회 -->
+		<sc-ajax id="findListUsedPurchaseGroupCategory"
+				 url="findListUsedPurchaseGroupCategory.do"
+				 body="{{searchParamJob}}"
+				 last-response="{{resultListJob}}">
+		</sc-ajax>
+
+		<!-- 구매 그룹 유형담당자 조회 -->
+		<sc-ajax id="findListPurchaseGroupCategoryJobUser"
+				 url="findListPurchaseGroupCategoryJobUser.do"
+				 body="{{searchParamJobUser}}"
+				 last-response="{{resultListJobUser}}">
+		</sc-ajax>
+
+		<!-- 구매 그룹 유형담당자 삭제 -->
+		<sc-ajax id="deleteListPurchaseGroupCategoryJobUser"
+				 url="deleteListPurchaseGroupCategoryJobUser.do"
+				 on-response="completeDeleteListPurchaseGroupCategoryJobUser">
+		</sc-ajax>
+
+		<!-- 구매 그룹 유형담당자 저장 -->
+		<sc-ajax id="savePurchaseGroupCategoryJobUser"
+				 url="savePurchaseGroupCategoryJobUser.do"
+				 on-response="completeSavePurchaseGroupCategoryJobUser">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+
+			<div class="vbox flex-4">
+
+				<cc-sub-title-bar title-text="구매 그룹 유형 현황">
+				</cc-sub-title-bar>
+				<cc-search-condition-panel on-search="onFindListPurchaseGroupCategory" search-condition-cls="label-row" auth-r>
+					<cc-fieldset>
+					<sc-label text="회사 명"></sc-label>
+					<sc-combobox-field id="compCdCombo" display-field="comp_nm" value-field="co_cd" selected-index="0"
+									   items="{{codes.allCompanyList}}" value="{{searchParamJob.co_cd}}" placeholder="선택"
+									   validation-group="search" required="true"></sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset hidden="true">
+					<sc-label text="유형"></sc-label>
+					<sc-combobox-field display-field="label" value-field="data" selected-index="0" items="{{codes.C010}}"
+									   value="{{searchParamJob.purc_grp_typ_ccd}}" placeholder="선택"></sc-combobox-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+
+			<sc-grid id="gridPanelJob" class="flex" data-provider="{{resultListJob}}" editable="true" use-selection="false" use-state="false"
+					 on-item-click="onItemClick">
+				<cc-grid-toolbar></cc-grid-toolbar>
+				<sc-grid-columns>
+					<!--<sc-combobox-column data-field="purc_grp_typ_ccd" header-text="구매 그룹 유형" width="100" text-align="center" items = "{{codes.C010}}" display-field="label" value-field="data" ></sc-combobox-column>-->
+					<sc-data-column data-field="purc_grp_cd" header-text="구매 그룹 코드" width="100" style-name="link" text-align="center" editable="false"></sc-data-column>
+					<sc-data-column data-field="purc_grp_nm" header-text="구매 그룹 명" width="200" text-align="left" editable="false"></sc-data-column>
+					<sc-data-column data-field="purc_grp_nm_en" header-text="구매 그룹 명 영문" width="200" text-align="left" editable="false"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+		</div>
+
+		<div class="hspace-10"></div>
+
+		<div class="vbox flex-6">
+			<sc-grid id="gridPanelJobUser" class="flex" data-provider="{{resultListJobUser}}">
+				<cc-grid-toolbar title-text="[[translate('구매 그룹 유형 담당자')]][[purcGrpNmText]]" i18n-disabled>
+					<sc-button text="담당자 추가" on-click="onAddJobUser" auth-s></sc-button>
+					<sc-button text="삭제" on-click="onDeleteListPurchaseGroupCategoryJobUser" auth-s></sc-button>
+					<sc-button text="저장" on-click="onSavePurchaseGroupCategoryJobUser" auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="usr_id" header-text="사용자 아이디" width="120" text-align="left"></sc-data-column>
+					<sc-data-column data-field="usr_nm" header-text="사용자 명" width="150" text-align="center"></sc-data-column>
+					<sc-data-column data-field="usr_nm_en" header-text="사용자 명 영문" width="150" text-align="center"></sc-data-column>
+					<sc-data-column data-field="comp_nm" header-text="회사 명" width="200" text-align="center"></sc-data-column>
+					<sc-data-column data-field="comp_nm_en" header-text="회사 명 영문" width="200" text-align="center"></sc-data-column>
+					<sc-data-column data-field="dept_nm" header-text="부서 명" width="200" text-align="center"></sc-data-column>
+					<sc-data-column data-field="dept_nm_en" header-text="부서 명 영문" width="200" text-align="center"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field data-field="purc_grp_typ_ccd"></sc-grid-field>
+					<sc-grid-field data-field="purc_grp_cd"></sc-grid-field>
+					<sc-grid-field data-field="co_cd"></sc-grid-field>
+					<sc-grid-field data-field="dept_cd"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</div>
+
+	</template>
+	<script>
+        Polymer({
+            is : "es-jobuser-list",
+            properties : {
+
+                // 코드 데이터
+                codes : {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                            allCompanyList : [],
+                            C010 : []
+                        };
+                    }
+                },
+
+                // 구매 그룹 유형코드 현황 : 조회조건
+                searchParamJob : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // 구매 그룹 유형코드 현황 : 조회결과
+                resultListJob : {
+                    type : Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+
+                // 구매 그룹 유형담당자 : 조회조건
+                searchParamJobUser : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // 구매 그룹 유형담당자 : 조회결과
+                resultListJobUser : {
+                    type : Array,
+                    value : function() {
+                        return [];
+                    }
+                },
+
+                purcGrpNmText:{
+                    type: String,
+					value: ''
+				}
+            },
+
+            formulas : {
+                // 수정 가능 상태
+                isEditable : function() {
+                    return this.searchParamJobUser.purc_grp_cd;
+                }
+            },
+
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized : function() {
+                var me = this;
+                me.onFindListPurchaseGroupCategory();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 구매 그룹 유형담당자 현황 : 그리드 cell click 이벤트
+            onItemClick : function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if (item.dataField == "purc_grp_cd") {
+                    me.set("searchParamJobUser", data);
+					if('ko_KR' != SCMdiManager.locale) {
+						if(UT.isEmpty(data.purc_grp_nm_en)) {
+	            			me.set("purcGrpNmText", " : " + "");
+	            		} else {
+	            			me.set("purcGrpNmText", " : " + me.searchParamJobUser.purc_grp_nm_en);
+	            		}
+					} else {
+						me.set("purcGrpNmText", " : " + me.searchParamJobUser.purc_grp_nm);
+					}
+                    me.onFindListPurchaseGroupCategoryJobUser();
+                    me.applyFormula();
+                }
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 구매 그룹 유형코드  현황 : 조회
+            onFindListPurchaseGroupCategory : function() {
+                var me = this;
+
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                // 구매 그룹 유형담당자 조회 조건 및 결과 초기화
+                me.set("searchParamJobUser", {});
+                me.$.gridPanelJobUser.getDataProvider().removeAll();
+                me.applyFormula();
+
+                UT.request(me.$.findListUsedPurchaseGroupCategory);
+            },
+
+            // 구매 그룹 유형담당자 : 조회
+            onFindListPurchaseGroupCategoryJobUser : function() {
+                var me = this;
+                UT.request(me.$.findListPurchaseGroupCategoryJobUser);
+            },
+
+            // 구매 그룹 유형담당자 : 구매 그룹 유형담당자 추가
+            onAddJobUser : function() {
+                var me = this;
+
+                if (!me.formula('isEditable')) {
+                    UT.alert(me.translate("STD.E1012",null,me.translate('구매 그룹 유형코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                var defaultParam = {
+                    co_cd : me.searchParamJobUser.co_cd
+                };
+
+                var userPopup = UT.popup("ep-user-list", me, '50%', '70%', {
+                    'selected-items' : function(popup, e) {
+                        me.onAddUserList(e.detail);
+                        popup.close();
+                    }
+                },{titleText : this.translate("사용자 검색")});
+                userPopup.show();
+                userPopup.getWindowContent().load({
+                    defaultParam : defaultParam,
+                    disabled : [ "compCdCombo" ]
+                });
+            },
+
+            onAddUserList : function(selectedItems) {
+                var me = this,
+                    grid = me.$.gridPanelJobUser,
+                    provider = grid.getDataProvider(),
+                    targetItems = provider.getItems(),
+                    dupCnt = 0;
+
+                if(selectedItems.length === 0){
+                    UT.alert("STD.N1600"); //선택된 항목이 없습니다.
+                    return;
+                }
+
+                for (var i = 0; i < selectedItems.length; i++) {
+                    var exist = false;
+
+                    for (var j = 0; j < targetItems.length; j++) {
+                        var usrId = targetItems[j].usr_id;
+
+                        // 아이디를 비교해서 데이터 존재여부 체크
+                        if (usrId == selectedItems[i].usr_id) {
+                            exist = true;
+                            dupCnt++;
+                            break;
+                        }
+                    }
+
+                    // 그리드에 존재하지 않는 데이터만 그리드에 신규 추가한다.
+                    if (!exist) {
+                        var param = me.get("searchParamJobUser");
+                        // 그리드 신규행 추가
+                        provider.addItemAt(0,{
+                            // key 값
+                            purc_grp_typ_ccd : param.purc_grp_typ_ccd, // 구매 그룹 유형
+                            purc_grp_cd : param.purc_grp_cd, // 구매 그룹 코드
+                            usr_id : selectedItems[i].usr_id, // 아이디
+                            co_cd : param.co_cd, // 회사 코드
+                            // display 값
+                            usr_nm : selectedItems[i].usr_nm, // 사용자명
+                            comp_nm : selectedItems[i].comp_nm // 회사명
+
+                        });
+                    }
+                }
+
+                if (dupCnt > 0) {
+                    UT.alert(me.translate("STD.N2010",null,dupCnt),null,true); // 중복 데이터 {0}건 제외 후 추가하였습니다
+                }
+            },
+
+            // 구매 그룹 유형담당자 : 삭제
+            onDeleteListPurchaseGroupCategoryJobUser : function() {
+                var me = this,
+                    provider = me.$.gridPanelJobUser.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600"); // "선택된 항목이 없습니다",
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListPurchaseGroupCategoryJobUser.body = {
+                            deleteList : deleted
+                        };
+                        UT.request(me.$.deleteListPurchaseGroupCategoryJobUser);
+                    }
+                });
+
+            },
+
+            // 구매 그룹 유형담당자 : 삭제 완료
+            completeDeleteListPurchaseGroupCategoryJobUser : function() {
+                var me = this;
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.onFindListPurchaseGroupCategoryJobUser();
+				});
+
+            },
+
+            // 구매 그룹 유형담당자 : 저장
+            onSavePurchaseGroupCategoryJobUser : function() {
+                var me = this;
+
+                if (!me.formula('isEditable')) {
+                    UT.alert(me.translate("STD.E1012",null,me.translate('구매 그룹 유형코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                var provider = me.$.gridPanelJobUser.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { //저장 하시겠습니까?
+                    me.$.savePurchaseGroupCategoryJobUser.body = {
+                        insertPurchaseGroupCategoryJobUserList : created,
+                        updatePurchaseGroupCategoryJobUserList : updated
+                    };
+                    UT.request(me.$.savePurchaseGroupCategoryJobUser);
+                });
+
+            },
+
+            // 구매 그룹 유형담당자 : 저장 완료
+            completeSavePurchaseGroupCategoryJobUser: function() {
+                var me = this;
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onFindListPurchaseGroupCategoryJobUser();
+				});
+
+            }
+        });
+	</script>
+</dom-module>
+
+

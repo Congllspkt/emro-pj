@@ -1,0 +1,430 @@
+<sc-link rel="import" href="../tmp/ep-tmp-preview.html"></sc-link>
+<sc-link rel="import" href="ep-mail-send-test.html"></sc-link>
+
+<dom-module id="es-mail-form">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+		
+		.red_label {
+			color: RED
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<!-- 공통코드 조회 -->
+			<sc-code-group>
+				<sc-code code="C009" value="{{codes.use_yn}}" ></sc-code> <!-- 사용여부 -->
+				<sc-code code="C002" value="{{codes.langCd}}"></sc-code> <!-- 언어코드 -->
+				<sc-code code="C015" value="{{codes.eml_snd_typ_ccd}}" ></sc-code> <!-- 메일전송구분 -->
+				<sc-code code="C082" value="{{codes.C082}}"></sc-code> <!-- 이메일 업무 유형 -->
+				<sc-code code="C083" value="{{codes.C083}}"></sc-code> <!-- 이메일 수신 대상 -->
+				
+			</sc-code-group>
+			<!-- 콤보박스 템플릿 목록 -->
+			<sc-ajax id="findCommonTemplateCode" url="findListEmailTemplate.do"
+					 last-response="{{codes.template}}">
+			</sc-ajax>
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax id="findListMailTemplate"
+				 url="findListMailTemplate.do"
+				 last-response="{{mailInfo}}"
+				 on-response="completeFindInfoMail">
+		</sc-ajax>
+
+		<!-- 템플릿 조회 -->
+		<sc-ajax id="findTemplateBaseInfoByTemplateBaseId"
+				 url="findTemplateBaseInfoByTemplateBaseId.do"
+				 on-response="completeFindInfoTmp">
+		</sc-ajax>
+		<sc-ajax id="findMailMultiLangTemplateInfo"
+				 url="findMailMultiLangTemplateInfo.do"
+				 on-response="completeMultiLangTemplateInfo">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax id="saveList"
+				 url="saveListMail.do"
+				 body="{{mailInfo}}"
+				 on-response="completeSaveListMail">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<cc-sub-title-bar title-text="이메일 템플릿 정보">
+			<sc-button text="저장" on-click="onSaveList" auth-s></sc-button>
+		</cc-sub-title-bar>
+		<cc-form-panel  label-width="120">
+			<cc-fieldset>
+				<sc-label text="업무 유형"></sc-label>
+				<sc-combobox-field
+						display-field="label" value-field="data"
+						items="{{codes.C082}}" value="{{mailInfo.task_typ_ccd}}" placeholder="선택" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="수신자"></sc-label>
+				<sc-combobox-field
+						display-field="label" value-field="data"
+						items="{{codes.C083}}" value="{{mailInfo.rcpt_subj_ccd}}" placeholder="선택" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="이메일 템플릿 아이디"></sc-label>
+				<sc-text-field value="{{mailInfo.eml_tmpl_cd}}" required="{{formula('isNew')}}" readonly="{{!formula('isNew')}}" max-length="50"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="사용 여부"></sc-label>
+				<sc-combobox-field
+						display-field="label" value-field="data"
+						items="{{codes.use_yn}}" value="{{mailInfo.use_yn}}" placeholder="선택" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="공용템플릿 아이디"></sc-label>
+				<sc-combobox-field
+						display-field="basc_ctmpl_nm" value-field="basc_ctmpl_cd"
+						items="{{codes.template}}" value="{{mailInfo.basc_ctmpl_cd}}" placeholder="선택" required="[[formula('isEditable')]]" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+		</cc-form-panel>
+		<cc-sub-title-bar title-text="다국어 이메일 템플릿 정보">
+			<sc-button text="미리보기" on-click="onPreview" auth-r></sc-button>
+			<sc-button text="이메일 테스트 전송" on-click="openDialogTestMailData" auth-s></sc-button>
+		</cc-sub-title-bar>
+		<cc-form-panel label-width="120">
+			<cc-fieldset>
+				<sc-label text="이메일 템플릿 언어"></sc-label>
+				<sc-combobox-field value="{{mailInfo.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data"
+								   required="true" placeholder="필수" on-change="onChangeTemplateLangCode">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="발신 유형"></sc-label>
+				<sc-combobox-field
+						display-field="label" value-field="data"
+						items="{{codes.eml_snd_typ_ccd}}" value="{{mailInfo.eml_snd_typ_ccd}}" placeholder="선택" readonly="[[!formula('isEditable')]]">
+				</sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset column-span="2">
+				<sc-label text="이메일 템플릿 명"></sc-label>
+				<div class="field-box" class="hbox" style="width:100%">
+					<sc-text-field class="flex" value="{{mailInfo.ctmpl_nm}}" max-length="200" readonly="[[!formula('isEditable')]]"></sc-text-field>
+					<span class="red_label">[[translate('※ 이메일 발송 시 기본 제목으로 사용됩니다.')]]</span>
+				</div>
+			</cc-fieldset>
+			<cc-fieldset column-span="2">
+				<sc-label text="설명"></sc-label>
+				<sc-text-field value="{{mailInfo.rmk}}" readonly="[[!formula('isEditable')]]" max-length="1000"></sc-text-field>
+			</cc-fieldset>
+		</cc-form-panel>
+		<div class="vspace-10"></div>
+		<!-- 템플릿 에디터 -->
+		<cc-source-editor id="editor" class="flex" value="{{mailInfo.ctmpl_cont}}" editable="true" view-hidden="false"></cc-source-editor>
+
+
+
+		<sc-dialog id="dialogTestMailData" title-text="이메일 테스트 전송" title-align="left" style="width:600px;height: 600px;" modal="true">
+			<cc-sub-title-bar>
+				<sc-button text="이메일 테스트 전송"	on-click="smtpSyncTestSendMail"></sc-button>
+			</cc-sub-title-bar>
+			<table class="tb-form">
+				<tr>
+					<th><sc-label text="아이디"></sc-label></th>
+					<td><sc-text-field value="{{testMailInfo.mailKey}}" disabled="true"></sc-text-field></td>
+				</tr>
+				<tr>
+					<th><sc-label text="수신자 이메일"></sc-label></th>
+					<td><sc-text-field value="{{testMailInfo.rcpnt_eml}}" required="true"></sc-text-field></td>
+				</tr>
+				<tr>
+					<th><sc-label text="수신자 명"></sc-label></th>
+					<td><sc-text-field value="{{testMailInfo.to_nm}}"></sc-text-field></td>
+				</tr>
+			</table>
+
+			<sc-panel title-text="Data입력" class="flex">
+				<div>[[translate('템플릿과 데이터의 결합은 FreeMarker템플릿 엔진을 사용합니다.')]]</div>
+				<cc-sub-title-bar>
+					<sc-button text="Data Reset" on-click="setDefaultJsonEditorData" i18n-disabled></sc-button>
+				</cc-sub-title-bar>
+				<div id="jsonEditor" style="heigㅂht:300px;"></div>
+			</sc-panel>
+		</sc-dialog>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-mail-form',
+
+            properties:{
+				// 코드 데이터
+                codes: {
+                    type: Object,
+					reset: false,
+                    value: function() {
+                        return {
+							use_yn:[],
+							eml_snd_typ_ccd:[],
+							C082: [],
+							template:[],
+							C083: []
+						};
+                    }
+                },
+				// 이메일 정보
+                mailInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+							isNew : false
+						};
+					}
+                },
+                tmpChangeReady: {
+                    type: Boolean,
+                    value: false
+                },
+                testMailInfo: {
+                    type: Object,
+					value: function () {
+						return {
+							to_nm: "",
+							data: {}
+						};
+                    }
+				}
+            },
+
+            formulas : {
+                // 신규 상태
+                isNew: function() {
+                    return this.mailInfo.isNew === true;
+                },
+
+                // 수정 가능 상태 (신규 & 수정)
+                isEditable : function() {
+                    return (this.formula('isNew') || !UT.isEmpty(this.mailInfo.eml_tmpl_cd));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data){
+                var me = this;
+
+                me.$.findListMailTemplate.body = {
+                    eml_tmpl_cd : data.eml_tmpl_cd,
+					ctmpl_uuid : data.ctmpl_uuid,
+					lang_ccd : SCLocaleManager.getLocale()
+				};
+
+                me.onFindInfoMail();
+            },
+
+            // 이메일 양식 추가
+            addMailForm: function(){
+                var me = this;
+                me.set("mailInfo", {});
+                me.set("mailInfo.ctmpl_cont", "");
+                me.set("mailInfo.isNew", true);
+
+                me.applyFormula();
+                me.$.editor.reset();
+                me.$.editor.focus();
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+                me.$.editor.reset();
+                me.applyFormula();
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 이메일 상세 조회
+            onFindInfoMail: function(){
+                var me = this;
+                me.set("tmpChangeReady", false); //Mail ID클릭시 onChangeTemplate이벤트가 발생하지 않도록
+                UT.request(me.$.findListMailTemplate);
+            },
+
+            // 이메일 조회 완료
+            completeFindInfoMail: function(e, res){
+				var me = this,
+						result = res.response;
+
+				if(UT.isNotEmpty(result)){
+					var langCcd = result.lang_ccd;
+					if(UT.isEmpty(langCcd)) me.set("mailInfo.lang_ccd", SCLocaleManager.getLocale());
+				}else{
+					me.set("mailInfo.lang_ccd", SCLocaleManager.getLocale());
+				}
+
+				me.set("tmpChangeReady", true);
+				me.$.findCommonTemplateCode.body = {
+					lang_ccd : me.get("mailInfo.lang_ccd")
+				}
+				me.$.findCommonTemplateCode.request();
+                me.applyFormula();
+            },
+            // 이메일 조회 완료
+			completeMultiLangTemplateInfo: function(e, res){
+				var me = this,
+						result = res.response;
+
+				if(UT.isNotEmpty(result)){
+					me.set("mailInfo.lang_ccd",result.lang_ccd);
+					me.set("mailInfo.eml_snd_typ_ccd",result.eml_snd_typ_ccd);
+					me.set("mailInfo.ctmpl_nm",result.ctmpl_nm);
+					me.set("mailInfo.ctmpl_cont",result.ctmpl_cont);
+					me.set("mailInfo.rmk", result.rmk);
+				}
+            },
+
+			// 저장
+            onSaveList: function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메일아이디')),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+                }
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.editor.syncValue();
+
+                    UT.request(me.$.saveList);
+                })
+            },
+
+            // 저장 완료
+            completeSaveListMail: function(){
+                var me = this;
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.fire("save-mail");
+
+					me.$.findListMailTemplate.body = {
+						eml_tmpl_cd : me.mailInfo.eml_tmpl_cd,
+						ctmpl_uuid : me.mailInfo.ctmpl_uuid,
+						lang_ccd : me.mailInfo.lang_ccd
+					};
+
+					me.onFindInfoMail();
+				});
+            },
+
+            // 미리보기 팝업
+            onPreview: function() {
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('메일아이디')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                me.$.editor.syncValue();
+
+                var defaultParam = {
+                    tmpl_typ_ccd 		: 'EML'								// 템플릿 구분(EML:메일양식)
+                    ,basc_ctmpl_cd 	: me.mailInfo.basc_ctmpl_cd			// 템플릿 코드(템플릿 기초 아이디)
+                  	,task_uuid			: me.mailInfo.eml_tmpl_cd 			// id
+                  	,lang_ccd			: me.mailInfo.lang_ccd 			// lang_ccd
+                  	,contents		: me.mailInfo.ctmpl_cont || ""		// 템플릿 안의 내용
+                };
+
+                var tmpPopup = UT.popup('ep-tmp-preview', me, 800, 600, {}, {titleText : "미리보기"});
+                tmpPopup.show();
+                tmpPopup.getWindowContent().load({defaultParam:defaultParam});
+            },
+
+            //템플릿 변경시 로드하기
+            onChangeTemplate: function(e, data) {
+                var me = this;
+
+                if(me.get("tmpChangeReady")) {
+                    UT.confirm("STD.ADM1001", function() {
+                        me.set("mailInfo.ctmpl_cont", "");
+
+                        me.$.findTemplateBaseInfoByTemplateBaseId.body = {
+                            basc_ctmpl_cd :  data.value,
+							lang_ccd : data.lang_ccd
+                        };
+
+                        UT.request(me.$.findTemplateBaseInfoByTemplateBaseId);
+                    }, function() {
+
+                    });
+                }
+                me.set("tmpChangeReady", false);
+            },
+
+			onChangeTemplateLangCode:function (){
+				var me = this;
+				if(me.get("tmpChangeReady")) {
+					me.set("mailInfo.ctmpl_cont", "");
+					me.set("mailInfo.ctmpl_nm", "");
+
+					me.$.findCommonTemplateCode.body = {
+						lang_ccd : me.get("mailInfo.lang_ccd")
+					}
+					me.$.findCommonTemplateCode.request();
+
+					me.$.findMailMultiLangTemplateInfo.body = me.get("mailInfo");
+
+					UT.request(me.$.findMailMultiLangTemplateInfo);
+				}
+			},
+
+            //템플릿 직접 변경할 때에만 
+            onTmpChangeReady: function() {
+                var me = this;
+                me.set("tmpChangeReady", true);
+            },
+
+            //템플릿 변경 조회 완료
+            completeFindInfoTmp: function(e, res){
+                var me = this,
+					result = res.response;
+                me.set("mailInfo.ctmpl_cont", result.basc_ctmpl_cont);
+            },
+
+			//이메일 연동 테스트를 위한 Dialog
+			openDialogTestMailData: function () {
+				var me = this;
+                me.set("testMailInfo.mailKey", me.mailInfo.eml_tmpl_cd);
+
+                //Mail ID는 반드시 선택되어 있어야 함
+                if(!(me.testMailInfo && me.testMailInfo.mailKey)) {
+                    UT.alert("STD.ADM1064", null, true);
+                    return;
+                }
+
+
+                var mailSendTestPopup = UT.popup("ep-mail-send-test", me, 600, 600);
+                mailSendTestPopup.show();
+                mailSendTestPopup.getWindowContent().load(me.mailInfo.eml_tmpl_cd, function() {
+                    me.$.editor.syncValue();
+                    return me.$.editor.value;
+				});
+            }
+        });
+	</script>
+
+</dom-module>

@@ -1,0 +1,197 @@
+<dom-module id="cc-module-attach">
+    <style>
+        :host {
+            display: inline-block;
+            background-color: #f9f9f9;
+            padding: 10px 5px;
+            border: 1px solid #d7d7d7;
+        }
+        .content-box {
+            padding-top: 5px;
+        }
+    </style>
+    <template>
+        <sc-ajax id="list" url="upload/list.do" headers="[[_headers]]"></sc-ajax>
+
+        <sc-ajax id="findListGroupModuleAttach"
+                 url="findListGroupModuleAttach.do"
+                 body="{{value}}"
+                 on-response="completeFindGroupModuleAttach">
+        </sc-ajax>
+        <div class="content-box">
+            <sc-text-field value="{{value}}" hidden="true"></sc-text-field>
+           <!-- <cc-form-panel id="contentTable"  column="1" title-text="일반 정보"  collapsible="true">
+                <cc-fieldset>
+                    <sc-label text="가이드 양식 다운로드"></sc-label>
+                </cc-fieldset>
+
+                <cc-fieldset id="end"></cc-fieldset>
+            </cc-form-panel>-->
+
+
+            <table id="contentTable" class="tb-form">
+                <colgroup>
+                    <col style="width:60px">
+                    <col>
+                    <col>
+                    <col>
+                </colgroup>
+                <tr>
+                    <th colspan="2"><sc-label text="가이드 양식 다운로드"></sc-label></th>
+                </tr>
+                <tr id="end" hidden="true"></tr>
+            </table>
+        </div>
+
+        <sc-upload id="uploader" hidden></sc-upload>
+    </template>
+    <script>
+         Polymer({
+            is: "cc-module-attach",
+            properties: {
+                value: {
+                    type: String,
+                    notify: true
+                },
+                _headers: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            'menuCode': SCMdiManager.getCurrentMenuId(this), // 메뉴코드 추가
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=_csrf]').content //CSRF
+                        };
+                    }
+                },
+            },
+
+            attached: function () {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this.load();
+                }
+            },
+
+            load: function () {
+                var me = this;
+
+                me.$.findListGroupModuleAttach.body = {
+                    modl_athf_grp_cd: me.value
+                }
+
+                me.$.findListGroupModuleAttach.request();
+            },
+
+           /* completeFindGroupModuleAttach: function(el, res) {
+                var me = this;
+                var result = res.response;
+
+                var fragment = document.createDocumentFragment();
+
+                var tr = Polymer.dom(me.$.contentTable).querySelectorAll('tr');
+                for(var i=0; i<tr.length; i++){
+                    if(tr[i].id.indexOf("moduleAttache") > -1){
+                        document.getElementById(tr[i].id).remove();
+                    }
+                }
+
+                for(var a=0, len=result.length; a<len; a++){
+                    var fieldSet = document.createElement("cc-fieldset");
+                    fieldSet.id = "moduleAttache"+a;
+                    var scLabel = document.createElement("sc-label");
+                    scLabel.text = a + 1;
+                    fieldSet.appendChild(scLabel);
+
+                    var tdLabel = document.createElement("sc-label");
+                    tdLabel.text = result[a].modl_athf_nm;
+                    tdLabel.modl_athf_cd = result[a].modl_athf_cd;
+                    tdLabel.athg_uuid = result[a].athg_uuid;
+                    tdLabel.att_count = result[a].att_count;
+
+                    tdLabel.style = "color: -webkit-link; cursor: pointer;  text-decoration: underline;";
+
+                    tdLabel.addEventListener('click', function (event) {
+                        var att_count = event.target.parentElement.att_count;
+                        if(1 < att_count){
+                            UT.popupModuleAttach(me, event.target.parentElement.modl_athf_cd, null, {});
+                        }else{
+                            me.onModuleAttachCall(event.target.parentElement.athg_uuid)
+                        }
+                    });
+                    fieldSet.appendChild(tdLabel);
+
+                    fragment.appendChild(fieldSet);
+                }
+                Polymer.dom(me.$.contentTable).appendChild(fragment);
+                Polymer.dom.flush();
+            },*/
+
+            completeFindGroupModuleAttach: function(el, res) {
+                var me = this;
+                var result = res.response;
+
+                var fragment = document.createDocumentFragment();
+
+                var tr = Polymer.dom(me.$.contentTable).querySelectorAll('tr');
+                for(var i=0; i<tr.length; i++){
+                    if(tr[i].id.indexOf("moduleAttache") > -1){
+                        document.getElementById(tr[i].id).remove();
+                    }
+                }
+
+                for(var a=0, len=result.length; a<len; a++){
+                    var tr = document.createElement("tr");
+                    tr.id = "moduleAttache"+a;
+                    var th = document.createElement("th");
+                    var scLabel = document.createElement("sc-label");
+                    scLabel.text = a + 1;
+                    th.appendChild(scLabel);
+                    tr.appendChild(th);
+
+                    var td = document.createElement("td");
+
+                    var tdLabel = document.createElement("sc-label");
+                    tdLabel.text = result[a].modl_athf_nm;
+                    tdLabel.modl_athf_cd = result[a].modl_athf_cd;
+                    tdLabel.athg_uuid = result[a].athg_uuid;
+                    tdLabel.att_count = result[a].att_count;
+
+                    tdLabel.style = "color: -webkit-link; cursor: pointer;  text-decoration: underline;";
+
+                    tdLabel.addEventListener('click', function (event) {
+                        var att_count = event.target.parentElement.att_count;
+                        if(1 < att_count){
+                            UT.popupModuleAttach(me, event.target.parentElement.modl_athf_cd, null, {});
+                        }else{
+                            me.onModuleAttachCall(event.target.parentElement.athg_uuid)
+                        }
+                    });
+                    td.appendChild(tdLabel);
+                    tr.appendChild(td);
+
+                    fragment.appendChild(tr);
+                }
+                Polymer.dom(me.$.contentTable).appendChild(fragment);
+                Polymer.dom.flush();
+            },
+
+            onModuleAttachCall : function (attFileGrpCd){
+                var me = this;
+                this.onFindFileList(attFileGrpCd).then(function(result) {
+                    var files = result.response;
+                    this.$.uploader.download(files[0].id);
+                }.bind(this));
+            },
+
+             onFindFileList : function (attFileGrpCd){
+                var me = this;
+                 me.$.list.body = {
+                     groupId : (attFileGrpCd || '')
+                 };
+                 return this.$.list.request();
+            }
+        });
+    </script>
+
+</dom-module>

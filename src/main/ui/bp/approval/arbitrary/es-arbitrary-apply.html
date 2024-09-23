@@ -1,0 +1,279 @@
+<dom-module id="es-arbitrary-apply">
+    <template>
+    
+        <sc-ajax id="applyInfo" url="selectListApplyInfoByAprvType.do" on-response="completeListApplyInfoByAprvType"></sc-ajax>
+        
+        <sc-ajax id="applyLine" url="selectListApplyMatchLineByCondition.do" on-response="completeListApplyMatchLineByCondition"></sc-ajax>
+    
+    </template>
+    
+    <script>
+        Polymer({
+            is: "es-arbitrary-apply",
+            
+            properties: {
+                enabled: {
+                    type: Boolean,
+                    value: false
+                },
+                applyParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                matchLines: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                defaultLines: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+            
+            initialized: function() {
+            },
+            
+            start: function(param) {
+                var me = this;
+                
+                me.set("matchLines", []);
+                me.set("defaultLines", []);
+                me.set("enabled", false);
+                me.set("applyParam", param);
+                
+                // 조회 모드이면 전결결재라인을 조회할 필요가 없다 || 결재 유형이 없으면 전결결재라인을 조회할 수 없다
+                if (me.applyParam.is_view_mode === true || UT.isEmpty(me.applyParam.apvl_typ_ccd)) {
+                    me.set("enabled", false);
+                    me.fire("arbitrary-started");
+                    return;
+                }
+                
+                // 결재 유형의 결재라인 정보를 조회한다.
+                me.$.applyInfo.body = me.applyParam;
+                UT.request(me.$.applyInfo);
+            },
+            
+            // 전결여부 확인
+            completeListApplyInfoByAprvType: function(e, res) {
+                var me = this;
+                var result = res.response;
+                var appData = me.applyParam.appData;
+                
+                if (UT.isEmpty(result) || result.arbitrary_yn !== "Y" || UT.isEmpty(appData)) { // 전결적용여부가 Y로 설정되어 있지 않으면 false, appData가 없으면 false
+                    me.set("enabled", false);
+                    me.fire("arbitrary-started");
+
+                } else {
+                    me.set("enabled", true);
+                    me.$.applyLine.body = {
+                        	aprv_incharge_usr_id: me.applyParam.aprv_incharge_usr_id,
+                            apvl_typ_ccd            : me.applyParam.apvl_typ_ccd,
+                            appAmt				: me.applyParam.appAmt,
+                            appData             : me.applyParam.appData
+                        };
+                    UT.request(me.$.applyLine);
+                    
+                }
+            },
+            
+            
+            // 결재 유형의 결재라인 정보 조회 완료 - 디폴트 결재라인, 전결조건 항목
+            completeListApplyInfoByAprvTypeBackup: function(e, res) {
+                var me = this;
+                var result = res.response;
+                var applyInfo = result.applyInfo || {};
+                var defaultLines = result.defaultLines;
+                var tableFactors = result.tableFactors;
+                var appData = me.applyParam.appData;
+                
+                if (applyInfo.arbitrary_yn !== "Y" || UT.isEmpty(appData)) { // 전결적용여부가 Y로 설정되어 있지 않으면 false, appData가 없으면 false
+                    me.set("enabled", false);
+                    me.fire("arbitrary-started");
+
+                }else {
+                    me.set("enabled", true);
+                    me.set("defaultLines", defaultLines);
+
+                    // 조건과 일치하는 결재라인 찾기
+                    var appFactors = [];
+                    var appTables = [];
+                    if (UT.isNotEmpty(tableFactors)) {
+                        for (var i = 0, ilen = tableFactors.length; i < ilen; i++) {
+                            appTables.push({
+                                dapvl_uuid: tableFactors[i].dapvl_uuid,
+                                dapvl_tbl_id: tableFactors[i].dapvl_tbl_id,
+                                factor_size: tableFactors[i].factors.length
+                            });
+                            for (var j = 0, jlen = tableFactors[i].factors.length; j < jlen; j++) {
+                                var key = tableFactors[i].factors[j].parm_key;
+    
+                                appFactors.push({
+                                    dapvl_uuid: tableFactors[i].dapvl_uuid,
+                                    dapvl_tbl_id: tableFactors[i].dapvl_tbl_id,
+                                    dapvl_cnd_inpvar_uuid: tableFactors[i].factors[j].dapvl_cnd_inpvar_uuid,
+                                    parm_key_val: (appData.hasOwnProperty(key) ? appData[key] : "")
+                                });
+                            }
+                        }
+                    }
+                    if (UT.isNotEmpty(appFactors)) {
+                        me.$.applyLine.body = {
+                        	aprv_incharge_usr_id: me.applyParam.aprv_incharge_usr_id,
+                            apvl_typ_ccd: me.applyParam.apvl_typ_ccd,
+                            factors: appFactors,
+                            tables: appTables
+                        };
+                        UT.request(me.$.applyLine);
+                    } else {
+                        // default line
+                        me.fire("arbitrary-started");
+                    }
+                }
+            },
+            
+            // 조건과 일치하는 결재라인 찾기 완료
+            completeListApplyMatchLineByCondition: function(e, res) {
+                var me = this;
+                var matchLines = res.response;
+                
+                me.set("matchLines", matchLines);
+                me.fire("arbitrary-started");
+            },
+            
+            // 조건과 일치하는 결재라인
+            getMatchLines: function() {
+                var me = this;
+                return me.matchLines;
+                /*
+                var filteredLines = me.filteringLine(UT.isEmpty(me.matchLines) ? me.defaultLines : me.matchLines);
+                var applyLines = [];
+                
+                if (me.enabled && UT.isNotEmpty(filteredLines)) {
+                    for (var i = 0, len = filteredLines.length; i < len; i++) {
+                        if (me.comparedToAmtBas(filteredLines[i].dapvl_cnd_amt, filteredLines[i].dapvl_cnd_amt_rv_yn)) {
+                            applyLines.push({
+                                apvr_typ_ccd: filteredLines[i].apvr_typ_ccd,
+                                usr_id: filteredLines[i].usr_id,
+                                usr_nm: filteredLines[i].usr_nm,
+                                dept_cd: filteredLines[i].dept_cd,
+                                dept_nm: filteredLines[i].dept_nm,
+                                posi_ccd: filteredLines[i].posi_ccd,
+                                apvlln_mod_poss_yn: filteredLines[i].apvlln_mod_poss_yn
+                            });
+                        }
+                    }
+                }
+                return applyLines;
+                */
+            },
+            
+            // 금액기준 비교
+            comparedToAmtBas: function(amtBas, amtCondYn) {
+                var me = this;
+                if (amtCondYn !== "Y") {
+                    return true;
+                }
+                var a = new BigNumber(me.applyParam.appAmt || 0);
+                var b = new BigNumber(amtBas || 0);
+                switch(a.comparedTo(b)) {
+                case -1: // a < b
+                    return false;
+                case 1: // a > b
+                case 0: // a == b
+                default:
+                    return true;
+                }
+            },
+            
+            // 현재 세션 유저가 결재선에 포함 되어 있다면 그 이후의 결재선만 적용한다.
+            filteringLine: function(lines) {
+               	var me = this;
+                var user = SCSessionManager.currentUser;
+                var filtered = [];
+                if (UT.isNotEmpty(lines)) {
+                    var lnId = lines[0].dapvl_apvlln_id;
+                    for (var i = 0, len = lines.length; i < len; i++) {
+                        if (lnId === lines[i].dapvl_apvlln_id) {
+                        	
+                            var aprverSrchRng = lines[i].apvr_srch_scop_ccd;
+                            
+                            var usrId = lines[i].c_usr_id;
+                            var usrNm = lines[i].c_usr_nm;
+                            var deptCd = lines[i].c_dept_cd;
+                            var deptNm = lines[i].c_dept_nm;
+                            var posCd = lines[i].c_pos_cd;
+                            
+                            if(aprverSrchRng === "DEPT"){
+                            	usrId = lines[i].d_usr_id;
+                            	usrNm = lines[i].d_usr_nm;
+                            	deptCd = lines[i].d_dept_cd;
+                            	deptNm = lines[i].d_dept_nm;
+                            	posCd = lines[i].d_pos_cd;
+                            }else if(aprverSrchRng === "COMP"){
+                            	usrId = lines[i].c_usr_id;
+                            	usrNm = lines[i].c_usr_nm;
+                            	deptCd = lines[i].c_dept_cd;
+                            	deptNm = lines[i].c_dept_nm;
+                            	posCd = lines[i].c_pos_cd;
+                            }else if(aprverSrchRng === "ODEPT"){
+                            	usrId = lines[i].od_usr_id;
+                            	usrNm = lines[i].od_usr_nm;
+                            	deptCd = lines[i].od_dept_cd;
+                            	deptNm = lines[i].od_dept_nm;
+                            	posCd = lines[i].od_pos_cd;
+                            }else if(aprverSrchRng === "APPROVER"){
+                            	usrId = lines[i].a_usr_id;
+                            	usrNm = lines[i].a_usr_nm;
+                            	deptCd = lines[i].a_dept_cd;
+                            	dpetNm = lines[i].a_dept_nm;
+                            	posCd = lines[i].a_pos_cd;
+                            }else if(aprverSrchRng === "INCHAGER"){
+                            	//담당자 선택
+                            	usrId = lines[i].ic_usr_id;
+                            	usrNm = lines[i].ic_usr_nm;
+                            	deptCd = lines[i].ic_dept_cd;
+                            	dpetNm = lines[i].ic_dept_nm;
+                            	posCd = lines[i].ic_pos_cd;
+                            }else if(aprverSrchRng === "CDEPT"){
+                            	//담당자 부서 선택
+                            	usrId = lines[i].cd_usr_id;
+                            	usrNm = lines[i].cd_usr_nm;
+                            	deptCd = lines[i].cd_dept_cd;
+                            	dpetNm = lines[i].cd_dept_nm;
+                            	posCd = lines[i].cd_pos_cd;
+                            }
+                            
+                            var v = {
+                                apvr_typ_ccd: lines[i].apvr_typ_ccd,
+                                jobtit_ccd: lines[i].apvr_jobtit_ccd,
+                                apvlln_mod_poss_yn: lines[i].apvlln_mod_poss_yn,
+                                dapvl_cnd_amt_rv_yn: lines[i].dapvl_cnd_amt_rv_yn,
+                                dapvl_cnd_amt: lines[i].dapvl_cnd_amt,
+                                usr_id : usrId,
+                                usr_nm : usrNm,
+                                dept_cd: deptCd,
+                                dept_nm: deptNm,
+                                posi_ccd : posCd
+                            };
+                            
+                            if (v.apvr_typ_ccd === "APVL" && user.usr_id === v.usr_id) { // A:결재자
+                                //filtered = []; 
+                            } else {
+                                filtered.push(v);
+                            }
+                        }
+                    }
+                }
+                return filtered;
+            }
+            
+        });
+    </script>
+
+</dom-module>

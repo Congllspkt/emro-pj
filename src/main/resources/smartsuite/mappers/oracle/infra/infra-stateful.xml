@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="infra-stateful">
+
+	<select id="findCacheBustValue" resultType="String">
+		SELECT SYS_ATTR_DAT
+		  FROM SYS_ATTR
+		WHERE SYS_ATTR_ID = 'cacheBust'
+	</select>
+	
+	<insert id="insertCacheBust" parameterType="String">
+	    INSERT INTO SYS_ATTR(
+			TEN_ID,
+			SYS_ATTR_ID,
+			SYS_ATTR_DAT
+	    )VALUES(
+	        #{g.tenant},
+	    	'cacheBust',
+	    	#{p}
+	    )
+    </insert>
+	
+	<update id="updateCacheBust" parameterType="String">
+		UPDATE SYS_ATTR
+			SET SYS_ATTR_DAT = #{p}
+		WHERE SYS_ATTR_ID = 'cacheBust'
+	</update>
+	
+	<resultMap type="map" id="resultMap-clientStates">
+        <result property="value" column="VALUE" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findUserPersonalizationClientData" resultMap="resultMap-clientStates">
+		SELECT USR_PZN_DAT_UUID
+			 , USR_PZN_DAT
+			 , USR_ID
+		FROM   USR_PZN_DAT
+		WHERE  TEN_ID = #{g.tenant}
+		AND    USR_ID = #{g.username}
+		<if test="p != null">
+			AND    USR_PZN_DAT_UUID = #{p}
+		</if>
+	</select>
+	
+	<insert id="insertUserPersonalizationClientData">
+		INSERT INTO USR_PZN_DAT
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			TEN_ID, USR_PZN_DAT_UUID, USR_PZN_DAT, USR_ID
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			#{g.tenant},
+			#{p.id},
+			#{p.value},
+			#{g.username}
+		</trim>
+	</insert>
+	
+	<update id="updateUserPersonalizationClientData">
+		UPDATE USR_PZN_DAT SET
+			USR_PZN_DAT = #{p.value}
+		WHERE TEN_ID = #{g.tenant}
+		AND    USR_ID = #{g.username}
+		AND   USR_PZN_DAT_UUID = #{p.id}
+	</update>
+	
+	<delete id="deleteUserPersonalizationClientData">
+		DELETE FROM USR_PZN_DAT
+		WHERE  TEN_ID = #{g.tenant}
+		AND    USR_ID = #{g.username}
+		AND    USR_PZN_DAT_UUID = #{p.id}
+	</delete>
+	
+	<delete id="allDeleteUserPersonalizationClientData">
+		DELETE FROM USR_PZN_DAT
+		WHERE  TEN_ID = #{g.tenant}
+		AND    USR_ID = #{g.username}
+	</delete>
+	
+</mapper>

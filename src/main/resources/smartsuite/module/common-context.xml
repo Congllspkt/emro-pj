@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+	
+	<!-- 일반 프로퍼티 -->
+	<util:properties id="globalProperties" location="classpath:smartsuite/properties/global.properties" />
+	<util:properties id="quartzProperties" location="classpath:smartsuite/properties/quartz.properties" />
+	<util:properties id="loggingProperties" location="classpath:smartsuite/properties/logging.properties" />
+	<util:properties id="smartsuiteProperties" location="classpath:smartsuite/properties/smartsuite.properties" />
+	<util:properties id="file" location="classpath:smartsuite/properties/file.properties" /><!-- 추후 삭제 예정 -->
+	
+	<!-- 암호화 적용 -->
+	<bean id="mail" class="smartsuite5.security.jasypt.EncPropertiesFactoryBean" p:properties-ref="enc-mail"/>
+	<bean id="sftp" class="smartsuite5.security.jasypt.EncPropertiesFactoryBean" p:properties-ref="enc-sftp"/>
+	<util:properties id="enc-mail" location="classpath:smartsuite/properties/encrypt/mail.properties" />
+	<util:properties id="enc-sftp" location="classpath:smartsuite/properties/encrypt/sftp.properties"  />
+</beans>

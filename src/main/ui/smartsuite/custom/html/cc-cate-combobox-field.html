@@ -1,0 +1,266 @@
+<dom-module id="cc-cate-combobox-field">
+<!--
+    ******************************************************************************************
+    ** Description     : 품목분류 field 컴포넌트(품목분류1-품목분류2-품목분류3-품목분류4)
+    ** Author          : jeKim
+    ** Create Date     : 2016.04.14
+    ** History         : 2016.04.14 jeKim 최초작성
+    ******************************************************************************************
+-->
+    <style>
+        :host {
+            display : table;
+        }
+        
+        :host > * {
+            display: table-cell;
+            vertical-align : middle;
+        }
+        
+    </style>
+    <template>
+<!-- 
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+ -->
+        <!-- 품목분류1 목록 조회 -->
+        <sc-ajax id="findListMajorCategory"
+			url="findListMajorCategory.do"
+			on-response="_onResponse"
+			last-response="{{codes.cate1List}}">
+		</sc-ajax>
+		<!-- 품목분류2 목록 조회 -->
+        <sc-ajax id="findListCategoryItemLevel2"
+			url="findListCategoryByParentCategoryCode.do"
+			last-response="{{codes.cate2List}}">
+		</sc-ajax>
+		<!-- 품목분류3 목록 조회 -->
+        <sc-ajax id="findListCategoryItemLevel3"
+			url="findListCategoryByParentCategoryCode.do"
+			last-response="{{codes.cate3List}}">
+		</sc-ajax>
+		<!-- 품목분류4 목록 조회 -->
+        <sc-ajax id="findListCategoryItemLevel4"
+			url="findListCategoryByParentCategoryCode.do"
+			last-response="{{codes.cate4List}}">
+		</sc-ajax>
+<!--  
+    ************************************************************************************************************
+    * UI Area
+    ************************************************************************************************************
+-->		    
+		<!-- 품목분류1 -->
+   		<sc-combobox-field id="cate1" class$="[[comboClass]]" placeholder="[[defaultLabel]]" display-field="label" value-field="data" 
+			items="{{codes.cate1List}}" value="{{itemcatLvl1Cd}}" required="{{required}}" disabled="[[disabled]]" readonly="[[readonly]]">
+		</sc-combobox-field>
+		<div class="hspace-5"></div>
+		<!-- 품목분류2 -->
+		<sc-combobox-field id="cate2" class$="[[comboClass]]" placeholder="[[defaultLabel]]" display-field="label" value-field="data"
+			items="{{codes.cate2List}}" value="{{itemcatLvl2Cd}}" required="{{required}}" disabled="[[disabled]]" readonly="[[readonly]]">
+		</sc-combobox-field>
+		<div class="hspace-5"></div>
+		<!-- 품목분류3 -->
+		<sc-combobox-field id="cate3" class$="[[comboClass]]" placeholder="[[defaultLabel]]" display-field="label" value-field="data" 
+			items="{{codes.cate3List}}" value="{{itemcatLvl3Cd}}" required="{{required}}" disabled="[[disabled]]" readonly="[[readonly]]">
+		</sc-combobox-field>
+		<div class="hspace-5"></div>
+		<!-- 품목분류4 -->
+		<sc-combobox-field id="cate4" class$="[[comboClass]]" placeholder="[[defaultLabel]]" display-field="label" value-field="data" 
+			items="{{codes.cate4List}}" value="{{itemcatLvl4Cd}}" required="{{required}}" disabled="[[disabled]]" readonly="[[readonly]]">
+		</sc-combobox-field>
+		<sc-cache id="cateCache" key="cate-item" value="{{codes.cate1List}}" async></sc-cache>
+    </template>
+<!--  
+    ************************************************************************************************************
+    * Script Area
+    ************************************************************************************************************
+-->
+    <script>
+        Polymer({
+            is: "cc-cate-combobox-field",
+            
+            properties : {
+            	init : {
+            		type : Boolean,
+            		value : true,
+            		reflectToAttribute : true
+            	},
+            	// 코드 DATA
+           		codes: {
+                	type : Object,
+                	value : function () {
+                		return {
+                			cate1List: []	// 품목분류1
+                			,cate2List: []	// 품목분류2
+                			,cate3List: []	// 품목분류3
+                			,cate4List: []	// 품목분류4
+                		}
+                	}
+           		},
+	
+				itemcatLvl1Cd: {
+                	type : String,
+                    notify: true
+                },
+	
+				itemcatLvl2Cd: {
+                	type : String,
+                    notify: true
+                },
+	
+				itemcatLvl3Cd: {
+                	type : String,
+                    notify: true
+                },
+	
+				itemcatLvl4Cd: {
+                	type : String,
+                    notify: true
+                },
+
+                disabled: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                required: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                readonly: {
+                    type: Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                
+                defaultLabel: {
+                	type: Object,
+                	value: function(){
+                		return "";
+                	}
+                },
+                
+                comboClass: {
+                	type: Object,
+                	value: function(){
+                		return "w-300";
+                	}
+                }
+           		
+            },
+            
+            observers: ["onChangeCate1(itemcatLvl1Cd)", "onChangeCate2(itemcatLvl2Cd)", "onChangeCate3(itemcatLvl3Cd)"],
+            
+            request : function() {
+            	var me = this;
+            	me.setDefaultLabel();
+            	if(this.$.cateCache.isCached) {
+            		if(this.$.cateCache.value) {
+            			this._completed(this.$.cateCache.value);
+               		}
+            		else {
+                		this.listen(this.$.cateCache, 'value-changed', function() {
+    	            		this._completed(this.$.cateCache.value);
+                		}.bind(this), {single : true});
+            		}
+            	}
+            	else {
+	            	this.$.findListMajorCategory.request();
+            	}
+            },
+            
+            _onResponse : function(event) {
+            	var response = event.target.lastResponse;
+            	this.$.cateCache.put(response);
+            	this._completed(response);
+            },
+            
+            _completed : function(value) {
+            	this.fire('response', value, {bubbles : false});
+            },
+            
+            setDefaultLabel: function(){
+            	var me = this;
+            	var isRequired = me.get("required");
+            	
+            	if(isRequired){
+            		me.set("defaultLabel", me.translate("선택"));
+            	}else{
+            		me.set("defaultLabel", me.translate("전체"));
+            	}
+            },
+            
+            // 품목분류1 콤보 변경시, 품목분류2 코드 조회
+            onChangeCate1: function(itemcatLvl1Cd){
+            	var me = this;
+            	
+            	if(itemcatLvl1Cd){
+               		me.$.findListCategoryItemLevel2.body = {
+						itemcat_lvl: "2"
+               			, par_itemcat_cd : itemcatLvl1Cd
+               		}
+               		
+               		UT.request(me.$.findListCategoryItemLevel2);
+                	
+            		
+            	}else{
+            		me.set("codes.cate2List", []);	
+        			me.set("codes.cate3List", []);
+        			me.set("codes.cate4List", []);
+            	}
+            	
+            },
+            
+         	// 품목분류2 콤보 변경시, 품목분류3 콤보 조회
+            onChangeCate2: function(itemcatLvl2Cd){
+            	var me = this;
+            	
+            	if(itemcatLvl2Cd){
+            		me.$.findListCategoryItemLevel3.body = {
+						itemcat_lvl: "3"
+               			, par_itemcat_cd : itemcatLvl2Cd
+               		}
+               		
+               		UT.request(me.$.findListCategoryItemLevel3);
+            		
+            	}else{
+            		me.set("codes.cate3List", []);
+        			me.set("codes.cate4List", []);
+            	}
+            	
+            },
+            
+            // 품목분류3 콤보 변경시, 품목분류4 코드 조회
+            onChangeCate3: function(itemcatLvl3Cd){
+            	var me = this;
+            	
+            	if(itemcatLvl3Cd){
+            		me.$.findListCategoryItemLevel4.body = {
+						itemcat_lvl: "4"
+                   		, par_itemcat_cd : itemcatLvl3Cd
+                   	}
+           			
+           			UT.request(me.$.findListCategoryItemLevel4);
+            	}else{
+            		me.set("codes.cate4List", []);
+            	}
+            	
+            },
+
+			reset: function() {
+                var fields = this.querySelectorAll('[field]:not([reset="false"])');
+                for (var i = 0, len = fields.length, field; i < len; i++) {
+                    field = fields[i];
+                    if (!field.hasAttribute("disabled") && field.reset) {
+                        field.reset();
+                    }
+                }
+			}
+        });
+    </script>
+</dom-module>

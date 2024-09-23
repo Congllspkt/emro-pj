@@ -1,0 +1,87 @@
+
+<dom-module id="es-pyramid-chart">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+        sc-panel {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }       
+    </style>
+    
+    <template>
+
+		<sc-panel  title="Pyramid Chart">
+			<div  id="pyramid-container" style="min-width: 400px; margin: 0 auto"></div>
+		</sc-panel>
+   
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'es-pyramid-chart',
+            properties : {
+ 
+            },
+            
+            ready: function() {
+
+            },
+            
+            /* 화면 생성 완료 후 실행 */
+            attached : function() {               
+				this.initLineChart();
+            },
+                        
+            //리얼그리드가 렌더링 되지 않는 현상으로 임시방편으로 리사이즈를 강제로 호출하기 위해 이벤트 리스너를 추가함
+            listeners : {
+                'activatePage' : 'onActivatePage'
+            },
+            
+            //리얼그리드가 렌더링 되지 않는 현상으로 임시방편으로 리사이즈를 강제로 호출하도록 함
+            onActivatePage : function() {
+                
+            },            
+            
+			initLineChart: function() {
+			    $('#pyramid-container').highcharts({
+			        chart: {
+			            type: 'pyramid',
+			            marginRight: 100
+			        },
+			        title: {
+			            text: 'Sales pyramid',
+			            x: -50
+			        },
+			        plotOptions: {
+			            series: {
+			                dataLabels: {
+			                    enabled: true,
+			                    format: '<b>{point.name}</b> ({point.y:,.0f})',
+			                    color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black',
+			                    softConnector: true
+			                }
+			            }
+			        },
+			        legend: {
+			            enabled: false
+			        },
+			        series: [{
+			            name: 'Unique users',
+			            data: [
+			                ['Website visits',      15654],
+			                ['Downloads',            4064],
+			                ['Requested price list', 1987],
+			                ['Invoice sent',          976],
+			                ['Finalized',             846]
+			            ]
+			        }]
+			    });
+			}
+        });
+        </script>
+
+</dom-module>

@@ -1,0 +1,930 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board">
+<!--
+	게시판 어드민(BBD_MGR)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->
+	<!-- 게시판 어드민 목록 조회  -->
+	<select id="findListAdminUser" resultType="map">
+	/* board.findListAdminUser */
+           SELECT BM.TEN_ID      /*시스템 아이디 */
+                 ,BM.BBD_UUID    /*게시판_아이디 */
+                 ,BM.CO_CD     /*회사 코드 */
+                 ,BM.USR_ID      /*사용자_아이디 */
+                 ,BM.REG_DTTM      /*등록 일시 */
+                 ,BM.REGR_ID      /*등록자 아이디 */
+                 ,USR.USR_NM      /*이름*/
+                 ,LOGIC_ORG.LOGIC_ORG_NM AS COMP_NM  /*회사*/
+             FROM BBD_MGR BM
+       INNER JOIN USR USR
+               ON USR.TEN_ID      = BM.TEN_ID
+              AND USR.CO_CD     = BM.CO_CD
+              AND USR.USR_ID      = BM.USR_ID
+       INNER JOIN LOGIC_ORG LOGIC_ORG
+               ON LOGIC_ORG.TEN_ID      = USR.TEN_ID
+              AND LOGIC_ORG.LOGIC_ORG_TYP_CCD  = 'COMPANY'
+              AND LOGIC_ORG.LOGIC_ORG_CD      = USR.CO_CD
+            WHERE BM.TEN_ID      = #{g.tenant}    /*시스템 아이디 */
+              AND BM.BBD_UUID    = #{p.bbd_uuid}  /*게시판_아이디 */
+	</select>
+
+	<!-- 게시판 어드민 여부 조회 -->
+	<select id="findInfoBoardAdminYn" resultType="map">
+	/* board.findInfoBoardAdminYn */
+		SELECT CASE WHEN COUNT(*) > 0 THEN 'Y' ELSE 'N' END AS admin_yn
+		  FROM BBD_MGR
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND BBD_UUID = #{p.bbd_uuid}
+		   AND USR_ID	= #{g.username}
+	</select>
+
+	<!-- 게시판 어드민 INSERT -->
+	<insert id="insertAdminUser">
+	/* board.insertAdminUser */
+		INSERT INTO BBD_MGR
+		(
+			 TEN_ID 	/*시스템 아이디 */
+			,BBD_UUID 	/*게시판_아이디 */
+			,CO_CD	/*회사 코드 */
+			,USR_ID 	/*사용자_아이디 */
+			,REG_DTTM 	/*등록 일시 */
+			,REGR_ID 	/*등록자 아이디 */
+		)
+		VALUES
+		(
+			 #{g.tenant}
+			,#{p.bbd_uuid}
+			,#{p.co_cd}
+			,#{p.usr_id}
+			,#{g.now}
+			,#{g.username}
+		)
+	</insert>
+
+	<!-- 게시판 어드민 DELETE -->
+	<delete id="deleteAdminUser">
+	/* board.deleteAdminUser */
+		DELETE
+		  FROM BBD_MGR
+		 WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		   AND BBD_UUID = #{p.bbd_uuid}		/*게시판_아이디 */
+		   AND CO_CD  = #{p.co_cd}		/*회사 코드*/
+		   AND USR_ID	= #{p.usr_id}		/*사용자_아이디 */
+	</delete>
+
+
+
+<!--
+	게시판 롤(BBD_ROLE)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->
+<!-- 사용자 게시판 롤 여부 조회 -->
+	<select id="findBoardReadRoleInfo" resultType="int">
+	/* board.findBoardReadRoleInfo */
+           SELECT COUNT(1) AS VCNT
+             FROM ROLE_USR RU
+       INNER JOIN ROLE_ACT RA
+               ON RU.TEN_ID   = RA.TEN_ID
+              AND RU.ROLE_CD  = RA.ROLE_CD
+            WHERE RU.TEN_ID   = #{g.tenant}
+              AND RU.USR_ID   = #{g.username}
+              AND RA.MENU_CD = #{p.menu_cd}
+              AND RA.ACT_CD = 'R'
+	</select>
+
+	<select id="findBoardSaveRoleInfo" resultType="int">
+	/* board.findBoardSaveRoleInfo */
+           SELECT COUNT(1)  AS WRT_CNT
+             FROM ROLE_USR RU
+       INNER JOIN ROLE_ACT RA
+               ON RU.TEN_ID   = RA.TEN_ID
+              AND RU.ROLE_CD  = RA.ROLE_CD
+            WHERE RU.TEN_ID   = #{g.tenant}
+              AND RU.USR_ID   = #{g.username}
+
+              AND RA.MENU_CD = #{p.menu_cd}
+              AND RA.ACT_CD = 'S'
+	</select>
+
+<!--
+	게시판(BBD)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->
+	<!-- 게시판 조회 -->
+	<resultMap type="map" id="resultMap-findListBoardInfo">
+        <result property="pst_cont" column="PST_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findListBoardInfo" resultType="map">
+	/* board.findListBoardInfo */
+
+           SELECT BOARD.TEN_ID			/*시스템 아이디 */
+                 ,BOARD.PST_NO			/*게시물_번호 */
+                 ,BOARD.BBD_UUID		/*게시판_아이디 */
+                 ,BOARD.PST_GRP_NO		/*게시물_그룹_번호 */
+                 ,BOARD.PST_GRP_SEQNO		/*게시물_그룹_일련번호 */
+                 ,BOARD.PST_LVL        /*게시물_레벨 */
+                 ,BOARD.PST_CAT_ID         /*카테고리_아이디 */
+                 ,CONCAT(( CASE WHEN LENGTH(BOARD.PST_TIT) > BOARDSETUP.PST_TIT_LEN THEN CONCAT(SUBSTR(BOARD.PST_TIT, 1, CAST(BOARDSETUP.PST_TIT_LEN AS INT)) , '...')
+                         ELSE BOARD.PST_TIT END
+                  ) , ( CASE WHEN BOARDSETUP.CMNT_USE_YN = 'Y' THEN CONCAT(CONCAT(' (' , ( CASE WHEN BOARD.CMNT_CNT IS NULL THEN '0' ELSE CAST(BOARD.CMNT_CNT AS VARCHAR(10)) END )) , ')')
+                              ELSE '' END )) AS PST_TIT /*게시물_제목 */
+                 ,BOARD.AUTO_PSTG_ST_DT         /*게시물_시작일 */
+                 ,BOARD.AUTO_PSTG_EXP_DT         /*게시물_종료일 */
+                 ,BOARD.REGR_ID          /*등록자_아이디 */
+                 ,COALESCE((SELECT USR_NM FROM USR c WHERE c.TEN_ID = BOARD.TEN_ID AND c.USR_ID = BOARD.REGR_ID), BOARD.CRTR_NM) as CRTR_NM           /*등록자_명 */
+                 ,(SELECT USR_NM_EN FROM USR c WHERE c.TEN_ID = BOARD.TEN_ID AND c.USR_ID = BOARD.REGR_ID) as CRTR_NM_EN           /*등록자_명 */
+                 ,BOARD.CRTR_EML       /*등록자_이메일 */
+                 ,BOARD.MODR_ID          /*수정자_아이디 */
+                 ,BOARD.MODR_NM          /*수정자_명 */
+                 ,BOARD.MODR_EML       /*수정자_이메일 */
+                 ,( CASE WHEN BOARD.VCNT IS NULL THEN 0
+                         ELSE BOARD.VCNT END
+                  ) AS VCNT     /*조회_수 */
+                 ,BOARD.ATHF_CNT     /*첨부파일_수 */
+                 ,BOARD.CMNT_CNT       /*댓글_수 */
+                 ,CASE WHEN BOARD.ANN_YN IS NULL THEN 'N' ELSE BOARD.ANN_YN END AS ANN_YN /*공지사항_여부 */
+                 ,BOARD.MAIN_ANN_YN    /*메인_공지사항_여부 */
+                 ,BOARD.ATHG_UUID      /*첨부파일_번호 */
+                 ,BOARD.SECTXT_YN        /*비밀글 여부*/
+                 ,CASE WHEN BOARD.PST_GRP_SEQNO > 0
+                            THEN ( SELECT ORIGIN_BDMA.REGR_ID
+                                     FROM BBD ORIGIN_BDMA
+                                    WHERE ORIGIN_BDMA.TEN_ID      = BOARD.TEN_ID
+                                      AND ORIGIN_BDMA.PST_GRP_NO = BOARD.PST_GRP_NO
+                                      AND ORIGIN_BDMA.PST_GRP_SEQNO = 0
+                                 )
+                       ELSE BOARD.REGR_ID
+                  END  AS ORG_REGR_ID /*원글 작성자(비밀글인 경우 원글 작성자와 관리자만 볼 수 있다.)*/
+                 ,BOARD.DEL_YN          /*삭제_여부 */
+                 ,BOARD.REG_DTTM          /*등록_일시 */
+                 ,BOARD.MOD_DTTM          /*수정_일시 */
+				 ,BOARD.CO_CD
+           		 , (SELECT CASE WHEN 'en_US' = #{g.locale} THEN LOGIC_ORG_NM_EN
+														   ELSE LOGIC_ORG_NM
+           		            END AS COMP_NM
+					FROM LOGIC_ORG
+					WHERE TEN_ID = #{g.tenant}
+					AND LOGIC_ORG_TYP_CCD = 'COMPANY'
+					AND LOGIC_ORG_CD = BOARD.CO_CD
+					AND USE_YN = 'Y'
+					AND STS != 'D') AS COMP_NM
+             FROM BBD BOARD
+       INNER JOIN BBD_SETUP BOARDSETUP
+               ON BOARD.TEN_ID = BOARDSETUP.TEN_ID
+            WHERE BOARD.BBD_UUID = BOARDSETUP.BBD_UUID
+              AND BOARD.TEN_ID   = #{g.tenant}
+              AND BOARD.BBD_UUID = #{p.bbd_uuid}
+              AND BOARD.DEL_YN   = 'N'
+		<if test='p.pst_tit != null and p.pst_tit != ""'>
+			<bind name="postTitPattern" value="'%' + p.pst_tit + '%'"/>
+              AND BOARD.PST_TIT LIKE #{postTitPattern}
+		</if>
+		<if test='p.pst_cont != null and p.pst_cont != ""'>
+			<bind name="postContPattern" value="'%' + p.pst_cont + '%'"/>
+              AND BOARD.PST_CONT LIKE #{postContPattern}
+		</if>
+		<if test='p.crtr_nm != null and p.crtr_nm != ""'>
+			<bind name="regNmPattern" value="'%' + p.crtr_nm + '%'"/>
+              AND BOARD.CRTR_NM LIKE #{regNmPattern}
+		</if>
+		<if test='p.pst_tit_cont != null and p.pst_tit_cont != ""'>
+			<bind name="postTitContPattern" value="'%' + p.pst_tit_cont + '%'"/>
+              AND ( BOARD.PST_TIT LIKE #{postTitContPattern}
+                 OR BOARD.PST_CONT LIKE #{postTitContPattern}
+                  )
+		</if>
+		<if test='p.co_bbd_use_yn == "Y" and p.co_cd != null and p.co_cd != ""'>
+			  AND CO_CD = #{p.co_cd}
+        </if>
+         ORDER BY ANN_YN DESC
+       			, CAST(BOARD.PST_GRP_NO AS INT) DESC
+               	, CAST(BOARD.PST_GRP_SEQNO AS INT)
+
+	</select>
+
+	<select id="hasBoardRole" resultType="int">
+		SELECT SUM(CNT)
+		  FROM(
+				/* 게시관리자 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_MGR BDBA
+				 WHERE BDBA.TEN_ID = #{g.tenant}
+				   AND BDBA.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDBA.CO_CD = #{g.co_cd}
+				   AND BDBA.USR_ID = #{g.username}
+
+
+			UNION ALL
+
+				/* 메뉴역할 체크 */
+				SELECT COUNT(1) CNT
+				FROM ROLE_ACT RF
+				INNER JOIN ROLE_USR AURP
+				    ON AURP.TEN_ID = #{g.tenant}
+				   AND AURP.ROLE_CD = RF.ROLE_CD
+				   AND AURP.USR_ID = #{g.username}
+				WHERE RF.TEN_ID = #{g.tenant}
+				AND RF.ACT_CD = 'R'
+				AND RF.MENU_CD = #{p.menu_cd}
+				<choose>
+                  <when test="g.roles != null and g.roles.size() > 0">
+                AND RF.ROLE_CD IN
+                    <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                      #{role}
+                    </foreach>
+                  </when>
+                  <otherwise>
+                AND 0 = 1
+                  </otherwise>
+                </choose>
+
+			<!--
+		    UNION ALL
+
+				/* 게시판 역할체크 여부 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_SETUP BDMT
+				 WHERE BDMT.TEN_ID = #{g.tenant}
+				   AND BDMT.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDMT.ROLE_APPLY_YN = 'N'    -->
+		) TMP
+	</select>
+
+	<select id="hasBoardInsertRole" resultType="int">
+		SELECT SUM(CNT)
+		  FROM(
+				/* 게시관리자 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_MGR BDBA
+				 WHERE BDBA.TEN_ID = #{g.tenant}
+				   AND BDBA.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDBA.CO_CD = #{g.co_cd}
+				   AND BDBA.USR_ID = #{g.username}
+
+			UNION ALL
+
+				/* 메뉴역할 체크 */
+				SELECT COUNT(1) CNT
+				FROM ROLE_ACT RF
+				INNER JOIN ROLE_USR AURP
+				    ON AURP.TEN_ID = #{g.tenant}
+				   AND AURP.ROLE_CD = RF.ROLE_CD
+				   AND AURP.USR_ID = #{g.username}
+				WHERE RF.TEN_ID = #{g.tenant}
+				AND RF.ACT_CD = 'S'
+				AND RF.MENU_CD = #{p.menu_cd}
+				<choose>
+                  <when test="g.roles != null and g.roles.size() > 0">
+                AND RF.ROLE_CD IN
+                    <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+                      #{role}
+                    </foreach>
+                  </when>
+                  <otherwise>
+                AND 0 = 1
+                  </otherwise>
+                </choose>
+
+		   <!--  UNION ALL
+
+				/* 게시판 역할체크 여부 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_SETUP BDMT
+				 WHERE BDMT.TEN_ID = #{g.tenant}
+				   AND BDMT.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDMT.ROLE_APPLY_YN = 'N'    -->
+		) TMP
+	</select>
+
+	<select id="hasBoardUpdateRole" resultType="int">
+		/* 작성자 확인 */
+		SELECT COUNT(1) CNT
+      	  FROM BBD BDMA
+      	 WHERE BDMA.TEN_ID = #{g.tenant}
+      	   AND BDMA.PST_NO  = #{p.pst_no}
+      	   AND BDMA.REGR_ID = #{g.username}
+	</select>
+
+	<select id="hasCommentUpdateRole" resultType="int">
+		/* 작성자 확인 */
+		SELECT COUNT(1) CNT
+      	  FROM BBD_CMNT BDBC
+      	 WHERE BDBC.TEN_ID = #{g.tenant}
+      	   AND BDBC.CMNT_NO  = #{p.cmnt_no}
+      	   AND BDBC.REGR_ID = #{g.username}
+	</select>
+
+	<select id="hasBoardDeleteRole" resultType="int">
+		SELECT SUM(CNT)
+		  FROM(
+		  		/* 작성자 확인 */
+				SELECT COUNT(1) CNT
+		      	  FROM BBD BDMA
+		      	 WHERE BDMA.TEN_ID = #{g.tenant}
+		      	   AND BDMA.PST_NO  = #{p.pst_no}
+		      	   AND BDMA.REGR_ID = #{g.username}
+
+			UNION ALL
+
+				/* 게시관리자 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_MGR BDBA
+				 WHERE BDBA.TEN_ID = #{g.tenant}
+				   AND BDBA.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDBA.CO_CD = #{g.co_cd}
+				   AND BDBA.USR_ID = #{g.username}
+		) TMP
+	</select>
+
+	<select id="hasCommentDeleteRole" resultType="int">
+		SELECT SUM(CNT)
+		  FROM(
+		  		/* 작성자 확인 */
+				SELECT COUNT(1) CNT
+		      	  FROM BBD_CMNT BDBC
+		      	 WHERE BDBC.TEN_ID = #{g.tenant}
+		      	   AND BDBC.CMNT_NO  = #{p.cmnt_no}
+		      	   AND BDBC.REGR_ID = #{g.username}
+
+			UNION ALL
+
+				/* 게시관리자 확인 */
+				SELECT COUNT(1) CNT
+				  FROM BBD_MGR BDBA
+				 WHERE BDBA.TEN_ID = #{g.tenant}
+				   AND BDBA.BBD_UUID  = #{p.bbd_uuid}
+				   AND BDBA.CO_CD = #{g.co_cd}
+				   AND BDBA.USR_ID = #{g.username}
+		) TMP
+	</select>
+
+	<!-- 게시판 업데이트(삭제상태) -->
+	<update id="updateDeleteBoard">
+	/* board.updateDeleteBoard */
+		UPDATE BBD
+		   SET DEL_YN 	= 'Y'
+		   	  ,MODR_ID	= #{g.username}
+		   	  ,MOD_DTTM	= #{g.now}
+		 WHERE TEN_ID 	= #{g.tenant}
+		   AND PST_NO 	= #{p.pst_no}
+	</update>
+
+	<!-- 신규 게시물 번호 조회 -->
+	<select id="findPostNo" resultType="java.lang.String">
+	/* board.findPostNo */
+           SELECT CASE WHEN PST_NO IS NULL THEN 1
+                       ELSE PST_NO+1 END
+             FROM (
+                   SELECT MAX(CAST(PST_NO AS INT)) AS PST_NO
+                     FROM BBD
+                  )
+	</select>
+
+	<!-- 게시물 INSERT 전 PST_GRP_SEQNO 업데이트 -->
+	<update id="updateBoardForPostGrpSn">
+	/* board.updateBoardForPostGrpSn */
+		UPDATE BBD
+		   SET PST_GRP_SEQNO = CAST(PST_GRP_SEQNO AS INT)+1
+         WHERE PST_GRP_NO = ( CASE WHEN #{p.pst_grp_no} IS NULL THEN #{p.pst_no} ELSE #{p.pst_grp_no} END )
+           AND CAST(PST_GRP_SEQNO AS INT) >= CAST(#{p.pst_grp_seqno} AS INT)
+           AND #{p.pst_grp_seqno} IS NOT NULL
+	</update>
+
+	<!-- 게시물 INSERT -->
+	<insert id="insertBoard">
+	/* board.insertBoard */
+			INSERT INTO BBD
+			(
+				 TEN_ID			/*시스템 아이디 */
+				,PST_NO		/*게시물_번호 */
+				,REGR_ID			/*등록자_아이디 */
+				,CRTR_NM			/*등록자_명 */
+				,CRTR_EML		/*등록자_이메일 */
+				,REG_DTTM			/*등록_일시 */
+				,BBD_UUID		/*게시판_아이디 */
+				,PST_GRP_NO	/*게시물_그룹_번호 */
+				,PST_GRP_SEQNO	/*게시물_그룹_일련번호 */
+				,PST_LVL		/*게시물_레벨 */
+				,PST_CAT_ID		/*카테고리_아이디 */
+				,PST_TIT		/*게시물_제목 */
+				,PST_CONT		/*게시물_내용 */
+				,AUTO_PSTG_ST_DT		/*게시물_시작일 */
+				,AUTO_PSTG_EXP_DT		/*게시물_종료일 */
+				,VCNT		/*조회_수 */
+				,ATHF_CNT	/*첨부파일_수 */
+				,CMNT_CNT		/*댓글_수 */
+				,ANN_YN		/*공지사항_여부 */
+				,MAIN_ANN_YN	/*메인_공지사항_여부 */
+				,ATHG_UUID		/*첨부파일_번호 */
+				,SECTXT_YN		/* 비밀글 여부 */
+				,DEL_YN			/*삭제_여부 */
+				,CO_CD
+			)
+			VALUES
+			(
+				 #{g.tenant}
+				,#{p.pst_no}
+				,#{g.username}
+				,#{p.crtr_nm}
+				,#{p.crtr_eml}
+				,#{g.now}
+				,#{p.bbd_uuid}
+			<choose>
+				<when test="p.pst_grp_no != null">
+      				,#{p.pst_grp_no}
+    			</when>
+    			<otherwise>
+      				,#{p.pst_no}
+    			</otherwise>
+    		</choose>
+    		<choose>
+				<when test="p.pst_grp_seqno != null">
+      				,CAST(#{p.pst_grp_seqno} AS INT)
+    			</when>
+    			<otherwise>
+      				,0
+    			</otherwise>
+    		</choose>
+    		<choose>
+    			<when test="p.pst_lvl != null">
+      				,CAST(#{p.pst_lvl} AS INT)
+    			</when>
+    			<otherwise>
+      				,1
+    			</otherwise>
+    		</choose>
+				,#{p.pst_cat_id}
+				,#{p.pst_tit}
+				,#{p.pst_cont}
+				,#{p.auto_pstg_st_dt}
+				,#{p.auto_pstg_exp_dt}
+				,0
+				,(SELECT COUNT(*)
+					FROM ATHF
+				   WHERE STS <![CDATA[<>]]> 'D'
+					 AND TEN_ID = #{g.tenant}
+					 AND ATHG_UUID = #{p.athg_uuid}
+				 )
+				,#{p.cmnt_cnt}
+				,#{p.ann_yn}
+				,#{p.main_ann_yn}
+				,#{p.athg_uuid}
+				,#{p.sectxt_yn}
+				,'N'
+				,#{p.co_cd}
+			)
+	</insert>
+
+	<!-- 게시물 UPATE -->
+	<update id="updateBoard">
+	/* board.updateBoard */
+		  UPDATE BBD
+		SET
+				 MODR_ID 	= #{g.username}		/*수정자 아이디*/
+				,MODR_NM		= #{p.mod_nm}		/*수정자_명 */
+				,MODR_EML	= #{p.modr_eml}	/*수정자_이메일 */
+				,MOD_DTTM 	= #{g.now}			/*수정 일시*/
+				,BBD_UUID		= #{p.bbd_uuid} 	/*게시판_아이디  */
+				,PST_GRP_NO	= #{p.pst_grp_no}	/*게시물_그룹_번호 */
+				,PST_GRP_SEQNO	= CAST(#{p.pst_grp_seqno} AS INT)	/*게시물_그룹_일련번호 */
+				,PST_LVL 		= CAST(#{p.pst_lvl} AS INT)	/*게시물_레벨 */
+				,PST_CAT_ID 		= #{p.pst_cat_id}		/*카테고리_아이디 */
+				,PST_TIT	 	= #{p.pst_tit}		/*게시물_제목 */
+				,PST_CONT 		= #{p.pst_cont}	/*게시물_내용 */
+				,AUTO_PSTG_ST_DT 		= #{p.auto_pstg_st_dt}		/*게시물_시작일 */
+				,AUTO_PSTG_EXP_DT 		= #{p.auto_pstg_exp_dt}		/*게시물_종료일 */
+				,ATHF_CNT 	= ( SELECT COUNT(*)
+				                      FROM ATHF
+				                     WHERE TEN_ID = #{g.tenant}
+				                       AND ATHG_UUID = #{p.athg_uuid}
+				                       AND STS != 'D'
+				                  ) /*첨부파일_수 */
+				,CMNT_CNT 		= #{p.cmnt_cnt}	/*댓글_수 */
+				,ANN_YN 		= #{p.ann_yn}		/*공지사항_여부 */
+				,MAIN_ANN_YN	= #{p.main_ann_yn}	/*메인_공지사항_여부 */
+				,ATHG_UUID 	= #{p.athg_uuid}	/*첨부파일_번호 */
+				,SECTXT_YN       = #{p.sectxt_yn}		/*비밀글 여부*/
+				,DEL_YN 		= #{p.del_yn}		/*삭제_여부 */
+				,CO_CD			= #{p.co_cd}
+		   WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		     AND PST_NO 	= #{p.pst_no}		/*게시물_번호 */
+	</update>
+
+	<!-- 게시물 조회수 UPDATE -->
+	<update id="updateBoardOfViewCount">
+	/* board.updateBoardOfViewCount */
+		  UPDATE BBD
+		SET
+				 MODR_ID 	= #{g.username}		/*수정자 아이디*/
+				,MOD_DTTM 	= #{g.now}			/*수정 일시*/
+				,VCNT 	= VCNT+1		/*조회_수 */
+		   WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		     AND PST_NO 	= #{p.pst_no}		/*게시물_번호 */
+	</update>
+
+	<!-- 게시물을 조회한다. -->
+	<resultMap type="map" id="resultMap-findBoardInfoByPostNo">
+        <result property="pst_cont" column="PST_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findBoardInfoByPostNo" resultMap="resultMap-findBoardInfoByPostNo">
+	/* board.findBoardInfoByPostNo */
+           SELECT TEN_ID         /*시스템 아이디 */
+                 ,PST_NO        /*게시물_번호 */
+                 ,BBD_UUID       /*게시판_아이디 */
+                 ,PST_GRP_NO    /*게시물_그룹_번호 */
+                 ,PST_GRP_SEQNO    /*게시물_그룹_일련번호 */
+                 ,PST_LVL       /*게시물_레벨 */
+                 ,PST_CAT_ID        /*카테고리_아이디 */
+                 ,PST_TIT       /*게시물_제목 */
+                 ,PST_CONT      /*게시물_내용 */
+                 ,AUTO_PSTG_ST_DT        /*게시물_시작일 */
+                 ,AUTO_PSTG_EXP_DT        /*게시물_종료일 */
+                 ,REGR_ID         /*등록자_아이디 */
+                 ,CRTR_NM         /*등록자_명 */
+                 ,CRTR_EML      /*등록자_이메일 */
+                 ,MODR_ID         /*수정자_아이디 */
+                 ,MODR_NM         /*수정자_명 */
+                 ,MODR_EML      /*수정자_이메일 */
+                 ,VCNT       /*조회_수 */
+                 ,ATHF_CNT    /*첨부파일_수 */
+                 ,CMNT_CNT      /*댓글_수 */
+                 ,ANN_YN        /*공지사항_여부 */
+                 ,MAIN_ANN_YN   /*메인_공지사항_여부 */
+                 ,ATHG_UUID     /*첨부파일_번호 */
+                 ,SECTXT_YN       /*비밀글 여부*/
+                 ,DEL_YN         /*삭제_여부 */
+                 ,TO_CHAR(REG_DTTM,'YYYY-MM-DD') AS REG_DTTM         /*등록_일시 */
+           		 ,CO_CD			/* 작성 회사 */
+             FROM BBD
+            WHERE TEN_ID 	= #{g.tenant}
+              AND PST_NO 	= #{p.pst_no}
+	</select>
+
+
+
+
+<!--
+	게시판 댓글(BBD_CMNT)
+	@author JuEung Kim
+	@since 2016. 3. 17
+	@변경이력 : [2016. 3. 17] JuEung Kim 최초작성
+-->
+	<!-- 게시물의 댓글을 조회한다. -->
+	<select id="findBoardCommentList" resultType="map">
+	/* board.findBoardCommentList */
+           SELECT BDBC.TEN_ID            /*시스템 아이디 */
+                 ,CMNT_NO     /*게시물_댓글_번호 */
+                 ,PST_NO           /*게시물_번호 */
+                 ,CMNT_CONT        /*댓글_내용 */
+                 ,REGR_ID            /*등록자_아이디 */
+                 ,COALESCE((SELECT CASE WHEN 'en_US' = #{g.locale} THEN USR_NM_EN ELSE USR_NM END FROM USR WHERE USR_ID = BDBC.REGR_ID AND TEN_ID = BDBC.TEN_ID), BDBC.CRTR_NM) as CRTR_NM           /*등록자_명 */
+                 ,(SELECT USR_NM_EN FROM USR WHERE USR_ID = BDBC.REGR_ID AND TEN_ID = BDBC.TEN_ID) as CRTR_NM_EN           /*등록자_명 */
+				 , CASE WHEN 'en_US' = #{g.locale} THEN (SELECT USR_NM_EN FROM USR WHERE USR_ID = BDBC.REGR_ID AND TEN_ID = BDBC.TEN_ID) ELSE COALESCE((SELECT USR_NM FROM USR WHERE USR_ID = BDBC.REGR_ID AND TEN_ID = BDBC.TEN_ID), BDBC.CRTR_NM) END AS DISPLAY_USR_NM
+                 ,REG_DTTM            /*등록_일시 */
+             FROM BBD_CMNT BDBC
+            WHERE TEN_ID  = #{g.tenant}
+              AND PST_NO = #{p.pst_no}
+         ORDER BY CMNT_NO
+	</select>
+
+	<!-- 게시물 댓글 INSERT -->
+	<insert id="insertBoardComment">
+	/* board.insertBoardComment */
+		INSERT INTO BBD_CMNT
+		(
+			 TEN_ID			/*시스템 아이디 */
+	        ,CMNT_NO	/*게시물_댓글_번호 */
+			,PST_NO		/*게시물_번호 */
+			,CMNT_CONT		/*댓글_내용 */
+			,REGR_ID			/*등록자_아이디 */
+			,CRTR_NM			/*등록자_명 */
+			,REG_DTTM			/*등록_일시 */
+		)
+		VALUES
+		(
+			 #{g.tenant}
+	        ,(
+	        	SELECT CASE WHEN CMNT_NO IS NULL THEN 1
+	            	   ELSE CMNT_NO+1 END
+	  	 		  FROM (
+			   			SELECT MAX(CAST(CMNT_NO AS INT)) AS CMNT_NO
+		  	  	 		  FROM BBD_CMNT
+		  	  			 WHERE TEN_ID = #{g.tenant}
+		  	  		   )
+	         )
+			,#{p.pst_no}		/*게시물_번호 */
+			,#{p.cmnt_cont}	/*댓글_내용 */
+			,#{g.username}		/*등록자_아이디 */
+			,#{p.crtr_nm}		/*등록자_명 */
+			,#{g.now}			/*등록_일시 */
+		)
+	</insert>
+
+	<!-- 게시물 댓글 UPDATE -->
+	<update id="updateBoardComment">
+	/* board.updateBoardComment */
+		UPDATE BBD_CMNT
+		   SET CMNT_CONT 		= #{p.cmnt_cont}
+		 WHERE TEN_ID 			= #{g.tenant}
+		   AND CMNT_NO 	= #{p.cmnt_no}
+	</update>
+
+	<!-- 게시물 댓글 DELETE -->
+	<delete id="deleteBoardComment">
+	/* board.deleteBoardComment */
+		DELETE
+		  FROM BBD_CMNT
+		 WHERE TEN_ID 			= #{g.tenant}
+		   AND CMNT_NO 	= #{p.cmnt_no}
+	</delete>
+
+	<!-- 게시물 댓글수 UPDATE -->
+	<update id="updateBoardOfCommentCount">
+	/* board.updateBoardOfCommentCount */
+		  UPDATE BBD BBD
+		  SET 	 MODR_ID 	= #{g.username}		/*수정자 아이디*/
+				,MOD_DTTM 	= #{g.now}			/*수정 일시*/
+				,CMNT_CNT 	= ( SELECT COUNT(*)
+				                  FROM BBD_CMNT
+				                 WHERE TEN_ID 	= BBD.TEN_ID
+				                   AND PST_NO 	= BBD.PST_NO
+				              )
+		   WHERE TEN_ID 	= #{g.tenant} 		/*시스템 아이디 */
+		     AND PST_NO 	= #{p.pst_no}		/*게시물_번호 */
+	</update>
+
+	<!-- 공지 팝업 목록 조회 -->
+	<select id="findListNoticeInfo" resultMap="resultMap-findListBoardInfo">
+            /** board.findListNoticeInfo **/
+            /** 공지 팝업 목록 조회 **/
+            SELECT BDMA.PST_NO                             AS PST_NO      /*게시물_번호 */
+                 , CASE WHEN BDMT.CMNT_USE_YN = 'Y'
+                            THEN CONCAT(BDMA.PST_TIT, CONCAT('(', CONCAT(CAST(COALESCE(BDMA.CMNT_CNT,0) AS CHAR),')')))
+                       ELSE BDMA.PST_TIT
+                   END                                      AS PST_TIT     /* 게시물_제목 */
+                 , BDMA.PST_CONT                           AS PST_CONT    /* 게시물_내용 */
+                 , BDMA.AUTO_PSTG_ST_DT                             AS AUTO_PSTG_ST_DT      /* 게시물_시작일 */
+                 , BDMA.AUTO_PSTG_EXP_DT                             AS AUTO_PSTG_EXP_DT      /* 게시물_종료일 */
+                 , CASE WHEN BDMA.VCNT IS NULL
+                             THEN 0
+                        ELSE BDMA.VCNT
+                    END                                     AS VCNT     /* 조회_수 */
+                 , BDMA.CMNT_CNT                           AS CMNT_CNT    /* 댓글_수 */
+                 , BDMA.ATHG_UUID                          AS ATT_FILE_NO  /* 첨부파일_번호 */
+                 , BDMA.ATHF_CNT                         AS ATT_FILE_CNT /* 첨부파일_수 */
+                 , BDMA.SECTXT_YN                            AS SECTXT_YN		/* 비밀글 여부 */
+                 , COALESCE(BDMA.MODR_ID, BDMA.REGR_ID)       AS REGR_ID       /* 등록자ID */
+                 , COALESCE(BDMA.MODR_NM, BDMA.CRTR_NM)       AS CRTR_NM       /* 등록자명 */
+                 , COALESCE(BDMA.MODR_EML, BDMA.CRTR_EML) AS CRTR_EML    /* 등록자 이메일 */
+                 , COALESCE(BDMA.MOD_DTTM, BDMA.REG_DTTM)       AS REG_DTTM       /* 등록 일시 */
+             FROM BBD BDMA
+       INNER JOIN BBD_SETUP BDMT
+               ON BDMA.TEN_ID = BDMT.TEN_ID
+              AND BDMA.BBD_UUID = BDMT.BBD_UUID
+            WHERE BDMA.TEN_ID   = #{g.tenant}
+              AND BDMA.PST_LVL = 1
+              AND BDMA.DEL_YN   = 'N'
+              /* AND BDMA.ANN_YN = 'Y'*/
+              AND BDMA.MAIN_ANN_YN = 'Y'
+              <![CDATA[
+              AND BDMA.AUTO_PSTG_ST_DT <= #{g.now}
+              AND BDMA.AUTO_PSTG_EXP_DT >= #{g.now}
+              ]]>
+              AND BDMT.PSTG_SUBJ_TYP = (CASE
+              												WHEN BDMT.PSTG_SUBJ_TYP = 'ALL' THEN 'ALL'
+              												ELSE #{g.usr_typ_ccd}
+              											END)
+              <if test="p.cookieData != null and p.cookieData.size() > 0">
+                 AND BDMA.PST_NO NOT IN
+                     <foreach collection="p.cookieData" index="index" item="pst_no" open="(" separator="," close=")">
+                     #{pst_no}
+                     </foreach>
+              </if>
+              AND EXISTS (
+              				/* 역할 체크 */
+							SELECT RF.ROLE_CD
+							FROM ROLE_ACT RF
+							INNER JOIN ROLE_USR AURP
+							    ON AURP.TEN_ID = #{g.tenant}
+							   AND AURP.ROLE_CD = RF.ROLE_CD
+							   AND AURP.USR_ID = #{g.username}
+							INNER JOIN MENU AUMM
+				              ON AUMM.TEN_ID = RF.TEN_ID
+				                 AND AUMM.MENU_CD = RF.MENU_CD
+							WHERE RF.TEN_ID = #{g.tenant}
+							AND RF.ACT_CD = 'R'
+							AND AUMM.MENU_URL LIKE '%bbd_uuid=' || BDMA.BBD_UUID || '%'
+							<choose>
+			                  <when test="g.roles != null and g.roles.size() > 0">
+			                AND RF.ROLE_CD IN
+			                    <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+			                      #{role}
+			                    </foreach>
+			                  </when>
+			                  <otherwise>
+			                AND 0 = 1
+			                  </otherwise>
+			                </choose>
+                         )
+       ORDER BY CAST(BDMA.PST_GRP_NO AS INT) DESC
+              , CAST(BDMA.PST_GRP_SEQNO AS INT)
+    </select>
+
+    <!-- 협력사포탈 공지사항 목록 조회 -->
+	<select id="findListPortalNoticeInfo" resultType="map">
+		/** board.findListPortalNoticeInfo **/
+		/** 협력사포탈 공지사항 목록 조회 **/
+		SELECT BBD_UUID
+		,      PST_NO
+		,      PST_TIT
+		,      TO_CHAR(REG_DTTM, 'yyyy-MM-dd') AS POST_REG_DTTM
+		,      CRTR_NM
+		FROM BBD
+		WHERE TEN_ID = #{g.tenant}
+		  AND BBD_UUID = #{p.bbd_uuid}
+		  AND PST_LVL = 1
+		  AND DEL_YN = 'N'
+		ORDER BY CAST(PST_NO AS INT) DESC
+    </select>
+
+	<select id="hasReadRole" resultType="int">
+	/* hasReadRole */
+		SELECT SUM(CNT)
+		  FROM(
+		  	/* 역할 체크 */
+				SELECT COUNT(1) CNT
+				FROM ROLE_ACT RF
+				INNER JOIN ROLE_USR AURP
+				    ON AURP.TEN_ID = #{g.tenant}
+				   AND AURP.ROLE_CD = RF.ROLE_CD
+				   AND AURP.USR_ID = #{g.username}
+				INNER JOIN MENU AUMM
+	              ON AUMM.TEN_ID = RF.TEN_ID
+	                 AND AUMM.MENU_CD = RF.MENU_CD
+				WHERE RF.TEN_ID = #{g.tenant}
+				AND RF.ACT_CD = 'R'
+				<bind name="boardIdPattern" value="'%bbd_uuid=' + p.bbd_uuid + '%'"/>
+				AND AUMM.MENU_URL LIKE #{boardIdPattern}
+				<choose>
+	                 <when test="g.roles != null and g.roles.size() > 0">
+	               AND RF.ROLE_CD IN
+	                   <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+	                     #{role}
+	                   </foreach>
+	                 </when>
+	                 <otherwise>
+	               AND 0 = 1
+	                 </otherwise>
+	               </choose>
+		) TMP
+	</select>
+
+	<select id="hasSaveRole" resultType="int">
+	/* hasSaveRole */
+		SELECT SUM(CNT)
+		  FROM(
+		  	/* 역할 체크 */
+				SELECT COUNT(1) CNT
+				FROM ROLE_ACT RF
+				INNER JOIN ROLE_USR AURP
+				    ON AURP.TEN_ID = #{g.tenant}
+				   AND AURP.ROLE_CD = RF.ROLE_CD
+				   AND AURP.USR_ID = #{g.username}
+				INNER JOIN MENU AUMM
+	              ON AUMM.TEN_ID = RF.TEN_ID
+	                 AND AUMM.MENU_CD = RF.MENU_CD
+				WHERE RF.TEN_ID = #{g.tenant}
+				AND RF.ACT_CD = 'S'
+				<bind name="boardIdPattern" value="'%bbd_uuid=' + p.bbd_uuid + '%'"/>
+				AND AUMM.MENU_URL LIKE #{boardIdPattern}
+				<choose>
+	                 <when test="g.roles != null and g.roles.size() > 0">
+	               AND RF.ROLE_CD IN
+	                   <foreach collection="g.roles" item="role" open="(" close=")" separator=",">
+	                     #{role}
+	                   </foreach>
+	                 </when>
+	                 <otherwise>
+	               AND 0 = 1
+	                 </otherwise>
+	               </choose>
+		) TMP
+	</select>
+    <!-- 게시판 조회 -->
+    <select id="findNoticeBoardList" resultMap="resultMap-findListBoardInfo">
+    /* board.findNoticeBoardList */
+
+           SELECT BBD.TEN_ID            /*시스템 아이디 */
+                 ,BBD.PST_NO            /*게시물_번호 */
+                 ,BBD.BBD_UUID        /*게시판_아이디 */
+                 ,BBD.PST_GRP_NO        /*게시물_그룹_번호 */
+                 ,BBD.PST_GRP_SEQNO        /*게시물_그룹_일련번호 */
+                 ,BBD.PST_LVL        /*게시물_레벨 */
+                 ,BBD.PST_CAT_ID         /*카테고리_아이디 */
+                 ,CONCAT(( CASE WHEN LENGTH(BBD.PST_TIT) > BS.PST_TIT_LEN THEN CONCAT(SUBSTR(BBD.PST_TIT, 1, CAST(BS.PST_TIT_LEN AS INT)) , '...')
+                         ELSE BBD.PST_TIT END
+                  ) , ( CASE WHEN BS.CMNT_USE_YN = 'Y' THEN CONCAT(CONCAT(' (' , ( CASE WHEN BBD.CMNT_CNT IS NULL THEN '0' ELSE CAST(BBD.CMNT_CNT AS VARCHAR(10)) END )) , ')')
+                              ELSE '' END )) AS PST_TIT /*게시물_제목 */
+                 ,BBD.PST_CONT       /*게시물_내용 */
+                 ,BBD.AUTO_PSTG_ST_DT         /*게시물_시작일 */
+                 ,BBD.AUTO_PSTG_EXP_DT         /*게시물_종료일 */
+                 ,BBD.REGR_ID          /*등록자_아이디 */
+                 ,BBD.CRTR_NM          /*등록자_명 */
+                 ,BBD.CRTR_EML       /*등록자_이메일 */
+                 ,BBD.MODR_ID          /*수정자_아이디 */
+                 ,BBD.MODR_NM          /*수정자_명 */
+                 ,BBD.MODR_EML       /*수정자_이메일 */
+                 ,( CASE WHEN BBD.VCNT IS NULL THEN 0
+                         ELSE BBD.VCNT END
+                  ) AS VCNT     /*조회_수 */
+                 ,BBD.ATHF_CNT     /*첨부파일_수 */
+                 ,BBD.CMNT_CNT       /*댓글_수 */
+                 ,CASE WHEN BBD.ANN_YN IS NULL THEN 'N' ELSE BBD.ANN_YN END AS ANN_YN /*공지사항_여부 */
+                 ,BBD.MAIN_ANN_YN    /*메인_공지사항_여부 */
+                 ,BBD.ATHG_UUID      /*첨부파일_번호 */
+                 ,BBD.SECTXT_YN        /*비밀글 여부*/
+                 ,CASE WHEN BBD.PST_GRP_SEQNO > 0
+                            THEN ( SELECT ORIGIN_BDMA.REGR_ID
+                                     FROM BBD ORIGIN_BDMA
+                                    WHERE ORIGIN_BDMA.TEN_ID      = BBD.TEN_ID
+                                      AND ORIGIN_BDMA.PST_GRP_NO = BBD.PST_GRP_NO
+                                      AND ORIGIN_BDMA.PST_GRP_SEQNO = 0
+                                 )
+                       ELSE BBD.REGR_ID
+                  END  AS ORG_REGR_ID /*원글 작성자(비밀글인 경우 원글 작성자와 관리자만 볼 수 있다.)*/
+                 ,BBD.DEL_YN          /*삭제_여부 */
+                 ,BBD.REG_DTTM          /*등록_일시 */
+                 ,BBD.MOD_DTTM          /*수정_일시 */
+             FROM BBD BBD
+       INNER JOIN BBD_SETUP BS
+               ON BBD.TEN_ID = BS.TEN_ID
+            WHERE BBD.BBD_UUID = BS.BBD_UUID
+              AND BBD.TEN_ID   = #{g.tenant}
+              AND BBD.BBD_UUID = #{p.bbd_uuid}
+              AND BBD.DEL_YN   = 'N'
+        <if test='p.pst_tit != null and p.pst_tit != ""'>
+            <bind name="postTitPattern" value="'%' + p.pst_tit + '%'"/>
+              AND BBD.PST_TIT LIKE #{postTitPattern}
+        </if>
+        <if test='p.pst_cont != null and p.pst_cont != ""'>
+            <bind name="postContPattern" value="'%' + p.pst_cont + '%'"/>
+              AND BBD.PST_CONT LIKE #{postContPattern}
+        </if>
+        <if test='p.crtr_nm != null and p.crtr_nm != ""'>
+            <bind name="regNmPattern" value="'%' + p.crtr_nm + '%'"/>
+              AND BBD.CRTR_NM LIKE #{regNmPattern}
+        </if>
+        <if test='p.pst_tit_cont != null and p.pst_tit_cont != ""'>
+            <bind name="postTitContPattern" value="'%' + p.pst_tit_cont + '%'"/>
+              AND ( BBD.PST_TIT LIKE #{postTitContPattern}
+                 OR BBD.PST_CONT LIKE #{postTitContPattern}
+                  )
+        </if>
+         ORDER BY ANN_YN DESC
+                 ,CAST(BBD.PST_GRP_NO AS INT) DESC
+                 ,CAST(BBD.PST_GRP_SEQNO AS INT)
+
+    </select>
+
+    <select id="getTotalBoardCount" resultType="int">
+    /* board.getTotalBoardCount : board 총 개수 구하기*/
+        SELECT COUNT(1) AS TOTAL_ROW
+          FROM BBD
+         WHERE TEN_ID = #{g.tenant}
+           AND BBD_UUID = #{p.bbd_uuid}
+           AND AUTO_PSTG_ST_DT &lt;= #{g.now}
+           AND AUTO_PSTG_EXP_DT &gt;= #{g.now}
+           AND PST_LVL = 1
+           AND ANN_YN = 'Y'
+           AND SECTXT_YN = 'N'
+           AND DEL_YN = 'N'
+    </select>
+
+<!-- 협력사포탈 공지사항 목록 조회 -->
+    <select id="findListPortalNoticeForGridPaging" resultType="map">
+    /* board.findListPortalNoticeForGridPaging : 협력사포탈 공지사항 목록 페이징 조회*/
+                 SELECT BBD_UUID
+                       ,PST_NO
+                       ,PST_TIT
+                       ,TO_CHAR(REG_DTTM, 'yyyy-MM-dd') AS POST_REG_DTTM
+                       ,CRTR_NM
+                   FROM BBD
+                  WHERE TEN_ID = #{g.tenant}
+                    AND BBD_UUID = #{p.bbd_uuid}
+                    AND AUTO_PSTG_ST_DT &lt;= #{g.now}
+                    AND AUTO_PSTG_EXP_DT &gt;= #{g.now}
+                    AND PST_LVL = 1
+                    AND ANN_YN = 'Y'
+                    AND SECTXT_YN = 'N'
+                    AND DEL_YN = 'N'
+    </select>
+</mapper>

@@ -1,0 +1,23 @@
+<sc-link rel="import" href="es-dictionary-list.html"></sc-link>
+
+<dom-module id="em-dictionary">
+
+	<style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<es-dictionary-list id="list"></es-dictionary-list>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-dictionary',
+		});
+	</script>
+</dom-module>

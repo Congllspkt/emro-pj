@@ -1,0 +1,432 @@
+<dom-module id="es-board-list">
+	<!--
+        ******************************************************************************************
+        ** @Program-name 	: 게시판 목록
+        ** @Description		:
+        ** @Author 			: jeKim
+        ** @Create Date 	: 2016.03.18
+        ** @History 		: 2016.03.18 jeKim 최초작성
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		<!-- 회사목록 -->
+		<sc-ajax id="companyCode"
+				 url="findListCompanyCodeForBulletinBoard.do"
+				 last-response="{{codes.company}}">
+		</sc-ajax>
+
+
+
+		<!-- 게시판 정보 조회 -->
+		<sc-ajax id="findBoardInfo"
+				 url="findBoardInfo.do"
+				 body="{{infoSearchParam}}"
+				 last-response="{{boardAdminDatas}}"
+				 on-response="completeFindBoardInfo">
+		</sc-ajax>
+
+		<!-- 삭제 -->
+		<sc-ajax id="deleteListBoard"
+				 url="deleteListBoard.do"
+				 on-response="completeDeleteBoardList">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<cc-page-title-bar title-text="[[formula('titleText')]]" i18n-disabled></cc-page-title-bar>
+
+		<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+			<cc-fieldset hidden="[[!formula('isCompanyBoardUse')]]">
+				<sc-label text="회사"></sc-label>
+				<sc-combobox-field value="{{searchParam.co_cd}}" items="{{codes.company}}" display-field="comp_nm" value-field="co_cd" on-enter="onSearch"
+								   placeholder="전체"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="제목"></sc-label>
+				<sc-text-field value="{{searchParam.pst_tit}}" on-enter="onSearch" max-length="100"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="내용"></sc-label>
+				<sc-text-field value="{{searchParam.pst_cont}}" on-enter="onSearch" max-length="100"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="제목+내용"></sc-label>
+				<sc-text-field value="{{searchParam.pst_tit_cont}}" on-enter="onSearch" max-length="100"></sc-text-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="작성자"></sc-label>
+				<sc-text-field value="{{searchParam.crtr_nm}}" on-enter="onSearch" max-length="100"></sc-text-field>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+
+		<sc-grid id="gridPanel" class="flex" data-provider="{{resultList}}"
+				 on-item-click="onItemClick" row-style-function="onRowStyle" use-selection="[[formula('isAdmin')]]" use-state="false">
+			<cc-grid-toolbar>
+				<sc-button text="작성" hidden="[[!formula('isWritable')]]" on-click="onAddBoard" auth-s></sc-button>
+				<sc-button text="삭제" hidden="[[!formula('isAdmin')]]" on-click="onDeleteBoard" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="comp_nm" header-text="회사" width="120" text-align="center" visible="[[formula('isCompanyBoardUse')]]"></sc-data-column>
+				<sc-data-column data-field="pst_tit" header-text="제목" width="400" text-align="left" style-name="link" item-label-function="onLabel" item-style-function="onStyle"></sc-data-column>
+				<sc-data-column data-field="crtr_nm" header-text="작성자 명" width="100" text-align="center" visible="[[formula('isRegNmDisp')]]"></sc-data-column>
+				<sc-date-column data-field="reg_dttm" header-text="등록 일시" width="130" text-align="center" visible="[[formula('isRegDtDisp')]]" display-format="yyyy/MM/dd HH:mm:ss"></sc-date-column>
+				<sc-data-column data-field="vcnt" header-text="조회수" width="70" text-align="right" visible="[[formula('isCntDisp')]]" data-type="number" format-type="integer"></sc-data-column>
+				<sc-attachment-column data-field="athf_cnt" header-text="첨부파일 개수" width="60" text-align="center" visible="[[formula('isAttDisp')]]" shared-group-field="athg_uuid" popup-call-fn="callAttachPopup"></sc-attachment-column>
+			</sc-grid-columns>
+			<sc-grid-paging id="findListBoardForGridPaging"
+							url="findListBoardForGridPaging.do"
+							body="{{searchParam}}"
+							on-response="completeFindBoardListByPaging"
+							page-size-items="30, 50, 100, 200, 300"
+							default-page-index="0">
+			</sc-grid-paging>
+
+		</sc-grid>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-board-list",
+            properties : {
+				// 코드 데이터
+				codes: {
+					type: Object,
+					reset: false,
+					value: function () {
+						return {
+							company: {},
+						};
+					}
+				},
+                // 게시판 정보 조회조건
+                infoSearchParam: {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+
+                // 게시판 정보 조회결과
+                boardAdminDatas : {
+                    type: Object,
+                    value : function(){
+                        return {
+                            // 게시판 list
+                            boardAdminList : {},
+
+                            // 게시판 정보
+                            boardAdminInfo : {},
+
+                            // 관리자 여부
+                            boardAdminYn : {},
+
+                            // 게시판 롤
+                            boardInfoActRole : {}
+                        };
+                    }
+                },
+
+                // 게시글 목록 조회조건
+                searchParam : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // 게시글 목록 조회결과
+                resultList: {
+                    type : Array,
+                    value : function() {
+                        return [];
+                    }
+                }
+
+            },
+
+            formulas : {
+				titleText: function(){
+					return this.translate(this.boardAdminDatas.boardAdminInfo.bbd_dspy_nm);
+				},
+                // 관리자 상태
+                isAdmin: function() {
+                    return	this.boardAdminDatas.boardAdminYn.admin_yn === "Y";
+                },
+                // 쓰기역할 상태
+                isWritable: function() {
+                    return (this.formula('isAdmin') || this.boardAdminDatas.boardInfoActRole.wrtg_perm_yn === "Y");
+                },
+                // 조회역할 상태
+                isViewable: function() {
+                    return (this.formula('isAdmin') || this.boardAdminDatas.boardInfoActRole.show_yn === "Y");
+                },
+                // 등록자명 보이기 여부
+                isRegNmDisp: function() {
+                    return this.boardAdminDatas.boardAdminInfo.crtr_show_yn === "Y";
+                },
+                // 등록일시 보이기 여부
+                isRegDtDisp: function() {
+                    return this.boardAdminDatas.boardAdminInfo.reg_dttm_show_yn === "Y";
+                },
+                // 조회수 보이기 여부
+                isCntDisp: function() {
+                    return this.boardAdminDatas.boardAdminInfo.vcnt_show_yn === "Y";
+                },
+                // 첨부 보이기 여부
+                isAttDisp: function() {
+                    return this.boardAdminDatas.boardAdminInfo.ath_show_yn === "Y";
+                },
+				// 회사별 게시판 사용 여부
+				isCompanyBoardUse: function(){
+					return this.boardAdminDatas.boardAdminInfo.co_bbd_use_yn === "Y";
+				}
+
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            load:function(data) {
+                var me = this;
+				if(data && data.bbd_uuid){
+					me.$.companyCode.body = data;
+					UT.request(me.$.companyCode, function(e, res){
+						me.onSearch(data);
+					});
+				}else {
+					me.onSearch(data);
+				}
+
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "pst_tit"){
+                    if(!me.formula("isViewable")) {
+                        UT.alert("STD.ADM1059");	//조회 역할이 없습니다.
+                        return;
+                    }
+
+                    if(data.sectxt_yn === "Y" && (SCSessionManager.currentUser.usr_id !== data.org_regr_id) && !me.formula('isAdmin')) {
+                        UT.alert("STD.ADM1060");	//비밀글인 경우 작성자 또는 관리자만 조회 가능합니다.
+                        return;
+                    } else {
+                        var param = {
+                            boardAdminInfo: me.get("boardAdminDatas.boardAdminInfo"),
+                            boardAdminYn: me.get("boardAdminDatas.boardAdminYn"),
+                            boardInfoActRole: me.get("boardAdminDatas.boardInfoActRole"),
+                            searchParam: data,
+							companyCode: me.get("codes.company")
+                        };
+                        me.fire("show-board-detail", param);
+                    }
+                }
+            },
+            
+            callAttachPopup : function(data, item, provider){
+            	var me = this,
+						athg_uuid = data.athg_uuid,
+                itemIndex = item.rowIndex,
+                fieldName = item.dataField;
+            	
+            	if(data.sectxt_yn === "Y" && (SCSessionManager.currentUser.usr_id !== data.org_regr_id) && !me.formula('isAdmin')) {
+                    UT.alert("STD.ADM1060");	//비밀글인 경우 작성자 또는 관리자만 조회 가능합니다.
+                    return;
+                } else {
+                	UT.popupAttach(me, athg_uuid, null, {editable : false});
+                }
+            },
+
+            // 공지 label 추가
+            onLabel : function(data, item) {
+                var me = this;
+                if(data.ann_yn === "Y") {
+                    var val = me.translate("[공지]");
+                    val += data.pst_tit;
+                    return val;
+                }
+                return data.pst_tit;
+            },
+
+            // 로우 별 스타일
+            onRowStyle : function(data) {
+                if(data.ann_yn === "Y") {
+                    return {
+                        "background": "#E0E0E0" // 공지 글 로우 색상 변경
+                    }
+                } else {
+                    return {
+                        "background": '#ffffff' // 기본 색상
+                    }
+                }
+
+            },
+
+            // 스타일
+            onStyle : function(data, item) {
+                var styleObj = {};
+
+                var postLvl = parseInt(data.pst_lvl);
+                if(postLvl > 1) {
+                	if(data.sectxt_yn === "Y"){
+                		styleObj.iconUrl = "img/icon_re_lock.png";
+                	}else{
+                		styleObj.iconUrl = "img/icon_re.gif";
+                	}
+                    styleObj.paddingLeft = (postLvl - 1) * 10;
+                } else if(data.sectxt_yn === "Y") {
+                    styleObj.iconUrl = "img/icon_lock.png";
+                }
+                return  styleObj;
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 게시판 정보 조회
+            onSearch : function(data){
+                var me = this;
+                // 다음의 값이 아닐 경우 true(null, undefined, NaN, empty string (""), 0, false)
+                if(data && data.bbd_uuid){
+                    me.set("infoSearchParam.bbd_uuid", data.bbd_uuid);
+                }
+                if(data && data.pst_no){
+                    me.set("infoSearchParam.pst_no",data.pst_no);
+                }
+                UT.request(me.$.findBoardInfo);
+            },
+
+            // 게시판 정보 조회 완료
+            completeFindBoardInfo: function(e, res){
+                var me = this,
+                    boardAdminInfo = me.get("boardAdminDatas.boardAdminInfo");
+
+                // 그리드 컬럼 보이기/숨김 처리 & 게시판 롤 체크
+                me.applyFormula();
+
+                me.set("searchParam.bbd_uuid", me.infoSearchParam.bbd_uuid);
+				me.set("searchParam.co_bbd_use_yn", boardAdminInfo.co_bbd_use_yn);
+
+                // 게시글 목록 페이징 조회
+                me.$.findListBoardForGridPaging.request();
+
+            },
+
+            // 게시글 목록 페이징 조회 완료
+            completeFindBoardListByPaging: function(e, res) {
+                var me = this;
+                
+                // 페이징 조회 처리 content
+                me.resultList = res.result_data.content;
+                
+                //post_no가 있는경우 상세조회 바로
+                if(UT.isNotEmpty(me.get("infoSearchParam.pst_no"))){
+                    var param = {
+                        boardAdminInfo: me.get("boardAdminDatas.boardAdminInfo"),
+                        boardAdminYn: me.get("boardAdminDatas.boardAdminYn"),
+                        boardInfoActRole: me.get("boardAdminDatas.boardInfoActRole"),
+                        searchParam: {
+                        	bbd_uuid: me.get("infoSearchParam.bbd_uuid"),
+                        	pst_no: me.get("infoSearchParam.pst_no")
+                        },
+						companyCode: me.get("codes.company")
+                    };
+                    var copyParam = UT.copy(param);
+                    me.reset();
+                    me.fire("show-board-detail", copyParam);
+                }
+            },
+
+            // 글쓰기
+            onAddBoard : function(){
+                var me = this,
+                    boardAdminDatas = me.get("boardAdminDatas");
+
+                var param = {
+                    // 게시판 정보
+                    boardAdminInfo : boardAdminDatas.boardAdminInfo,
+                    // 관리자 여부
+                    boardAdminYn : boardAdminDatas.boardAdminYn,
+                    // 게시판 롤
+                    boardInfoActRole : boardAdminDatas.boardInfoActRole,
+
+					companyCode: me.get("codes.company")
+                };
+
+                me.fire("show-board-detail", param);
+            },
+
+            // 삭제
+            onDeleteBoard : function(){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    checked = provider.selectionCheckedIndexes(),
+                    message = "STD.N1300"; // "삭제 하시겠습니까?"
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListBoard.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteListBoard);
+                    }
+                });
+
+
+            },
+
+            // 삭제 후 callBack
+            completeDeleteBoardList :function(){
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+            },
+
+            // 닫기
+            onClose: function(){
+                var me = this;
+                me.fire('show-boardadmin');
+            }
+
+        });
+	</script>
+
+</dom-module>

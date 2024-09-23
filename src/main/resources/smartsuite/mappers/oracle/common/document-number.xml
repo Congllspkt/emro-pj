@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="document-number">
+
+<!-- 
+	문서번호 채번(DOC_NO)
+	@author : JuEung Kim
+	@Date 	: 2016. 2. 2
+-->	
+	<!-- 문서번호 채번(DOC_NO) 조회  -->
+	<select id="findListDocNumber" resultType="map">
+	/* document-number.findListDocNumber */
+       SELECT TEN_ID                /*시스템 아이디 */
+             ,DOC_NO_CD             /*문서 번호 코드 */
+             ,DOC_NO_NM             /*문서 번호 코드 명 */
+             ,ST_SEQNO             /*시작 시퀀스 */
+             ,ED_SEQNO               /*종료 시퀀스 */
+             ,DOC_NO_RULE            /*표현 */
+             ,REN_CY_CCD      /*시퀀스 갱신 단위 */
+             ,USE_YN                /*사용 여부 */
+             ,FNL_CRN_DT   /*최종 생성 일자 */
+             ,CURR_SEQNO           /*현재 시퀀스 */
+             ,PRE_SEQNO /* 갱신 이전 시퀀스 */
+             ,STS                   /*상태 */
+             ,REGR_ID                /*등록자 아이디 */
+             ,REG_DTTM                /*등록 일시 */
+             ,MODR_ID                /*수정자 아이디 */
+             ,MOD_DTTM                /*수정 일시 */
+         FROM DOC_NO
+        WHERE TEN_ID 	= #{g.tenant}
+		<if test='p.doc_no_cd != null and p.doc_no_cd != ""'>
+			<bind name="docNoCd" value="p.doc_no_cd + '%'" />
+          AND DOC_NO_CD LIKE #{docNoCd}
+		</if> 
+		<if test='p.doc_no_nm != null and p.doc_no_nm != ""'>
+			<bind name="docNoNm" value="'%' + p.doc_no_nm + '%'" />
+          AND UPPER(DOC_NO_NM) LIKE UPPER(#{docNoNm})
+		</if>
+     ORDER BY REG_DTTM
+	</select>
+	
+	<!-- 문서번호 채번(DOC_NO) INSERT -->
+	<insert id="insertDocNumber">
+	/* document-number.insertDocNumber */
+		INSERT INTO DOC_NO
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+				 STS					/*상태 */
+      			,TEN_ID					/*시스템 아이디 */
+      			,REGR_ID					/*등록자 아이디 */
+      			,REG_DTTM					/*등록 일시 */
+      			,CO_CD
+      			,DOC_NO_CD				/*문서 번호 코드 */
+      			,DOC_NO_NM				/*문서 번호 코드 명 */
+      			,ST_SEQNO				/*시작 시퀀스 */
+      			,ED_SEQNO				/*종료 시퀀스 */
+      			,DOC_NO_RULE				/*표현 */
+      			,REN_CY_CCD		/*시퀀스 갱신 단위 */
+      			,USE_YN					/*사용 여부 */
+      			,FNL_CRN_DT	/*최종 생성 일자 */
+      			,CURR_SEQNO			/*현재 시퀀스 */
+      	</trim>
+      	<trim prefix="VALUES (" suffix=")" prefixOverrides=",">
+      			 'C'
+      			,#{g.tenant}
+      			,#{g.username}
+      			,#{g.now}
+      			,#{g.co_cd}
+      			,#{p.doc_no_cd}
+      			,#{p.doc_no_nm}
+      			,#{p.st_seqno}
+      			,#{p.ed_seqno}
+      			,#{p.doc_no_rule}
+      			,#{p.ren_cy_ccd}
+      			,#{p.use_yn}
+      			,#{p.fnl_crn_dt}
+      			,#{p.curr_seqno}
+      	</trim>
+	</insert>
+	
+	<!-- 문서번호 채번(DOC_NO) UPODATE -->
+	<update id="updateDocumentNumber">
+	/* document-number.updateDocumentNumber */
+		UPDATE DOC_NO
+		<trim prefix="set" prefixOverrides=",">
+				 MODR_ID 				= #{g.username}				/*수정자 아이디*/
+			  	,MOD_DTTM 				= #{g.now}					/*수정 일시*/
+				,DOC_NO_NM 				= #{p.doc_no_nm}			/*문서 번호 코드 명 */
+				,ST_SEQNO 				= #{p.st_seqno}			/*시작 시퀀스 */
+				,ED_SEQNO 				= #{p.ed_seqno}				/*종료 시퀀스 */
+				,DOC_NO_RULE 			= #{p.doc_no_rule}			/*표현 */
+				,REN_CY_CCD 		= #{p.ren_cy_ccd}		/*시퀀스 갱신 단위 */
+				,USE_YN 				= #{p.use_yn}				/*사용 여부 */
+				,FNL_CRN_DT 	= #{p.fnl_crn_dt}	/*최종 생성 일자 */
+				,CURR_SEQNO 			= #{p.curr_seqno}			/*현재 시퀀스 */
+		</trim>
+		 WHERE TEN_ID 		= #{g.tenant}
+		   AND DOC_NO_CD 	= #{p.doc_no_cd}
+		   AND CO_CD = #{g.co_cd}
+	</update>
+	
+	<!-- 문서번호 채번(DOC_NO) DELETE  -->
+	<delete id="deleteDocNumber">
+	/* document-number.deleteDocNumber */
+		DELETE 
+		  FROM DOC_NO
+		 WHERE TEN_ID 		= #{g.tenant}		/*시스템 아이디 */
+		   AND DOC_NO_CD 	= #{p.doc_no_cd} 	/*문서 번호 코드 */
+	</delete>
+	
+</mapper>

@@ -1,0 +1,100 @@
+<dom-module id="ep-freemarker-preview">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <!-- Template + Data 결합  -->
+        <sc-ajax id="generatePreviewTemplate"
+                 url="generatePreviewTemplate.do"
+                 body="{{searchParam}}"
+                 on-response="completeGeneratePreviewTemplate"
+                 on-exception-response="exceptionGeneratePreviewTemplate">
+        </sc-ajax>
+
+        <cc-sub-title-bar title-text="템플릿 생성 결과">
+            <sc-button text="생성" on-click="onGenerateTemplate"></sc-button>
+        </cc-sub-title-bar>
+        <div class="hbox flex">
+            <div class="vbox flex" id="content" style="border: 1px solid #bfbfbf"></div>
+            <div style="width:10px;"></div>
+            <div class="vbox flex">
+                <cc-source-editor id="editor" value="{{templateData}}" mode="json" mode-disabled="true" view-hidden="true"></cc-source-editor>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'ep-freemarker-preview',
+
+            properties: {
+                html: {
+                    type: String,
+                    value: function () {
+                        return "";
+                    }
+                },
+                template: {
+                    type: String,
+                    value: function () {
+                        return "";
+                    }
+                },
+                templateData: {
+                    type: String,
+                    value: function () {
+                        return "";
+                    }
+                },
+                content: {
+                    type: String,
+                    computed: 'computeHtml(html)'
+                }
+            },
+
+            load: function (template) {
+                var me = this;
+
+                me.template = template;
+                me.$.content.innerHTML = me.content;
+            },
+
+            onGenerateTemplate: function () {
+                var me = this;
+                me.$.editor.syncValue();
+                me.generate(me.template, me.templateData);
+            },
+
+            generate: function (template, templateData) {
+                var me = this;
+
+                me.$.generatePreviewTemplate.body = {
+                    template: template,
+                    templateData: JSON.parse(templateData || "{}")
+                };
+                UT.request(me.$.generatePreviewTemplate);
+            },
+
+            completeGeneratePreviewTemplate: function (e, res) {
+                var me = this;
+                var result = res.response;
+
+                me.html = result.html;
+                me.$.content.innerHTML = me.content;
+            },
+
+            exceptionGeneratePreviewTemplate: function() {
+                var me = this;
+                me.html = this.translate('STD.N10500');
+            },
+
+            computeHtml: function (html) {
+                return html || '<div class="no-content"> '+  this.translate("STD.N4100") +'</div>'; //데이터가 존재하지 않습니다.
+            }
+        });
+    </script>
+
+</dom-module>

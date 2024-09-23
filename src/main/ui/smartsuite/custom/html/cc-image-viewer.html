@@ -1,0 +1,140 @@
+<dom-module id="cc-image-viewer">
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            width : 100%;
+            height : 100%;
+        }
+        sc-listbox.imagelist> * {
+			padding-top : 4px;
+			padding-bottom : 4px;
+			padding-left : 4px;
+			padding-right : 4px;
+			cursor : pointer;
+		}
+		
+		 sc-listbox.imagelist {
+			height: 100%;
+		}
+    </style>
+	<template>
+<!-- 
+	************************************************************************************************************
+	* Service Area
+	************************************************************************************************************
+-->
+		<!-- 조회 -->
+		<sc-ajax
+			id="findImageList"
+	        url="findListAttach.do"
+	        body="{{searchParam}}"
+	        last-response="{{imageList}}"
+	        on-response="onComplete"></sc-ajax>
+<!--  
+	************************************************************************************************************
+	* UI Area
+	************************************************************************************************************
+-->
+			 <sc-toolbar>
+                <sc-label text="이미지보기"></sc-label>
+                <sc-spacer></sc-spacer>
+                <sc-button text="닫기" on-click="onClose"></sc-button>
+            </sc-toolbar>
+			<sc-listbox id="imageListbox" class="imagelist" >
+				<template>
+					<image name="ccImageName" width="{{imageWidth}}" height="{{imageHeight}}" class="listbox-item" data-src="download.do?id=[[item.athf_uuid]]"/>
+				</template>
+			</sc-listbox>
+            <div id="imageNone" style="display:none;">
+            	<span>조회된 이미지가 없습니다</span>
+            </div>                
+		<!-- page 끝 -->	
+	</template>
+<!--  
+	************************************************************************************************************
+	* Script Area
+	************************************************************************************************************
+-->
+	<script>
+		Polymer({
+			is: "cc-image-viewer",
+			properties : {
+				imageList : {
+					type: Array,
+					value: function(){
+                		return [];
+                	}
+				},
+				searchParam:{
+					type: Object,
+					value: function(){
+                		return {};
+                	}
+				},
+				imageWidth:{
+					type:Number,
+					value:0
+				},
+				imageHeight:{
+					type:Number,
+					value:0
+				}
+				
+			},
+			attached : function() {
+				if(!this._attachedCalled) {
+		            this._attachedCalled = true;
+		            //한번만 호출되도록 로직작성
+		            
+		            var me = this;
+					// 초기화 완료 이벤트 생성
+					me.fire("init-complete");
+		        }
+			},
+			setParam : function(data){
+				var me = this;
+				this.searchParam.athg_uuid = data.athg_uuid;
+				UT.request(me.$.findImageList);
+			},
+			onComplete : function(event,res){
+				var me = this, list = this.imageList;
+				var contentComputedStyle = getComputedStyle(me.$.imageListbox);
+				var imgContainerWidth = Number(contentComputedStyle.width.replace('px',''));
+				var size = 0,listSize =list.length ;
+				
+				if(listSize == 0){
+					me.$.imageListbox.hidden = true;
+					me.$.imageNone.style = '';
+				}else{
+					if(listSize > 1){
+						var imgContainerHeight = Number(contentComputedStyle.height.replace('px',''));
+						var rowcount = Math.floor(list.length/2);
+						size = ((imgContainerWidth/2)-4-4);
+						if(rowcount*size > imgContainerHeight){
+							size = size-15;
+						}else{
+							size = size-10;
+						}
+					}else{
+						size = ((imgContainerWidth)-4-4)-16;
+					}
+					this.imageWidth = size;
+					this.imageHeight = size;
+					me.$.imageListbox.items = res.__data__.response;
+					setTimeout(function(){
+						var imgList = me.$.imageListbox.querySelectorAll('[name=ccImageName]');
+						for(var i = 0,len = imgList.length;i< len;i++){
+							var img = imgList[i]; 
+							img.setAttribute('src',img.dataSrc);
+						}
+					},200);
+				}
+			},
+			onClose : function(){
+				 var me = this;
+		         me.fire("close");
+			}
+						
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,497 @@
+<sc-link rel="import" href="ep-menu-board-append-list.html"></sc-link>
+
+<dom-module id="es-menu-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <!-- 코드 조회 -->
+        <sc-code-group>
+            <sc-code code="C002" value="{{codes.langCd}}" ></sc-code> <!-- 언어코드 -->
+            <sc-code code="C016" value="{{codes.usrCls}}" ></sc-code> <!-- 사용자 유형 -->
+        </sc-code-group>
+
+        <!-- 목록 조회 -->
+        <sc-ajax id="findList" url="findListMenu.do" body="{{findList.param}}" on-response="completeFindList"></sc-ajax>
+        <!-- 목록 삭제 -->
+        <sc-ajax id="deleteList" url="deleteListMenu.do" on-response="completeDeleteList"></sc-ajax>
+        <!-- 목록 저장 -->
+        <sc-ajax id="saveList" url="saveListMenu.do" on-response="completeSaveList"></sc-ajax>
+
+        <sc-ajax id="moveMenuInfo" url="moveMenuInfo.do" on-response="completeSaveList"></sc-ajax>
+
+        <!-- 역할 -->
+        <cc-auth-checker check-list="auth-r, auth-s, auth-d"></cc-auth-checker>
+
+		<div class="vbox flex">
+			<cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="구분" ></sc-label>
+					<sc-combobox-field id="usrClsCombo" value="{{findList.param.usr_typ_ccd}}" items="{{codes.usrCls}}" display-field="label" value-field="data" required="true"
+									   selected-index="0"></sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="다국어" ></sc-label>
+					<sc-combobox-field value="{{findList.param.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data" placeholder="선택"></sc-combobox-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+	        <sc-grid id="gridPanel" is-tree="true" class="flex" on-selection-checked="onSelectionChecked"
+	                 on-item-click="onDataCellClicked" editable="true">
+	            <cc-grid-toolbar>
+	                <sc-button text="펼침"         on-click="onExpandAll"     auth-r></sc-button>
+	                <sc-button text="접기"         on-click="onCollapseAll"   auth-r></sc-button>
+	                <sc-button text="현재노드 추가" on-click="onAddCurrentRow" auth-s></sc-button>
+	                <sc-button text="하위노드 추가" on-click="onAddChildRow"   auth-s></sc-button>
+	                <sc-button text="메뉴 이동" on-click="onDialogMenuReplace"   auth-s></sc-button>
+	                <sc-button text="게시판 배포" on-click="onShowCreateBoardMenu"   auth-s></sc-button>
+	                <sc-button text="삭제"         on-click="onDeleteList"    auth-d></sc-button>
+	                <sc-button text="저장"         on-click="onSaveList"      auth-s></sc-button>
+	            </cc-grid-toolbar>
+	            <sc-grid-columns>
+	                <sc-data-column	data-field="menu_nm"	header-text="메뉴 명"	width="250"	text-align="left" editable="true" max-length="100"	></sc-data-column>
+	                <sc-data-column	data-field="lang_ccd_menu_nm"	header-text="[[translate('다국어')]] [[_getMultilingual(findList.param.lang_ccd)]]"	width="200"	text-align="left" editable="true" visible="[[formula('isMultilingual')]]" i18n-disabled></sc-data-column>
+	                <sc-data-column	data-field="menu_cd"	header-text="메뉴 코드"	width="100"	item-editable-function="onMenuCdEditable" required="true" max-length="18" item-style-function="onMenuCdStyle"	></sc-data-column>
+	                <sc-data-column	data-field="menu_url"	header-text="메뉴 URL"	width="250"	text-align="left" editable="true"	max-length="128" 	></sc-data-column>
+	                <sc-data-column	data-field="menu_sort"	header-text="정렬"	width="50" editable="true"	max-length="4" data-type="number" format-type="integer" validator-type="integer"></sc-data-column>
+	                <sc-checkbox-column	data-field="use_yn"	header-text="사용 여부"	width="80"	editable="true"></sc-checkbox-column>
+	            </sc-grid-columns>
+	            <sc-grid-fields>
+	                <sc-grid-field	data-field="tree"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="ml_menu_cd"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="ml_menu_cd2"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="par_menu_cd"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="lang_ccd"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="lang_ccd2"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="usr_typ_ccd"	data-type="text"></sc-grid-field>
+	                <sc-grid-field	data-field="map_cnt"	data-type="number"></sc-grid-field>
+	            </sc-grid-fields>
+	        </sc-grid>
+	     </div>
+
+
+		<sc-dialog id="dialogMenuReplace" title-text="메뉴 이동" title-align="left" style="width:700px;height:900px" modal="true">
+			<div id="menuContent" class="wrap_sb_content fav_content">
+				<h2>메뉴</h2>
+				<div id="menuTree"></div>
+			</div>
+		</sc-dialog>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-menu-list",
+            properties: {
+                findList: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            info: {},
+                            param: {}
+                        };
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            usrCls: [],
+							langCd: []
+                        };
+                    },
+                    reset: false
+                },
+
+				menuDialogList: {
+					type: Array,
+					observer: '_menuDialogListChanged',
+					notify: true
+				},
+            },
+
+            formulas:{
+                isMultilingual: function(){
+                    if(!this.findList.param.lang_ccd) {
+                        return false;
+					}
+                    return SCLocaleManager.getLocale() !== this.findList.param.lang_ccd;
+                }
+            },
+
+
+            // 화면 생성 완료
+            initialized: function() {
+                var me = this;
+                var filtered = me.codes.langCd.filter(function(item){
+                    if(item.data !== SCLocaleManager.getLocale()){
+                        return item;
+					}
+				});
+                me.set("codes.langCd", filtered);
+                me.onFindList();
+
+            },
+
+            _getMultilingual: function(data) {
+                var me = this;
+                if(!data) {
+                    return '';
+				}
+                var filtered = me.codes.langCd.filter(function(item){
+                    if(item.data === data){
+                        return item;
+                    }
+                });
+                return '('+filtered[0].label+')';
+			},
+
+            onMenuCdStyle: function(data, item){
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                //crerate상태일때는 메뉴코드 style 지정안함.
+                if(provider.getItemState(item.nodeIndex) == "created"){
+                	return {};
+                }
+                var childIndexes = provider.getChildIndexes(item.nodeIndex);
+                if( !childIndexes || childIndexes.length === 0 ){
+                    return {
+                        fontWeight: "bold",
+                        fontColor: "#0e006f"
+                    };
+                }
+            },
+
+            // 그룹코드 속성 : 속성코드 editable 제어
+            onMenuCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.nodeIndex) == "created");
+            },
+
+            onSelectionChecked: function(event){
+                var me = this,detail = event.detail,
+						grid = me.$.gridPanel,
+                    checked = detail.checked,  //체크하여 변경된값
+                    nodeIndex = detail.nodeIndex;
+				grid.expand(nodeIndex, true);
+
+				parents = provider.getAncestorsIndexes(nodeIndex) || [];
+				grid.selectionChild(nodeIndex, checked);
+            },
+
+            onDataCellClicked: function(e){
+                var me = this,
+                    item = e.detail.item,
+                    data = e.detail.data,
+                    provider = this.$.gridPanel.getDataProvider();
+                if (provider.getItemState(item.nodeIndex) === "created") {
+                    return;
+                }
+
+				var childIndexes = provider.getChildIndexes(item.nodeIndex);
+				if (item.dataField=== "menu_cd" && (!childIndexes || childIndexes.length === 0)) { // leaf 노드
+					me.fire("selected-menu", data);
+				}
+            },
+
+            // 조회
+            onFindList: function() {
+                var me = this;
+                var lang = me.get("findList.param.lang_ccd");
+
+                if(!me.$.usrClsCombo.validate()){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+                UT.request(me.$.findList);
+            },
+
+            // 조회 완료
+            completeFindList: function(e, res) {
+                var me = this,
+                    result = res.response,
+                    lang = me.get("findList.param.lang_ccd");
+
+				me.set("menuDialogList",result);
+                me.set("findList.info", UT.copy(me.get("findList.param")));  // 검색조건 저장
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "menu_cd", "par_menu_cd", "children", "ROOT", null, true);
+                me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+
+                me.applyFormula();
+                me.fire('complete-search');
+            },
+
+            //저장
+            onSaveList: function() {
+                var me = this,
+                    message = "STD.N1200", // 저장 하시겠습니까?
+                    provider = this.$.gridPanel.getDataProvider();
+
+                //그리드 validation
+                if(!me.$.gridPanel.validate()){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var created = provider.getNewItems(),
+                        updated = provider.getUpdateItems();
+                    me.$.saveList.body = {
+                        insertMenus: created,
+                        updateMenus: updated
+                    };
+                    UT.request(me.$.saveList);
+                });
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onFindList();
+				});
+            },
+
+            //삭제
+            onDeleteList: function() {
+                var me = this,
+                    provider = this.$.gridPanel.getDataProvider();
+                var checked = provider.selectionCheckedIndexes();
+                if (checked && checked.length > 0) {
+                    UT.confirm("STD.N1401", function() {
+                        var deleted = provider.removeItems();
+                        if(UT.isNotEmpty(deleted)){
+                            me.$.deleteList.body = {
+                                deleteMenus: deleted
+                            };
+                            UT.request(me.$.deleteList);
+                        }
+                    });
+                }
+                else{
+                    UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                }
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+                UT.alert(message, function(){
+                    me.onFindList();
+                });
+            },
+
+            // 펼침
+            onExpandAll:function(){
+                var me = this;
+                me.$.gridPanel.expandAll();
+            },
+
+            // 접기
+            onCollapseAll:function(){
+                var me = this;
+                me.$.gridPanel.collapseAll();
+            },
+
+            // 현재노드추가
+            onAddCurrentRow: function() {
+                var me = this,
+                    grid = me.$.gridPanel,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                cell = grid.getCurrentCell();
+                var parentIndex = (cell === null) ? -1 : provider.getParentIndex(cell.nodeIndex);
+                var parentItem = {};
+                if(parentIndex > -1){
+                    parentItem = provider.getParentItem(cell.nodeIndex);
+                }
+
+                var data = {
+                    usr_typ_ccd: me.findList.info.usr_typ_ccd,
+                    lang_ccd: 'ko_KR',
+                    lang_ccd2: me.findList.info.lang_ccd,
+                    par_menu_cd: (parentIndex > -1) ? parentItem.menu_cd: "ROOT"
+                };
+
+                provider.addChildItem(parentIndex, data);
+            },
+
+            // 하위 노드 추가
+            onAddChildRow: function() {
+                var me = this,
+                    grid = me.$.gridPanel,
+                    provider = grid.getDataProvider();
+
+                cell = grid.getCurrentCell();
+
+                if(cell === null) {
+                	UT.alert("STD.N1600");
+                	return;
+                }
+
+                var parentIndex = cell.nodeIndex;
+                var parentItem = {};
+                if(parentIndex > -1){
+                    parentItem = provider.getItemAt(parentIndex);
+                }
+
+                if (parentIndex < 0) { // 현재 노드가 없으면 하위 노드 추가를 할 수 없다.
+                	UT.alert("STD.N1600");
+                    return;
+                }
+
+                if(provider.getItemState(parentIndex) == "created"){
+                    UT.alert("STD.N1800"); // 신규 노드에는 하위노드를 추가할 수 없습니다.
+                    return;
+                }
+
+                var data = {
+                    usr_typ_ccd: me.findList.info.usr_typ_ccd,
+                    lang_ccd: 'ko_KR',
+                    lang_ccd2: me.findList.info.lang_ccd,
+                    par_menu_cd: (parentIndex > -1) ? parentItem.menu_cd: "ROOT"
+                };
+
+                var newNodeIndex = provider.addChildItem(cell.nodeIndex, data);
+                grid.expand(parentIndex);
+                grid.setCurrentCell({nodeIndex: newNodeIndex});
+            },
+
+			// menuDialogList 변경 시
+			_menuDialogListChanged: function(newValue, oldValue) {
+				var me = this;
+				newValue = newValue || [];
+				var list = newValue.map(function(item) {
+					var parentCode = "";
+					var viewType = "";
+					if(item.par_menu_cd == "ROOT"){
+						parentCode = "#";
+						viewType = "#";
+					}else if(UT.isEmpty(item.par_menu_cd)){
+						parentCode = item.menu_cd;
+						viewType = "MENU";
+					}/*else if(item.par_menu_cd.indexOf("00000") > -1){
+						parentCode = item.par_menu_cd;
+						viewType = "ROOT";
+					}*/else{
+						parentCode = item.par_menu_cd;
+						viewType = "MENU";
+					}
+
+					// Type plugin을 사용하면 inside drag drop이 작용하지 않음. 삭제
+
+					var menuItem = {
+						"id"    : item.menu_cd,
+						"text"  : item.menu_nm,
+						"parent": parentCode,
+						"type"  : viewType
+					}
+					menuItem.data = item;
+					//cItem.text += '&nbsp;<i class="fa fa-trash"></i>';
+					/*if(menuItem.type === "ROOT") {
+						menuItem.text += '<i class="fav-edit-btn"></i>';
+					}
+					menuItem.text += '<i class="fav-del-btn"></i>';*/
+					menuItem.state = {selected: false}
+					return menuItem;
+				});
+
+				if(!oldValue) {
+					me._generateFavoriteTree(list);
+				} else {
+					$(me.$.menuTree).jstree(true).settings.core.data = list;
+					$(me.$.menuTree).jstree(true).refresh();
+				}
+			},
+
+			_generateFavoriteTree: function(list) {
+				var me = this;
+
+				$(me.$.menuTree).jstree({
+					core: {
+						data: list,
+						check_callback: (operation, node, node_parent, node_position, more) => {
+							/*
+                            * operation : 동작 상태('create_node', 'rename_node', 'delete_node', 'move_node', 'copy_node' or 'edit')
+                            * node : 선택된 노드 정
+                            * node_parent : Drop 된 트리의 부모 노드 정보
+                            * node_position : Drop 된 위치
+                            * more : 기타 정보
+                            */
+
+							// 트리에서 특정 노드를 Drag 하여 Drop 하는 시점
+							if(node.parent ==="#" || node.parent ==="ROOT" || node_parent.id === "#"){
+								return false
+							}else{
+								return true
+							}
+						},
+						expand_selected_onload: true,
+						themes: {
+							dots: true,
+							responsive: false
+						}
+					},
+					//checkbox: {cascade: "", three_state: false},
+					dnd: {
+						drag_check: function(data) {
+							return true;
+						}},
+					plugins: [
+						"dnd"// drag and drop
+					]
+				}).bind('loaded.jstree', function(e) {
+					// loaded 시 전체 펼치기
+					$(this).jstree('open_node(#)');
+
+				}).bind("refresh.jstree", function (e, data) {
+					// refresh 시 전체 펼치기
+					$(this).jstree("open_node(#)");
+
+				}).bind("move_node.jstree", function(e, item) {
+					// 노드 이동 시 - 순서 업데이트
+					var menuData = item.node.data;
+					if(item.parent === "#"){
+						UT.alert("STD.ADM1062");
+						$(me.$.menuTree).jstree(true).refresh();
+					}else{
+						menuData.par_menu_cd = item.parent;
+					}
+					me.onMoveMenu(menuData);
+				});
+			},
+
+			onMoveMenu:function(menuData){
+				var me =this;
+				me.$.moveMenuInfo.body = menuData;
+				UT.request(me.$.moveMenuInfo);
+			},
+
+
+			onDialogMenuReplace:function () {
+				var me = this;
+				me.$.dialogMenuReplace.show();
+			},
+			//메뉴에 게시판 생성
+			onShowCreateBoardMenu: function(){
+				var me = this;
+
+				var previewPopup = UT.popup('ep-menu-board-append-list', me, "70%", "90%", {}, {titleText : "게시판 메뉴 배포"});
+				previewPopup.show();
+				previewPopup.getWindowContent().load();
+			},
+
+		});
+    </script>
+
+</dom-module>

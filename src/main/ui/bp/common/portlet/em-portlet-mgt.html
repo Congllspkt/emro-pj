@@ -1,0 +1,36 @@
+<link rel="import" href="../../../smartsuite/portal/sc-portal-loader.html" />
+<sc-link rel="import" href="es-portlet-mgt-list.html"></sc-link>
+<sc-link rel="import" href="es-portlet-layout-config.html"></sc-link>
+<dom-module id="em-portlet-mgt">
+	<style>
+         :host { 
+             @apply(--vbox-layout) 
+         } 
+    </style>
+    
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<sc-tab-navigation class="fit">
+			<es-portlet-mgt-list id="portletManager" title-text="포틀릿 설정" 
+				origin-common-config="{{commonConfig}}">
+			</es-portlet-mgt-list>    		
+        	<template>
+        		<es-portlet-layout-config id="portletLayout" title-text="레이아웃 설정" 
+        			common-config="{{commonConfig}}">
+        		</es-portlet-layout-config>	
+        	</template>
+        </sc-tab-navigation>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-portlet-mgt', 
+            properties: {
+            	commonConfig: {
+            		type: Object
+            	}
+            }
+        });
+    </script>
+
+</dom-module>

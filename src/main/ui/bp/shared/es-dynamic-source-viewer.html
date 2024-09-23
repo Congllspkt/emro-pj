@@ -1,0 +1,135 @@
+<script src="../../lib/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+
+<dom-module id="es-dynamic-source-viewer">
+	<style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <sc-ajax id="changeSourceHtmlPage"
+                 url="changeSourceHtmlPage.do"
+                 on-response="onChangeComplete">
+        </sc-ajax>
+
+        <sc-request-group id="requestGroup" on-response="onResponse"></sc-request-group>
+        <cc-sub-title-bar>
+            <sc-button text="소스 반영" on-click="onSourceChangeRequest"></sc-button>
+        </cc-sub-title-bar>
+    	<sc-tab-navigation id="tabNavi" class="flex">
+
+        </sc-tab-navigation>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'es-dynamic-source-viewer',
+            behaviors:[
+                Polymer.SCAutoGenIdBehavior
+            ],
+            properties : {
+            	srcList : {
+            		type : Array,
+            		value : function() {
+            			return []
+            		}
+            	},
+            	editors : {
+            		type : Array,
+            		value : function() {
+            			return []
+            		}
+            	},
+            	contents : {
+            		type : Array,
+            		value : function() {
+            			return []
+            		}
+            	}
+            },
+            initialized: function() {
+                var me = this, srcList = me.srcList;
+                
+                for(var i=0; i<srcList.length; i++) {
+                	var data = srcList[i];
+                	
+                	var container = document.createElement("sc-container");
+                	var id = me.generateId();
+                	container._contentElement.id = id;
+                	container.i18nDisabled = data["i18nDisabled"] || false;
+                	container.setAttribute("title-text", data["title"]);
+                	container.setAttribute("class"     , "fit");
+
+                	Polymer.dom(me.$.tabNavi).appendChild(container);
+                	Polymer.dom.flush();
+                	
+                	me.editors[i] = ace.edit(id);
+                	me.editors[i].id = id;
+                	me.editors[i].url = data["url"];
+                	me.editors[i].setTheme("ace/theme/crimson_editor");
+                	me.editors[i].getSession().setMode("ace/mode/" + data["extension"]);
+                    me.editors[i].setReadOnly(false);
+                    me.editors[i].$blockScrolling = Infinity;
+                    
+                    var ajax = document.createElement("sc-ajax");
+                    ajax.setAttribute("url"      , data["url"]);
+                    ajax.setAttribute("method"   , "GET");
+                    ajax.setAttribute("handle-as", "text");
+                    
+                    Polymer.dom(me.$.requestGroup).appendChild(ajax);
+                    Polymer.dom.flush();
+                }
+                me.$.requestGroup.request();
+            },
+            onResponse: function(e, res) {
+            	var me = this;
+           		
+            	for(var i=0; i<me.editors.length; i++) {
+            		var response = e.currentTarget.children[i].lastResponse;
+            		
+	            	me.editors[i].setValue(response);
+	           		me.editors[i].selection.clearSelection();
+	           		me.editors[i].gotoLine(0);
+            	}
+            },
+            _destroy: function() {
+				var me = this;
+           		
+            	for(var i=0; i<me.editors.length; i++) {
+            		me.editors[i].destroy();
+            	}
+            },
+            onSourceChangeRequest:function () {
+                var me = this;
+
+                var tabId = this.querySelector(".item-selected").getAttribute("tab-id");
+                var conTentElementId = this.querySelector("sc-container[tab-id='"+tabId+"'")._contentElement.id;
+
+                me.editors.forEach(function(data) {
+                    var editorId = data.id;
+                    if(editorId == conTentElementId){
+                        var editValue = data.getValue();
+                        var url = data.url;
+
+                        console.log(editValue);
+                        console.log(url);
+
+                        me.$.changeSourceHtmlPage.body ={
+                            editValue : editValue,
+                            url : url
+                        }
+
+                        UT.request(me.$.changeSourceHtmlPage);
+
+                        return false;
+                    }
+
+                })
+            },
+
+            onChangeComplete:function () {
+                window.location.reload();
+            }
+        });
+    </script>
+</dom-module>

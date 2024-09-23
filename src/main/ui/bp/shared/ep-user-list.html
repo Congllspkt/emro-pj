@@ -1,0 +1,218 @@
+<dom-module id="ep-user-list">
+
+    <style>
+       :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    
+        <sc-ajax id="findList" url="findListUserEdu.do" body="{{findList.param}}" last-response="{{resultList}}"></sc-ajax>
+            
+        <!-- 공통코드 -->
+        <sc-request-group init>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.companies}}"></sc-ajax> <!-- 회사목록 -->
+        </sc-request-group>
+        
+        <div class="vbox flex">
+
+			<cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+				<!-- <cc-fieldset>
+					<sc-label text="회사"></sc-label>
+					<sc-combobox-field id="compCdCombo"
+									   display-field="comp_nm" value-field="co_cd"
+									   items="{{codes.companies}}" value="{{findList.param.co_cd}}" placeholder="전체">
+					</sc-combobox-field>
+				</cc-fieldset> -->
+				<cc-fieldset>
+					<sc-label text="부서 명"></sc-label>
+					<sc-text-field value="{{findList.param.dept_nm}}" max-length="200" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="사용자 아이디"></sc-label>
+					<sc-text-field value="{{findList.param.usr_id}}" max-length="200" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="사용자 명"></sc-label>
+					<sc-text-field value="{{findList.param.usr_nm}}" max-length="200" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+    
+        	<sc-grid id="gridPanel" editable="false" selection-mode="[[formula('selectionMode')]]"	use-state="false" class="flex"
+        			 use-selection="[[!singleSelect]]"
+        			 data-provider="{{resultList}}" on-item-click="onDataCellClicked">
+        		<cc-grid-toolbar>
+	                <sc-button text="선택" on-click="onSelectedList" hidden="[[singleSelect]]"></sc-button>
+	            </cc-grid-toolbar>
+	            <sc-grid-columns>
+                   <!--  <sc-data-column data-field="co_cd"	header-text="회사 코드"		width="80"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="display_comp_nm"	header-text="회사 명"		width="150"	text-align="center"></sc-data-column> -->
+                    <sc-data-column data-field="usr_id"		header-text="사용자 아이디"		width="100"	text-align="center"></sc-data-column>
+                    <sc-group-column	hide-child-headers="true"	header-text="사용자 명"			width="150"	text-align="center"	editable="false">
+                    	<sc-data-column data-field="display_usr_nm"		header-text="사용자 명"		width="120"	text-align="center"></sc-data-column>
+                    	<sc-image-column	singular-source="ui/assets/img/grid/ico_grd_select.png"		data-field="btn_select"	width="30"	text-align="center" editable="false"  visible="[[singleSelect]]"></sc-image-column>
+                    </sc-group-column>
+                    <sc-data-column data-field="dept_cd"	header-text="부서 코드"		width="100"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="display_dept_nm"	header-text="부서 명"		width="150"	text-align="center"></sc-data-column>
+	            </sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field data-field="usr_nm"></sc-grid-field>
+					<sc-grid-field data-field="usr_nm_en"></sc-grid-field>
+					<sc-grid-field data-field="comp_nm"></sc-grid-field>
+					<sc-grid-field data-field="comp_nm_en"></sc-grid-field>
+					<sc-grid-field data-field="dept_nm"></sc-grid-field>
+					<sc-grid-field data-field="dept_nm_en"></sc-grid-field>
+				</sc-grid-fields>
+        	</sc-grid>
+        </div>
+
+    </template>
+    
+    <script>
+        Polymer({
+            is: "ep-user-list",
+            properties: {
+            	titleText:{
+                    type: String,
+    				value: I18N.translate("사용자 검색")
+    			},
+    			
+                findList: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            param: {
+								co_cd : SCSessionManager.currentUser.co_cd
+							}
+                        };
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            companies: []
+                        };
+                    },
+                    reset: false
+                },
+                singleSelect: {
+                    type: Boolean,
+                    value: false
+                },
+                resultList : {
+                	type : Array,
+                	value : function() {
+                		return [];
+                	}
+                }
+            },
+            formulas: {
+            	selectionMode: function(){
+            		var me = this;
+            		return (me.get("singleSelect") ? "radio" : "check");
+            	}
+            },
+            // find list url
+            getAjaxUrl: function() {
+                var me = this;
+                return me.$.findList.url;
+            },
+            
+            // 팝업 load 및 옵션 설정
+            load: function(options) {
+                var me = this;
+                options = options || {};
+                me.set("singleSelect", UT.isBoolean(options.singleSelect) ? options.singleSelect : false);
+                me.applyFormula();
+                me.set("autoComplete" , UT.isBoolean(options.autoComplete) ? options.autoComplete : false);
+
+                if (UT.isObject(options.defaultParam)) {
+                    me.set("findList.param", options.defaultParam);
+                }
+                if(UT.isArray(options.dataRows)) { // 배열 데이터
+                    var provider = me.$.gridPanel.getDataProvider();
+                    provider.addItems(options.dataRows);
+                }
+                if(UT.isArray(options.disabled)){
+                	var disabledArray = options.disabled;
+                	
+                	for(var i=0; i<disabledArray.length; i++) {
+						var strId = disabledArray[i];
+						
+						me.$[strId].disabled = true;
+					}
+                }
+
+                me.onFindList();
+            },
+            
+            
+          	//그리드이벤트
+            onDataCellClicked: function(e){
+            	var me = this,
+                data = e.detail.data,
+                item = e.detail.item;
+                var grid = me.$.gridPanel;
+                var current = grid.getCurrentCell();
+                
+                var index = current.rowIndex;
+                
+				var singleSelect = me.get("singleSelect");
+                
+                if(singleSelect){
+                	if(item.dataField === "btn_select"){
+                		//바로선택
+                    	me.selectedList([data]);
+                	}
+                }else{
+                	grid.selectionCheck(index,true,singleSelect);
+                }
+            },
+            
+            // 검색(조회)
+            onFindList: function() {
+                var me = this;
+                UT.request(me.$.findList);
+            },
+            
+          	//선택 목록 반환
+            selectedList: function(selected){
+            	var me = this;
+            	if(selected.length > 0) {
+                    me.fire('selected-items', selected);
+                    if(me.get("autoComplete")){
+                    	me.onClose();
+                    }
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+				}
+            },
+            
+            // 선택 목록 반환
+            onSelectedList: function() {
+                var me = this;
+                var provider = me.$.gridPanel.getDataProvider();
+            	var selected = provider.selectionCheckedItems();
+            	//ZER-333
+				me.selectedList(selected);
+            },
+          	//닫기
+            onClose : function() {
+            	var me = this;
+            	
+            	me.clearData();
+            	me.fire('close');
+            },
+            clearData : function() {
+            	var me = this;
+                me.reset();
+            },
+            behaviors:[
+                Polymer.CCAutocompleteBehavior
+            ]
+        });
+    </script>
+
+</dom-module>

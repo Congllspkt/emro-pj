@@ -1,0 +1,783 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mail-manager">
+	
+	<resultMap type="map" id="resultMap-findInfoMail">
+        <result property="ctmpl_cont" column="CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findListMail" resultMap="resultMap-findInfoMail">
+		/* mail-manager.findListMail : 메일 목록 조회*/
+		SELECT CP.TEN_ID
+		     , CP.CTMPL_UUID
+		     , CP.TMPL_TYP_CCD
+		     , CP.BASC_CTMPL_CD
+		     , CTMPL_MULTLANG.CTMPL_NM
+		     , CTMPL_MULTLANG.CTMPL_CONT
+		     , CTMPL_MULTLANG.CTMPL_PARM_INFO
+		     , CASE WHEN CTMPL_MULTLANG.RMK IS NULL THEN BASE_CTMPL_MULTLANG.RMK
+		            ELSE CTMPL_MULTLANG.RMK
+		        END AS RMK
+		     , CP.STS
+		     , CP.REGR_ID
+		     , CP.REG_DTTM
+		     , CP.MODR_ID
+		     , CP.MOD_DTTM
+		     , ETS.EML_TMPL_CD
+		     , ETS.TASK_TYP_CCD
+		  FROM CTMPL CP
+		  LEFT OUTER JOIN CTMPL_MULTLANG BASE_CTMPL_MULTLANG
+		    ON CP.TEN_ID = BASE_CTMPL_MULTLANG.TEN_ID
+		   AND CP.CTMPL_UUID = BASE_CTMPL_MULTLANG.CTMPL_UUID
+		   AND BASE_CTMPL_MULTLANG.LANG_CCD = 'ko_KR'
+		  LEFT OUTER JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+		    ON CP.TEN_ID = CTMPL_MULTLANG.TEN_ID
+		   AND CP.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+		   AND CTMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+		 INNER JOIN EML_TMPL_SETUP ETS
+		    ON CP.TEN_ID = ETS.TEN_ID
+		   AND CP.CTMPL_UUID = ETS.CTMPL_UUID
+		  LEFT OUTER JOIN DTLCD
+		    ON DTLCD.TEN_ID = ETS.TEN_ID
+		   AND DTLCD.CCD = 'C082'
+		   AND DTLCD.DTLCD = ETS.TASK_TYP_CCD
+		 WHERE CP.TEN_ID = #{g.tenant}
+		   AND CP.STS != 'D'
+		   <if test="p.task_typ_ccd != null and p.task_typ_ccd != ''">
+		       AND ETS.TASK_TYP_CCD = #{p.task_typ_ccd}
+		   </if>
+		   <if test="p.eml_tmpl_cd != null and p.eml_tmpl_cd != ''">
+		       <bind name="idPattern" value="'%' + p.eml_tmpl_cd + '%'" />
+		       AND (UPPER(ETS.EML_TMPL_CD) LIKE UPPER(#{idPattern}))
+		   </if>
+		   <if test="p.rmk != null and p.rmk != ''">
+		       <bind name="rmkPattern" value="'%' + p.rmk + '%'" />
+		       AND (UPPER(CTMPL_MULTLANG.RMK) LIKE UPPER(#{rmkPattern}))
+		   </if>
+		 ORDER BY DTLCD.DTLCD_SORT, ETS.EML_TMPL_CD
+	</select>
+	
+	
+	<resultMap type="map" id="resultMap-findListMailMultiLangTemplate">
+        <result property="ctmpl_cont" column="CTMPL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findListMailMultiLangTemplate" resultMap="resultMap-findListMailMultiLangTemplate">
+		/* mail-manager.findListMailMultiLangTemplate : 메일 목록 상세 조회*/
+		SELECT CP.TEN_ID
+			 , CP.CTMPL_UUID
+			 , CP.TMPL_TYP_CCD
+			 , CP.BASC_CTMPL_CD
+			 , CTMPL_MULTLANG.LANG_CCD
+			 , CTMPL_MULTLANG.CTMPL_NM
+			 , CTMPL_MULTLANG.CTMPL_CONT
+			 , CTMPL_MULTLANG.CTMPL_PARM_INFO
+			 , CTMPL_MULTLANG.RMK
+			 , CP.STS
+			 , CP.REGR_ID
+			 , CP.REG_DTTM
+			 , CP.MODR_ID
+			 , CP.MOD_DTTM
+			 , ETS.EML_TMPL_CD
+			 , ETS.USE_YN
+			 , ETS.EML_SND_TYP_CCD
+		     , ETS.TASK_TYP_CCD
+		     , ETS.RCPT_SUBJ_CCD
+		FROM CTMPL CP
+				 INNER JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+								 ON CP.TEN_ID = CTMPL_MULTLANG.TEN_ID
+									 AND CP.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+									 AND CTMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+		INNER JOIN EML_TMPL_SETUP ETS
+			ON 	 CP.TEN_ID = ETS.TEN_ID
+			AND  CP.CTMPL_UUID = ETS.CTMPL_UUID
+			AND  ETS.EML_TMPL_CD = #{p.eml_tmpl_cd}
+		WHERE CP.TEN_ID = #{g.tenant}
+		  AND CP.STS != 'D'
+	</select>
+
+	<select id="findListMailTemplate" resultMap="resultMap-findListMailMultiLangTemplate">
+		/* mail-manager.findListMailTemplate : 메일 목록 상세 조회*/
+		SELECT CP.TEN_ID
+             , CP.CTMPL_UUID
+             , CP.TMPL_TYP_CCD
+             , CP.BASC_CTMPL_CD
+             , CP.STS
+             , CP.REGR_ID
+             , CP.REG_DTTM
+             , CP.MODR_ID
+             , CP.MOD_DTTM
+             , CM.CTMPL_NM
+             , (CASE WHEN CM.LANG_CCD IS NULL THEN #{p.lang_ccd}
+                       ELSE CM.LANG_CCD
+               END) AS LANG_CCD
+             , CASE WHEN CM.RMK IS NULL THEN BASE_CM.RMK
+                    ELSE CM.RMK
+                END RMK
+             , ETS.EML_TMPL_CD
+             , ETS.USE_YN
+             , ETS.EML_SND_TYP_CCD
+             , ETS.TASK_TYP_CCD
+             , ETS.RCPT_SUBJ_CCD
+		FROM CTMPL CP
+		LEFT OUTER JOIN CTMPL_MULTLANG BASE_CM
+		    ON CP.TEN_ID = BASE_CM.TEN_ID
+		           AND CP.CTMPL_UUID = BASE_CM.CTMPL_UUID
+		    AND BASE_CM.LANG_CCD = 'ko_KR'
+		LEFT OUTER JOIN CTMPL_MULTLANG CM
+		    ON CP.TEN_ID = CM.TEN_ID
+		           AND CP.CTMPL_UUID = CM.CTMPL_UUID
+		    AND CM.LANG_CCD = #{g.locale}
+		INNER JOIN EML_TMPL_SETUP ETS
+			ON 	 CP.TEN_ID = ETS.TEN_ID
+			AND  CP.CTMPL_UUID = ETS.CTMPL_UUID
+			AND  ETS.EML_TMPL_CD = #{p.eml_tmpl_cd}
+		WHERE CP.TEN_ID = #{g.tenant}
+		  AND CP.STS != 'D'
+	</select>
+
+	<select id="findMailMultiLangTemplateInfo" resultMap="resultMap-findListMailMultiLangTemplate">
+		/* mail-manager.findMailMultiLangTemplateInfo : 메일 목록 상세 조회*/
+		SELECT
+			 (CASE WHEN CTMPL_MULTLANG.LANG_CCD IS NULL THEN #{p.lang_ccd}
+					 ELSE CTMPL_MULTLANG.LANG_CCD
+			END) AS LANG_CCD
+			 , CTMPL_MULTLANG.CTMPL_NM
+			 , CTMPL_MULTLANG.CTMPL_CONT
+			 , CTMPL_MULTLANG.RMK
+			 , ETS.EML_SND_TYP_CCD
+		FROM CTMPL CP
+				 INNER JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+							ON CP.TEN_ID = CTMPL_MULTLANG.TEN_ID
+								AND CP.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+								AND CTMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+				 INNER JOIN EML_TMPL_SETUP ETS
+							ON 	 CP.TEN_ID = ETS.TEN_ID
+								AND  CP.CTMPL_UUID = ETS.CTMPL_UUID
+								AND  ETS.EML_TMPL_CD = #{p.eml_tmpl_cd}
+		WHERE CP.TEN_ID = #{g.tenant}
+		  AND CP.STS != 'D'
+	</select>
+
+
+	<!-- 저장 -->
+	<insert id="insertMailTemplate">
+		/* mail-manager.insertMailTemplate  템플릿 본문 신규저장 */
+		INSERT INTO CTMPL(
+			TEN_ID
+			, CTMPL_UUID
+			, TMPL_TYP_CCD
+			, BASC_CTMPL_CD
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES(
+			#{g.tenant}
+			,#{p.ctmpl_uuid}
+			,(SELECT TMPL_TYP_CCD FROM ELEM_COMM_TMPL WHERE ELEM_COMM_TMPL.BASC_CTMPL_CD = #{p.basc_ctmpl_cd} AND ELEM_COMM_TMPL.TEN_ID = #{g.tenant})
+			,#{p.basc_ctmpl_cd}
+			,'C'
+			,#{g.username}
+			,#{g.now}
+			,#{g.username}
+			,#{g.now}
+		)
+	</insert>
+	<!-- 저장 -->
+	<insert id="insertMailTemplateMultiLang">
+		/* mail-manager.insertMailTemplateMultiLang  템플릿 본문 신규저장 */
+		INSERT INTO CTMPL_MULTLANG(
+			TEN_ID
+			, CTMPL_UUID
+			, CTMPL_NM
+			, CTMPL_CONT
+			, CTMPL_PARM_INFO
+			, LANG_CCD
+			, RMK
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES(
+			#{g.tenant}
+			,#{p.ctmpl_uuid}
+			,#{p.ctmpl_nm}
+			,#{p.ctmpl_cont}
+			,#{p.ctmpl_parm_info}
+			,#{p.lang_ccd}
+			,#{p.rmk}
+			,'C'
+			,#{g.username}
+			,#{g.now}
+			,#{g.username}
+			,#{g.now}
+		)
+	</insert>
+
+
+	<insert id="insertMailSetup">
+		/* mail-manager.saveListMail 메일 설정 신규저장*/
+		INSERT INTO EML_TMPL_SETUP(
+			TEN_ID
+			, EML_TMPL_CD
+			, CTMPL_UUID
+			, USE_YN
+			, EML_SND_TYP_CCD
+			, TASK_TYP_CCD
+			, RCPT_SUBJ_CCD
+			, STS
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES(
+			#{g.tenant}
+			,#{p.eml_tmpl_cd}
+			 ,#{p.ctmpl_uuid}
+			,#{p.use_yn}
+			,#{p.eml_snd_typ_ccd}
+			,#{p.task_typ_ccd}
+            ,#{p.rcpt_subj_ccd}
+			,'C'
+			,#{g.username}
+			,#{g.now}
+			,#{g.username}
+			,#{g.now}
+		)
+	</insert>
+	
+	<update id="updateMailSetup">
+		/*mail-manager.saveListMail 메일 설정 수정*/
+		UPDATE EML_TMPL_SETUP
+			SET STS='U'
+				, MODR_ID = #{g.username}
+				, MOD_DTTM = #{g.now}
+				, EML_TMPL_CD = #{p.eml_tmpl_cd}
+				, USE_YN = #{p.use_yn}
+				, EML_SND_TYP_CCD = #{p.eml_snd_typ_ccd}
+			    , TASK_TYP_CCD = #{p.task_typ_ccd}
+			    , RCPT_SUBJ_CCD = #{p.rcpt_subj_ccd}
+			WHERE TEN_ID = #{g.tenant}
+		 		AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+	</update>
+	
+	<update id="updateMailTemplate">
+		/*mail-manager.updateMailTemplate 템플릿 본문 수정*/
+		UPDATE CTMPL
+			SET STS='U'
+				, MODR_ID = #{g.username}
+				, MOD_DTTM = #{g.now}
+				<if test='p.basc_ctmpl_cd != null' >
+					, BASC_CTMPL_CD = #{p.basc_ctmpl_cd}
+				</if>
+			 WHERE TEN_ID = #{g.tenant}
+		 		AND CTMPL_UUID = #{p.ctmpl_uuid}
+	</update>
+	<update id="updateMailTemplateMultiLang">
+		/*mail-manager.updateMailTemplateMultiLang 템플릿 본문 수정*/
+		UPDATE CTMPL_MULTLANG
+			SET STS='U'
+				, MODR_ID = #{g.username}
+				, MOD_DTTM = #{g.now}
+			    , CTMPL_NM = #{p.ctmpl_nm}
+			    , RMK = #{p.rmk}
+				<if test='p.ctmpl_parm_info != null' >
+					, CTMPL_PARM_INFO = #{p.ctmpl_parm_info}
+				</if>
+				<if test='p.ctmpl_cont != null' >
+					, CTMPL_CONT = #{p.ctmpl_cont}
+				</if>
+			 WHERE TEN_ID = #{g.tenant}
+		 		AND CTMPL_UUID = #{p.ctmpl_uuid}
+				AND LANG_CCD = #{p.lang_ccd}
+	</update>
+
+	<select id="findCountMailTemplate" resultType="int">
+		SELECT COUNT(*)
+    	  FROM CTMPL
+    	 WHERE TEN_ID = #{g.tenant}
+     		  AND CTMPL_UUID = #{p.ctmpl_uuid}
+	</select>
+	<select id="findCountMailTemplateMultiLang" resultType="int">
+		SELECT COUNT(*)
+    	  FROM CTMPL_MULTLANG
+    	 WHERE TEN_ID = #{g.tenant}
+     		  AND CTMPL_UUID = #{p.ctmpl_uuid}
+			  AND LANG_CCD = #{p.lang_ccd}
+	</select>
+
+	<select id="findCountMailHistory" resultType="int">
+		/* mail-manager.findCountMailHistory */
+		SELECT COUNT(EML_SND_UUID) AS CNT
+		FROM EML_SND_HISTREC
+		WHERE TEN_ID = #{g.tenant}
+		AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+	</select>
+	
+	<update id="updateMailSetupStatusDeleteByMailSetupId">
+		/* mail-manager.updateMailSetupStatusDeleteByMailSetupId: EML_TMPL_SETUP 메일설정 삭제 상태로 변경 */
+		UPDATE EML_TMPL_SETUP
+			SET STS='D' 
+			WHERE TEN_ID= #{g.tenant}
+				AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+	</update>
+	
+	<update id="updateMailTemplateStatusDeleteByTemplateId">
+		/* mail-manager.updateMailTemplateStatusDeleteByTemplateId: CTMPL 템플릿 본문 삭제 상태로 변경 */
+		UPDATE CTMPL
+			SET STS='D'
+			WHERE TEN_ID= #{g.tenant}
+				AND CTMPL_UUID =#{p.ctmpl_uuid}
+	</update>
+	
+	<delete id="deleteMailSetupByMailSetId">
+		/* mail-manager.deleteMail: EML_TMPL_SETUP 메일설정 삭제 */
+		DELETE FROM EML_TMPL_SETUP
+			WHERE TEN_ID= #{g.tenant}
+				AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+	</delete>
+	
+	<delete id="deleteMailMultlangTemplateByTemplateId">
+		/* mail-manager.deleteMailMultlangTemplateByTemplateId */
+		DELETE FROM CTMPL_MULTLANG
+		 WHERE TEN_ID = #{g.tenant}
+		   AND CTMPL_UUID = #{p.ctmpl_uuid}
+	</delete>
+	
+	<delete id="deleteMailTemplateByTemplateId">
+		/* mail-manager.deleteContent: CTMPL 템플릿 본문 삭제 */
+		DELETE FROM CTMPL
+			WHERE TEN_ID= #{g.tenant}
+				AND CTMPL_UUID =#{p.ctmpl_uuid}
+	</delete>
+	
+	
+	<select id="findListEmailTemplate" resultType="map">
+		/*콤보박스 select*/
+		SELECT ELEM_COMM_TMPL.BASC_CTMPL_CD
+			,(CASE WHEN ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_NM IS NULL
+			    THEN (SELECT BASC_CTMPL_NM
+			         FROM ELEM_COMM_TMPL_MULTLANG
+			         WHERE TEN_ID = ELEM_COMM_TMPL.TEN_ID
+			         AND TMPL_TYP_CCD = ELEM_COMM_TMPL.TMPL_TYP_CCD
+			         AND BASC_CTMPL_CD =  ELEM_COMM_TMPL.BASC_CTMPL_CD
+			         AND LANG_CCD = 'ko_KR')
+				ELSE ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_NM
+				END) AS BASC_CTMPL_NM
+    	  FROM ELEM_COMM_TMPL ELEM_COMM_TMPL
+				   LEFT OUTER JOIN ELEM_COMM_TMPL_MULTLANG ELEM_COMM_TMPL_MULTLANG
+								   ON ELEM_COMM_TMPL.TEN_ID = ELEM_COMM_TMPL_MULTLANG.TEN_ID
+									   AND ELEM_COMM_TMPL.TMPL_TYP_CCD = ELEM_COMM_TMPL_MULTLANG.TMPL_TYP_CCD
+									   AND ELEM_COMM_TMPL.BASC_CTMPL_CD = ELEM_COMM_TMPL_MULTLANG.BASC_CTMPL_CD
+									   AND ELEM_COMM_TMPL_MULTLANG.LANG_CCD = #{p.lang_ccd}
+    	 WHERE ELEM_COMM_TMPL.TEN_ID = #{g.tenant}
+    	 	AND ELEM_COMM_TMPL.TMPL_TYP_CCD = 'EML'
+	</select>
+	
+	<resultMap type="map" id="resultMap-findListMailSendHistory">
+		<result property="rcpnt_eml" column="RCPNT_EML_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="rcpnt_nm" column="RCPNT_NM_LIST" jdbcType="CLOB" javaType="string" />
+        <result property="fail_cont" column="FAIL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findListMailSendHistory" resultMap="resultMap-findListMailSendHistory">
+		/* mail-manager.findListMailSendHistory 메일전송이력 조회 */
+		SELECT ESH.TEN_ID
+			, ESH.EML_SND_UUID
+			, ESH.EML_TMPL_CD
+			, ESH.SNDR_EML
+			, ESH.SNDR_NM
+			, ESH.RCPNT_EML_LIST
+			, ESH.RCPNT_NM_LIST
+			, ESH.SND_DTTM
+			, ESH.EML_TIT
+			, ETS.EML_SND_TYP_CCD
+			, ESH.SND_YN
+			, ESH.REGR_ID
+			, ESH.REG_DTTM
+		FROM EML_SND_HISTREC ESH
+			INNER JOIN EML_TMPL_SETUP ETS
+			ON ESH.EML_TMPL_CD = ETS.EML_TMPL_CD
+			WHERE ESH.EML_TMPL_CD = #{p.eml_tmpl_cd}
+				<if test="p.from_date != null">
+					AND ESH.SND_DTTM <![CDATA[>=]]> #{p.from_date}
+				</if>
+				<if test="p.to_date != null">
+					AND ESH.SND_DTTM <![CDATA[<]]> #{p.to_date}
+				</if>
+				AND ETS.STS != 'D'
+		ORDER BY ESH.SND_DTTM DESC
+	</select>
+	
+	<!-- 메일설정(EML_TMPL_SETUP) 테이블에서 CTMPL_UUID select -->
+	<select id="findMailSetForTemplateIdByMailSetupId" resultType="String">
+		SELECT CTMPL_UUID FROM EML_TMPL_SETUP
+			WHERE TEN_ID= #{g.tenant}
+			AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+	</select>
+	
+	<!-- 다중 발송 전송여부 변경  -->
+	<update id="updateEmailMultiSendingComplete">
+		/* mail-manager.updateEmailMultiSendingComplete : 다중 메일 전송 여부 업데이트*/
+		UPDATE EML_SND_HISTREC
+		   SET SND_YN = #{p.snd_yn}
+		     , SND_DTTM = #{g.now}
+			<if test="p.snd_err_msg != null">
+				,SND_ERR_MSG = #{p.snd_err_msg}				 	/* 발신 에러 내용  */
+			</if>
+		 WHERE TEN_ID = #{g.tenant}
+		   AND EML_SND_UUID = #{p.eml_snd_uuid}
+	</update>
+
+	<insert id="insertMultiMailInfo">
+		INSERT INTO EML_SND_HISTREC
+		(
+			TEN_ID
+			,REGR_ID
+			,REG_DTTM
+			,EML_SND_UUID					/*메일 아이디 */
+			,EML_TMPL_CD				/*메일 설정 아이디 */
+			<if test="p.eml_tit != null">
+				,EML_TIT					/*메일 제목*/
+			</if>
+			<if test="p.eml_cont != null">
+				,EML_CONT					/*메일 내용*/
+			</if>
+
+			<if test="p.rcpnt_nm_list != null">
+				,RCPNT_NM_LIST						/*송신자 이름 목록*/
+			</if>
+			<if test="p.rcpnt_eml_list != null">
+				,RCPNT_EML_LIST					/*송신자 주소 목록*/
+			</if>
+			<if test="p.cc_nm_list != null">
+				,CC_NM_LIST						/*CC 송신자 이름 목록*/
+			</if>
+			<if test="p.cc_eml_list != null">
+				,CC_EML_LIST					/*CC 송신자 주소 목록*/
+			</if>
+			<if test="p.bcc_nm_list != null">
+				,BCC_NM_LIST						/* BCC 송신자 이름 목록*/
+			</if>
+			<if test="p.bcc_eml_list != null">
+				,BCC_EML_LIST					/* BCC 송신자 주소 목록*/
+			</if>
+			<if test="p.sndr_nm != null">
+				,SNDR_NM					/*수신자 이름*/
+			</if>
+			<if test="p.sndr_eml != null">
+				,SNDR_EML					/*수신자 주소*/
+			</if>
+			<if test="p.athg_uuid != null">
+				,ATHG_UUID
+			</if>
+			<if test="p.snd_yn != null">
+				,SND_YN						/*전송 여부*/
+			</if>
+			<if test="p.snd_dttm != null">
+				,SND_DTTM						/*전송 일시*/
+			</if>
+			<if test="p.rcpnt_id_list != null">
+				,RCPNT_ID_LIST					/* 송신자 아이디 목록 */
+			</if>
+			<if test="p.cc_id_list != null">
+				,CC_ID_LIST					/* CC 송신자 아이디 목록 */
+			</if>
+			<if test="p.bcc_id_list != null">
+				,BCC_ID_LIST					/* BCC 송신자 아이디 목록 */
+			</if>
+			<if test="p.rcpnt_xcept_yn_list != null">
+				,RCPNT_XCEPT_YN_LIST					/* 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.cc_xcept_yn_list != null">
+				,CC_XCEPT_YN_LIST					/* CC 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.bcc_xcept_yn_list != null">
+				,BCC_XCEPT_YN_LIST					/* BCC 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.snd_err_msg != null">
+				,SND_ERR_MSG					/* 발신 에러 내용  */
+			</if>
+		)
+		    VALUES (
+			#{g.tenant}
+			, #{g.username}
+			, #{g.now}
+			, #{p.eml_snd_uuid}
+			, #{p.eml_tmpl_cd}
+			<if test="p.eml_tit != null">
+				, #{p.eml_tit}
+			</if>
+			<if test="p.eml_cont != null">
+				, #{p.eml_cont}
+			</if>
+			<if test="p.rcpnt_nm_list != null">
+				,#{p.rcpnt_nm_list}						/*송신자 이름 목록*/
+			</if>
+			<if test="p.rcpnt_eml_list != null">
+				,#{p.rcpnt_eml_list}					/*송신자 주소 목록*/
+			</if>
+			<if test="p.cc_nm_list != null">
+				,#{p.cc_nm_list}						/*CC 송신자 이름 목록*/
+			</if>
+			<if test="p.cc_eml_list != null">
+				,#{p.cc_eml_list}					/*CC 송신자 주소 목록*/
+			</if>
+			<if test="p.bcc_nm_list != null">
+				,#{p.bcc_nm_list}						/* BCC 송신자 이름 목록*/
+			</if>
+			<if test="p.bcc_eml_list != null">
+				,#{p.bcc_eml_list}					/* BCC 송신자 주소 목록*/
+			</if>
+			<if test="p.sndr_nm != null">
+				, #{p.sndr_nm}
+			</if>
+			<if test="p.sndr_eml != null">
+				, #{p.sndr_eml}
+			</if>
+			<if test="p.athg_uuid != null">
+				, #{p.athg_uuid}
+			</if>
+			<if test="p.snd_yn != null">
+				, #{p.snd_yn}
+			</if>
+			<if test="p.snd_dttm != null">
+				, #{p.snd_dttm}
+			</if>
+			<if test="p.rcpnt_id_list != null">
+				, #{p.rcpnt_id_list}					/* 송신자 아이디 목록 */
+			</if>
+			<if test="p.cc_id_list != null">
+				, #{p.cc_id_list}					/* CC 송신자 아이디 목록 */
+			</if>
+			<if test="p.bcc_id_list != null">
+				, #{p.bcc_id_list}					/* BCC 송신자 아이디 목록 */
+			</if>
+			<if test="p.rcpnt_xcept_yn_list != null">
+				, #{p.rcpnt_xcept_yn_list}					/* 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.cc_xcept_yn_list != null">
+				, #{p.cc_xcept_yn_list}					/* CC 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.bcc_xcept_yn_list != null">
+				, #{p.bcc_xcept_yn_list}					/* BCC 송신자 제외 여부 목록 */
+			</if>
+			<if test="p.snd_err_msg != null">
+				, #{p.snd_err_msg}					/* 발신 에러 내용 */
+			</if>
+		)
+	</insert>
+
+	<resultMap type="map" id="resultMap-findMultiMailSendHistory">
+		<result property="snd_err_msg" column="SND_ERR_MSG" jdbcType="CLOB" javaType="string" />
+	</resultMap>
+
+	<select id="findMultiMailSendHistory" resultMap="resultMap-findMultiMailSendHistory">
+		/* mail-manager.findMultiMailSendHistory 메일전송이력 조회 */
+		SELECT EMML.TEN_ID
+		     , EMML.EML_SND_UUID
+		     , EMML.EML_TMPL_CD
+		     , EMML.SNDR_EML
+		     , EMML.SNDR_NM
+		     , EMML.SND_DTTM
+		     , EMML.EML_TIT
+		     , ETS.EML_SND_TYP_CCD
+		     , EMML.SND_ERR_MSG
+		     , EMML.SND_YN
+		     , EMML.REGR_ID
+		     , EMML.REG_DTTM
+		  FROM EML_SND_HISTREC EMML
+		 INNER JOIN EML_TMPL_SETUP ETS
+		    ON EMML.EML_TMPL_CD = ETS.EML_TMPL_CD
+		 WHERE EMML.EML_TMPL_CD = #{p.eml_tmpl_cd}
+		   <if test="p.from_date != null">
+		       AND EMML.SND_DTTM <![CDATA[>=]]> #{p.from_date}
+		   </if>
+		   <if test="p.to_date != null">
+		       AND EMML.SND_DTTM <![CDATA[<]]> #{p.to_date}
+		   </if>
+		   AND ETS.STS != 'D'
+		 ORDER BY EMML.SND_DTTM DESC
+	</select>
+	
+	<resultMap type="map" id="resultMap-findMultiMailSendHistoryDetail">
+		<result property="rcpnt_eml_list" column="RCPNT_EML_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="rcpnt_nm_list" column="RCPNT_NM_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="rcpnt_id_list" column="RCPNT_ID_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="rcpnt_xcept_yn_list" column="RCPNT_XCEPT_YN_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="bcc_eml_list" column="BCC_EML_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="bcc_nm_list" column="BCC_NM_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="bcc_id_list" column="BCC_ID_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="bcc_xcept_yn_list" column="BCC_XCEPT_YN_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="cc_eml_list" column="CC_EML_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="cc_nm_list" column="CC_NM_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="cc_id_list" column="CC_ID_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="cc_xcept_yn_list" column="CC_XCEPT_YN_LIST" jdbcType="CLOB" javaType="string" />
+		<result property="eml_cont" column="EML_CONT" jdbcType="CLOB" javaType="string" />
+	</resultMap>
+	<select id="findMultiMailSendHistoryDetail" resultMap="resultMap-findMultiMailSendHistoryDetail">
+		SELECT RCPNT_EML_LIST
+		     , RCPNT_NM_LIST
+		     , RCPNT_ID_LIST
+		     , RCPNT_XCEPT_YN_LIST
+		     , CC_EML_LIST
+		     , CC_NM_LIST
+		     , CC_ID_LIST
+		     , CC_XCEPT_YN_LIST
+		     , BCC_EML_LIST
+		     , BCC_NM_LIST
+		     , BCC_ID_LIST
+		     , BCC_XCEPT_YN_LIST
+		     , EML_TIT
+		     , EML_CONT
+		     , SNDR_EML
+		     , SNDR_NM
+		     , ATHG_UUID
+		     , EML_TMPL_CD
+		  FROM EML_SND_HISTREC
+		 WHERE TEN_ID = #{g.tenant}
+		   AND EML_SND_UUID = #{p.eml_snd_uuid}
+	</select>
+	
+	<select id="findListUndeliveredMail" resultType="map">
+		SELECT EML_SND_UUID
+		  FROM EML_SND_HISTREC
+		 WHERE TEN_ID = #{g.tenant}
+		   AND SND_YN IS NULL
+	</select>
+    
+    <select id="searchReceiptSubjectEmail" resultType="map">
+        SELECT CP.TEN_ID
+             , CP.CTMPL_UUID
+             , CP.TMPL_TYP_CCD
+             , CP.BASC_CTMPL_CD
+             , CTMPL_MULTLANG.CTMPL_NM
+             , CTMPL_MULTLANG.RMK
+             , ETS.EML_TMPL_CD
+             , ETS.TASK_TYP_CCD
+             , ETS.RCPT_SUBJ_CCD
+             , (CASE WHEN EXS.EML_TMPL_CD IS NULL THEN 'N' ELSE 'Y' END) AS XCEPT_YN
+          FROM CTMPL CP
+          LEFT OUTER JOIN CTMPL_MULTLANG CTMPL_MULTLANG
+            ON CP.TEN_ID = CTMPL_MULTLANG.TEN_ID
+           AND CP.CTMPL_UUID = CTMPL_MULTLANG.CTMPL_UUID
+           AND CTMPL_MULTLANG.LANG_CCD = #{p.locale}
+         INNER JOIN EML_TMPL_SETUP ETS
+            ON CP.TEN_ID = ETS.TEN_ID
+           AND CP.CTMPL_UUID = ETS.CTMPL_UUID
+          LEFT OUTER JOIN EML_XCEPT_SUBJ EXS
+            ON EXS.TEN_ID = ETS.TEN_ID
+           AND EXS.EML_TMPL_CD = ETS.EML_TMPL_CD
+           AND EXS.USR_ID = #{g.username}
+         WHERE CP.TEN_ID = #{g.tenant}
+           AND (ETS.RCPT_SUBJ_CCD = #{g.usr_typ_ccd} OR ETS.RCPT_SUBJ_CCD = 'ALL')
+           AND CP.STS != 'D'
+        <if test="p.task_typ_ccd != null and p.task_typ_ccd != ''">
+           AND ETS.TASK_TYP_CCD = #{p.task_typ_ccd}
+        </if>
+        <if test="p.eml_tmpl_cd != null and p.eml_tmpl_cd != ''">
+           <bind name="idPattern" value="'%' + p.eml_tmpl_cd + '%'" />
+           AND UPPER(ETS.EML_TMPL_CD) LIKE UPPER(#{idPattern})
+        </if>
+        <if test="p.ctmpl_nm != null and p.ctmpl_nm != ''">
+           <bind name="p_ctmpl_nm" value="'%' + p.ctmpl_nm + '%'"/>
+           AND UPPER(CTMPL_MULTLANG.CTMPL_NM) LIKE UPPER(#{p_ctmpl_nm})
+        </if>
+        ORDER BY EML_TMPL_CD
+    </select>
+    
+    <insert id="insertExceptEmail">
+        INSERT INTO EML_XCEPT_SUBJ(
+               TEN_ID,
+               EML_TMPL_CD,
+               USR_ID,
+               REG_ID,
+               REG_DTTM,
+               MOD_ID,
+               MOD_DTTM
+        ) VALUES (
+               #{g.tenant},
+               #{p.eml_tmpl_cd},
+               #{g.username},
+               #{g.username},
+               #{g.now},
+               #{g.username},
+               #{g.now}
+        )
+        
+    </insert>
+    
+    <delete id="deleteExceptEmail">
+        DELETE FROM EML_XCEPT_SUBJ
+         WHERE TEN_ID = #{g.tenant}
+           AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+           AND USR_ID = #{g.username}
+    </delete>
+    
+    <select id="checkExceptSubject" resultType="map">
+        SELECT EML_TMPL_CD,
+               USR_ID
+          FROM EML_XCEPT_SUBJ
+         WHERE TEN_ID = #{g.tenant}
+           AND EML_TMPL_CD = #{p.eml_tmpl_cd}
+           AND USR_ID = #{p.receiver.id}
+    </select>
+    
+    
+    <insert id="insertSendMailInfoListTempTable">
+        INSERT INTO EML_TEMP_TBL
+        (
+          TEN_ID,
+          TEMP_ID,
+          TEMP_SEQ,
+          EML_TMPL_CD,
+          RCPT_TYP,
+          USR_EML,
+          USR_ID ,
+          USR_NM
+        ) VALUES (
+          #{g.tenant},
+          #{p.temp_id},
+          #{p.temp_seq},
+          #{p.eml_tmpl_cd},
+          #{p.receiver.recipientType.type},
+          #{p.receiver.address},
+          #{p.receiver.id},
+          #{p.receiver.name}
+        )
+    </insert>
+    
+    <delete id="deleteSendMailInfoListTempTable">
+        DELETE FROM EML_TEMP_TBL
+         WHERE TEN_ID = #{g.tenant}
+           AND TEMP_ID = #{p}
+    </delete>
+    
+    <select id="searchFilterReceiver" resultType="smartsuite.app.common.mail.data.TemplateMailData$Receiver">
+        SELECT ETT.TEN_ID,
+               ETT.EML_TMPL_CD,
+               ETT.RCPT_TYP AS RECIPIENTTYPE,
+               ETT.USR_EML AS ADDRESS,
+               ETT.USR_NM AS NAME,
+               CASE WHEN USR.EML_RCPT_YN = 'N' THEN 'Y'
+                    WHEN EXS.USR_ID IS NOT NULL THEN 'Y'
+                ELSE 'N'
+               END AS XCEPTYN,
+               ETT.USR_ID AS ID
+          FROM EML_TEMP_TBL ETT
+          LEFT OUTER JOIN USR USR
+            ON USR.TEN_ID = ETT.TEN_ID
+           AND USR.USR_ID = ETT.USR_ID
+          LEFT OUTER JOIN EML_XCEPT_SUBJ EXS
+            ON EXS.TEN_ID = ETT.TEN_ID
+           AND EXS.EML_TMPL_CD = ETT.EML_TMPL_CD
+           AND EXS.USR_ID = ETT.USR_ID
+         WHERE ETT.TEN_ID = #{g.tenant}
+           AND ETT.TEMP_ID = #{p}
+    </select>
+    
+</mapper>

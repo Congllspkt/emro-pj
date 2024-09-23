@@ -1,0 +1,162 @@
+<dom-module id="sc-mdi-splitter">
+	<style>
+	</style>
+	
+	<template>
+		<div>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'sc-mdi-splitter',
+			properties : {
+				/**
+				 * splitter 앞에 있는 부분 사이즈
+				 */
+				_previousElementSize : {
+					type : Number
+				},
+				
+				/**
+				 * 분할 방향을 가리킨다.
+				 * 가질 수 있는 값은 다음과 같다. 
+				 * - vertical : 세로 선을 그어 좌우 분할
+				 * - horizontal : 가로선을 그어 위 아래 분할
+				 */
+				splitType : {
+					type : String
+				},
+				
+				/**
+				 * splitter의 기본 크기를 구한다. (vertical일 때는 width, horizontal일 때는 height 값을 가진다. 기본값은 12px이다.
+				 */
+				_splitterSize : {
+					type : Number
+				},
+				
+				/**
+				 * splitter의 부모의 크기. 반드시 splitter로 나누어진 두 구간과 splitter의 width값의 합과 같아야 한다.
+				 */
+				_totalSize : {
+					type : Number
+				},
+				
+				/**
+				 * 시작점을 변경할 때 사용. vertical일때는 left, horizontal일때는 top
+				 */
+				_adjustValue : {
+					type : String
+				},
+				
+				/**
+				 * 변경 값을 가리킬 때 사용. vertical일때는 dx, horizontal일때는 dy
+				 */
+				_adjustDimensionValue : {
+					type : String
+				},
+				
+				/**
+				 * track시 사용하는 변수로 이전 위치를 나타낸다.
+				 */
+				_prevLoc : {
+					type : Number,
+					value : 0
+				}
+			},
+			
+			listeners : {
+				'track' : '_onTrackListener'             // 드래그 중에 발생
+			},
+			
+			/**
+			 * [lifecycle method]
+			 * 분할 방향에 따른 조절할 속성값을 결정
+			 */
+			ready : function() {
+				// 좌우 분할
+				this.dimension = 'width';
+				this._adjustValue = 'left';
+				this._adjustDimensionValue = 'dx';				
+				
+				this.classList.toggle(this.splitType, true);
+			},
+			
+		    /**
+		     * resizer를 클릭하고 움직일때 호출됨
+		     * 현재 resizer의 크기를 계산한다.
+		     */
+		    _onTrackStart: function() {
+		    	
+		    	// splitter 앞의 element의 크기를 구하고 width 값을 넣는다.
+		    	this.previousElementSize = parseFloat(getComputedStyle(this.previousElementSibling)[this.dimension]);
+		    	this.previousElementSibling.style[this.dimension] = this.previousElementSize + 'px';
+		    	
+		    	// splitter 크기를 구함
+		    	this._splitterSize = parseFloat(getComputedStyle(this)[this.dimension]);
+		    	this.style.zIndex = 90;
+		    	
+		    	// splitter의 부모 크기를 구함
+		    	this._totalSize = parseFloat(getComputedStyle(this.parentElement)[this.dimension]);
+		    	
+		    	// 만약 사이즈를 조정할 splitter 앞쪽에 flex가 설정되어있을 경우 flex를 none으로 바꿈
+		    	if(this.previousElementSibling.style.flex !== 'none')
+		    		this.previousElementSibling.style.flex = 'none';
+		    	
+		    	// 만약 ie의 경우 
+		    	/* if(this.previousElementSibling.style['-ms-flex'] !== 'none') {
+		    		this.previousElementSibling.style['-ms-flex'] = 'none';
+		    	} */
+		    	
+		    	// 만약 사이즈를 조정할 splitter 뒤쪽에 flex가 설정되어있을 경우 flex를 설정
+		    	/* if(!this.nextElementSibling.style.flex || this.nextElementSibling.style.flex === 'none')
+		    		this.nextElementSibling.style.flex = 1; */
+		    	
+		    },
+		    
+		    /**
+		     * 마우스 드래그 시 호출
+		     * 대상이 되는 element의 크기를 변환시킨다. 
+		     * @param  event : 마우스 track 이벤트 
+		     */
+		    _onTrackListener: function(event) {
+		    	event.stopPropagation();
+		    	
+		    	// 만약 track start 상태라면 해당 이벤트 리스너 실행
+		    	if(event.detail.state === 'start') {
+		    		this._onTrackStart();
+		    		return;
+		    	}
+		    	
+		    	// 이동이 종료되었을 때 좌 우의 elemen에게 resize 이벤트를 발생시킴
+		    	else if(event.detail.state === 'end') {
+		    		this.style.zIndex = null;
+		        	this.fire('area-resize');
+		        }
+		    	
+		    	// track 중일 경우
+		    	else {
+		    		// 현재 조정 대상인 객체의 크기를 조절한다. (this.dimension은 width 또는 height의 값을 가진다.)
+		    		var dimensionSize = event.detail[this._adjustDimensionValue];
+		    		var resizedValue = this.previousElementSize + dimensionSize;
+		    		if((dimensionSize - this._prevLoc) > 0 && (this._totalSize - this._splitterSize) < resizedValue) {
+		    			return;
+		    		}
+		    		this.previousElementSibling.style[this.dimension] = resizedValue + 'px';
+		   			this._prevLoc = dimensionSize;
+		   			this.fire('sc-resize');
+		    	}
+		    },
+		    
+		    _destroy : function() {
+		    	this._propertySetter('_previousElementSize', null);
+		    	this._propertySetter('splitType', null);
+		    	this._propertySetter('_splitterSize', null);
+		    	this._propertySetter('_totalSize', null);
+		    	this._propertySetter('_adjustValue', null);
+		    	this._propertySetter('_prevLoc', null);
+		    }
+		});
+	</script>
+</dom-module>
+

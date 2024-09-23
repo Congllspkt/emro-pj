@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+MENU_ACT: 메뉴기능
+ROLE_ACT: 롤기능
+ -->
+
+<mapper namespace="menu-function">
+
+    <insert id="insertMenuFunc">
+    /* menu-function.insertMenuFunc: 메뉴기능 등록 */
+    INSERT 
+      INTO MENU_ACT (
+           TEN_ID
+         , MENU_CD
+         , ACT_CD
+         , ACT_NM
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.menu_cd}
+         , #{p.act_cd}
+         , #{p.act_nm}
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <update id="updateMenuFunc">
+    /* menu-function.updateMenuFunc: 메뉴기능 수정 */
+    UPDATE MENU_ACT
+       SET MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         <if test='p.act_nm != null'>
+         , ACT_NM = #{p.act_nm}
+         </if>
+     WHERE TEN_ID = #{g.tenant}
+       AND MENU_CD = #{p.menu_cd}
+       AND ACT_CD = #{p.act_cd}
+    </update>
+    
+    <delete id="deleteMenuFunc">
+    /* menu-function.deleteMenuFunc: 메뉴기능 삭제 */
+    DELETE 
+      FROM MENU_ACT
+     WHERE TEN_ID = #{g.tenant}
+       AND MENU_CD = #{p.menu_cd}
+       AND ACT_CD = #{p.act_cd}
+    </delete>
+
+    <select id="findListMenuFunc" resultType="map">
+    /* menu-function.findListMenuFunc: 메뉴기능 목록 */
+    SELECT MA.TEN_ID
+         , MA.MENU_CD
+         , MA.ACT_CD
+         , MA.ACT_NM
+         , MA.REGR_ID
+         , MA.REG_DTTM
+         , MA.MODR_ID
+         , MA.MOD_DTTM
+         , (SELECT COUNT(*)
+              FROM ROLE_ACT RA
+             INNER JOIN ROLE RL
+                ON RA.TEN_ID = RL.TEN_ID
+               AND RA.ROLE_CD = RL.ROLE_CD
+               AND RL.STS != 'D'
+             WHERE RA.TEN_ID = MA.TEN_ID
+               AND RA.MENU_CD = MA.MENU_CD
+               AND RA.ACT_CD = MA.ACT_CD
+           ) AS USE_COUNT_ROLE_FUNC
+           ,(SELECT COUNT(1)
+               FROM MENU_ACT_URL MAU
+              WHERE MAU.TEN_ID  = MA.TEN_ID
+                AND MAU.MENU_CD = MA.MENU_CD
+                AND MAU.ACT_CD = MA.ACT_CD
+            ) AS USE_COUNT_FUNC_URL
+      FROM MENU_ACT MA
+     WHERE MA.TEN_ID = #{g.tenant}
+       AND MA.MENU_CD = #{p.menu_cd}
+    </select>
+
+	<select id="findListMenuPattern" resultType="map">
+	/* menu-function.findListMenuPattern: 메뉴 URL 목록 */
+		SELECT MAUC.MENU_CD
+		 , MAU.ACT_CD
+         , MAUC.MENU_ACT_URL
+        FROM MENU_ACT_URL_COLL MAUC
+        LEFT OUTER JOIN MENU_ACT_URL MAU
+         ON MAUC.TEN_ID = MAU.TEN_ID
+	     	AND MAUC.MENU_CD = MAU.MENU_CD
+	     	AND MAUC.MENU_ACT_URL = MAU.MENU_ACT_URL
+	    WHERE MAUC.TEN_ID = #{g.tenant}
+	      AND MAUC.MENU_CD = #{p.menu_cd}
+	</select>
+	
+    <select id="getCountMenuFunc" resultType="int">
+    /* menu-function.getCountMenuFunc: 메뉴기능 카운트 */
+    SELECT COUNT(*)
+      FROM MENU_ACT
+     WHERE TEN_ID = #{g.tenant}
+       AND MENU_CD = #{p.menu_cd}
+       AND ACT_CD = #{p.act_cd}
+    </select>
+    
+    <delete id="deleteMenuFuncAll">
+    /* menu-function.deleteMenuFuncAll: 메뉴기능 전체 삭제 */
+    DELETE 
+      FROM MENU_ACT
+     WHERE TEN_ID = #{g.tenant}
+       AND MENU_CD = #{p.menu_cd}
+    </delete>
+
+
+
+</mapper>

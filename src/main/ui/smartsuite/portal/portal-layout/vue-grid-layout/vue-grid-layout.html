@@ -1,0 +1,282 @@
+<!--
+ * @Desc Home에서의 포탈
+ * @Author dmwon
+ * @Created 2017-06-20
+ -->
+<dom-module id="vue-grid-layout">
+	<style>
+		:host {
+			width:100%;
+			height:100%;
+		}
+	</style>
+
+	<template>	
+		<!-- 개인화 저장 -->
+		<sc-ajax id="saveUserLayout" 
+				 url="saveUserLayout.do"
+				 handle-as="json" method="post"
+				 body="{{portletStateful}}" 
+				 contentType="application/json"></sc-ajax> 
+				 
+		<!-- 개인화 조회 -->
+		<sc-ajax id="findUserLayout"
+				 url="findUserLayout.do"
+				 handle-as="json" method="post"
+				 contentType="application/json"
+				 last-response="{{layout}}" 
+				 on-response="onFindUserLayoutCompleted"></sc-ajax>
+
+		<sc-ajax id="deleteUserLayout"
+				 url="deleteUserLayout.do"
+				 handle-as="json" method="post"
+				 contentType="application/json"
+				 last-response="{{layout}}"></sc-ajax>
+
+
+		<!-- 기본 레이아웃 조회 -->
+		<sc-ajax id="findDefaultLayout"
+				 url="portlet/findDefaultLayout.do"
+				 handle-as="json" method="post"
+				 contentType="application/json"
+				 last-response="{{layout}}" 
+				 on-response="onFindDefaultLayoutCompleted"></sc-ajax>
+
+		<sc-ajax id="findListCommonCodeAttributeCode"
+				 url="findListCommonCodeAttributeCode.do"
+				 last-response="{{homeTyp}}">
+		</sc-ajax>
+
+		<!-- 위젯 추가 컴포넌트 -->
+	    <div id="managerHandle" on-tap="onShowWidgets"></div>
+	
+		<div id="vueGridApp" style="width: 100%;min-height:100%;">
+	        <div id="content" style="display:block;">
+	            <grid-layout @mousedown="mouseDown"
+	            			 :layout="layout"
+	                         :col-num="colNum"
+	                         :row-height="rowHeight"
+	                         :is-draggable="draggable"
+	                         :is-resizable="resizable"
+	                         :vertical-compact="true"
+	                         :use-css-transforms="false">
+	                <grid-item v-for="item in layout"
+	                           :x="item.x" :y="item.y"
+	                           :w="item.w" :h="item.h"
+	                           :i="item.i"
+	                           :drag-ignore-from="item.ignore"
+	                           :resize-ignore-from="item.ignore"
+	                           @resized="resizedEvent"
+	                           @moved="movedEvent">
+	                </grid-item>
+	            </grid-layout>
+	        </div>
+	    </div>
+	
+	    <!-- 위젯 툴바 -->
+		<sc-toolbar id="portalToolbar" class="portal-toolbar vertical v-bottom" style="z-index:2;height:84px !important;padding:0px !important">
+			<sc-button text="위젯 추가" icon-cls="btn add-col" class="portal-tool-button add-button" on-click="onShowWidgetManager"></sc-button>
+			<sc-button text="위젯 전체 제거" icon-cls="btn add-col" class="portal-tool-button remove-button" on-click="removeAllWidget"></sc-button>
+			<sc-button text="개인화 해제" icon-cls="btn add-col" class="portal-tool-button remove-button" on-click="deleteUserFormatWidget"></sc-button>
+		</sc-toolbar>
+		
+		<!-- 기존 위젯 관리자 -->
+		<sc-portal-manager id="widgetManager" on-widget-loaded="onAfterWidgetLoaded"
+			style="position:absolute;z-index:3;display:none;left:10px;top:4px;">
+		</sc-portal-manager>
+	
+	    <!-- 포틀릿 Manager -->
+	    <vue-grid-portlet-manager id="portletManager" on-portlet-close="onPortletClose" common-config="[[commonConfig]]"></vue-grid-portlet-manager>
+
+		<sc-dialog id="homeTypMsgBox" title="HOME 유형 선택" title-align="left" style="width:400px;" modal="true">
+			<sc-toolbar>
+				<sc-spacer></sc-spacer>
+				<sc-button text="저장"></sc-button>
+			</sc-toolbar>
+			<table class="tb-form">
+				<tr>
+					<td>
+						<sc-combobox-field id="homeTypField" items="{{homeTyp}}" display-field="label" value-field="data" placeholder="선택" required="true"></sc-combobox-field>
+					</td>
+				</tr>
+			</table>
+		</sc-dialog>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'vue-grid-layout',
+
+            behaviors: [
+					Polymer.SCInteractDraggableBehavior,
+					Polymer.BehaviorIDGenerator,
+					Polymer.VueGridLayoutBehavior,
+					Polymer.SCResizableBehavior
+			],
+
+			properties: {
+				portletContainerCls : {
+					type: String,
+					value : function() {
+						return '.vue-grid-item.vue-grid-layout';	
+					}
+				},
+				commonConfig: {
+					type: Object,
+					observer: 'onChangeCommonConfig'
+				},
+
+                homeTyp: {
+                    type:Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+			},
+
+            listeners: {
+            	'widget-into-vuegrid-completed' : 'onWidgetIntoVueGridCompleted',
+            	'portlet-container-completed' : 'onPortletContainerCompleted',
+            	'portlet-loaded' : 'onPortletLoaded',
+            	'find-user-layout' : 'onFindUserLayout',
+            	'delete-user-layout' : 'onDeleteUserLayout',
+            	'save-user-layout' : 'onSaveUserLayout',
+            	'sc-resize' : 'onVueGridLayoutResize',
+                'show-hometype-msgbox' : 'onShowHomeTypMsgBox'
+            },
+
+            onVueGridLayoutResize : function() {
+            	var vue = this.vue, children;
+            	if(this.isVisible(true) && vue && (children = vue.$children)) {
+            		for(var i=0,len=children.length,child; i<len; i++) {
+            			child = children[i];
+            			child.onWindowResize();
+            		}	
+            	}
+            },
+            
+            /** 공통 설정 변경시 */
+            onChangeCommonConfig: function(newValue) {
+            	if(newValue && newValue.use_userlayout === 'N') {
+            		this.$.managerHandle.style.display = 'none';
+            	}
+            },
+            
+            /** 포틀릿(개인화) 조회 */
+            onFindUserLayout: function(){
+                this.$.findUserLayout.body = {
+                  'lyt_typ' : this.getAttribute('page-id'),
+					home_scr_typ_ccd : SCSessionManager.currentUser.home_scr_typ_ccd,
+					portl_usr_typ_ccd : SCSessionManager.currentUser.usr_typ_ccd
+                }
+                this.$.findUserLayout.generateRequest();
+            },
+
+			onDeleteUserLayout: function(){
+                this.$.deleteUserLayout.body = {
+					'lyt_typ' : this.getAttribute('page-id'),
+					home_scr_typ_ccd : SCSessionManager.currentUser.home_scr_typ_ccd,
+					portl_usr_typ_ccd : SCSessionManager.currentUser.usr_typ_ccd
+				}
+                this.$.deleteUserLayout.generateRequest();
+            },
+
+            /** 개인화 정보 조회 완료 핸들러 */
+            onFindUserLayoutCompleted: function(e){
+              var me = this, portletSchemaList = [];
+              if(typeof me.layout == "string"){
+                me.layout = JSON.parse(me.layout)
+              }
+				
+              if(me.layout){
+            	  var layoutSrc = JSON.parse(me.layout.lyt_srccd);
+                  portletSchemaList = layoutSrc;
+//            	  if(me.layout.isDefault){
+//            		  portletSchemaList = layoutSrc[usr_typ_ccd] ? layoutSrc[usr_typ_ccd] : me.getWidgets();
+//            	  }else{
+//                      portletSchemaList = layoutSrc;
+//            	  }
+
+              }else{
+            	  portletSchemaList = me.getWidgets();
+              }
+        	  me.$.widgetManager.setUseWidgets(portletSchemaList);
+
+              for(var i = 0; i < portletSchemaList.length; i++){
+            	  portletSchemaList[i].x = Number(portletSchemaList[i].x);
+            	  portletSchemaList[i].y = Number(portletSchemaList[i].y);
+            	  portletSchemaList[i].w = Number(portletSchemaList[i].w);
+            	  portletSchemaList[i].h = Number(portletSchemaList[i].h);
+              }
+
+				if(!this.vue) {
+					me.createPortletContainerOnVueGrid(portletSchemaList);
+				} else {
+					me.setPortletSchemaList(portletSchemaList);
+				}
+			},
+            
+            /** 포틀릿 기본 레이아웃 조회 완료 핸들러 */
+            onFindDefaultLayoutCompleted: function(e){
+            	var me = this, portletSchemaList = [];
+//            	var usr_typ_ccd = SCSessionManager.currentUser.usr_typ_ccd;
+                if(typeof me.layout == "string"){
+                  me.layout = JSON.parse(me.layout)
+                }
+
+                if(me.layout && me.layout.lyt_srccd) {
+                    portletSchemaList = JSON.parse(me.layout.lyt_srccd);
+                } else {
+                    portletSchemaList = me.getWidgets();
+                }
+//                if(me.layout && me.layout.lyt_srccd){
+//              	  	var layoutSrc = JSON.parse(me.layout.lyt_srccd);
+//
+//              	  	// 개인화 정보가 있을 경우
+//                	if(layoutSrc[usr_typ_ccd]) {
+//                		portletSchemaList = layoutSrc[usr_typ_ccd];
+//                	} else {
+//                		portletSchemaList = me.getWidgets();
+//                	}
+//                } else {
+//            		//개인화 정보가 없으면
+//                	portletSchemaList = me.getWidgets();
+//              	}
+                
+                // 위젯 매니저에 해당 목록 등록
+                me.$.widgetManager.setUseWidgets(portletSchemaList);
+
+                // Vue Grid Layout 생성
+                me.createPortletContainerOnVueGrid(portletSchemaList);
+            },
+
+            /** 포틀릿(개인화) 저장 */
+            onSaveUserLayout: function(){
+            	var me = this, index = 0,
+            		portletContainerSchemaList = me.getPortletContainerSchemaList(),
+            		laytSrc = [];
+            	
+            	for(var i=0; i<portletContainerSchemaList.length; i++){
+                	me.insert(laytSrc, portletContainerSchemaList[i]);
+            	}
+            	
+              	me.portletStateful = {
+                	lyt_srccd: JSON.stringify(laytSrc),
+                	lyt_typ: me.getAttribute('page-id')
+              	};
+            	me.$.saveUserLayout.generateRequest();
+            },
+
+            onShowHomeTypMsgBox: function() {
+                this.$.homeTypField.value = "";
+                this.$.homeTypMsgBox.show();
+			},
+
+            /**  */
+            _destroy: function(){
+            	this._propertySetter('portletContainerCls', null);
+            	this.layout = null;
+            }
+        });
+    </script> 
+</dom-module>

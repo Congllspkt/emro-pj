@@ -1,0 +1,138 @@
+<dom-module id="ep-multi-mail-history-detail">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	<template>
+		<sc-ajax id="findMultiMailSendHistoryDetail"
+				 url="findMultiMailSendHistoryDetail.do"
+				 on-response="completeFindMultiMailSendHistoryDetail">
+		</sc-ajax>
+		
+		<table class="tb-form">
+			<colgroup>
+				<col style="width:50px"></col>
+				<col></col>
+			</colgroup>
+			<tr>
+				<th>
+					<sc-label text="제목"></sc-label>
+				</th>
+				<td>
+					<sc-text-field value="{{mailInfo.eml_tit}}" readonly="true"></sc-text-field>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					<sc-label text="내용"></sc-label>
+				</th>
+				<td>
+					<sc-editor id="editorPanel" class="h-400" value="{{mailInfo.eml_cont}}" editable="false" remove-source-button="true" ></sc-editor>
+				</td>
+			</tr>
+		</table>
+		
+		<div class="hbox flex" style="padding-top: 5px;">
+			<sc-grid id="toGridPanel" class="flex"	use-state="false" use-selection="false" use-dummy="false" column-fit-style="even"
+					 show-number-line="true" header-visible="true" editable="true"
+					 style="margin-right: 5px;">
+				<cc-grid-toolbar title-text="수신자"></cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="name" header-text="이름" width="100" text-align="center"></sc-data-column>
+					<sc-data-column data-field="address" header-text="이메일 주소" width="250" text-align="left"></sc-data-column>
+					<sc-data-column data-field="xcept_yn" header-text="제외 여부" width="80"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field data-field="id"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+			
+			<sc-grid id="ccGridPanel" class="flex"	use-state="false" use-selection="false" use-dummy="false" column-fit-style="even"
+					 show-number-line="true" header-visible="true" editable="true"
+					 style="margin-right: 5px;">
+				<cc-grid-toolbar title-text="참조자"></cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="name" header-text="이름" width="100" text-align="center"></sc-data-column>
+					<sc-data-column data-field="address" header-text="이메일 주소" width="250" text-align="left"></sc-data-column>
+					<sc-data-column data-field="xcept_yn" header-text="제외 여부" width="80"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field data-field="id"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+			
+			<sc-grid id="bccGridPanel" class="flex"	use-state="false" use-selection="false" use-dummy="false" column-fit-style="even"
+					 show-number-line="true" header-visible="true" editable="true">
+				<cc-grid-toolbar title-text="숨은참조자"></cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="name" header-text="이름" width="100" text-align="center"></sc-data-column>
+					<sc-data-column data-field="address" header-text="이메일 주소" width="250" text-align="left"></sc-data-column>
+					<sc-data-column data-field="xcept_yn" header-text="제외 여부" width="80"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-grid-field data-field="id"></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: "ep-multi-mail-history-detail",
+			
+			properties: {
+				mailInfo: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				}
+			},
+			
+			load: function(emlSndUuid) {
+				var me = this;
+				me.$.findMultiMailSendHistoryDetail.body = {
+					eml_snd_uuid: emlSndUuid
+				};
+				UT.request(me.$.findMultiMailSendHistoryDetail);
+			},
+			
+			completeFindMultiMailSendHistoryDetail: function(e, res) {
+				var me = this;
+				var response = res.response;
+				me.set("mailInfo", response);
+				
+				if(UT.isNotEmpty(response.rcpnt_eml_list)) {
+					me.makeGridData(me.$.toGridPanel, response.rcpnt_eml_list, response.rcpnt_nm_list, response.rcpnt_id_list, response.rcpnt_xcept_yn_list);
+				}
+				if(UT.isNotEmpty(response.cc_eml_list)) {
+					me.makeGridData(me.$.ccGridPanel, response.cc_eml_list, response.cc_nm_list, response.cc_id_list, response.cc_xcept_yn_list);
+				}
+				if(UT.isNotEmpty(response.bcc_eml_list)) {
+					me.makeGridData(me.$.bccGridPanel, response.bcc_eml_list, response.bcc_nm_list, response.bcc_id_list, response.bcc_xcept_yn_list);
+				}
+			},
+			
+			makeGridData: function(grid, addresses, names, ids, xceptYNs) {
+				var provider = grid.getDataProvider();
+				var addressArr = addresses? addresses.split(',') : [];
+				var nameArr = names? names.split(',') : [];
+				var idArr = ids? ids.split(',') : [];
+				var xceptYNArr = xceptYNs? xceptYNs.split(',') : [];
+				var mailInfoList = [];
+				for(var i = 0; i < addressArr.length; i++) {
+					var mailInfoMap = {
+						address: addressArr[i],
+						name: nameArr[i],
+						id: idArr[i],
+						xcept_yn: xceptYNArr[i]
+					};
+					
+					mailInfoList.push(mailInfoMap);
+				}
+				
+				provider.addItems(mailInfoList);
+			}
+		});
+	</script>
+</dom-module>

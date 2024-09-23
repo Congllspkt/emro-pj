@@ -1,0 +1,46 @@
+<sc-link rel="import" href="es-line-chart.html"></sc-link>
+<sc-link rel="import" href="es-spider-chart.html"></sc-link>
+<sc-link rel="import" href="es-combo-chart.html"></sc-link>
+
+<dom-module id="em-chart">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+        .row-1 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }
+        .row-2 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }                        
+    </style>
+
+    <template>
+
+        <sc-toolbar class="page-title">
+            <sc-label text="Dashboard" width="300" i18n-disabled></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="도움말" class="manual-btn" i18n-disabled></sc-button>
+            <sc-button text="" class="bookmark-btn fa fa-star-o" i18n-disabled></sc-button>
+        </sc-toolbar>	
+		<div class="row-1">            
+			<es-line-chart id="line-chart" title="Line Chart Basic"></es-line-chart>
+			<div class="hspace-5"></div>
+			<es-spider-chart id="spider-chart" title="Spider Chart"></es-spider-chart>
+		</div>
+		<div class="row-2">            
+			<es-combo-chart id="combo-chart" title="Combination Chart"></es-combo-chart>
+		</div>		
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-chart',    
+        });
+    </script>
+
+</dom-module>

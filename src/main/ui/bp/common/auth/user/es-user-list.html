@@ -1,0 +1,195 @@
+<dom-module id="es-user-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <!-- 코드 데이터 조회 -->
+        <sc-request-group init>
+            <!-- 공통 코드 -->
+            <sc-code-group>
+                <sc-code code="C009" value="{{codes.useYn}}" ></sc-code> <!-- 사용여부 -->
+            </sc-code-group>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사 목록 -->
+        </sc-request-group>
+
+        <!-- 사용자 현황 조회 -->
+        <sc-ajax id="findList"
+                 url="findListUserInfo.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <!-- 사용자 삭제 from 그리드 -->
+        <sc-ajax id="deleteList"
+                 url="deleteListUser.do"
+                 on-response="completeDeleteList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="vbox flex">
+        	<cc-sub-title-bar title-text="사용자 목록" ></cc-sub-title-bar>
+            <cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+                <cc-fieldset>
+                    <sc-label text="회사 명"></sc-label>
+                    <sc-combobox-field placeholder="전체"
+                                       items="{{codes.company}}" display-field="comp_nm" value-field="co_cd"
+                                       value="{{searchParam.co_cd}}">
+                    </sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="부서 코드"></sc-label>
+                    <cc-dept-search id="deptSearch"
+                                    value="{{searchParam.dept_nm}}" result-field="dept_cd" result-value="{{searchParam.dept_cd}}">
+                    </cc-dept-search>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용자 아이디"></sc-label>
+                    <sc-text-field value="{{searchParam.usr_id}}" on-enter="onFindList"></sc-text-field></td>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용자 명"></sc-label>
+                    <sc-text-field value="{{searchParam.usr_nm}}" on-enter="onFindList"></sc-text-field></td>
+                </cc-fieldset>
+            </cc-search-condition-panel>
+
+            <sc-grid id="gridPanel" data-provider="{{resultList}}" class="flex"
+                     on-item-click="onItemClick">
+                <cc-grid-toolbar>
+                    <sc-button text="추가" on-click="onAddUser" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteUser" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="usr_id" header-text="사용자 아이디" width="100" text-align="center" style-name="link"></sc-data-column>
+                    <sc-data-column data-field="usr_nm" header-text="사용자 명" width="150" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="usr_nm_en" header-text="사용자 명 영문" width="150" text-align="center"></sc-data-column>
+                    <sc-combobox-column data-field="use_yn" header-text="사용 여부" width="70" text-align="center" items="{{codes.useYn}}" display-field="label" value-field="data"></sc-combobox-column>
+                    <sc-data-column data-field="comp_nm" header-text="회사 명" width="120" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="comp_nm_en" header-text="회사 명 영문" width="160" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="dept_nm" header-text="부서 명" width="150" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="dept_nm_en" header-text="부서 명 영문" width="160" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="co_cd" header-text="회사 코드" width="100" text-align="center"></sc-data-column>
+                </sc-grid-columns>
+            </sc-grid>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'es-user-list',
+            properties : {
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            company: [],
+                            useYn: []
+                        };
+                    }
+                },
+
+                // 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 조회결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+                var me = this;
+                me.onFindList();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "usr_id"){
+                    me.fire('find-userinfo', data);
+                }
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 사용자 현황 조회
+            onFindList : function() {
+                var me = this;
+                UT.request(me.$.findList);
+                me.fire('clear');
+            },
+
+            // 사용자 저장 이후 재조회
+            onReFindList : function() {
+                var me = this;
+                UT.request(me.$.findList);
+            },
+
+            // 사용자 현황 삭제
+            onDeleteUser : function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");  // "선택된 항목이 없습니다",
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteList.body = {
+                            deleteUsers : deleted
+                        };
+                        UT.request(me.$.deleteList);
+                    }
+                });
+            },
+
+            // 사용자 삭제 완료
+            completeDeleteList : function() {
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+                UT.alert(message, function(){
+                    me.onFindList();
+                });
+            },
+
+            // 신규 사용자 추가
+            onAddUser : function() {
+                var me = this;
+                me.fire('init-user', "N");
+            }
+
+        });
+    </script>
+
+</dom-module>

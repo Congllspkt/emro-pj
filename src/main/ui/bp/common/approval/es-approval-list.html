@@ -1,0 +1,120 @@
+<sc-link rel="import" href="ep-approval-code-list.html"></sc-link>
+
+
+<dom-module id="es-approval-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<!-- 결재 템플릿 목록 그리드 조회 -->
+		<sc-ajax id="findList"
+				 url="findListApprovalTemplate.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+		<div class="vbox flex">
+			<cc-sub-title-bar title-text="결재 유형" ></cc-sub-title-bar>
+
+			<cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="결재 유형"></sc-label>
+					<sc-text-field value="{{searchParam.apvl_typ_ccd}}" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="결재 유형 명"></sc-label>
+					<sc-text-field value="{{searchParam.ctmpl_nm}}" on-enter="onFindList"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+
+			<sc-grid id="gridPanel" data-provider="{{resultList}}" class="flex" use-state="false" use-dummy="false" column-fit-style="evenFill"
+					 on-item-click="onItemClick">
+				<cc-grid-toolbar  title-text="결재 유형 목록" >
+					<sc-button text="유형 관리"	on-click="onAppendApprovalPopup"	 auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="apvl_typ_ccd" header-text="결재 유형" width="200" text-align="left" style-name="link"></sc-data-column>
+					<sc-data-column data-field="ctmpl_nm" header-text="결재 유형 명" width="400" text-align="left"></sc-data-column>
+					<sc-data-column data-field="use_yn" header-text="사용 여부" width="100" text-align="center"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+		</div>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-approval-list',
+
+            properties:{
+                // 조회 조건
+                searchParam:{
+                    type: Object,
+                    value: function() {
+                        return {
+                            ccd : "G003" // 결재 유형 코드
+						};
+                    }
+                },
+                // 조회 결과
+				resultList: {
+                    type: Array,
+					value: function() {
+                        return [];
+					}
+				}
+            },
+            /******************************
+             * 초기화 설정
+             ******************************/
+			// 초기화 완료 후 호출 함수
+            initialized: function(){
+                var me = this;
+                me.onFindList();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "apvl_typ_ccd"){
+                    me.fire("selected-approval", data);
+                }
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+			// 조회
+            onFindList: function(){
+                var me = this;
+				me.set("searchParam.lang_ccd", SCLocaleManager.getLocale());
+                UT.request(me.$.findList);
+            },
+
+			onAppendApprovalPopup : function () {
+
+				var me = this;
+				var approvalCodeAppendPopup = UT.popup("ep-approval-code-list", me, 1000, 600, {
+					'close' : function(popup,e) {
+						approvalCodeAppendPopup.close();
+						me.onFindList();
+					}
+				});
+				approvalCodeAppendPopup.show();
+				approvalCodeAppendPopup.getWindowContent().load();
+			}
+
+        });
+	</script>
+
+</dom-module>

@@ -1,0 +1,168 @@
+<dom-module id="em-chart-srs">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            @apply(--layout-flex);
+        }
+        .row-1 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }
+        .row-2 {
+            @apply(--layout-horizontal);
+            @apply(--layout-flex);
+        }                        
+    </style>
+
+    <template>
+    	<sc-panel title-text="SRM(matrix) - SRS차트">
+			<cc-matrix-chart id="matrixChart" 
+							 titles="{{titles}}" 
+							 x-axis-ranges="{{xAxisRanges}}" 
+							 y-axis-ranges="{{yAxisRanges}}"
+							 points="{{points}}"
+							 rectangle-areas="{{rectangleAreas}}"
+							 chart-labels="{{chartLabels}}"
+							 on-point-click="onPointClick"
+							 on-area-click="onAreaClick">
+			
+			</cc-matrix-chart>
+		</sc-panel>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-chart-srs',
+            properties : {
+            	
+            	titles : {
+    				type:Object,
+    				value :{
+    					x_title :"관계매력도",
+    					y_title :"전략적중요도"
+    				}
+    			},
+    			xAxisRanges:{
+    				type:Array,
+    			 	value : [
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"100",    max_sco :"100",    min_pos :"75",    min_sco :"75",    oper_org_sn :"10010",    rng_cls :"A",    sys_id :"EMRO",    title :"상호매력 높음",    xy_cls :"X"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"75",    max_sco :"75",    min_pos :"50",    min_sco :"50",    oper_org_sn :"10010",    rng_cls :"B",    sys_id :"EMRO",    title :"구매사매력 높음",    xy_cls :"X"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"50",    max_sco :"50",    min_pos :"25",    min_sco :"25",    oper_org_sn :"10010",    rng_cls :"C",    sys_id :"EMRO",    title :"협력사매력 높음",    xy_cls :"X"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"25",    max_sco :"25",    min_pos :"0",    min_sco :"0",    oper_org_sn :"10010",    rng_cls :"D",    sys_id :"EMRO",    title :"상호매력 부족",    xy_cls :"X"}
+     	            ]
+    			},
+    			
+    			yAxisRanges:{
+    				type:Array,
+    			 	value : [
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"100",    max_sco :"100",    min_pos :"75",    min_sco :"90",    oper_org_sn :"10010",    rng_cls :"A",    sys_id :"EMRO",    title :"전략(Critical)",    xy_cls :"Y"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"75",    max_sco :"90",    min_pos :"50",    min_sco :"50",    oper_org_sn :"10010",    rng_cls :"B",    sys_id :"EMRO",    title :"안전(Bottleneck)",    xy_cls :"Y"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"50",    max_sco :"50",    min_pos :"25",    min_sco :"25",    oper_org_sn :"10010",    rng_cls :"C",    sys_id :"EMRO",    title :"경쟁(Leverage)",    xy_cls :"Y"},
+						{co_cd :"C4100",    lang_ccd :"ko_KR",    mat_typ_cd :"SRS",    max_pos :"25",    max_sco :"25",    min_pos :"0",    min_sco :"0",    oper_org_sn :"10010",    rng_cls :"D",    sys_id :"EMRO",    title :"일반(Loutine)",    xy_cls :"Y"}
+     	            ]
+    			},
+    			points:{
+    				type : Array,
+    				value : [
+    				         {area :"S",    check_select :"N",    cntr_no :"CONTRACT",    color :"RED",    co_cd :"C4100",    dept_nm : "",
+    				         editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",    mat_typ_cd :"SRS",   
+    				         oper_org_sn :"10010",    pjt_no :"PROJECT",    ra_area_cd :"A",    ra_title :"상호매력 높음",    score :"93.07",    sg_cd :"SG0004",    sg_nm :"수공구",    si_area_cd :"A",    si_title :"전략(Critical)",    sys_id :"EMRO",    usr_id : "" ,usr_nm : ""
+    				         ,vd_sn :"-1",    x :"0",    x_position :"91",    x_position_old :"91",    x_score :"90.85",    y :"0",    y_position :"87",    y_position_old :"87",    y_score :"94.68"}, 
+    				         
+    				         {area :"T",    check_select :"N",    cntr_no :"CONTRACT",    color :"RED",    co_cd :"C4100",    dept_nm : "",
+    				         editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",    mat_typ_cd :"SRS",   
+    				         oper_org_sn :"10010",    pjt_no :"PROJECT",    ra_area_cd :"D",    ra_title :"상호매력 부족",    score :"1.01",    sg_cd :"SG0008",    sg_nm :"연마공구",    si_area_cd :"D",    si_title :"일반(Loutine)",    sys_id :"EMRO",    usr_id : ""
+    				         ,usr_nm : ""
+    				         ,vd_sn :"-1",    x :"0",    x_position :"13",    x_position_old :"13",    x_score :"12.7",    y :"0",    y_position :"8",    y_position_old :"8",    y_score :"8.08"},  
+    				         
+    				         {area :"S",    check_select :"N",    cntr_no :"CONTRACT",    color :"RED",    co_cd :"C4100",    dept_nm : "",
+    				         editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",    mat_typ_cd :"SRS",    
+    				         oper_org_sn :"10010",    pjt_no :"PROJECT",    ra_area_cd :"A",    ra_title :"상호매력 높음",    score :"89.23",    sg_cd :"SG0005",    sg_nm :"전동공구",    si_area_cd :"A",    si_title :"전략(Critical)",    sys_id :"EMRO",    usr_id : ""
+    				         ,usr_nm : ""
+    				         ,vd_sn :"-1",    x :"0",    x_position :"80",    x_position_old :"80",    x_score :"79.65",    y :"0",    y_position :"76",    y_position_old :"76",    y_score :"90.55"},
+    				         
+    				         
+    				         {area :"S",    check_select :"N",    cntr_no :"CONTRACT",    color :"RED",    co_cd :"C4100",    dept_nm : "",
+    				         editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",    mat_typ_cd :"SRS",   
+    				         oper_org_sn :"10010",    pjt_no :"PROJECT",    ra_area_cd :"A",    ra_title :"상호매력 높음",    score :"88.9",    sg_cd :"SG0006",    sg_nm :"체결재",    si_area_cd :"A",    si_title :"전략(Critical)",    sys_id :"EMRO",    usr_id : ""
+    				         ,usr_nm : ""
+    				         ,vd_sn :"-1",    x :"0",    x_position :"76",    x_position_old :"76",    x_score :"75.69",    y :"0",    y_position :"75",    y_position_old :"75",    y_score :"90.16"},  
+    				         
+    				         
+    				         {area :"C",    check_select :"N",    cntr_no :"CONTRACT",    color :"RED",    co_cd :"C4100",    dept_nm : "",
+    				         editstatus :"",    editstatusname :"",    eg_cd :"EG0020",    es_seq :"10000",    eval_kind_cd :"ET0001_000001",    eval_seq :"10002",    eval_typ_cd :"ET0001",    mat_typ_cd :"SRS",  
+    				         oper_org_sn :"10010",    pjt_no :"PROJECT",    ra_area_cd :"B",    ra_title :"구매사매력 높음",    score :"57.83",    sg_cd :"SG0007",    sg_nm :"측정공구",    si_area_cd :"B",    si_title :"안전(Bottleneck)",    sys_id :"EMRO",    usr_id : ""
+    				         ,usr_nm : ""
+    				        ,vd_sn :"-1",    x :"0",    x_position :"59",    x_position_old :"59",    x_score :"58.73",    y :"0",    y_position :"60",    y_position_old :"60",    y_score :"65.57"}
+    	        	]
+    			},
+    			rectangleAreas :{
+    				type:Array,
+    				value:[
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"DA",    mat_area_cd :"C",    width :"25",    x :"0",    x_max_sco :"25",    x_min_sco :"0",    y :"0",    y_max_sco :"100",    y_min_sco :"90"},  
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"AC",    mat_area_cd :"C",    width :"25",    x :"75",    x_max_sco :"100",    x_min_sco :"75",    y :"50",    y_max_sco :"50",    y_min_sco :"25"}, 
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"BB",    mat_area_cd :"C",    width :"25",    x :"50",    x_max_sco :"75",    x_min_sco :"50",    y :"25",    y_max_sco :"90",    y_min_sco :"50"},  
+    				       {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"DC",    mat_area_cd :"T",    width :"25",    x :"0",    x_max_sco :"25",    x_min_sco :"0",    y :"50",    y_max_sco :"50",    y_min_sco :"25"},  
+    				       {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"BD",    mat_area_cd :"T",    width :"25",    x :"50",    x_max_sco :"75",    x_min_sco :"50",    y :"75",    y_max_sco :"25",    y_min_sco :"0"}, 
+    				       {area_nm :"S(전략적)",    color :"#ffae76",    height :"25",    mat_area :"AA",    mat_area_cd :"S",    width :"25",    x :"75",    x_max_sco :"100",    x_min_sco :"75",    y :"0",    y_max_sco :"100",    y_min_sco :"90"},
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"CC",    mat_area_cd :"C",    width :"25",    x :"25",    x_max_sco :"50",    x_min_sco :"25",    y :"50",    y_max_sco :"50",    y_min_sco :"25"}, 
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"CB",    mat_area_cd :"C",    width :"25",    x :"25",    x_max_sco :"50",    x_min_sco :"25",    y :"25",    y_max_sco :"90",    y_min_sco :"50"}, 
+   				    	   {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"DB",    mat_area_cd :"T",    width :"25",    x :"0",    x_max_sco :"25",    x_min_sco :"0",    y :"25",    y_max_sco :"90",    y_min_sco :"50"},  
+    				       {area_nm :"S(전략적)",    color :"#ffae76",    height :"25",    mat_area :"AB",    mat_area_cd :"S",    width :"25",    x :"75",    x_max_sco :"100",    x_min_sco :"75",    y :"25",    y_max_sco :"90",    y_min_sco :"50"},
+    				       {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"CD",    mat_area_cd :"T",    width :"25",    x :"25",    x_max_sco :"50",    x_min_sco :"25",    y :"75",    y_max_sco :"25",    y_min_sco :"0"}, 
+    				       {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"AD",    mat_area_cd :"T",    width :"25",    x :"75",    x_max_sco :"100",    x_min_sco :"75",    y :"75",    y_max_sco :"25",    y_min_sco :"0"},
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"BC",    mat_area_cd :"C",    width :"25",    x :"50",    x_max_sco :"75",    x_min_sco :"50",    y :"50",    y_max_sco :"50",    y_min_sco :"25"}, 
+    				       {area_nm :"S(전략적)",    color :"#ffae76",    height :"25",    mat_area :"BA",    mat_area_cd :"S",    width :"25",    x :"50",    x_max_sco :"75",    x_min_sco :"50",    y :"0",    y_max_sco :"100",    y_min_sco :"90"}, 
+    				       {area_nm :"C(협업적)",    color :"#95c9f5",    height :"25",    mat_area :"CA",    mat_area_cd :"C",    width :"25",    x :"25",    x_max_sco :"50",    x_min_sco :"25",    y :"0",    y_max_sco :"100",    y_min_sco :"90"}, 
+    				       {area_nm :"T(거래위주)",    color :"#cad1d9",    height :"25",    mat_area :"DD",    mat_area_cd :"T",    width :"25",    x :"0",    x_max_sco :"25",    x_min_sco :"0",    y :"75",    y_max_sco :"25",    y_min_sco :"0"}     
+    				       
+    		       ]
+    			},
+    			chartLabels :  {
+    				type:Array,
+    				value:[
+    				       {label_nm :"S",    x_crd :"87.5",    y_crd :"12.5"},
+    				       {label_nm :"S",    x_crd :"62.5",    y_crd :"12.5"},
+    				       {label_nm :"C",    x_crd :"37.5",    y_crd :"12.5"},
+    				       {label_nm :"C",    x_crd :"12.5",    y_crd :"12.5"},
+    				       {label_nm :"S",    x_crd :"87.5",    y_crd :"37.5"},
+    				       {label_nm :"C",    x_crd :"62.5",    y_crd :"37.5"},
+    				       {label_nm :"C",    x_crd :"37.5",    y_crd :"37.5"},
+    				       {label_nm :"T",    x_crd :"12.5",    y_crd :"37.5"},
+    				       {label_nm :"C",    x_crd :"87.5",    y_crd :"62.5"},
+    				       {label_nm :"C",    x_crd :"62.5",    y_crd :"62.5"},
+    				       {label_nm :"C",    x_crd :"37.5",    y_crd :"62.5"},
+    				       {label_nm :"T",    x_crd :"12.5",    y_crd :"62.5"},
+    				       {label_nm :"T",    x_crd :"87.5",    y_crd :"87.5"},
+    				       {label_nm :"T",    x_crd :"62.5",    y_crd :"87.5"},
+    				       {label_nm :"T",    x_crd :"37.5",    y_crd :"87.5"},
+    				       {label_nm :"T",    x_crd :"12.5",    y_crd :"87.5"}       
+    		        ]
+    			}
+            },
+            attached: function() {
+            	var chart = this.$.matrixChart;
+            	/** (차트생성시 유의할점)
+            	*   1. chart는 생성될 div를 지정하여 해당 div안에 그려지기때문에 attached 시점 이후에  생성해야합니다.
+            	*   2. titles, xAxisRanges, yAxisRanges, points, rectangleAreas,chartLabels 의 데이터를 셋팅(조회)한 후에 생성해야합니다.
+            	*    
+            	*/
+           		chart.createMatrixChart();
+            },
+        	
+        	//포인트 클릭시 이벤트 처리
+        	onPointClick : function(event,data){
+        		console.log('event : ' ,event);
+        		console.log('data  : ' ,data);
+        	},
+        	
+        	//영역 클릭시 이벤트 처리
+        	onAreaClick :  function(event,data){
+        		console.log('event : ' ,event);
+        		console.log('data  : ' ,data);
+        	},
+        });
+    </script>
+
+</dom-module>

@@ -1,0 +1,346 @@
+<!-- 
+Progress State Bar
+
+<cc-cntr-progress-state icon-fst-use="{{iconUseYn}}" icon-sec-use="{{iconUseYn}}" icon-trd-use="{{iconUseYn}}" icon-fth-use="{{iconUseYn}}" last-page-index="{{lastPageIndex}}"
+						icon-fst-text="{{iconFstText}}" icon-sec-text="{{iconSecText}}" icon-trd-text="{{iconTrdText}}" icon-fth-text="{{iconFthText}}"></cc-cntr-progress-state>
+
+1. 주요 Property
+1) iconFstUse : '템플릿 및 계약 상대자 선택' icon 활성화 여부
+[boolean] [optional]
+
+2) iconSecUse : '정보 입력' icon 활성화 여부
+[boolean] [optional]
+
+3) iconTrdUse : '편집 및 검토' icon 활성화 여부
+[boolean] [optional]
+
+3) iconFthUse : '확인 및 발송' icon 활성화 여부
+[boolean] [optional]
+
+4) lastPageIndex : 다음/이전 버튼의 progress 이동 이벤트
+[Number] [optional]
+
+5) iconFstText : '템플릿 및 계약 상대자 선택' icon text 문구 변경
+[String] [optional]
+
+6) iconSecText : '정보 입력' icon text 문구 변경
+[String] [optional]
+
+7) iconTrdText : '편집 및 검토' icon text 문구 변경
+[String] [optional]
+
+8) iconFthText : '확인 및 발송' icon text 문구 변경
+[String] [optional]
+
+ -->
+
+<dom-module id="cc-cntr-progress-state">
+    <style>
+        #container {
+            width: 100%;
+            margin: 0 auto;
+        }
+        .container {width: 100%;height: 100px;background: #dce6f3;border: 1px solid #c7d1e0;border-radius: 3px;padding: 10px 20px;box-sizing: border-box;overflow: hidden}
+        .container .flex-box {display: flex;justify-content: center;width: 90%;margin: 0 auto;}
+        .container .flex-box div {flex: 0 0 auto;}
+        .container .flex-box .step {position: relative;display: inline-block;width: 48px;height: 48px;border-radius: 50px;border: 3px solid #a8c1d6;background-color: #fff;}
+        .container .flex-box .step>p {position: absolute;display: inline-block;bottom: -38px;left: 50%;width: 500px;font-size: 15px;color: #7f96a9;font-weight: bold;letter-spacing: -1px;text-align: center;margin-left: -250px;}
+        .container .flex-box .line {display: inline-block;width: calc(33.3% - 48px);height: 3px;background: #a8c1d6;margin-top: 25px;}
+        .container .flex-box .step.df {border: 3px solid #a8c1d6;background-color: #fff;}
+        .container .flex-box .step.on {border: 3px solid #00aada;background-color: #00aada;}
+        .container .flex-box .step.pv {border: 3px solid #00aada;background-color: #fff;}
+        .container .flex-box .step.da {border: 3px solid #a8c1d6;background-color: transparent;}
+        .container .flex-box .step.pv + .line {background: #00aada;}
+        .container .flex-box .step.on>p {color: #00aada;}
+        .container .flex-box .step.da>p {color: #a8c1d6;}
+        .container .flex-box .creat {background: url(./img/icon_create_g.png) no-repeat center;}
+        .container .flex-box .input {background: url(./img/icon_input_g.png) no-repeat center;}
+        .container .flex-box .save {background: url(./img/icon_save_g.png) no-repeat center;}
+        .container .flex-box .send {background: url(./img/icon_send_g.png) no-repeat center;}
+        .container .flex-box .creat.on {background: #00aada url(./img/icon_create_w.png) no-repeat center;}
+        .container .flex-box .input.on {background: #00aada url(./img/icon_input_w.png) no-repeat center;}
+        .container .flex-box .save.on {background: #00aada url(./img/icon_save_w.png) no-repeat center;}
+        .container .flex-box .send.on {background: #00aada url(./img/icon_send_w.png) no-repeat center;}
+        .container .flex-box .pv {background: url(./img/icon_check.png) no-repeat center;}
+    </style>
+    
+    <template>
+        <div id="container" class="container">
+            <div class="flex-box">
+                <div id="icon1" class$="step creat [[iconClass.iconFstClass]]" hidden="[[!iconFstUse]]">
+                    <p>[[iconFstText]]</p>
+                </div>
+                <div class="line" hidden="[[!iconSecUse]]"></div>
+                <div id="icon2" class$="step input [[iconClass.iconSecClass]]" hidden="[[!iconSecUse]]">
+                    <p>[[iconSecText]]</p>
+                </div>
+                <div class="line" hidden="[[!iconTrdUse]]"></div>
+                <div id="icon3" class$="step save [[iconClass.iconTrdClass]]" hidden="[[!iconTrdUse]]">
+                    <p>[[iconTrdText]]</p>
+                </div>
+                <div class="line" hidden="[[!iconFthUse]]"></div>
+                <div id="icon4" class$="step send [[iconClass.iconFthClass]]" hidden="[[!iconFthUse]]">
+                    <p>[[iconFthText]]</p>
+                </div>
+            </div>
+        </div>
+        <div class="vspace-5"></div>
+    </template>
+    
+    <script>
+    Polymer({
+            is : 'cc-cntr-progress-state',
+            properties : {
+                iconClass : {
+                    type : Object,
+                    value : function(){
+                        return {
+                            iconFstClass : "df",
+                            iconSecClass : "df",
+                            iconTrdClass : "df",
+                            iconFthClass : "df",
+                        };
+                    }
+                },
+                iconFstUse : {
+                    type : Boolean,
+                    observer: 'setIconClass1',
+                    value : false
+                },
+                iconSecUse : {
+                    type : Boolean,
+                    observer: 'setIconClass2',
+                    value : false
+                },
+                iconTrdUse : {
+                    type : Boolean,
+                    observer: 'setIconClass3',
+                    value : false
+                },
+                iconFthUse : {
+                    type : Boolean,
+                    observer: 'setIconClass4',
+                    value : false
+                },
+                lastPageIndex: {
+                    type: Number,
+                    observer: 'changeStep',
+                    value: 0
+                },
+                prvPageIndex: {
+                    type: Number,
+                    value: function () {
+                        return 0;
+                    }
+                },
+                iconFstText : {
+                    type : String,
+                    observer: 'setIconText1',
+                    value : ""
+                },
+                iconSecText : {
+                    type : String,
+                    observer: 'setIconText2',
+                    value : ""
+                },
+                iconTrdText : {
+                    type : String,
+                    observer: 'setIconText3',
+                    value : ""
+                },
+                iconFthText : {
+                    type : String,
+                    observer: 'setIconText4',
+                    value : ""
+                }
+            },
+            
+            observers : [],
+            //최초 호출
+            attached : function() {
+                if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                }
+            },
+            
+            detached : function() {
+                if(!this._detachedCalled) {
+                    this._detachedCalled = true;
+                }
+            },
+            
+            /* Icon Class Setting */
+            setIconClass1 : function(data)  {
+                var me = this;
+                
+                var bools = UT.isBoolean(data)? data : me.convertStringToBoolean(data);
+                if(bools) {
+                    me.set("iconClass.iconFstClass", "df")
+                } else {
+                    me.set("iconClass.iconFstClass", "da")
+                }
+            },
+            
+            setIconClass2 : function(data)  {
+                var me = this;
+                var bools = UT.isBoolean(data)? data : me.convertStringToBoolean(data);
+                if(bools) {
+                    me.set("iconClass.iconSecClass", "df")
+                } else {
+                    me.set("iconClass.iconSecClass", "da")
+                }
+            },
+            
+            setIconClass3 : function(data)  {
+                var me = this;
+                var bools = UT.isBoolean(data)? data : me.convertStringToBoolean(data);
+                if(bools) {
+                    me.set("iconClass.iconTrdClass", "df")
+                } else {
+                    me.set("iconClass.iconTrdClass", "da")
+                }
+            },
+            
+            setIconClass4 : function(data)  {
+                var me = this;
+                var bools = UT.isBoolean(data)? data : me.convertStringToBoolean(data);
+                if(bools) {
+                    me.set("iconClass.iconFthClass", "df")
+                } else {
+                    me.set("iconClass.iconFthClass", "da")
+                }
+            },
+            
+            /* Next Step */
+            selectIcon : function(){
+                var me = this;
+  
+                var val1 = me.lastPageIndex;
+                
+                if(val1 === 1){
+                    if(me.get("iconFstUse") === true) {
+                        me.$.icon1.classList.remove('df');
+                        me.$.icon1.classList.add('on');
+                        me.$.icon2.classList.remove('on');
+                        me.$.icon2.classList.remove('pv');
+                        me.$.icon3.classList.remove('on');
+                        me.$.icon3.classList.remove('pv');
+                        me.$.icon4.classList.remove('on');
+                        me.$.icon4.classList.remove('pv');
+                    }
+                }else if(val1 === 2){
+                    if(me.get("iconSecUse") === true) {
+                        me.$.icon1.classList.remove('on');
+                        me.$.icon1.classList.add('pv'); 
+                        me.$.icon2.classList.remove('df');
+                        me.$.icon2.classList.add('on');
+                    }
+                }else if(val1 === 3){
+                    if(me.get("iconTrdUse") === true) {
+                        me.$.icon1.classList.remove('on');
+                        me.$.icon1.classList.add('pv'); 
+                        me.$.icon2.classList.remove('on');
+                        me.$.icon2.classList.add('pv'); 
+                        me.$.icon3.classList.remove('df');
+                        me.$.icon3.classList.add('on');  
+                    }
+                }else if(val1 === 4){
+                    if(me.get("iconFthUse") === true) {
+                        me.$.icon1.classList.remove('on');
+                        me.$.icon1.classList.add('pv'); 
+                        me.$.icon2.classList.remove('on');
+                        me.$.icon2.classList.add('pv'); 
+                        me.$.icon3.classList.remove('on');
+                        me.$.icon3.classList.add('pv'); 
+                        me.$.icon4.classList.remove('df');
+                        me.$.icon4.classList.add('on');
+                    }
+                }
+            },
+            
+            /* Previous Step */
+            selectPrvIcon : function(){
+                var me = this;
+     
+                var val1 = me.lastPageIndex;
+                
+                if(val1 === 1){
+                    if(me.get("iconFstUse") === true) {
+                        me.$.icon3.classList.remove('on');
+                        me.$.icon3.classList.add('df'); 
+                        me.$.icon2.classList.remove('on');
+                        me.$.icon2.classList.add('df'); 
+                        me.$.icon1.classList.remove('df');
+                        me.$.icon1.classList.add('on');
+                    }
+                }else if(val1 === 2){
+                    if(me.get("iconSecUse") === true) {
+                        me.$.icon3.classList.remove('on');
+                        me.$.icon3.classList.add('df'); 
+                        me.$.icon2.classList.remove('pv');
+                        me.$.icon2.classList.add('on');
+                    }
+                }
+            },
+            
+            /* 다음/이전 버튼 */
+            changeStep : function(data)  {
+                var me = this;
+                // 여기에서 기존값보다 큰지 작은지 확인하고 
+                // selectIcon / selectPrvIcon 이벤트 따로 태우기
+                if(data !== me.get("prvPageIndex")) {
+                    if(me.get("prvPageIndex") < data) {
+                        // next step
+                        me.selectIcon();
+                    } else if(me.get("prvPageIndex") > data) {
+                        // previous step
+                        me.selectPrvIcon();
+                    }
+                }
+                
+                me.set("prvPageIndex", data);
+            },
+            
+            /* String true/false 값 변경 */
+            convertStringToBoolean : function(data)  {
+                var me = this;
+                
+                // defualt : true
+                if(UT.isString(data)) {
+                    if(data === "false") {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } else { 
+                    return true;
+                }
+            },
+            
+            /* Icon Text Setting */
+            setIconText1 : function(data) {
+                var me = this;
+                var text = UT.isEmpty(data)? me.translate("템플릿 및 계약 상대자 선택") : data;
+                me.set("iconFstText", this.translate(text));
+            },
+            
+            setIconText2 : function(data) {
+                var me = this;
+                var text = UT.isEmpty(data)? me.translate("계약 정보 입력") : data;
+                me.set("iconSecText", this.translate(text));
+            },
+            
+            setIconText3 : function(data) {
+                var me = this;
+                var text = UT.isEmpty(data)? me.translate("편집 및 검토") : data;
+                me.set("iconTrdText", this.translate(text));
+            },
+            
+            setIconText4 : function(data) {
+                var me = this;
+                var text = UT.isEmpty(data)? me.translate("확인 및 발송") : data;
+                me.set("iconFthText", this.translate(text));
+            }
+        });
+    </script>
+</dom-module>

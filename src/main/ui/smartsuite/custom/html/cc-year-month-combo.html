@@ -1,0 +1,79 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-year-combo
+    ** Author          : choijh
+    ** Create Date     : 2016.10.27
+    ** History         : 2016.10.27 choijh 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="cc-year-month-combo">
+    <style>
+        :host {
+            display : table;
+        }
+        :host > * {
+            display: table-cell;
+            vertical-align : middle;
+        }    
+        
+       	sc-combobox-field {
+       		min-width: 50px;
+       	}
+    </style>
+    <template>
+		<cc-year-combo items="[[years]]" value="{{year}}" placeholder="년도" required$="[[required]]" disabled$="[[disabled]]" readonly$="[[readonly]]"></cc-year-combo>
+		<sc-combobox-field items="[[months]]" value="{{month}}" placeholder="월" required$="[[required]]" disabled="[[disabled]]" readonly$="[[readonly]]"></sc-combobox-field>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-year-month-combo",
+			properties : {
+				months: {
+					type: Array,
+					value: function() {
+						var items = [];
+						for (var i = 1; i <= 12; i++) {
+							items.push({
+								text : i,
+								value : i
+							});
+						}
+						return items;
+					} 
+				},
+				
+				year: {
+					type: Object,
+					notify: true
+				},
+				
+				month: {
+					type: Object,
+					notify: true
+				},
+				
+				value: {
+					type: Object,
+					observer: "_valueChanged"
+				}
+			},
+			
+			_valueChanged: function(newValue, oldValue) {
+				
+				//Date Objet 확인
+				if(Object.prototype.toString.call(newValue) === '[object Date]') {
+					this.year = newValue.getFullYear();
+					this.month = newValue.getMonth() + 1;
+				
+				//날짜 확인	
+				} else if((""+newValue).length === 6) {
+
+					this.year = parseInt(newValue / 100);
+					this.month = newValue % 100;
+				}
+				
+			}
+
+		});
+	</script>
+</dom-module>

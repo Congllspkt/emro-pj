@@ -1,0 +1,67 @@
+<!--
+    ******************************************************************************************
+    ** @Program-name    : 로그인화면 이용약관
+    ** @Description     : 이용약관 팝업
+    ** @Author          : shh
+    ** @Create Date     : 2020.04.22
+    ** @History         : 2020.04.22 DHLee 최초작성
+    ******************************************************************************************
+-->
+<dom-module id="ep-sp-terms-info">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+        <!-- 약관 정보 조회(현재일자에 유효한 약관) -->
+        <sc-ajax id="findValidTermsMasterInfoByTermsConditions"
+                 url="findValidTermsMasterInfoByTermsConditions.do"
+                 on-response="completeTermsCondition">
+        </sc-ajax>
+
+        <div inner-h-t-m-l="[[termsInfo.ctmpl_cont]]"></div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-sp-terms-info",
+            properties: {
+            	// TITLE
+                stepTitle : String,
+                // 약관 Info
+                termsInfo : {
+                    type: Object,
+                    value: function(){
+                        return {
+                            ctmpl_cont:""
+                        };
+                    }
+                }
+            },
+            
+            // 화면 생성 Callback
+            initialized : function() {
+                var me = this;
+
+                me.$.findValidTermsMasterInfoByTermsConditions.body = {
+                    tenant : me.tenant,
+                    lang_ccd : me.locale,
+                    termcnd_typ_ccd : me.tcClsCd
+                };
+                UT.request(me.$.findValidTermsMasterInfoByTermsConditions);
+            },
+
+            completeTermsCondition: function(e, res) {
+                var me = this;
+                var result = res.response;
+                if(UT.isEmpty(result)){
+                    me.set("termsInfo.ctmpl_cont","")
+                }else{
+                    me.set("termsInfo",result)
+                }
+            }
+        });
+    </script>
+</dom-module>

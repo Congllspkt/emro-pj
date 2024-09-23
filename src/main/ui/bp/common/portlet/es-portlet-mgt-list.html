@@ -1,0 +1,703 @@
+<dom-module id="es-portlet-mgt-list">
+
+	<style>
+		:host {
+			@apply(--hbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        --> 
+		<!-- 공통코드 조회 -->
+		<sc-code-group>
+			<sc-code code="C016" value="{{codes.userDivList}}" ></sc-code>
+		</sc-code-group>
+
+		<!-- 포탈 공통 설정 조회 -->
+		<sc-ajax id="findPortalCommonConfig"
+				url="../portal/findPortalCommonConfig.do"
+				on-response="onResponseFindPortalCommonConfig">
+		</sc-ajax>
+		
+		<sc-ajax id="savePortalCommonConfig"
+				url="../portal/savePortalCommonConfig.do">
+		</sc-ajax>
+		
+		<sc-ajax id="updatePortalCommonConfig"
+				url="../portal/updatePortalCommonConfig.do"
+				on-response="onResponseSaveCommonConfig">
+		</sc-ajax>
+
+		<!-- 포틀릿 조회 -->
+		<sc-ajax id="findListPortlet"
+				 url="findListPortlet.do"
+				 body="{{searchParam}}"
+				 last-response="{{portletList}}">
+		</sc-ajax>
+
+		<!-- 포틀릿 상세 조회(포틀릿 정보 & 사용자 롤) -->
+		<sc-ajax id="findInfoPortlet"
+				 url="findInfoPortlet.do"
+				 body="{{searchParamPortlet}}"
+				 on-response="completeFindInfoServlet">
+		</sc-ajax>
+
+		<!-- 롤 조회 -->
+		<sc-ajax id="findListPortletRole"
+				 url="findListPortletRole.do"
+				 body="{{searchParam}}"
+				 last-response="{{roleList}}">
+		</sc-ajax>
+
+		<!-- 포틀릿 정보 저장 -->
+		<sc-ajax id="saveInfoPortlet"
+				 url="saveInfoPortlet.do"
+				 on-response="completeSaveInfoPortlet">
+		</sc-ajax>
+
+		<!-- 포틀릿 현황 삭제 -->
+		<sc-ajax id="deleteListPortlet"
+				 url="deleteListPortlet.do"
+				 on-response="completeDeleteListPortlet">
+		</sc-ajax>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <div class="vbox flex">
+			<div class="vbox flex">
+				<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+					<cc-fieldset>
+						<sc-label text="사용자 유형"></sc-label>
+						<sc-combobox-field placeholder="선택" selected-index="0" required="true"
+										   display-field="label" value-field="data" items="{{codes.userDivList}}"
+										   value="{{searchParam.portl_usr_typ_ccd}}"
+										   on-change="onSearch"
+										   validation-group="search">
+						</sc-combobox-field>
+					</cc-fieldset>
+				</cc-search-condition-panel>
+	
+				<cc-sub-title-bar title-text ="포탈 공통 설정">
+					<sc-button text="저장" on-click="onSaveCommonConfig" auth-s></sc-button>
+				</cc-sub-title-bar>
+				<div>
+					<cc-form-panel label-width="120">
+						<cc-fieldset>
+							<sc-label text="레이아웃"></sc-label>
+							<sc-radio-group-field value="{{selectedCommonConfig.layout_type}}">
+								<sc-radio-field label="Vue Grid" input-value="vueGrid"></sc-radio-field>
+							</sc-radio-group-field>
+						</cc-fieldset>
+						<cc-fieldset>
+							<sc-label text="사용자 제어 허용"></sc-label>
+							<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{selectedCommonConfig.use_userlayout}}"></sc-checkbox-field>
+						</cc-fieldset>
+					</cc-form-panel>
+				</div>
+	
+				<sc-grid id="gridPanelPortlet" data-provider="{{portletList}}" class="flex" use-state="false"
+						 on-item-click="onItemClick">
+					<cc-grid-toolbar title-text="포틀릿 현황">
+						<sc-button text="추가" on-click="onAddPortlet" auth-s></sc-button>
+						<sc-button text="삭제" on-click="onDelete" auth-s></sc-button>
+					</cc-grid-toolbar>
+					<sc-grid-columns>
+						<sc-data-column data-field="portlt_id" header-text="아이디" width="150" text-align="left" style-name="link"></sc-data-column>
+						<sc-data-column data-field="portlt_nm" header-text="명" width="200" text-align="left"></sc-data-column>
+						<sc-combobox-column data-field="portl_usr_typ_ccd" header-text="사용자 유형" width="100" text-align="center" items="{{codes.userDivList}}" display-field="label" value-field="data"></sc-combobox-column>
+						<sc-data-column data-field="sort" header-text="정렬" width="60" text-align="center"></sc-data-column>
+						<sc-data-column data-field="use_yn" header-text="사용 여부" width="80" text-align="center"></sc-data-column>
+					</sc-grid-columns>
+				</sc-grid>
+	
+			</div>
+		</div>
+
+		<div class="hspace-10"></div>
+
+		<div class="vbox flex">
+			<cc-sub-title-bar title-text ="포틀릿 정보">
+				<sc-button text="미리보기" on-click="onPreview" auth-s></sc-button>
+				<sc-button text="저장" on-click="onSave" auth-s></sc-button>
+			</cc-sub-title-bar>
+
+				<cc-form-panel validation-group="save" label-width="120">
+					<cc-fieldset>
+						<sc-label text="사용자 유형"></sc-label>
+						<sc-combobox-field placeholder="선택" required="[[formula('isEditableKey')]]" disabled="[[!formula('isEditableKey')]]"
+										   display-field="label" value-field="data" items="{{codes.userDivList}}"
+										   value="{{portletInfo.portl_usr_typ_ccd}}">
+						</sc-combobox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="ID"></sc-label>
+						<sc-text-field required="true" disabled="[[!formula('isEditableKey')]]" value="{{portletInfo.portlt_id}}"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="명"></sc-label>
+						<sc-text-field required="true" max-length="100" value="{{portletInfo.portlt_nm}}" disabled="[[!formula('isEditable')]]"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="타입"></sc-label>
+						<sc-text-field required="true" value="{{portletInfo.bas_attr_json.type}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="전달할 파라메터" ></sc-label>
+						<sc-text-field value="{{portletInfo.bas_attr_json.param}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="위젯에 표시될 라벨" ></sc-label>
+						<sc-text-field required="true" value="{{portletInfo.bas_attr_json.label}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="헤더의 타이틀 메세지" ></sc-label>
+						<sc-text-field required="true" value="{{portletInfo.bas_attr_json.title}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="헤더 표시" ></sc-label>
+						<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{portletInfo.bas_attr_json.display_header}}" disabled="[[!formula('isEditable')]]">
+						</sc-checkbox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="항상 헤더 표시" ></sc-label>
+						<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{portletInfo.bas_attr_json.headable}}" disabled="[[!formula('isEditable')]]">
+						</sc-checkbox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="새로고침 가능"></sc-label>
+						<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{portletInfo.bas_attr_json.refreshable}}" disabled="[[!formula('isEditable')]]">
+						</sc-checkbox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="사용 여부"></sc-label>
+						<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{portletInfo.use_yn}}" disabled="[[!formula('isEditable')]]">
+						</sc-checkbox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="종료 가능" ></sc-label>
+						<sc-checkbox-field checked-value="Y" un-checked-value="N" input-value="{{portletInfo.bas_attr_json.closeable}}" disabled="[[!formula('isEditable')]]">
+						</sc-checkbox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="정렬"></sc-label>
+						<sc-number-field value="{{portletInfo.sort}}" disabled="[[!formula('isEditable')]]" min-value="0" max-length="100" hide-trigger="true"></sc-number-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="경로" ></sc-label>
+						<sc-text-field value="{{portletInfo.bas_attr_json.portlet_loc}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="아이콘 이미지 URL" ></sc-label>
+						<sc-text-field value="{{portletInfo.bas_attr_json.icon_image}}" disabled="[[!formula('isEditable')]]" max-length="100"></sc-text-field>
+					</cc-fieldset>
+				</cc-form-panel>
+
+
+			<sc-grid id="gridPanelRole" class="vbox flex-3" data-provider="{{roleList}}" editable="true" use-selection="false">
+				<cc-grid-toolbar title-text="사용자 역할"></cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-checkbox-column data-field="use_yn" header-text="역할 배정" width="120" text-align="center" editable="true" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+					<sc-data-column data-field="role_cd" header-text="역할 코드" width="100" text-align="center"></sc-data-column>
+					<sc-data-column data-field="role_nm" header-text="역할 명" width="150" text-align="center"></sc-data-column>
+					<sc-data-column data-field="role_nm_en" header-text="역할 명 영문" width="150" text-align="center"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+
+		</div>
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+        Polymer({
+            is: "es-portlet-mgt-list",
+            
+            get portletPath(){
+            	return  SCPortalLocation.portletPath;
+            },
+            
+            get iconImagePath(){
+            	return  SCPortalLocation.iconImagePath;
+            },
+            
+            properties: {
+                // 코드
+                codes : {
+                    type : Object,
+                    value : function() {
+                    	return { userDivList : [] };
+                    }
+                },
+                
+                // 기본 공통 설정
+                originCommonConfig: {
+                	type: Object,
+                	notify: true
+                },
+                
+                // 현재 선택된 공통 설정 변수
+                selectedCommonConfig: {
+                	type: Object,
+                	value: function() {
+                		return {
+                		};
+                	}
+                },
+                
+                // 포틀릿 현황 : 조회 조건
+                searchParam : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // 포틀릿 현황 : 조회 결과
+                portletList : {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+                // 포틀릿 정보 : 조회 조건
+                searchParamPortlet : {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+
+                // 포틀릿 정보
+                portletInfo : {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 사용자 롤 조회 결과
+                roleList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+                
+                // 변경 금지 여부
+                preventChange: {
+                	type: Object,
+                	value: function() {
+                		return false;
+                	}
+                }
+
+            },
+
+            formulas : {
+                // 신규 상태
+                isNew : function() {
+                    return (this.portletInfo.is_new === true);
+                },
+                // 사용자 구분 및 ID 수정 가능 여부
+                isEditableKey : function() {
+                    return (this.formula('isNew'));
+                },
+                // 수정 가능 여부
+                isEditable: function() {
+                    return ((this.formula('isNew')) || !UT.isEmpty(this.portletInfo.portlt_id));
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+            	// 직무 목록 자동 조회
+                this.onSearch(); 
+                
+             	// 공통 설정 불러오기
+                UT.request(this.$.findPortalCommonConfig); 
+            },
+            
+            /***************************
+             * 공통 설정 관련
+             **************************/
+            /** 공통 설정 불러오기 완료  */
+            onResponseFindPortalCommonConfig: function(response) {
+            	var me = this;
+            	var commonConfig = response.detail.response;
+            	
+            	// 오는 값은 
+            	// {id: "SC-PORTAL", value: "{"layout_type":"vueGrid","use_userlayout":"Y"}"} 
+            	// 형태로 들어옴 그러므로 value의 값만을 가져오도록 수정
+            	if(commonConfig) {
+            		commonConfig = commonConfig.value;
+            	}
+            	
+            	// 공통 설정 값이 없는 경우 - 최초 실행시에는 각 분류에 맞는 신규 값을 넣어 전달함
+            	if(!commonConfig) {
+            		// 신규 공통 설정을 생성함
+            		commonConfig = {};
+            		for(var i = 0; i < me.codes.userDivList.length; i++) {
+            			commonConfig[me.codes.userDivList[i].data] = {
+            				layout_type: 'vueGrid', 
+            				use_userlayout: true
+            			};
+            		}
+            	
+            		// widgetpopup_autoclose
+            		// 저장 요청
+           			me.$.savePortalCommonConfig.body = {
+           					commonConfig: JSON.stringify(commonConfig)	
+           			};
+           			me.$.savePortalCommonConfig.generateRequest();
+            	} 
+            	
+            	// 공통 설정 값이 있는 경우 - 해당 값을 설정함
+            	else {
+            		// 1.0.3 이상 버전
+            		if(commonConfig.indexOf('{') !== -1) {
+            			commonConfig = JSON.parse(commonConfig);
+            			var isOld = true;
+            			
+            			// 각 분류별로 설정을 가지고있는 1.0.6 이상인지 확인
+            			if(Object.keys(commonConfig).length === me.codes.userDivList.length) {
+							isOld = false;   				
+            				for(var i = 0; i < me.codes.userDivList.length; i++) {
+                				if(Object.keys(commonConfig).indexOf(me.codes.userDivList[i].data) === -1) {
+									isOld = true;                					
+                					break; 
+                				}
+                			}	
+            			}
+            			
+            			// 구버전과 신버전에 따른 설정을 다르게 가져감
+            			if(isOld) {
+            				var replaceData = {};
+            				for(var i = 0; i < me.codes.userDivList.length; i++) {
+            					replaceData[me.codes.userDivList[i].data] = UT.copy(commonConfig);
+            				}
+            				commonConfig = replaceData;
+            			}
+            		}
+            		// 1.0.3 미만 버전 - 단순하게 response에 어떤 레이아웃을 쓸지 (vuegrid, slider)를 기재되어있다.
+            		else {
+            			var tmpObj = {};
+            			for(var i = 0; i < me.codes.userDivList.length; i++) {
+            				tmpObj[me.codes.userDivList[i].data] = {
+            					layout_type: commonConfig, 
+                    			use_userlayout: 'Y'
+            				};
+            			}
+            			commonConfig = tmpObj;
+            		}
+            	}
+            		
+            	// 현재 선택된 설정을 넣는다.
+        		me.originCommonConfig		= commonConfig;
+                me.selectedCommonConfig		= UT.copy(commonConfig[this.searchParam.portl_usr_typ_ccd]);
+            },
+            
+         	/** 포틀릿 공통 설정 저장 버튼 클릭시 */
+            onSaveCommonConfig: function() {
+            	var me = this;
+            	var isDifferent = false;
+            	
+            	// 현재 구분의 공통 정보 가져오기
+            	var divCommonConfig = this.originCommonConfig[this.searchParam.portl_usr_typ_ccd];
+            	
+            	// 현재 선택된 구분에 대해서만 기존 데이터와 차이점 확인
+            	//for(var key in divCommonConfig) {
+            	for(var key in this.selectedCommonConfig) {
+            		if(divCommonConfig[key] !== this.selectedCommonConfig[key]) {
+            			isDifferent = true;
+            			break;
+            		}
+            	}	
+            	
+            	// 변경점 존재 여부 확인
+            	if(isDifferent) {
+            		UT.confirm('STD.ADM1057', function() { //포탈 공통 설정 정보를 저장하시겠습니까?
+            			// 저장할 데이터 수정
+            			var saveCommonConfig = UT.copy(me.originCommonConfig);
+            			saveCommonConfig[me.searchParam.portl_usr_typ_ccd] = me.selectedCommonConfig;
+            		
+            			me.$.updatePortalCommonConfig.body = {
+            				commonConfig: JSON.stringify(saveCommonConfig)
+            			};
+                    	me.$.updatePortalCommonConfig.generateRequest();
+                    });
+            	} else {
+            		UT.alert('STD.ADM1056');  // 변경사항이 존재하지 않습니다.
+            	}
+            },
+            
+            /** 공통 설정 저장 이후 */
+            onResponseSaveCommonConfig: function(response) {
+            	var me = this;
+            
+            	// origin 공통 설정 갱신
+            	this.originCommonConfig[this.searchParam.portl_usr_typ_ccd] = UT.copy(this.selectedCommonConfig);
+            	
+            	// 새로고침 여부 확인
+            	UT.confirm('STD.ADM1058', // 변경된 공통 설정을 본 화면에 적용하기 위해서는 새로고침이 필요합니다.<br/>새로고침 하시겠습니까? 
+            		function() {
+                        me.reload();
+                    }
+                );
+            },
+            
+            /** vue-grid-layout 라이브러리 사용여부 */
+            hasVueGrid: function(){
+            	try{
+        			if(!VueGridLayout)	return false;
+        			else				return true;
+        		}catch(e){
+        			return false;
+        		}
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 그리드 cell click 이벤트
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "portlt_id"){
+                    // 그룹코드의 선택된 행의 데이터를 설정한다.
+                    me.set("searchParamPortlet", data);
+                    // 그룹코드 속성 목록을 조회한 후 상세코드 목록을 조회한다.
+                    me.onFindInfoPortlet();
+                }
+            },
+
+            // 화면 데이터 초기화
+            onClear: function(){
+                var me = this;
+                
+                // 화면에 있는 모든 그리드의 데이터를 초기화 한다.
+                me.set("portletInfo", {});
+                me.set("searchParamPortlet", {});
+                me.$.gridPanelRole.setDataProvider([]);
+                me.applyFormula();
+            },
+
+            // 포틀릿 현황의 조회 버튼 클릭시
+            onSearch: function() {
+                var me = this;
+                
+                // 조회조건 필수값 체크
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+                
+                // 현재 선택된 설정을 넣는다.
+                if(me.originCommonConfig) {
+                	me.selectedCommonConfig = UT.copy(me.originCommonConfig[me.searchParam.portl_usr_typ_ccd]);
+                }
+                
+                me.onClear();
+                UT.request(me.$.findListPortlet);
+            },
+            
+            // 저장 이후 데이터 갱신
+            onRefresh: function() {
+            	var me = this;
+            	UT.request(me.$.findListPortlet);
+            	me.onFindInfoPortlet();
+            },
+
+
+            // 포틀릿 정보 : 조회
+            onFindInfoPortlet: function() {
+                var me = this;
+                UT.request(me.$.findInfoPortlet);
+            },
+
+            // 포틀릿 정보 : 조회 완료
+            completeFindInfoServlet: function(e, res) {
+                var me = this,
+                    portletInfo = res.response.portletInfo,
+                    portletRoleList = res.response.portletRoleList;
+
+                // 포틀릿 정보 바인딩
+                portletInfo.bas_attr_json = JSON.parse(portletInfo.portlt_scr_attr);
+                
+                // 기존 시스템과 호환성을 위해서 기존 시스템의 경로, 이미지 주소 헤더 표시를 넣는다.
+                if(!portletInfo.bas_attr_json.portlet_loc || portletInfo.bas_attr_json.portlet_loc === '') { // 포탈 위치
+                	portletInfo.bas_attr_json.portlet_loc = this.portletPath + portletInfo.bas_attr_json.type;
+                }
+                if(!portletInfo.bas_attr_json.icon_image || portletInfo.bas_attr_json.icon_image === '') { // 아이콘
+                	portletInfo.bas_attr_json.icon_image = '/'+this.iconImagePath;
+                }
+                if(!portletInfo.bas_attr_json.display_header) { // 헤더 표시여부
+                	portletInfo.bas_attr_json.display_header = 'Y';
+                }
+                if(!portletInfo.bas_attr_json.resizable) { // 리사이즈 여부
+                	portletInfo.bas_attr_json.resizable = 'Y';
+                }
+                	
+                // 조회 결과값도 추가
+                me.set("portletInfo", res.response.portletInfo);
+
+                // 사용자 롤 바인딩
+                me.$.gridPanelRole.setDataProvider(portletRoleList);
+
+                me.applyFormula();
+            },
+
+            // 포틀릿 현황 : 추가
+            onAddPortlet: function() {
+                var me = this;
+
+                // 조회조건 필수값 체크
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                // 포트릿 정보 기본값 셋팅
+                me.set("portletInfo", {
+                    is_new : true,
+                    portl_usr_typ_ccd : me.get("searchParam").portl_usr_typ_ccd,
+                    bas_attr_json : {}
+                });
+
+                // 사용자 롤 조회
+                UT.request(me.$.findListPortletRole);
+                me.applyFormula();
+            },
+
+            // 포틀릿 현황 : 삭제
+            onDelete: function() {
+                var me = this,
+                    provider = me.$.gridPanelPortlet.getDataProvider(),
+                    checked = provider.selectionCheckedIndexes(),
+                    message = "STD.N1300"; // "삭제 하시겠습니까?"
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListPortlet.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteListPortlet);
+                    }
+                });
+
+
+            },
+
+            // 포틀릿 현황 : 삭제 완료
+            completeDeleteListPortlet: function() {
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+				UT.alert(message, function(){
+					me.onSearch();
+				});
+
+            },
+
+            // 포틀릿 정보 : 저장
+            onSave: function() {
+                var me = this,
+                    portletInfo = me.get("portletInfo"),
+                    message = "STD.N1200"; // 저장 하시겠습니까?
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,'ID'),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+                }
+
+                // 저장 유효성 체크
+                if(!me.validate('save')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    // 포틀릿 정보
+                    portletInfo.portlt_scr_attr = JSON.stringify(portletInfo.bas_attr_json);
+                    // 사용자 롤
+                    var updated = me.$.gridPanelRole.getDataProvider().getUpdateItems();
+                    // request body에 데이타 셋팅
+                    me.$.saveInfoPortlet.body = {
+                        portletInfo: portletInfo,
+                        portletRoleList: updated
+                    };
+                    me.$.findInfoPortlet.body = portletInfo;
+                    UT.request(me.$.saveInfoPortlet);
+                });
+            },
+
+            // 포틀릿 정보 : 저장 완료
+            completeSaveInfoPortlet: function() {
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onRefresh();
+				});
+
+            },
+
+            // 미리보기
+            onPreview: function(){
+                var me = this,
+                    portletInfo = me.get("portletInfo"),
+                    id = portletInfo.portlt_id;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,'ID'),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+                }
+
+                var type  = portletInfo.bas_attr_json.type || "",
+                	title = portletInfo.bas_attr_json.title || "",
+                	width = '40%', height = '35%';
+                
+                // 기존시스템과 유지를 위하여 경로 설정함
+                var loc = '';
+                if(portletInfo.bas_attr_json.portlet_loc) {
+                	loc = portletInfo.bas_attr_json.portlet_loc + "/" + type + ".html";
+                } else {
+                	loc = "/" + this.portletPath + type + "/" + type + ".html";	
+                }
+                
+                Polymer.Base.importLink(loc, function(){
+                	me.tmpPopup = UT.popup(type, me, width, height, {
+                		"attached": function(popup, e) {}
+                	}, {
+                		titleText: title
+                	});
+                	me.tmpPopup.getWindowContent().portletParam = portletInfo.bas_attr_json.param;
+                	me.tmpPopup.show();
+                }, function(){
+                	UT.alert("STD.ADM1019");
+                });
+            }
+        });
+	</script>
+
+</dom-module>

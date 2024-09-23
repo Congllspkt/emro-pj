@@ -1,0 +1,426 @@
+<dom-module id="es-operorg-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <!-- 코드 -->
+        <sc-request-group init>
+        	<sc-code-group>
+                <sc-code code="C009" value="{{codes.useYn}}" ></sc-code> <!-- 사용여부 -->
+            </sc-code-group>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+            <sc-ajax url="../operunit/getAllListOperUnit.do" last-response="{{codes.operUnit}}"></sc-ajax> <!-- 운영단위 -->
+        </sc-request-group>
+
+        <!-- 목록 조회 -->
+        <sc-ajax id="findList"
+                 url="findListOperationOrganization.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindList">
+        </sc-ajax>
+
+        <!-- 목록 삭제 -->
+        <sc-ajax id="deleteList"
+                 url="deleteListOperationOrganization.do"
+                 on-response="completeDeleteList">
+        </sc-ajax>
+
+        <!-- 목록 저장 -->
+        <sc-ajax id="saveList" url="saveListOperationOrganization.do" on-response="completeSaveList"></sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="vbox flex">
+            <cc-sub-title-bar title-text="운영조직 목록">
+            </cc-sub-title-bar>
+            <cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row"  auth-r>
+                <cc-fieldset>
+                    <sc-label text="운영단위" ></sc-label>
+                    <sc-combobox-field value="{{searchParam.ounit_cd}}" items="{{codes.operUnit}}" display-field="ounit_nm" value-field="ounit_cd"
+                                           selected-index="0" required="true" placeholder="선택"
+                                           validation-group="search"></sc-combobox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="회사"></sc-label>
+                    <sc-combobox-field value="{{searchParam.logic_org_cd}}" items="{{codes.company}}" display-field="comp_nm" value-field="co_cd"
+                                       placeholder="전체">
+                    </sc-combobox-field>
+                </cc-fieldset>
+            </cc-search-condition-panel>
+
+            <sc-grid id="gridPanel" editable="true" is-tree="true" class="flex"
+                    selection-able-function="onSelectionOption">
+                <cc-grid-toolbar>
+                    <sc-button text="저장" on-click="onSaveList" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="oorg_nm" header-text="운영조직 명" width="210" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="oorg_nm_en" header-text="운영조직 명 영문" width="210" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="oorg_cd" header-text="운영조직 코드" width="140" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="logic_org_typ_nm" header-text="논리 조직 유형 명" width="170" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="logic_org_nm" header-text="논리 조직 명" width="180" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="logic_org_nm_en" header-text="논리 조직 명 영문" width="220" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="logic_org_cd" header-text="논리 조직 코드" width="190" text-align="center" ></sc-data-column>
+                    <sc-checkbox-column data-field="use_count_yn" header-text="운영조직 연결 여부" width="170" text-align="center" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+                    <sc-checkbox-column data-field="use_yn" header-text="운영조직 사용 여부" width="130" text-align="center" item-editable-function="onItemEditableFn" item-style-function="onItemStyleFn" display-checkbox="false" checked-value="Y" un-checked-value=""></sc-checkbox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                    <sc-grid-field	data-field="parnode_oorg_cd"></sc-grid-field>
+                    <sc-grid-field	data-field="parnode_logic_org_cd"></sc-grid-field>
+                    <sc-grid-field	data-field="ounit_cd"></sc-grid-field>
+                    <sc-grid-field	data-field="logic_org_typ_ccd"></sc-grid-field>
+                    <sc-grid-field	data-field="logic_org_use_yn"></sc-grid-field>
+                    <sc-grid-field	data-field="chdnode_yn"></sc-grid-field>
+                    <sc-grid-field	data-field="use_count_oper_org_user" data-type="number"></sc-grid-field>
+                    <sc-grid-field	data-field="use_count_oper_org_link" data-type="number"></sc-grid-field>
+                    <sc-grid-field	data-field="is_new"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-operorg-list",
+            properties: {
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value:  function() {
+                        return {
+                            company: [],
+                            operUnit: [],
+                            useYn: [],
+                            addNodeItems: [
+                                {label: "현재노드 추가", value: "current"},
+                                {label: "하위노드 추가", value: "child"}
+                            ]
+                        }
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+                checkedAddNodeItem: {
+                    type: String,
+                    value: "child"
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+                var me = this;
+                me.onFindList();
+            },
+
+
+            onItemLabelFunction : function(data, item){
+                var me = this;
+                var dataField = item.dataField,
+                    value = data[dataField];
+                var provider = me.$.gridPanel.getDataProvider();
+                var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+                if((!childIndexes || childIndexes.length === 0)){
+                    return value;
+                }else{
+                    return "";
+                }
+                return "";
+            },
+
+            // checkBar editable 제어
+            onSelectionOption: function(item){
+                // 연결된 조직과 사용자가 없는 leaf 노드 만 체크 가능
+                if(item.use_count_yn != 'Y' && item.isLeaf) {
+                    return true;
+                }
+                // 신규 노드 체크 가능
+                return (item.is_new);
+            },
+            
+            onItemEditableFn : function(data, item) {
+            	if(item.dataField === "use_yn") {
+                    var me = this;
+                    var provider = me.$.gridPanel.getDataProvider();
+                    var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+                    if(!(!childIndexes || childIndexes.length === 0)){
+                        return false;
+                    }
+
+            		return data["logic_org_use_yn"] === "Y";
+            	}
+            },
+
+            onItemStyleFn : function(data, item){
+                var me = this;
+                var dataField = item.dataField,
+                    value = data[dataField],
+                    styleObj = {};
+                var provider = me.$.gridPanel.getDataProvider();
+                var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+                if(!(!childIndexes || childIndexes.length === 0)){
+                    styleObj.shapeSize = "0";
+                }
+                return styleObj;
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 검색(조회)
+            onFindList: function() {
+                var me = this;
+
+                // 조회 조건 유효성 체크
+                if(!me.validate('search')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                UT.request(me.$.findList);
+            },
+
+            // 검색(조회) 완료
+            completeFindList: function(e, res) {
+                var me = this,
+                    result = res.response;
+
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "oorg_cd", "parnode_oorg_cd", "children", "ROOT", null, true);
+                me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+
+                me.$.gridPanel.expandAll();
+
+
+                // 2024-02-15 대표님, 요청 사항 운영조직코드가 최하위 리프노드일 경우만 표기
+                var statusIndex = [];
+                var provider = me.$.gridPanel.getDataProvider();
+                provider.setItemAtBatch(true, function(index, data) {
+                    var childIndexes = provider.getChildIndexes(index);
+                    if((!childIndexes || childIndexes.length === 0)){
+                        return {oorg_cd:data["oorg_cd"]};
+                    }else{
+                        statusIndex.push(index);
+                        return {oorg_cd: ""};
+                    }
+                });
+
+                for(var a=0; a<statusIndex.length; a++){
+                    provider.setItemState(statusIndex[a],"none");
+                }
+
+
+                me.fire("found-operorg", me.get("searchParam"));
+            },
+
+            // 삭제
+            onDeleteList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600"); // "선택된 항목이 없습니다",
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    var deleted = provider.removeItems(true);	// 그리드에서 체크된 데이터를 지워주고, db에서 삭제해야 할 데이터 목록을 리턴한다.
+                    if(deleted.length > 0) {
+                        me.$.deleteList.body = {
+                            deleteOperationOrganizations: deleted
+                        };
+                        UT.request(me.$.deleteList);
+                    } else {
+                    	me.completeDeleteList();
+                    }
+                });
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this;
+
+                UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+                    me.onFindList();
+                });
+            },
+
+            // 저장
+            onSaveList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveList.body = {
+                        insertOperationOrganizations: created,
+                        updateOperationOrganizations: updated
+                    };
+                    UT.request(me.$.saveList);
+                });
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this;
+
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onFindList();
+                });
+            },
+
+            // 노드 추가
+            onAddList: function(checked) {
+                var me = this,
+                    selected = checked.selected,
+                    target = checked.target;
+
+                var filter = function(parentRow) {
+                    var filtered = {
+                        otherCompCount: 0,
+                        existCount: 0,
+                        rows: []
+                    };
+                    var plain = function(arr) {
+                        var plains = [];
+                        if(!arr){
+                            return plains;
+                        }
+
+                        for (var i = 0, len = arr.length; i < len; i++) {
+                            plains.push({
+                                oorg_cd: arr[i].oorg_cd
+                            });
+                            if (arr[i].rows && arr[i].rows.length > 0) {
+                                plains = plains.concat(plain(arr[i].rows));
+                            }
+                        }
+                        return plains;
+                    };
+
+                    var all = plain(me.$.gridPanel.getDataProvider().getItems());
+
+                    for (var i = 0, iLen = selected.length; i < iLen; i++) { // 신규행 데이터 가공
+                        var value = {
+                            parnode_oorg_cd: selected[i].parnode_logic_org_cd === ('ROOT' || '' ) ? 'ROOT' : parentRow.ounit_cd+selected[i].parnode_logic_org_cd,
+                            oorg_cd: parentRow.ounit_cd + selected[i].logic_org_cd,
+                            ounit_cd: parentRow.ounit_cd,
+                            logic_org_nm: selected[i].logic_org_nm,
+                            oorg_nm: UT.isEmpty(selected[i].oorg_nm) ? selected[i].logic_org_nm : selected[i].oorg_nm,
+                            org_typ_nm: selected[i].org_typ_nm,
+                            logic_org_typ_ccd: selected[i].logic_org_typ_ccd,
+                            parnode_logic_org_cd: selected[i].parnode_logic_org_cd,
+                            logic_org_cd: selected[i].logic_org_cd,
+                            co_cd: selected[i].co_cd,
+                            chdnode_yn: "Y",
+                            use_yn: selected[i].use_yn,
+                            is_new : true
+                        };
+                        var otherComp = false;
+                        if (parentRow.oorg_cd !== "ROOT" && parentRow.co_cd !== value.co_cd) { // 상위 노드와 다른 회사 filtering
+                            filtered.otherCompCount++;
+                            otherComp = true;
+                        }
+                        var exist = false;
+                        for (var j = 0, jLen = all.length; j < jLen; j++) {
+                            if (all[j].oorg_cd === value.oorg_cd) { // oorg_cd
+                                exist = true;
+                                filtered.existCount++;
+                                break;
+                            }
+                        }
+                        if (!otherComp && !exist) {
+                            filtered.rows.push(value);
+                        }
+                    }
+                    return filtered;
+                };
+
+                var grid= me.$.gridPanel,
+                    provider = grid.getDataProvider(),
+                    current = grid.getCurrentCell();
+
+                var parentNodeIdx = -1,
+                    parentItem = null;
+
+                if(current != null) {
+                    parentNodeIdx = provider.getParentIndex(current.nodeIndex);
+                    parentItem = parentNodeIdx > -1 ? provider.getItemAt(parentNodeIdx) : null;
+                }
+
+                if(parentItem === null) {
+                    parentItem = {
+                        oorg_cd: "ROOT",
+                        ounit_cd: me.get("searchParam.ounit_cd")
+                    };
+                }
+
+                var filtered = filter(parentItem);
+                for (var i= 0, len = filtered.rows.length; i<len; i++){
+                    var newNodeIndex = provider.addChildItem(parentNodeIdx, filtered.rows[i]);
+                    grid.expand(parentNodeIdx);
+                    grid.setCurrentCell({nodeIndex: newNodeIndex});
+                }
+
+                if (filtered.existCount > 0 && filtered.otherCompCount > 0) {
+                    UT.alert(me.translate("STD.ADM1016", "", filtered.existCount, filtered.otherCompCount),null,true);
+                } else if (filtered.existCount > 0) {
+                    UT.alert(me.translate("STD.N2010", "", filtered.existCount), null,true);
+                } else if (filtered.otherCompCount > 0) {
+                    UT.alert(me.translate("STD.ADM1017", "", filtered.otherCompCount), null,true);
+                }
+
+                var item = grid.getDataProvider().getItems();
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(item, "oorg_cd", "parnode_oorg_cd", "children", "ROOT", null, true);
+                grid.setHierachyDataProvider(hierachiDatas, "children");
+                grid.expandAll();
+
+                grid.getDataProvider().setItemStateAtBatch(true, function(index, data){
+                    if(data.is_new === 'true') return "created";
+                })
+
+
+            }
+
+        });
+    </script>
+
+</dom-module>

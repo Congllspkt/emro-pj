@@ -1,0 +1,291 @@
+<dom-module id="es-dml">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            width : 100%;
+            height : 100%;
+        }
+        
+        #textarea1 {
+            height : 100%;
+        }
+        #textarea2 {
+            height : 100%;
+        }
+        #textarea3 {
+            height : 100%;
+        }
+        #textarea4 {
+            height : 100%;
+        }
+    </style>
+    
+    <template>
+    
+        <sc-overlay id="overlay" with-backdrop>로딩중...</sc-overlay>
+        
+        <!-- 조회 -->
+        <sc-ajax 
+            id="findListDml"
+            url="findListDml.do"
+            body="{{searchParam}}"
+            last-response="{{resultList}}"
+            on-response="completefindListDml">
+        </sc-ajax>
+        
+        <sc-toolbar>
+            <sc-label text="{{searchParam.table_name}}" i18n-disabled></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="닫기" on-click="onClose"></sc-button>
+        </sc-toolbar>
+        
+        <table class="tb-form">
+            <tr>
+                <th width="120">select</th>
+                <td><sc-textarea-field value="{{result.sql_select}}" readonly="true"></sc-textarea-field></td>
+                <th width="120">insert</th>
+                <td><sc-textarea-field value="{{result.sql_insert}}" readonly="true"></sc-textarea-field></td>
+            </tr>
+            <tr>
+                <th width="120">delete</th>
+                <td><sc-textarea-field value="{{result.sql_update}}" readonly="true"></sc-textarea-field></td>
+                <th width="120">update</th>
+                <td><sc-textarea-field value="{{result.sql_merge}}" readonly="true"></sc-textarea-field></td>
+            </tr>
+            <tr>
+                <th width="120">delete</th>
+                <td colspan="3"><sc-textarea-field value="{{result.sql_delete}}" readonly="true"></sc-textarea-field></td>
+            </tr>
+        </table>
+    </template>
+    
+    <script>
+        Polymer({
+            is: "es-dml",
+            
+            properties: {
+                /* 검색 조건 데이터 binding object */
+                searchParam: {
+                    type: Object,
+                    value: {}
+                },
+                /* 조회 결과 데이터 binding object */
+                resultList: {
+                    type: Object,
+                    value: {}
+                },
+                /* dml 데이터 binding object */
+                result: {
+                    type: Object,
+                    value: {}
+                }
+            },
+            
+            ready: function() {
+                this.$.overlay.open();
+            },
+            
+            // 화면 생성 완료 후 실행
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    this.$.overlay.close();
+                
+	                // 조회
+	                //this.onfindListDml();
+                }
+            },
+            
+            // 닫기
+            onClose: function() {
+                this.parentElement.parentElement.parentElement.close();
+            },
+            
+            // 조회
+            onfindListDml: function(param) {
+                this.$.overlay.open();
+                
+                this.set("searchParam", param);
+                this.$.findListDml.generateRequest();
+            },
+            
+            // 조회 완료
+            completefindListDml: function() {
+                this.generateDml();
+                
+                this.$.overlay.close();
+            },
+            
+            // 공백
+            blank: function(blank_cnt) {
+                var blank = "";
+            
+                for(var i=0; i<Number(blank_cnt); i++) {
+                    blank += " ";
+                }
+                
+                return blank;
+            },
+            
+            generateDml: function() {
+                var param  = this.searchParam;
+                var list   = this.resultList;
+                
+                var item = null;
+                var len  = (list)? list.length:0;
+                
+                var lf            = "\n";
+                var tab           = "    " // "0x09";
+                var sql_table     = param.table_name + ((param.table_comments)? " /* " + param.table_comments + " */":"");
+                var sql_column1   = "";        // 컬럼 1개를 한열에 배치
+                var sql_column5   = tab + tab; // 컬럼 5개를 한열에 배치
+                var sql_param     = "";        // prepareStatement SET 컬럼
+                var sql_condition = "";        // prepareStatement WHERE 조건
+                var cname_lower   = "";        // 컬럼명
+                var idx_condition = 0;
+                var idx_select    = 0;
+                var idx_update    = 0;
+                var comma         = ",";
+                var and           = "AND";
+                
+                // DML 시작
+                var sql_select    = tab + "SELECT" + lf;
+                var sql_insert    = tab + "INSERT INTO " + sql_table + lf;
+                var sql_update    = tab + "UPDATE" + lf +
+                                    tab + tab + sql_table + lf +
+                                    tab + "SET" + lf;
+                var sql_delete    = tab + "DELETE" + lf +
+                                    tab + tab + sql_table + lf;
+                var sql_merge     = tab + "MERGE INTO" + lf +
+                                    tab + tab + sql_table.replace(" ", " A ") + lf +
+                                    tab + "USING" + lf +
+                                    tab + tab + "(" + lf +
+                                    tab + tab + "SELECT" + lf;
+                var sql_merge_on  = tab + "ON" + lf + tab + tab + "(" + lf;
+                var sql_merge_m   = tab + "WHEN MATCHED THEN" + lf +
+                                    tab + tab + "UPDATE SET" + lf;
+                var sql_merge_nm  = tab + "WHEN NOT MATCHED THEN" + lf +
+                                    tab + tab + "INSERT";
+                
+                // 컬럼
+                for(var i=0; i<len; i++) {
+                    item = list[i];
+                    
+                    // 기본 컬럼 값 맵핑
+                    switch(item.cname) {
+                        case "SYS_ID" : cname_lower = "#{$.tenant}"; break;
+                        case "STS"    : cname_lower = "'C'";         break;
+                        case "MODR_ID" : cname_lower = "#{$.regr_id}"; break;
+                        case "REG_DTTM" :
+                        case "MOD_DTTM" : cname_lower = "#{$.now}"; break;
+                        default       : cname_lower = "#{p." + (item.cname).toLowerCase() + "}";
+                    }
+                    
+                    // SELECT
+                    if(item.cname != "SYS_ID" && item.cname != "MODR_ID" && item.cname != "MOD_DTTM") {
+                        // 최초컬럼 콤마제거
+                        comma = (idx_select==0)? " ":",";
+                        
+                        sql_column1 += tab + tab + comma + item.cname + ((item.comments)? this.blank(item.blank_cnt) + " /* " + item.comments + " */":"") + lf;
+                        
+                        // 5컬럼씩 개행, 마지막 제외
+                        if(i<len-1 && ++idx_select%5 == 0) {
+                            sql_column1 += tab + tab + lf;
+                        }
+                    }
+                    
+                    comma = (i==0)? " ":",";
+                    
+                    sql_column5 += comma + item.cname + this.blank(Number(item.blank_cnt)+1);
+                    sql_param   += tab + tab + comma + cname_lower + lf;
+                    
+                    if(i<len-1 && (i+1)%5 == 0) {
+                        sql_column5 += lf + tab + tab;
+                        sql_param   += tab + tab + lf;
+                    } 
+                    
+                    // PK컬럼
+                    if(item.pk_yn == "Y") {
+                        if(idx_condition++ == 0) {
+                            comma = " ";
+                            and   = "    ";
+                        } else {
+                            comma = ",";
+                            and   = "AND ";
+                        }
+                        
+                        sql_condition += tab + tab + and + item.cname + this.blank(item.blank_cnt_pk) + " = " + cname_lower + lf;
+                        sql_merge     += tab + tab + tab + comma + cname_lower + this.blank(item.blank_cnt_pk) + " AS " + item.cname + lf;
+                        sql_merge_on  += tab + tab + and + "A." + item.cname + this.blank(item.blank_cnt_pk) + " = B." + item.cname + lf;
+                    }
+                    else {
+                        // 등록자, 등록일시 제외
+                        if(item.cname == "REGR_ID" || item.cname == "REG_DTTM") continue;
+                        
+                        comma = (idx_update==0)? " ":",";
+                        
+                        if(item.cname == "STS") cname_lower = "'U'";
+                        
+                        sql_update  += tab + tab + comma + item.cname + this.blank(item.blank_cnt_no_pk) + " = " + cname_lower + lf;
+                        sql_merge_m += tab + tab + tab + comma + item.cname + this.blank(item.blank_cnt_no_pk) + " = " + cname_lower + lf;
+                        
+                        if(++idx_update%5 == 0) {
+                            sql_update += tab + tab + lf;
+                        }
+                    }
+                }
+                
+                // 마지막 개행 제거
+                sql_condition = sql_condition.substr(0, sql_condition.length-1);
+                sql_update    = sql_update.replace(lf+lf, lf);
+                
+                // 컬럼, 조건절 합치기
+                sql_select += sql_column1 +
+                              tab + "FROM" + lf +
+                              tab + tab + sql_table + lf +
+                              tab + "WHERE" + lf +
+                              sql_condition;
+                sql_insert += tab + tab + "(" + lf +
+                              sql_column5 + lf +
+                              tab + tab + ")" + lf +
+                              tab + "VALUES" + lf +
+                              tab + tab + "(" + lf +
+                              sql_param +
+                              tab + tab + ")";
+                sql_update += tab + "WHERE" + lf +
+                              sql_condition;
+                sql_delete += tab + "WHERE" + lf +
+                              sql_condition;
+                sql_merge  += tab + tab + "FROM" + lf +
+                              tab + tab + tab + "DUAL" + lf +
+                              tab + tab + ") B" + lf +
+                              sql_merge_on +
+                              tab + tab + ")" + lf + lf +
+                              sql_merge_m + lf +
+                              sql_merge_nm + lf +
+                              tab + tab + tab + "(" + lf +
+                              sql_column5.replace(/0x090x09/g, tab+tab+tab) + lf +
+                              tab + tab + tab + ")" + lf +
+                              tab + tab + "VALUES" + lf +
+                              tab + tab + tab + "(" + lf +
+                              sql_param.replace(/0x090x09/g, tab+tab+tab) +
+                              tab + tab + tab + ")";
+                
+                //결과
+                //map.table_name     = param.table_name;
+                //map.table_comments = param.table_comments;
+                
+                this.result = {
+                      "sql_select": sql_select,
+                      "sql_insert": sql_insert,
+                      "sql_update": sql_update,
+                      "sql_delete": sql_delete,
+                      "sql_merge" : sql_merge
+                }
+            }
+        });
+        </script>
+
+</dom-module>

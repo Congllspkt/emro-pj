@@ -1,0 +1,424 @@
+
+<dom-module id="es-jobitem-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+
+    <template>
+
+        <!-- 구매 그룹 유형별 품목 조회 -->
+        <sc-ajax id="findListPurchaseGroupCategoryItem"
+                 url="findListPurchaseGroupCategoryItem.do"
+                 body="{{searchParam}}"
+                 on-response="completeFindList">
+        </sc-ajax>
+
+        <!-- 구매 그룹 유형에 연결된 품목 삭제 -->
+        <sc-ajax id="deleteListPurchaseGroupCategoryAndItemMappingByPurchaseGroupCode"
+                 url="deleteListPurchaseGroupCategoryAndItemMappingByPurchaseGroupCode.do"
+                 on-response="completeDeleteList">
+        </sc-ajax>
+
+        <!-- 구매 그룹 유형별 품목 저장 -->
+        <sc-ajax id="savePurchaseGroupCategoryAndItemMapping"
+                 url="savePurchaseGroupCategoryAndItemMapping.do"
+                 on-response="completeSaveList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <div class="vbox flex">
+        	<cc-sub-title-bar title-text="품목 분류">
+        	</cc-sub-title-bar>
+            <cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+                <cc-fieldset>
+                    <sc-label text="분류 코드"></sc-label>
+                    <sc-text-field value="{{searchParam.itemcat_cd}}" on-enter="onFindItemFromGrid" maxlength="18"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="품목분류 명"></sc-label>
+                    <sc-text-field value="{{searchParam.itemcat_nm}}" on-enter="onFindItemFromGrid" maxlength="100"></sc-text-field>
+                </cc-fieldset>
+            </cc-search-condition-panel>
+
+            <sc-grid  id="gridPanel" is-tree="true"  class="flex" use-state="false"
+                      selection-able-function="onSelectionOption">
+                <cc-grid-toolbar title-text="[[searchParam.purc_grp_nm]]" i18n-disabled>
+                    <sc-button text="펼침" on-click="onExpandAll" auth-r></sc-button>
+                    <sc-button text="접기" on-click="onCollapseAll" auth-r></sc-button>
+                    <sc-button text="매핑" on-click="onSaveList" auth-s></sc-button>
+                    <sc-button text="매핑 삭제" on-click="onDeleteList" auth-s></sc-button>
+                </cc-grid-toolbar>
+
+                <sc-grid-columns>
+                    <sc-data-column data-field="itemcat_nm" header-text="품목분류 명" width="350" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="itemcat_nm_en" header-text="품목분류 명 영문" width="350" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="itemcat_cd" header-text="분류 코드" width="150" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="purc_grp_cd" header-text="구매 그룹 코드" width="170" text-align="center"></sc-data-column>
+                    <sc-data-column data-field="purc_grp_nm" header-text="구매 그룹 명" width="150" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="purc_grp_nm_en" header-text="구매 그룹 명 영문" width="200" text-align="left"></sc-data-column>
+                    <sc-data-column data-field="cate_lvl" header-text="레벨" width="100" text-align="center"  ></sc-data-column>
+                </sc-grid-columns>
+
+                <sc-grid-fields>
+                    <sc-grid-field	data-field="purc_grp_typ_ccd"></sc-grid-field>
+                    <sc-grid-field	data-field="co_cd"></sc-grid-field>
+                    <sc-grid-field	data-field="use_yn"></sc-grid-field>
+                    <sc-grid-field	data-field="par_itemcat_cd"></sc-grid-field>
+                </sc-grid-fields>
+
+            </sc-grid>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-jobitem-list",
+            properties: {
+                // 조회 조건
+                searchParam : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // UI Binding Object
+                uiBind : {
+                    type : Object,
+                    value : function() {
+                        return {
+                            // 버튼 숨김 여부
+                            btnHidden: false
+                        }
+                    }
+                }
+            },
+
+            observers: [ 'setBtnHidden(searchParam.cate_cd, searchParam.cate_nm)' ],
+
+            formulas : {
+                // 수정 가능 상태
+                isEditable : function() {
+                    // 구매 그룹 유형 코드가 선택 되었을 경우 true
+                    return this.searchParam.purc_grp_cd;
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            load: function(data) {
+                var me = this,
+                    grid = me.$.gridPanel;
+
+                // 선택된 구매 그룹 유형의 회사코드 또는 구매 그룹 유형유형이 변경된 경우 품목분류목록 재조회
+                if(me.searchParam.co_cd != data.co_cd || me.searchParam.purc_grp_typ_ccd != data.purc_grp_typ_ccd) {
+
+                    // 회사코드, 구매 그룹 유형유형이 바뀐 경우 구매 그룹 유형별 품목목록 초기화
+                    me.clear();
+                    me.set("searchParam.co_cd", data.co_cd);
+                    me.set("searchParam.purc_grp_typ_ccd", data.purc_grp_typ_ccd);
+                    me.set("searchParam.purc_grp_cd", data.purc_grp_cd);
+                    // 품목분류 목록 조회
+                    me.onFindList();
+
+                } else {
+                    grid.selectionCheckAll(false);
+                    me.onCollapseAll();
+                }
+                me.set("searchParam", data);
+                if('ko_KR' != SCMdiManager.locale) {
+                	if(UT.isEmpty(data.purc_grp_nm_en)) {
+                		me.set("searchParam.purc_grp_nm", "");
+                	} else {
+	                	me.set("searchParam.purc_grp_nm", data.purc_grp_nm_en);
+                	}
+                } else {
+                	me.set("searchParam.purc_grp_nm", data.purc_grp_nm);
+                }
+                me.applyFormula();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // checkBar editable 제어
+            onSelectionOption: function(item){
+                // 분류레벨이 4이고 leaf 노드 만 체크 가능
+                return (item.isLeaf && item.cate_lvl === "4");
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+
+            // 조회
+            onFindList: function() {
+                UT.request(this.$.findListPurchaseGroupCategoryItem);
+            },
+
+            // 검색(조회) 완료
+            completeFindList: function(e, res) {
+                var me = this,
+                    result = res.response;
+
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "itemcat_cd", "par_itemcat_cd", "children", "0", null, true);
+                me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+            },
+
+            // 초기화
+            clear: function(){
+                var me = this;
+                me.reset();
+            },
+
+            setBtnHidden : function() {
+                var me = this;
+                if(me.get("uiBind.btnHidden")){
+                    me.set("uiBind.btnHidden", false);
+                }
+            },
+
+            // 펼침
+            onExpandAll:function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('구매 그룹 유형코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                me.$.gridPanel.expandAll();
+            },
+
+            // 접기
+            onCollapseAll:function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('구매 그룹 유형코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                me.$.gridPanel.collapseAll();
+            },
+
+
+
+            // 삭제
+            onDeleteList: function() {
+                var me = this,
+                    grid = me.$.gridPanel,
+                    provider = grid.getDataProvider();
+
+                var checked = provider.selectionCheckedIndexes();
+                var deletes = [];
+
+                if(checked.length < 1){
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                for (var i=0; i < checked.length; i++ ){
+                    var row = provider.getItemAt(checked[i]);
+                    // check된 항목중 구매 그룹 유형가 연결된 항목만 삭제 대상리스트에 추가
+                    if(row.purc_grp_cd){
+                        deletes.push(row);
+                    }
+                }
+
+                if(deletes.length < 1){
+                    UT.alert("STD.ADM1013"); // 연결된 구매 그룹이 없습니다.
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // 삭제 하시겠습니까?
+                    me.$.deleteListPurchaseGroupCategoryAndItemMappingByPurchaseGroupCode.set("body",{
+                        deleteList: deletes
+                    });
+                    UT.request(me.$.deleteListPurchaseGroupCategoryAndItemMappingByPurchaseGroupCode);
+                });
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this;
+                UT.alert("STD.N2500", function(){
+                    me.onFindList();
+                });
+            },
+
+            // 저장
+            onSaveList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var job = me.get("searchParam"), // 구매 그룹 유형목록에서 선택한 구매 그룹 유형 Object
+                    checked = provider.selectionCheckedIndexes(),
+                    inserts = [],
+                    updates = [],
+                    sts = "",
+                    cnt = 0;
+
+                // check된 품목분류가 없는 경우 처리
+                if(checked.length < 1){
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+                for (var i=0; i < checked.length; i++ ){
+                    var row = provider.getItemAt(checked[i]);
+
+                    if(!row.purc_grp_cd){
+                        sts = "I";
+                        cnt++;
+                    }else if(row.co_cd != job.co_cd || row.purc_grp_typ_ccd != job.purc_grp_typ_ccd || row.purc_grp_cd != job.purc_grp_cd){
+                        sts = "U";
+                        cnt++;
+                    }
+
+                    row.purc_grp_cd = job.purc_grp_cd;
+                    row.purc_grp_typ_ccd = job.purc_grp_typ_ccd;
+                    row.co_cd = job.co_cd;
+
+                    if(sts == "U"){
+                        updates.push(row);
+                    }else if (sts == "I"){
+                        inserts.push(row);
+                    }
+                }
+
+                if(cnt <1){
+                    // 선택한 구매 그룹 유형와 연결된 구매 그룹 유형가 같은 경우 처리
+                    UT.alert("STD.ADM1014"); //"선택한 구매 그룹 유형와 연결된 품목입니다."
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.savePurchaseGroupCategoryAndItemMapping.set("body", {
+                        insertList: inserts,
+                        updateList: updates
+                    });
+                    UT.request(me.$.savePurchaseGroupCategoryAndItemMapping);
+                });
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this,
+                    message = "STD.N1500"; // 저장하였습니다.
+
+                UT.alert(message, function(){
+                    me.onFindList();
+                });
+            },
+
+            // 조건을 만족하는 Item 검색
+            onFindItemFromGrid: function() {
+                var me = this;
+                var treeGrid = me.$.gridPanel;
+                var codeValues = me.searchParam.itemcat_cd;    // 분류코드 필드 값
+                var nameValues = me.searchParam.itemcat_nm;    // 분류명 필드 값
+                var fields = [];    // 검색 옵션 조건 필드 목록
+                var values = [];    // 검색 옵션 조건 값 목록
+                var startIndex = 0;
+
+                /*if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null, me.translate('구매 그룹 유형코드')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }*/
+
+                if(codeValues && codeValues != ''){
+                    fields.push("itemcat_cd");
+                    values.push(codeValues);
+                }
+                if(nameValues && nameValues != ''){
+                    fields.push("itemcat_nm");
+                    values.push(nameValues);
+                }
+
+                if(fields.length <1){
+                    //입력 받은 필드/값 없는 경우 return
+                    UT.alert("STD.N2700");
+                    return;
+                }
+
+                if(!me.get("uiBind.btnHidden")){
+                    me.set("uiBind.btnHidden", true);
+                }else{
+                    startIndex = treeGrid.getCurrentCell().rowIndex;
+                }
+                me.searchTreeItemFunc(treeGrid, fields, values, startIndex);
+            },
+
+            // 구매 그룹 유형 품목 검색(Grid 내 조건 만족하는 Item 검색)
+            searchTreeItemFunc: function (treeGrid, fields, values, startIndex){
+
+                // 그리드 검색 옵션 설정
+                /* var options = new RealGridJS.SearchOptions();
+                 options.fields = fields;
+                 options.values = values;
+                 options.caseSensitive = false; // 대소문자 구분 여부
+                 options.partialMatch = true; // 부분검색 여부(Like검색)
+                 options.wrap = true; // 검색 완료 시 처음부터 다시 검색
+                 options.allFields = true; // 모든 필드의 조건을 만족하는 항목만 검색
+                 options.select = true; // focus 이동 여부
+                 options.startIndex = startIndex; // 검색 시작 index */
+                // treeGird 경우 펼쳐진 노드에 대해서만 searchItem 기능 제공
+                var me = this;
+                var currentCell = treeGrid.getCurrentCell();
+                var searchData = {};
+                for(var i = 0,len = fields.length ; i<len ; i++){
+                    searchData[fields[i]] = values[i];
+                }
+                // treeGird 경우 펼쳐진 노드에 대해서만 searchItem 기능 제공
+                // 트리를 모드 펼친 상태로 검색
+                treeGrid.expandAll();
+
+                var findNodeIndex = function(searchData,startIndex){
+                    var nodeIndex = 0;
+                    var startIndex = (startIndex+1) || 0;
+                    var items = treeGrid.getDataProvider().getItems();
+                    for(var i = startIndex,len=items.length; i <len; i++){
+                        nodeIndex = i;
+                        var data = items[i];
+                        var matched= true;
+                        for (var p in searchData){
+                            if (data[p].indexOf(searchData[p]) < 0) {
+                                matched = false;
+                                break;
+                            }
+                        }
+                        if(matched){
+                            break;
+                        }
+                        nodeIndex = -1;
+                    }
+                    return nodeIndex;
+                };
+
+                var nodeIndex = findNodeIndex(searchData,startIndex);
+
+                if (nodeIndex < 0) {
+                    UT.alert("STD.N2800");
+                    return;
+                }
+
+                // focusing
+                treeGrid.setCurrentCell({
+                    nodeIndex: nodeIndex,
+                    dataField: fields[fields.length-1]
+                });
+            }
+
+        });
+    </script>
+
+</dom-module>

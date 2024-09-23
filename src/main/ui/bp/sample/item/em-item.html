@@ -1,0 +1,33 @@
+<sc-link rel="import" href="es-item-list.html"></sc-link>
+
+<dom-module id="em-item">
+
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+    </style>
+    
+	<template>
+
+        <sc-toolbar>
+            <sc-label text="품목 관리" width="300"></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="도움말" class="manual-btn" i18n-disabled></sc-button>
+            <sc-button text="" class="bookmark-btn fa fa-star-o" i18n-disabled></sc-button>
+        </sc-toolbar>
+        
+        <div class="fit">			
+			<es-item-list id="list"></es-item-list>
+		</div>
+
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-item'
+		});
+	</script>
+
+
+</dom-module>

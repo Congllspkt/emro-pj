@@ -1,0 +1,249 @@
+<sc-link rel="import" href="es-arbitrary-header-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-header-detail.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-aprv-line-list.html"></sc-link>
+<sc-link rel="import" href="es-arbitrary-aprv-line-condition-list.html"></sc-link>
+
+<dom-module id="es-arbitrary-manage-detail">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <cc-page-title-bar>
+            <sc-button text="닫기" on-click="onClose"></sc-button>
+        </cc-page-title-bar>
+        
+        <div class="hbox flex" style="overflow-x:hidden;">
+            <es-arbitrary-header-list id="head_list" on-selected-header="onSelectedHeader" on-deleted-headers="onDeletedHeaders" class="flex-4">
+            </es-arbitrary-header-list>
+
+            <div class="hspace-10"></div>
+            
+            <div class="vbox flex-6">
+                <es-arbitrary-header-detail id="head_data" on-selected-table="onSelectedTable" on-saved-header="onChangedHeader" on-deleted-tables="onChangedHeader" 
+                    class="flex-3" disabled$="[[!formula('isSelectedHeader')]]" header-data="{{headerData}}">
+                </es-arbitrary-header-detail>
+                
+                <div class="hspace-10"></div>
+                
+                <es-arbitrary-aprv-line-list id="line_list" on-selected-aprv-line="onSelectedAprvLine" on-saved-aprv-lines="onSavedAprvLines" on-deleted-aprv-lines="onDeletedAprvLines" 
+                    class="flex-3" disabled$="[[!formula('isSelectedTable')]]" header-data="{{headerData}}">
+                </es-arbitrary-aprv-line-list>
+
+                <div class="hspace-10"></div>
+                
+                <es-arbitrary-aprv-line-condition-list id="cond_list" on-saved-aprv-line-conditions="onSavedAprvLineConditions" on-deleted-aprv-line-conditions="onDeletedAprvLineConditions" 
+                    class="flex-4" disabled$="[[!formula('isSelectedAprvLine')]]" header-data="{{headerData}}">
+                </es-arbitrary-aprv-line-condition-list>
+            </div>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-arbitrary-manage-detail",
+
+            properties: {
+                selectedAprvTyp: { // 선택된 결재 유형
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                headerData: { // 선택된 헤더
+                    type: Object,
+                    notify: true,
+                    value: function() {
+                        return {};
+                    }
+                },
+                selectedHeader: { // 선택된 헤더
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                selectedTable: { // 선택된 전결테이블
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                selectedAprvLine: { // 선택된 전결결재선
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+            },
+            
+            formulas: {
+                isSelectedHeader: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedHeader);
+                },
+                isSelectedTable: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedTable);
+                },
+                isSelectedAprvLine: function() {
+                    var me = this;
+                    return UT.isNotEmpty(me.selectedAprvLine);
+                }
+            },
+            
+            initialized: function() {
+                var me = this;
+
+                me.applyFormula();
+            },
+            
+            load: function(param) {
+                var me = this;
+                
+                me.set("selectedAprvTyp", param);
+                
+                me.$.head_list.load(me.selectedAprvTyp); // 전결규정 이력
+                
+                me.applyFormula();
+            },
+            
+            // 헤더 선택  
+            onSelectedHeader: function(e, data) {
+                var me = this;
+
+                me.set("selectedHeader", data);  // 헤더 선택
+                me.set("selectedTable", {});     // 전결테이블 선택 초기화
+                me.set("selectedAprvLine", {});  // 전결결재선 선택 초기화
+                
+                me.$.head_data.load(me.selectedHeader); // 헤더 및 전결테이블 목록 조회
+                me.$.line_list.clear();      // 전결결재선 초기화
+                me.$.cond_list.clear(); // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+
+            // 헤더 삭제  
+            onDeletedHeaders: function(e, data) {
+                var me = this;
+
+                me.set("selectedHeader", {});   // 헤더 선택 초기화
+                me.set("selectedTable", {});    // 전결테이블 선택 초기화
+                me.set("selectedAprvLine", {}); // 전결결재선 선택 초기화
+
+                me.$.head_list.load(me.selectedAprvTyp); // 전결규정 이력
+                me.$.head_data.clear(); // 헤더 및 전결테이블 목록 초기화
+                me.$.line_list.clear(); // 전결결재선 초기화
+                me.$.cond_list.clear(); // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+            
+            // 헤더 및 전결테이블 저장됨
+            onChangedHeader: function(e, data) {
+                var me = this;
+
+                me.set("selectedHeader", data); // 헤더 선택
+                me.set("selectedTable", {});    // 전결테이블 선택 초기화
+                me.set("selectedAprvLine", {}); // 전결결재선 선택 초기화
+                
+                me.$.head_list.load(me.selectedAprvTyp); // 전결규정 이력
+                me.$.head_data.load(me.selectedHeader); // 헤더 및 전결테이블 목록 조회
+                me.$.line_list.clear();      // 전결결재선 초기화
+                me.$.cond_list.clear(); // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+
+            // 전결테이블 선택
+            onSelectedTable: function(e, data) {
+                var me = this;
+
+                me.set("selectedTable", data);  // 전결테이블 선택
+                me.set("selectedAprvLine", {}); // 전결결재선 선택 초기화
+                
+                me.$.line_list.load(me.selectedTable);     // 전결결재선 목록 조회
+                me.$.cond_list.clear(); // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+
+            // 전결결재선 선택  
+            onSelectedAprvLine: function(e, data) {
+                var me = this;
+
+                me.set("selectedAprvLine", data); // 전결결재선 선택
+                
+                me.$.cond_list.load(me.selectedAprvLine); // 전결기준조건 목록 조회
+                
+                me.applyFormula();
+            },
+
+            // 전결결재선 - 저장완료
+            onSavedAprvLines: function() {
+                var me = this;
+
+                me.set("selectedAprvLine", {}); // 전결결재선 선택 초기화
+                
+                me.$.head_data.load(me.selectedHeader); // 전결테이블 목록 조회
+                me.$.line_list.load(me.selectedTable);     // 전결결재선 목록 조회
+                me.$.cond_list.clear();    // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+            
+            // 전결결재선 - 목록삭제
+            onDeletedAprvLines: function() {
+                var me = this;
+
+                me.set("selectedAprvLine", {}); // 전결결재선 선택 초기화
+                
+                me.$.head_data.load(me.selectedHeader); // 전결테이블 목록 조회
+                me.$.line_list.load(me.selectedTable);     // 전결결재선 목록 조회
+                me.$.cond_list.clear();    // 전결기준조건 초기화
+                
+                me.applyFormula();
+            },
+            
+            // 전결기준조건 - 저장완료
+            onSavedAprvLineConditions: function() {
+                var me = this;
+
+                me.$.line_list.load(me.selectedTable);     // 전결결재선 목록 조회
+                me.$.cond_list.load(me.selectedAprvLine); // 전결기준조건 목록 조회
+                
+                me.applyFormula();
+            },
+            
+            // 전결기준조건 - 목록삭제
+            onDeletedAprvLineConditions: function() {
+                var me = this;
+                
+                me.$.line_list.load(me.selectedTable);     // 전결결재선 목록 조회
+                me.$.cond_list.load(me.selectedAprvLine); // 전결기준조건 목록 조회
+                
+                me.applyFormula();
+            },
+            
+            // 닫기
+            onClose: function() {
+                var me = this;
+                
+                me.$.head_list.clear();
+                me.$.head_data.clear();
+                me.$.line_list.clear();
+                me.$.cond_list.clear();
+                me.reset();
+                me.applyFormula();
+                me.fire("close");
+            }
+            
+        });
+    </script>
+
+</dom-module>

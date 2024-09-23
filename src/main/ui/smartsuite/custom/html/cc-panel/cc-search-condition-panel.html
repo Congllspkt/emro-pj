@@ -1,0 +1,171 @@
+<dom-module id="cc-search-condition-panel">
+<style>
+	:host {
+				display: block;
+			}
+</style>
+    <template>
+		
+		<cc-collapse-panel id="collapsePanel"
+				  title-text="[[translate(titleText)]]"
+				  host-cls="search-container" 
+				  class="border-box" collapsible="true">
+            
+			<!-- 검색 영역 : search-condition-group label-row : searchConditionGroupCssClass-->
+			<div id="content">
+				<div id="searchConditionGroup">
+					<content></content>
+				</div>
+			</div>
+		</cc-collapse-panel>
+		<!-- 버튼 영역 -->
+		<div class="btn-group search search-button" hidden="[[searchButtonHidden]]">
+			<sc-button 	id="_searchBtn"
+						veto-fixed-size
+						class="search"
+						on-click="_onSearchButtonClick"
+						hidden="false"
+						text="조회"></sc-button>
+			<sc-button 	id="_resetBtn"
+						veto-fixed-size
+						class="reset"
+						on-click="_onResetButtonClick"
+						hidden="false"
+						text="초기화"></sc-button>
+			<sc-button 	id="_closeBtn"
+						veto-fixed-size
+						class="close"
+						on-click="_oncloseButtonClick"
+						hidden="false"
+						text="닫기"></sc-button>
+		</div>
+	</template>
+	<script>
+	
+		Polymer({ 
+    		is: 'cc-search-condition-panel',
+			
+			className : 'CCSearchConditionPanel',
+			
+			behaviors: [
+				Polymer.SCElementBehavior,
+				Polymer.CCPanelMediatorBehavior,
+				Polymer.SCCSSClassStyleBehavior
+			],
+			
+			properties: {
+
+				searchButtonHidden:{
+					type: Object,
+					value: function(){
+						return false;
+					}
+				},
+				
+				/** 타이틀 */
+				titleText: {
+					type: String,
+					value: "검색 조건"
+				},
+				
+				/** [Smartsuite 10] 검색 영역 CSS 클래스 : 디폴트 */
+				defaultSearchConditionGroupCls: {
+					type: String,
+					value: "search-condition-group content",
+					observer: "onChangedSearchConditionGroupCssClass"
+				},
+				
+				/** 라벨의 Direction(label-row, label-column) */
+				searchConditionCls: {
+					type: String,
+					value: function(){
+						var defaultCls = "label-row";
+						var userFormcls = SCSessionManager.getCurrentUser().lbl_sort_typ_ccd || "HORIZ"; // 수평
+						if(userFormcls == "VERT"){
+							defaultCls = "label-column";
+						}
+						return defaultCls;
+					},
+					observer: "onChangedSearchConditionGroupCssClass"
+				}
+				
+			},
+			
+			/** [Smartsuite 10] 검색 영역 엘리먼트 */
+			get searchConditionGroupEl() {
+				return this.$.searchConditionGroup;
+			},
+			
+			/** 검색 영역 CSS 클래스 변경 */
+			onChangedSearchConditionGroupCssClass: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this.searchConditionGroupEl, oldValue);
+				}
+				if(newValue == "label-column"){
+					this.set("labelWidth", this.freeLabelWidth); 
+				}
+				this.updateSearchConditionGroupCssClass();
+			},
+			
+			/** 검색 영역 CSS 클래스 수정 */
+			updateSearchConditionGroupCssClass: function(){
+				this.addCls(
+						this.searchConditionGroupEl,
+						this.combindCssClass(this.defaultSearchConditionGroupCls, this.searchConditionCls));
+			},
+			
+			/** [버튼 영역] 조회 버튼 */
+			_onSearchButtonClick: function(e){
+                var me = this;
+                me.fire("search", e, {bubbles: false});
+            },
+            
+            /** [버튼 영역] 닫기 버튼 */
+            _oncloseButtonClick: function(e){
+            	this.collapsePanel();
+            },
+			
+			/** [버튼 영역] 초기화 버튼 */
+			_onResetButtonClick: function(e){
+                this.clear();
+            },
+            
+            /** Collapse 열기 / 닫기 */
+            collapsePanel: function(){
+				var display = this.$.collapsePanel.style['display'] ;
+				if(display != "none"){
+					this.$.collapsePanel.style['display'] = "none";
+					this.$._closeBtn.set("text",this.translate("닫기"));
+					this.$._closeBtn.classList.replace("close","open");
+				}else{
+					this.$.collapsePanel.style['display'] = "block";
+					this.$._closeBtn.set("text",this.translate("닫기"));
+					this.$._closeBtn.classList.replace("open","close");
+				}
+				this.$.collapsePanel._onPanelCollapseButtonClick();
+
+            },
+            
+            /** 검색조건 초기화(비우기) */
+            clear: function(){
+            	var me = this;
+                var targetElement =  me;
+                var fields = targetElement.querySelectorAll('[field]:not([reset="false"])');
+
+                // field 가 아니면서 reset="false"인 대상 중 field 가 reset="false"가 아닌 대상 추출 (ex => cc-user-search 의 fields)
+                var noResetFields = targetElement.querySelectorAll("*:not([field])[reset='false'] [field]:not([reset='false'])");
+                var noResetFieldArr = Array.prototype.slice.call(noResetFields);
+
+                for (var i = 0, len = fields.length, field; i < len; i++) {
+                    field = fields[i];
+                    if(field.reset && noResetFieldArr.indexOf(field) === -1) {
+                        field.reset();
+                    }
+                }
+                me.fire("reset", e, {bubbles: false});	
+            }
+			
+	  	});
+	
+	</script>
+</dom-module>

@@ -1,0 +1,169 @@
+<dom-module id="ep-format-expression-write">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+	<template>
+		<cc-page-title-bar>
+			<sc-button text="초기화" on-click="onResetBtnClick"></sc-button>
+			<sc-button text="적용" on-click="onApplyBtnClick"></sc-button>
+		</cc-page-title-bar>
+		<table class="tb-form">
+			<colgroup>
+				<col style="width:120px;">
+				<col>
+			</colgroup>
+			<tr>
+				<th><sc-label text="표현식"></sc-label></th>
+				<td><sc-text-field id="expressionField" value="{{expression}}" required="true" validator="expValidator"></sc-text-field></td>
+			</tr>
+		</table>
+		<div style="color:red;font-weight:bold;">[[translate('※ 표현식은 직접 작성하며, 수식은 수식코드를 더블 클릭하여 추가하세요.')]]</div>
+		<sc-grid use-selection="false" use-state="false" data-provider="[[codes.expressions]]"  on-item-double-click="onDataCellDblClicked" reset="false">
+			<cc-grid-toolbar title-text="표현식 목록">
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column		data-field="label"	header-text="표현식 명" width="150"	text-align="left"	editable="false"></sc-data-column>
+				<sc-data-column		data-field="data"	header-text="표현식 코드" width="100"	text-align="center"	style-name="link" editable="false"></sc-data-column>
+				<sc-data-column		data-field="cstr_cnd_val"	header-text="설명" width="150"	text-align="left"	editable="false"></sc-data-column>
+			</sc-grid-columns>
+		</sc-grid>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'ep-format-expression-write',
+			
+			properties:{
+				//팝업 타이틀 지정
+				titleText: {
+					type: String,
+					value: function () {
+						return this.translate('포맷터 표현식');
+					}
+				},
+				expression:String,
+				codes : {
+	               	type : Object,
+	               	value : function(){
+	               		var me = this;
+		               	return	{
+		               		expressions     : [{sort_ord: 1,  data: "#MM#", relation: null, label: me.translate("월(2자리)"),cstr_cnd_val:"03"},
+	               				{sort_ord: 2,  data: "#dd#", relation: null, label: me.translate("일(2자리)"),cstr_cnd_val:"33"},
+	               				{sort_ord: 3,  data: "#yy#", relation: null, label: me.translate("년도(2자리)"),cstr_cnd_val: "02"},
+	               				{sort_ord: 4,  data: "#yyyy#", relation: null, label: me.translate("년도(4자리)"),cstr_cnd_val : "2019"},
+	               				{sort_ord: 7,  data: "#HH#", relation: null, label: me.translate("시간"),cstr_cnd_val: "03"},
+	               				{sort_ord: 8,  data: "#H#", relation: null, label: me.translate("시간"),cstr_cnd_val: "3"},
+	               				{sort_ord: 9,  data: "#mm#", relation: null, label: me.translate("분"),cstr_cnd_val: "04"},
+	               				{sort_ord: 10,  data: "#m#", relation: null, label: me.translate("분"),cstr_cnd_val: "4"},
+	               				{sort_ord: 11,  data: "#ss#", relation: null, label: me.translate("초"),cstr_cnd_val : "02"},
+	               				{sort_ord: 12,  data: "#s#", relation: null, label: me.translate("초"),cstr_cnd_val: "2"},
+	               				{sort_ord: 13,  data: "#a#", relation: null, label: me.translate("PM,AM 표시"),cstr_cnd_val:"pm"}],
+	               			param		      : {
+	               				cstr_cnd_cd      : "EXP_DESC",
+	               				ccd       : "C035"
+	               			}
+	               		};
+	               	},
+	               	reset: false
+	            }
+			},
+			
+			load: function(param){
+				this.set("expression", param || "");
+			},
+			
+			//그리그 셀 더블클릭 이벤트
+            onDataCellDblClicked: function(event){
+                var data = event.detail.data,
+                	item = event.detail.item,
+                	fieldName = item.dataField;
+                
+                // 수식코드 더블 click
+                if (fieldName === "data") {
+                	this.set("expression", this.get("expression") + data.data); 
+                }
+            },
+            
+            onResetBtnClick: function(){
+            	this.set("expression", "");
+            	this.$.expressionField.clearInvalid();
+            },
+            
+            expValidator: function(expression){
+            	var results = [];
+            	this.splitSentence(expression, "#", results);
+            	this.splitSentence(expression, "@", results);
+            	
+            	var expressions = this.codes.expressions;
+            	
+            	// 중복 제거
+            	var resultObj = {};
+            	var resultsArr = [];
+            	for (var j = 0; j < results.length; j++) {
+                    if (!(results[j] in resultObj)) {
+                    	resultsArr.push(results[j]);
+                        resultObj[results[j]] = true;
+                    }
+                }
+            	
+            	var counts = 0;
+            	for(var i = 0, len = expressions.length ; i < len; i++) {
+            		var expression = expressions[i].data 
+            		if(resultsArr.indexOf(expression) > -1)
+            			counts++;
+   				}
+            	
+            	if(counts == resultsArr.length){
+            		return true;
+            	}
+            	else{
+            		return this.translate('STD.N10400');
+            	}
+            },
+            
+            splitSentence: function(sentence, separator, results){
+            	// first check to see if we do have both substrings
+                if(sentence.indexOf(separator) < 0) return;
+
+                // find one result
+                var result = this.getEquation(sentence, separator);
+                // push it to the results array
+                results.push(result);
+                // remove the most recently found one from the string
+                sentence = this.removeEquation(sentence, separator);
+
+                // if there's more substrings
+                if(sentence.indexOf(separator) > -1) {
+                    this.splitSentence(sentence, separator, results);
+                }
+                else return; 
+            },
+            
+            getEquation: function(sentence, separator){
+            	if(sentence.indexOf(separator) < 0) return false;
+                var SP = sentence.indexOf(separator);
+                var frontString = sentence.substr(0, SP + separator.length);
+                var endString = sentence.substr(SP + separator.length);
+                var TP = frontString.length + endString.indexOf(separator) + separator.length;
+                return sentence.substring(SP,TP);
+            },
+            
+            removeEquation:function (sentence, separator) {
+                if(sentence.indexOf(separator) < 0) return false;
+                var removeStr = this.getEquation(sentence, separator);
+                return sentence.replace(removeStr,"");
+            },
+            
+            onApplyBtnClick: function(){
+            	if(!this.$.expressionField.validate()){
+            		UT.alert(this.$.expressionField.getErrors(),null,true);
+            		return;
+            	}
+            	this.fire("apply-expression", {'expression':this.expression});
+            }
+		});
+	</script>
+</dom-module>

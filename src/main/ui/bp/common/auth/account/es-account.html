@@ -1,0 +1,338 @@
+<dom-module id="es-account">
+
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		
+		<!-- 조회 -->
+		<sc-ajax id="accountSettingsLoad" url="load.do" last-response="{{accountSettings}}" init></sc-ajax>
+		
+		<!-- 저장 -->
+		<sc-ajax id="accountSettingsSave" url="save.do"></sc-ajax>
+		
+		<sc-ajax id="ipAddressLoad" url="ipAddressLoad.do" last-response="{{ipAddress}}" init></sc-ajax>
+		
+		<sc-ajax id="ipAddressDelete" url="ipAddressDelete.do"></sc-ajax>
+		
+		<sc-ajax id="ipAddressSave" url="ipAddressSave.do"></sc-ajax>
+		
+		<sc-code-group init>
+			<sc-code code="C071" value="{{codes.accountUserNotifyCodes}}"></sc-code>	<!-- 미사용 계정 통보 기간 설정 -->
+			<sc-code code="C072" value="{{codes.accountDisableCodes}}"></sc-code>		<!-- 미사용 계정 설정 기준 기간 -->
+		</sc-code-group>
+		
+		<cc-auth-checker check-list="auth-s, auth-r"></cc-auth-checker>
+		
+		<cc-page-title-bar title-text="계정 관리">
+			<sc-button text="저장" on-click="_onSaveButtonClick"></sc-button>
+		</cc-page-title-bar>
+		<!-- ※ 계정관리의 변경된 설정은 WAS 재기동시 반영됩니다. -->
+		<div style="color:red;font-weight:bold;">[[translate('STD.ADM1088')]]</div>
+		
+		<sc-panel title-text="비밀번호 복잡도">
+			<table class="tb-form">
+				<colgroup>
+	        		<col style="width:150px"></col>
+	        		<col></col>
+	        		<col style="width:150px"></col>
+	        		<col></col>
+	        		<col style="width:150px"></col>
+	        		<col></col>
+	        	</colgroup>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="최소 길이"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.passwordMinLengthRule}}" required min-value="0"></sc-number-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="최대 길이"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.passwordMaxLengthRule}}" required min-value="0"></sc-number-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="특수 문자열 포함"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-checkbox-field value="{{accountSettings.passwordSepecialCharacterRule}}"></sc-checkbox-field>
+	        		</td>
+	        	</tr>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="반복문자 제한"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.passwordRepeatCharacterRule}}" required min-value="0"></sc-number-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="순차문자 제한"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.passwordSequenceCharacterRule}}" required min-value="0"></sc-number-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="알파벳 포함여부"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-checkbox-field value="{{accountSettings.passwordAlphabetCharacterRule}}"></sc-checkbox-field>
+	        		</td>
+	        	</tr>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="숫자 포함"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-checkbox-field value="{{accountSettings.passwordDigitCharacterRule}}"></sc-checkbox-field>
+	        		</td>
+					<th>
+						<sc-label text="전화번호 중복 제한"></sc-label>
+					</th>
+					<td>
+						<sc-number-field value="{{accountSettings.passwordPhoneNoDuplicateRule}}" validator="phoneDupValidator" required min-value="0"></sc-number-field>
+					</td>
+	        		<th>
+	        		</th>
+	        		<td>
+	        		</td>
+	        	</tr>
+			</table>
+		</sc-panel>
+		
+		<sc-panel title-text="비밀번호 관리">
+			<table class="tb-form">
+				<colgroup>
+	        		<col style="width:170px"></col>
+	        		<col></col>
+	        		<col style="width:170px"></col>
+	        		<col></col>
+	        	</colgroup>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="비밀번호 변경주기(월)"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.passwordExpiredPeriod}}" min-value="1" max-value="999"></sc-number-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="비밀번호 오류 제한(횟수)"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-number-field value="{{accountSettings.limitLoginInvalidPasswordCount}}" min-value="0"></sc-number-field>
+	        		</td>
+	        	</tr>
+			</table>
+		</sc-panel>
+		
+		<sc-panel title-text="미사용 계정 관리">
+			<table class="tb-form">
+				<colgroup>
+	        		<col style="width:170px"></col>
+	        		<col></col>
+	        		<col style="width:170px"></col>
+	        		<col></col>
+	        	</colgroup>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="미사용 계정 적용일자"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-date-field value="{{accountSettings.accountDisableForSpecifiedDate}}"></sc-date-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="미사용 계정 알림기간"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-combobox-field display-field="label" value-field="data" items="[[codes.accountUserNotifyCodes]]" placeholder="선택"
+	        				value="{{accountSettings.accountDisableUserNotifyCode}}"></sc-combobox-field>
+	        		</td>
+	        	</tr>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="미사용 계정 대상(마지막 로그인 일자 기준)"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-combobox-field display-field="label" value-field="data" items="[[codes.accountDisableCodes]]" placeholder="선택"
+	        				value="{{accountSettings.accountDisableCode}}"></sc-combobox-field>
+	        		</td>
+	        		<th>
+	        			<sc-label text="사용 여부"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-checkbox-field value="{{accountSettings.disableOnSpecifiedDate}}"></sc-checkbox-field>
+	        		</td>
+	        	</tr>
+			</table>
+		</sc-panel>
+		
+		<sc-panel title-text="관리자 페이지 관리">
+			<table class="tb-form">
+				<colgroup>
+	        		<col style="width:150px"></col>
+	        		<col></col>
+	        		<col style="width:150px"></col>
+	        		<col></col>
+	        	</colgroup>
+	        	<tr>
+	        		<th>
+	        			<sc-label text="2차인증 사용여부"></sc-label>
+	        		</th>
+	        		<td>
+	        			<sc-checkbox-field value="{{accountSettings.adminAdditionalAuthentication}}"></sc-checkbox-field>
+	        		</td>
+	        		<th>
+	        		</th>
+	        		<td>
+	        		</td>
+	        	</tr>
+			</table>
+		</sc-panel>
+		<sc-grid id="gridPanel" editable="true" data-provider="{{ipAddress}}" class="flex">
+			<cc-grid-toolbar title-text="관리자 페이지 2차 인증 접근 허용 IP 관리">
+				<sc-button text="추가" on-click="_onIpAddressAddButtonClick" auth-s></sc-button>
+				<sc-button text="삭제" on-click="_onIpAddressDeleteButtonClick" auth-s></sc-button>
+				<sc-button text="저장" on-click="_onIpAddressSaveButtonClick" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="mgr_ip", header-text="아이피 주소" width="200" text-align="center" editable="true" item-editable-function="_onEdit" validator-type="ipAddress" required="true"></sc-data-column>
+			</sc-grid-columns>
+		</sc-grid>
+	</template>
+	
+	<script>
+	
+		Polymer({
+			
+			is : 'es-account',
+			
+			properties : {
+				codes : {
+					type : Object,
+					value : function() {
+						return {};
+					}
+				},
+				accountSettings : {
+					type : Object,
+					value : function() {
+						return {};
+					}
+				},
+				ipAddress : {
+					type : Array,
+					value : function() {
+						return [];
+					}
+				}
+			},
+			
+			initialized : function() {
+			},
+			
+			_onSaveButtonClick : function() {
+				var me = this;
+					
+				if(!me.validate()){
+					UT.alert("STD.E0000");
+					return;
+				}
+					
+				UT.confirm("STD.N1200", function() {
+					var params = me.mixin({}, me.accountSettings);
+					var codes = params.accountDisableUserNotifyCode.split('');
+					var convert = function(key) {
+						if(key == 'Q' || key == 'M') {
+							return key;
+						}
+						return key.toLowerCase();
+					};
+					params.accountDisableUserNotifyDate = moment(params.accountDisableForSpecifiedDate).subtract(Number(codes[0]), convert(codes[1])).toDate();
+					codes = params.accountDisableCode.split('');
+					params.accountDisableByLastLoginDate = moment(params.accountDisableForSpecifiedDate).subtract(Number(codes[0]), convert(codes[1])).toDate();
+					params.passwordSepecialCharacterRule = params.passwordSepecialCharacterRule ? 1 : 0; 
+					params.passwordAlphabetCharacterRule = params.passwordAlphabetCharacterRule ? 1 : 0; 
+					params.passwordDigitCharacterRule = params.passwordDigitCharacterRule ? 1 : 0; 
+					me.$.accountSettingsSave.body = params;
+					UT.request(me.$.accountSettingsSave, function() {
+						me.$.accountSettingsLoad.request();
+						UT.completeAlert();
+					});
+				});
+			},
+			
+			_onEdit : function(data, item) {
+				return !data["sys_id"];	
+			},
+			
+			_onIpAddressAddButtonClick : function() {
+				var provider = this.$.gridPanel.getDataProvider();
+				provider.addItem({});
+			},
+			
+			_onIpAddressDeleteButtonClick : function() {
+				var me = this,
+					provider = this.$.gridPanel.getDataProvider(),
+					removeItems = provider.removeItems();
+				
+				if(!removeItems.length) {
+					UT.alert("STD.ADM1034");
+					return;
+				}
+				UT.confirm("STD.N1300", function() {
+					me.$.ipAddressDelete.body = {
+						deleteItems : removeItems
+					};
+					UT.request(me.$.ipAddressDelete, function() {
+						me.$.ipAddressLoad.request();
+						UT.alert("STD.N2500");
+					});
+				});
+			},
+			
+			_onIpAddressSaveButtonClick : function() {
+				var me = this,
+					provider = this.$.gridPanel.getDataProvider(),
+					newItems = provider.getNewItems();
+				
+				if(!this.validate()) {
+					UT.alert("STD.E0000");
+					return;					
+				}
+				if(!newItems.length) {
+					UT.alert("STD.ADM1035");
+					return;
+				}
+				UT.confirm("STD.N1200", function() {
+					me.$.ipAddressSave.body = {
+						newItems : newItems
+					};
+					UT.request(me.$.ipAddressSave, function() {
+						me.$.ipAddressLoad.request();
+						UT.completeAlert();
+					});
+				});
+			},
+
+			// 전화번호 중복 체크 custom validator
+            phoneDupValidator: function(value) {
+			    var me = this;
+				if(UT.isEmpty(value) || (value > 0 && value < 3)){
+				    return "중복체크 미사용 시 0, 사용할 경우 3 ~ 비밀번호 최대길이 만큼 입력하세요.";
+				}
+
+				var pwMaxLen = me.accountSettings.passwordMaxLengthRule;
+				if(value > pwMaxLen ){
+                    return "비밀번호 최대길이를 초과 할 수 없습니다.";
+				}
+				return true;
+			}
+		});
+		
+	</script>
+
+</dom-module>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta http-equiv="Cache-control" content="no-cache"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+    <title>LGE GPS</title>
+
+
+    <link rel="stylesheet" type="text/css" href="/bower_components/sc-component/sc-elements.css">
+    <link rel="stylesheet" type="text/css" href="/ui/assets/css/common.css"/>
+    <link rel="stylesheet" type="text/css" href="/ui/assets/css/c3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/ui/assets/css/master.css"/>
+
+    <link rel="import" href="/bower_components/promise-polyfill/promise-polyfill.html">
+    <script src="/bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="/bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="/bower_components/sc-component/js/jszip.min.js"></script>
+    <script src="/ui/lib/dext5editor/js/dext5editor.js"></script>
+    <script src="/ui/lib/custom/js/message.js"></script>
+    <script src="/ui/lib/custom/js/grid.js"></script>
+    <script src="/ui/lib/custom/js/editor.js"></script>
+    <script src="/ui/lib/custom/js/upload.js"></script>
+    <script src="/ui/lib/custom/js/def.js"></script>
+    <script src="/ui/lib/custom/js/util.js"></script>
+    <script src="/ui/lib/custom/js/validator.js"></script>
+    <script src="/ui/lib/grid.util.js"></script>
+    <script src="/ui/lib/web.util.js"></script>
+    <script src="/ui/lib/ajax.util.js"></script>
+    <script src="/ui/lib/message.gps.js"></script>
+    <script src="/ui/assets/js/bignumber.min.js"></script>
+    <script src="/ui/assets/js/accounting.min.js"></script>
+    <script src="/ui/assets/js/d3.min.js" charset="utf-8"></script>
+    <script src="/ui/assets/js/c3.min.js"></script>
+
+    <!-- hichart Sample 용 -->
+    <script src="/ui/lib/chart/modules/data.js"></script>
+    <script src="/ui/lib/chart/modules/drilldown.js"></script>
+    <script src="/ui/lib/chart/modules/funnel.js"></script>
+    <script src="/ui/assets/js/grid-bluesky-theme.js"></script>
+
+    <!-- realgrid -->
+    <script src="/ui/lib/realgrid/realgridjs-lic.js"></script>
+    <script src="/ui/lib/realgrid/realgridjs_eval.1.0.14.min.js"></script>
+    <script src="/ui/lib/realgrid/realgridjs-api.1.0.14.js"></script>
+    <script src="/ui/assets/js/grid-gpgate-theme.js"></script>
+
+    <link rel="import" href="/ui/lib/gp-elements.html">
+    <link rel="import" href="/ui/lib/mdi/sc-mdi.html">
+    <link rel="import" href="/ui/lib/preloads/sc-environment.html">
+    <link rel="import" href="/ui/lib/preloads/sc-rolemanager.html">
+    <link rel="import" href="/ui/override.html">
+    <style>
+        body {
+            margin-top: 50px
+        }
+
+        #container {
+            width: 80%;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+<template is="dom-bind">
+    <sc-ajax auto id="protocolFindProgress" url="/bp/pr/tempList.do" handle-as="json" last-response="{{progressData}}"
+             debounce-duration="300"></sc-ajax>
+
+    <div id="container">
+        <gp-progress-state id="gpps" data="{{progressData.list}}"></gp-progress-state>
+    </div>
+
+    <script>
+        var ps = document.querySelector('#gpps');
+        ps.addEventListener('state-tap', function(e) {
+            console.log(e);
+        })
+    </script>
+</template>
+
+
+</body>
+</html>

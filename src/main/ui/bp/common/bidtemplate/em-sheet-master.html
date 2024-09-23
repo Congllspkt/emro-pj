@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-sheet-master-list.html"></sc-link>
+<sc-link rel="import" href="es-sheet-master-detail.html"></sc-link>
+
+<dom-module id="em-sheet-master">
+    <style>
+        :host {
+			@apply(--fit-layout);
+        }
+    </style>
+    
+	<template>
+		<sc-pages id="pages" selected="0" class="fit">
+			<es-sheet-master-list id="list" on-show-detail="onShowDetail"></es-sheet-master-list>
+			<template>
+				<es-sheet-master-detail id="masterDetail" on-show-list="onShowList" ></es-sheet-master-detail>
+			</template>
+		</sc-pages>
+	</template>
+	
+	<script>
+		Polymer({
+			is : 'em-sheet-master',
+
+			onShowDetail : function(e, data){
+				var me = this;
+				me.$.pages.selectItem(me.$.masterDetail);
+				me.$.masterDetail.load(data);
+			},
+
+			onShowList: function(e, data) {
+				var me = this;
+				me.$.pages.selectItem(me.$.list);
+				this.$.list.onSearch(data);
+			}
+		});
+	</script>
+
+
+</dom-module>

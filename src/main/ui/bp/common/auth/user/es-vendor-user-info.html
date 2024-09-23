@@ -1,0 +1,268 @@
+<dom-module id="es-vendor-user-info">
+    <style>
+        :host {
+            @apply(--hbox-layout);
+        }
+    </style>
+
+    <template>
+        <!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+        <sc-request-group init>
+            <sc-code-group>
+                <!-- 타임존 -->
+                <sc-code code="C025" value="{{codes.C025}}" ></sc-code>
+                <sc-code code="C080" value="{{codes.C080}}" ></sc-code>
+            </sc-code-group>
+        </sc-request-group>
+
+
+        <!-- 사용자 정보 조회 -->
+        <sc-ajax id="findVendorUserInfo"
+                 url="findVendorUserInfo.do"
+                 body="{{searchDetailParam}}"
+                 last-response="{{vendorUserInfo}}">
+        </sc-ajax>
+
+        <!-- 잠금해제 -->
+        <sc-ajax id="saveInfoAccLockYn"
+                 url="saveInfoAccLockYn.do"
+                 on-response="completeSaveInfoAccLockYn">
+        </sc-ajax>
+
+        <!-- 비밀번호 초기화 -->
+        <sc-ajax id="saveInfoPwReset"
+                 url="saveInfoPwReset.do"
+                 on-response="completeSaveInfoPwReset">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <div class="vbox flex">
+            <cc-form-panel column="1" label-width="120">
+                <cc-fieldset>
+                    <sc-label text="협력사 코드"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.vd_cd}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="협력사 명"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.display_vd_nm}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용자 아이디"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.usr_id}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용 여부"></sc-label>
+                    <sc-checkbox-field readonly="true" input-value="{{vendorUserInfo.use_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용자 명"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.usr_nm}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="사용자 명 영문"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.usr_nm_en}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="이메일"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.eml}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="모바일"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.mob}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="팩스"></sc-label>
+                    <sc-text-field readonly="true" value="{{vendorUserInfo.fax}}"></sc-text-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="이메일 수신 여부"></sc-label>
+                    <sc-checkbox-field readonly="true" input-value="{{vendorUserInfo.eml_rcpt_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="SMS 수신 여부"></sc-label>
+                    <sc-checkbox-field readonly="true" input-value="{{vendorUserInfo.sms_rcpt_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="타임존"></sc-label>
+                    <sc-combobox-field value="{{vendorUserInfo.tmz_ccd}}" items="{{codes.C025}}" readonly="true" display-field="label" value-field="data"></sc-combobox-field>
+                </cc-fieldset>
+            </cc-form-panel>
+
+
+            <cc-form-panel column="1" validation-group="save" label-width="120">
+                <cc-sub-title-bar>
+                    <sc-button text="잠금해제" on-click="onSaveAccLockYn" auth-s></sc-button>
+                    <sc-button text="비밀번호 초기화" on-click="onSavePwReset" auth-s></sc-button>
+                </cc-sub-title-bar>
+                <cc-fieldset>
+                    <sc-label text="계정 잠김 여부"></sc-label>
+                    <sc-checkbox-field readonly="true" input-value="{{vendorUserInfo.acct_lckd_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="비밀번호 만료 여부"></sc-label>
+                    <sc-checkbox-field readonly="true" input-value="{{vendorUserInfo.pw_expired_yn}}" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="비밀번호 변경 시간"></sc-label>
+                    <sc-date-field readonly="true" value="{{vendorUserInfo.pw_mod_dt}}"></sc-date-field>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="비밀번호 실패 횟수"></sc-label>
+                    <div>
+                        <sc-label text="{{vendorUserInfo.pwd_inperr_cnt}}"></sc-label> /  <sc-label style="color: red;" text="{{vendorUserInfo.limitLoginInvalidPw}}"></sc-label>
+                    </div>
+                </cc-fieldset>
+                <cc-fieldset>
+                    <sc-label text="마지막 인증 시간"></sc-label>
+                    <sc-date-field readonly="true" value="{{vendorUserInfo.last_login_dttm}}"></sc-date-field>
+                </cc-fieldset>
+            </cc-form-panel>
+        </div>
+
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "es-vendor-user-info",
+
+            properties : {
+                // 협력사 사용자 목록 : 조회조건
+                searchParam: {
+                    type : Object,
+                    value : function(){return {};
+                    }
+                },
+
+                // 사용자 정보 : 조회조건
+                searchDetailParam: {
+                    type: Object,
+                    value : function(){return {};
+                    }
+                },
+
+                // 협력사 사용자 목록 : 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {return [];
+                    }
+                },
+
+                // 사용자 정보
+                vendorUserInfo : {
+                    type: Object,
+                    value : function(){return {    pwd_inperr_cnt:0,    limitLoginInvalidPw:0};
+                    }
+                },
+
+                codes: {
+                    type: Object,
+                    value: function () {return {};
+                    }
+                }
+            },
+
+            formulas : {
+                // 수정 가능 상태
+                isEditable : function() {
+                    // 사용자 아이디가 존재 할 경우 true
+                    return this.vendorUserInfo.usr_id;
+                }
+            },
+            load : function(data) {
+                var me = this;
+                me.set("searchDetailParam", data);
+                me.onSearchDetail();
+            },
+
+            // 사용자 정보 초기화
+            onClear: function(){
+                var me = this;
+                me.set("vendorUserInfo", {});
+            },
+
+            // 사용자 정보 조회
+            onSearchDetail: function(){
+                var me = this;
+                me.onClear();
+                UT.request(me.$.findVendorUserInfo);
+            },
+
+            // 잠김 해제
+            onSaveAccLockYn : function(){
+                var me = this,
+                    vendorUserInfo = me.get("vendorUserInfo"),
+                    message = "STD.ADM1003";
+
+                if(vendorUserInfo.acct_lckd_yn == "N"){
+                    UT.alert("STD.ADM1004");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    me.$.saveInfoAccLockYn.body = vendorUserInfo;
+                    UT.request(me.$.saveInfoAccLockYn);
+                });
+            },
+
+            // 잠김 해제 완료
+            completeSaveInfoAccLockYn :function(){
+                var me = this,
+                    message = "STD.N1500";	
+
+                UT.alert(message, function(){
+                    me.onSearchDetail();
+                });
+
+            },
+
+            // 비밀번호 초기화
+            onSavePwReset: function(){
+                var me = this,
+                    vendorUserInfo = me.get("vendorUserInfo"),
+                    message = "STD.ADM1005";
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('아이디')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                if(!vendorUserInfo.eml){
+                    UT.alert("STD.ADM1006");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    // request body에 데이타 셋팅
+                    me.$.saveInfoPwReset.body = vendorUserInfo;
+                    UT.request(me.$.saveInfoPwReset);
+                });
+            },
+
+            completeSaveInfoPwReset: function(){
+                var me = this,
+                    message = "STD.N1500";
+
+                UT.alert(message, function(){
+                    me.onSearchDetail();
+                });
+            }
+
+        });
+    </script>
+
+</dom-module>

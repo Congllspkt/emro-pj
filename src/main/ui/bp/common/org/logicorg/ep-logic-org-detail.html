@@ -1,0 +1,389 @@
+<dom-module id="ep-logic-org-detail">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <!-- 코드 조회 -->
+        <sc-request-group init>
+            <!-- 공통 코드 조회-->
+            <sc-code-group>
+                <sc-code code="C001" value="{{codes.natCd}}" ></sc-code> <!-- 국가코드 -->
+                <sc-code code="C002" value="{{codes.lang}}" ></sc-code> <!-- 언어코드 -->
+                <sc-code code="C004" value="{{codes.cur}}" ></sc-code> <!-- 통화코드 -->
+				<sc-code code="C025" value="{{codes.tmzCd}}" ></sc-code> <!-- 타임존코드 -->
+                <sc-code code="C079" value="{{codes.orgType}}" ></sc-code> <!-- 통화코드 -->
+            </sc-code-group>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+        </sc-request-group>
+
+        <!-- 상세정보 조회 -->
+        <sc-ajax id="findInfo"
+                 url="findLogicOrganizationInfo.do"
+                 body="{{resultInfo}}"
+                 last-response="{{resultInfo}}"
+                 on-response="completeFindInfo">
+        </sc-ajax>
+
+        <!-- 상세정보 저장 -->
+        <sc-ajax id="saveLogicOrganizationInfo"
+                 url="saveLogicOrganizationInfo.do"
+                 on-response="completeSaveInfo">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        <cc-page-title-bar title-text="논리 조직 정보">
+            <sc-button text="저장" on-click="onSaveInfo" auth-s></sc-button>
+            <sc-button text="닫기" on-click="onClose" auth-s></sc-button>
+        </cc-page-title-bar>
+        <cc-form-panel column="1" validation-group="save" label-width="120">
+            <cc-fieldset> <!-- cc-fieldset : Label 필드 1개 / Input 필드 1개 패턴 유지 필수 -->
+                <sc-label text="논리 조직 유형"></sc-label> <!-- Label 필드 1개 -->
+                <sc-combobox-field value="{{resultInfo.logic_org_typ_ccd}}" items="{{codes.logicOrgType}}" readonly="{{!formula('isNew')}}" display-field="label" value-field="data"
+                                   placeholder="선택" required="true">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="[[formula('isTopOrganizationNode')]]">
+                <sc-label text="상위노드 조직 코드"></sc-label>
+                <sc-text-field value="{{resultInfo.parnode_logic_org_cd}}" readonly="true" max-length="18"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="조직 코드"></sc-label>
+                <sc-text-field value="{{resultInfo.org_cd}}" required="true" mask-re="/[a-zA-Z0-9]/" strip-chars-re="/[ㄱ-힣]/"  readonly="{{!formula('isNew')}}" max-length="18"  on-keyup="onKeyupOrgData"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="논리 조직 코드"></sc-label>
+                <sc-text-field value="{{resultInfo.logic_org_cd}}" required="true" readonly="true"  max-length="18"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="논리 조직 명"></sc-label>
+                <sc-text-field value="{{resultInfo.logic_org_nm}}" required="true" readonly="{{!formula('isEditable')}}" max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="논리 조직 명 영문"></sc-label>
+                <sc-text-field value="{{resultInfo.logic_org_nm_en}}" required="true" readonly="{{!formula('isEditable')}}" max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="법인번호"></sc-label>
+                <sc-text-field value="{{resultInfo.corpno}}" readonly="{{!formula('isEditable')}}"  max-length="18"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사업자등록번호"></sc-label>
+                <sc-text-field value="{{resultInfo.bizregno}}" readonly="{{!formula('isEditable')}}" required="[[formula('isKoreaBizRegNoCodeCheck')]]" max-length="12" mask-re="/[0-9]/" strip-chars-re="/[ㄱ-힣]/" on-blur="onCheckBizRegNo"></sc-text-field>
+                <p hidden="[[!formula('isKoreaBizRegNoCodeCheck')]]" style="font-weight: bold; color: red;">[[lb_biz_reg_no]]</p>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="대표자 명"></sc-label>
+                <sc-text-field value="{{resultInfo.ceo_nm}}" readonly="{{!formula('isEditable')}}" max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="대표자 명 영문"></sc-label>
+                <sc-text-field value="{{resultInfo.ceo_nm_en}}" readonly="{{!formula('isEditable')}}" max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="업종"></sc-label>
+                <sc-text-field value="{{resultInfo.ind}}" readonly="{{!formula('isEditable')}}" max-length="128"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="업태"></sc-label>
+                <sc-text-field value="{{resultInfo.biztyp}}" readonly="{{!formula('isEditable')}}" max-length="128"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="국가"></sc-label>
+                <sc-combobox-field value="{{resultInfo.ctry_ccd}}" items="{{codes.natCd}}" display-field="label" value-field="data"
+                                   readonly="{{!formula('isEditable')}}" placeholder="선택" on-change="onChangeCtryCode">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="도시"></sc-label>
+                <sc-text-field value="{{resultInfo.city_ccd}}" readonly="{{!formula('isEditable')}}" max-length="18"></sc-text-field>
+            </cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="타임존"></sc-label>
+				<sc-combobox-field value="{{resultInfo.tmz_ccd}}" items="{{codes.tmzCd}}" display-field="label" value-field="data"
+								   readonly="{{!formula('isEditable')}}" placeholder="선택">
+				</sc-combobox-field>
+			</cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="언어"></sc-label>
+                <sc-combobox-field value="{{resultInfo.lang_ccd}}" items="{{codes.lang}}" display-field="label" value-field="data"
+                                   readonly="{{!formula('isEditable')}}" placeholder="선택">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="통화"></sc-label>
+                <sc-combobox-field value="{{resultInfo.cur_ccd}}" items="{{codes.cur}}" display-field="label" value-field="data"
+                                   readonly="{{!formula('isEditable')}}" placeholder="선택">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="주소"></sc-label>
+                <sc-text-field value="{{resultInfo.addr}}" readonly="{{!formula('isEditable')}}" max-length="256"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="주소 영문"></sc-label>
+                <sc-text-field value="{{resultInfo.addr_en}}" readonly="{{!formula('isEditable')}}" max-length="256"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="우편번호"></sc-label>
+                <sc-text-field value="{{resultInfo.zipcd}}" readonly="{{!formula('isEditable')}}" max-length="6"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전화"></sc-label>
+                <sc-text-field value="{{resultInfo.tel}}" readonly="{{!formula('isEditable')}}" max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.use_yn}}" checked-value="Y" un-checked-value="N" readonly="{{!formula('isEditable')}}"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="비고"></sc-label>
+                <sc-textarea-field value="{{resultInfo.rmk}}" class="h-50" readonly="{{!formula('isEditable')}}" max-length="128"></sc-textarea-field>
+            </cc-fieldset>
+        </cc-form-panel>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'ep-logic-org-detail',
+            properties: {
+
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+                            company: [],
+                            orgType: [],
+                            logicOrgType: [],
+                            natCd: [],
+                            lang: [],
+                            cur: [],
+							tmzCd: []
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                // 조회 결과 : 조직 정보
+                resultInfo: {
+                    type: Object,
+                    value: function(){
+                        return {
+                        }
+                    }
+                }
+
+            },
+
+            formulas : {
+                // 신규 상태
+                isNew : function() {
+                    return this.resultInfo.is_new === true;
+                },
+                // 수정 가능 상태
+                isEditable : function() {
+                    return this.formula('isNew') || !UT.isEmpty(this.resultInfo.logic_org_cd);
+                },
+                // 국가 코드가 한국 일 때만 사업자번호 체크
+                isKoreaBizRegNoCodeCheck : function() {
+                    return this.formula('isEditable') && this.resultInfo.ctry_ccd == "KR";
+                },
+                // 최상위 노드 상태
+                isTopOrganizationNode : function() {
+                    return this.resultInfo.parnode_logic_org_cd === "ROOT";
+                }
+            },
+            initialized: function() {
+                var me = this;
+                me.set("codes.logicOrgType",me.get("codes.orgType"));
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data) {
+                var me = this;
+
+                // 신규 추가 시
+                if(data.is_new === true){
+                    me.set("resultInfo", {
+                        parnode_logic_org_cd : data.parnode_logic_org_cd,
+                        use_yn : "Y",
+                        is_new : true
+                    });
+                    if(data.is_current && data.parnode_logic_org_cd === "ROOT"){
+                        // 현재노드 추가가 아니면, 회사 유형을 선택 할 수 없음. CODE.C079
+                        me.set("codes.logicOrgType",me.get("codes.orgType"));
+                        me.applyFormula("isTopOrganizationNode");
+                    }else{
+                        /*var orgTypeCode = me.get("codes.orgType");
+                        var logicOrgTypeCode = [];
+                        for (var i = 0, len = orgTypeCode.length; i < len; i++) {
+                            if(orgTypeCode[i].data !== "COMPANY"){
+                                logicOrgTypeCode.push({data: orgTypeCode[i].data, label: orgTypeCode[i].label});
+                            }
+                        }
+                        me.set("codes.logicOrgType",logicOrgTypeCode);*/
+                        me.set("codes.logicOrgType",me.get("codes.orgType"));
+                        me.applyFormula("isTopOrganizationNode");
+                    }
+                } else {
+                    me.set("resultInfo", {
+                        parnode_logic_org_cd : data.parnode_logic_org_cd,
+                        logic_org_cd : data.logic_org_cd,
+                        use_yn : "Y",
+                        is_new : false
+                    });
+
+                    if(data.parnode_logic_org_cd === "ROOT"){
+                        // 현재노드 추가가 아니면, 회사 유형을 선택 할 수 없음. CODE.C079
+                        me.applyFormula("isTopOrganizationNode");
+                    }
+                    me.set("codes.logicOrgType",me.get("codes.orgType"));
+                    me.onFindInfo();
+                }
+
+                me.applyFormula();
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+
+            // 조회
+            onFindInfo: function() {
+                var me = this;
+                UT.request(me.$.findInfo);
+            },
+
+            // 조회 완료
+            completeFindInfo: function() {
+                var me = this;
+                me.applyFormula();
+            },
+
+            // 저장
+            onSaveInfo: function() {
+                var me = this;
+                var resultInfo = me.get('resultInfo');
+
+                // 저장 유효성 체크
+                if(!me.validate('save')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                if(resultInfo.ctry_ccd == "KR") {
+                    // 사업자번호는 필수 입력항목 입니다.
+                    if(!resultInfo.bizregno){
+                        UT.alert(me.translate("STD.N10600"));
+                        return;
+                    }
+                    // 사업자번호가 유효하지 않습니다.
+                    if(!me.checkBizRegNo(resultInfo.bizregno)){
+                        UT.alert(me.translate("STD.VS1026"));
+                        return;
+                    }
+                }
+
+                me.$.saveLogicOrganizationInfo.body = {
+                    orgInfo: me.resultInfo
+                };
+
+                UT.confirm("STD.N1200", function(){ // 저장 하시겠습니까?
+                    UT.request(me.$.saveLogicOrganizationInfo);
+                });
+            },
+
+            // 저장 완료
+            completeSaveInfo: function() {
+                var me = this;
+                UT.completeAlert("", function(){  // 저장하였습니다.
+                    me.set("resultInfo.is_new", false);
+                    me.fire("complete");
+                });
+            },
+            onClose: function() {
+                var me = this;
+                me.clearData();
+                me.fire("close");
+            },
+            clearData: function() {
+                var me = this;
+                me.reset();
+            },
+            onChangeCtryCode: function(e) {
+                var me = this;
+                me.applyFormula('isKoreaBizRegNoCodeCheck');
+            },
+
+            onKeyupOrgData : function(e) {
+                var me = this;
+                var resultInfo = me.get('resultInfo');
+
+                // 부모 논리 조직코드 + 물리 조직코드를 합쳐, 논리로직코드를 표현한다.
+                if(resultInfo.parnode_logic_org_cd === "ROOT"){
+                    me.set("resultInfo.logic_org_cd",me.get("resultInfo.org_cd"));
+                }else{
+                    me.set("resultInfo.logic_org_cd",me.get("resultInfo.parnode_logic_org_cd")+me.get("resultInfo.org_cd"));
+                }
+            },
+
+            onCheckBizRegNo : function() {
+                var me = this;
+                var resultInfo = me.get('resultInfo');
+
+                if(resultInfo.ctry_ccd == "KR") {
+                    // 사업자번호는 필수 입력항목 입니다.
+                    if(!resultInfo.bizregno){
+                        me.set("lb_biz_reg_no", me.translate("STD.N10600"));		//사업자번호를 입력하세요.
+                        return;
+                    }
+                    // 사업자번호가 유효하지 않습니다.
+                    if(!me.checkBizRegNo(resultInfo.bizregno)){
+                        me.set("lb_biz_reg_no", me.translate("STD.VS1026"));
+                        return;
+                    }else{
+                        me.set("lb_biz_reg_no", "");
+                        return;
+                    }
+                }
+            },
+
+            // 사업자등록번호 체크 로직
+            checkBizRegNo: function(bizRegNo) {
+                var checkID = new Array(1, 3, 7, 1, 3, 7, 1, 3, 5, 1);
+                var i, chkSum=0, c2, remander;
+                if(10 === bizRegNo.length){
+                    for (i=0; i<=7; i++) chkSum += checkID[i] * bizRegNo.charAt(i);
+
+                    c2 = "0" + (checkID[8] * bizRegNo.charAt(8));
+                    c2 = c2.substring(c2.length - 2, c2.length);
+
+                    chkSum += Math.floor(c2.charAt(0)) + Math.floor(c2.charAt(1));
+
+                    remander = (10 - (chkSum % 10)) % 10 ;
+
+                    if (Math.floor(bizRegNo.charAt(9)) == remander) return true; // OK!
+                }
+
+                return false;
+            },
+
+        });
+    </script>
+
+</dom-module>

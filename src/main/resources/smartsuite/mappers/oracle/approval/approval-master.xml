@@ -1,0 +1,735 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+APVL: 결재마스터
+APVL_BODY: 결재본문
+ESGAMLK: 업무결재연동
+APVLLN_APVR_PRGS_STS: 결재선
+ -->
+
+<mapper namespace="approval-master">
+
+    <insert id="insertApprovalMaster">
+    /* approval-master.insertApprovalMaster: 결재마스터 등록 */
+    INSERT 
+      INTO APVL (
+           TEN_ID
+         , APVL_UUID
+         , APVL_TYP_CCD
+         , APVL_DOCNO
+         , APVL_REVNO
+         , APVL_TIT
+         <if test='p.apvl_sts_ccd == "PRGSG"'>
+         , APVL_RPTG_DTTM
+         </if>
+         , APVL_STS_CCD
+         , ATHG_UUID
+         , STS
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.apvl_uuid}
+         , #{p.apvl_typ_ccd}
+         , #{p.apvl_docno}
+         , CAST( #{p.apvl_revno} AS NVARCHAR2(4))
+         , #{p.apvl_tit}
+         <if test='p.apvl_sts_ccd == "PRGSG"'>
+         , #{g.now}
+         </if>
+         , #{p.apvl_sts_ccd}
+         , #{p.athg_uuid}
+         , 'C'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <update id="updateApprovalMaster">
+    /* approval-master.updateApprovalMaster: 결재마스터 수정 */
+    UPDATE APVL
+       SET STS = 'U'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         <if test='p.apvl_tit != null'>
+         , APVL_TIT = #{p.apvl_tit}
+         </if>
+         <if test='p.apvl_sts_ccd == "PRGSG"'>
+         , APVL_RPTG_DTTM = #{g.now}
+         </if>
+         <if test='p.apvl_sts_ccd != null'>
+         , APVL_STS_CCD = #{p.apvl_sts_ccd}
+             <if test='p.apvl_sts_ccd != "APVD" and p.apvl_sts_ccd != "RET"'>
+             , FNL_APVL_DTTM = null
+             </if>
+         </if>
+         <if test='p.athg_uuid != null'>
+         , ATHG_UUID = #{p.athg_uuid}
+         </if>
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </update>
+
+    <update id="updateApprovalMasterStatus">
+    /* approval-master.updateApprovalMasterStatus: 결재마스터 상태정보 수정 */
+    UPDATE APVL
+       SET APVL_STS_CCD = #{p.apvl_sts_ccd}
+         <if test='p.apvl_sts_ccd == "APVD" or p.apvl_sts_ccd == "RET"'>
+         , FNL_APVL_DTTM = #{g.now}
+         </if>
+         <if test='p.apvl_sts_ccd != "APVD" and p.apvl_sts_ccd != "RET"'>
+         , FNL_APVL_DTTM = null
+         </if>
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </update>
+
+    <update id="deleteApprovalMaster">
+    /* approval-master.deleteApprovalMaster: 결재마스터 삭제 - 상신 취소 */
+    UPDATE APVL
+       SET STS = 'D'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </update>
+
+    <select id="findApprovalMaster" resultType="map">
+    /* approval-master.findApprovalMaster: 결재마스터 상세정보 조회 */
+    SELECT APVL.TEN_ID
+         , APVL.APVL_UUID
+         , APVL.APVL_TYP_CCD
+         , APVL.APVL_DOCNO
+         , APVL.APVL_REVNO
+         , APVL.APVL_TIT
+         , APVL.APVL_RPTG_DTTM
+         , APVL.APVL_STS_CCD
+         , APVL.APVL_RES_CCD
+         , APVL.FNL_APVL_DTTM
+         , APVL.ATHG_UUID
+         , APVL.STS
+         , APVL.REGR_ID
+         , APVL.REG_DTTM
+         , APVL.MODR_ID
+         , APVL.MOD_DTTM
+         , TASK_APVL.TASK_UUID
+         , USR.USR_NM AS CRTR_NM
+         , CASE WHEN 'en_US' = #{g.locale} THEN  USR.USR_NM_EN
+             ELSE USR.USR_NM  END AS DISPLAY_CRTR_NM
+      	 , APVLLN_APVR_PRGS_STS.APVL_OPN
+      FROM APVL APVL
+     INNER JOIN TASK_APVL TASK_APVL
+        ON APVL.TEN_ID = TASK_APVL.TEN_ID
+       AND APVL.APVL_UUID = TASK_APVL.APVL_UUID
+       AND APVL.APVL_TYP_CCD = TASK_APVL.APVL_TYP_CCD
+      LEFT OUTER JOIN USR USR
+        ON APVL.TEN_ID = USR.TEN_ID
+       AND APVL.REGR_ID = USR.USR_ID
+	  LEFT JOIN APVLLN_APVR_PRGS_STS APVLLN_APVR_PRGS_STS
+	    ON APVLLN_APVR_PRGS_STS.TEN_ID = APVL.TEN_ID
+	   AND APVLLN_APVR_PRGS_STS.APVL_UUID = APVL.APVL_UUID
+	   <choose>
+           <when test='p.dpty_aprv_yn == "Y"'>
+		AND APVLLN_APVR_PRGS_STS.USR_ID = #{p.apvr_id}
+           </when>
+           <otherwise>
+	   AND APVLLN_APVR_PRGS_STS.USR_ID = #{g.username}
+           </otherwise>
+       </choose>
+	   AND APVLLN_APVR_PRGS_STS.STS !='D'
+     WHERE APVL.TEN_ID = #{g.tenant}
+       AND APVL.APVL_UUID = #{p.apvl_uuid}
+    </select>
+    
+    <select id="findApprovalMasterForReSubmit" resultType="map">
+    /* approval-master.findApprovalMasterForReSubmit: 재상신용 결재마스터 상세정보 조회 */
+    SELECT ''                            AS APVL_UUID
+         , MS.APVL_TYP_CCD                 AS APVL_TYP_CCD
+         , MS.APVL_DOCNO                 AS APVL_DOCNO
+         , CAST(MS.APVL_REVNO AS INTEGER ) + 1  AS APVL_REVNO
+         , MS.APVL_TIT                    AS APVL_TIT
+         , 'CRNG'                           AS APVL_STS_CCD
+         , MS.ATHG_UUID                     AS PREV_ATHG_UUID
+         , 'C'                           AS STS
+         , LK.TASK_UUID                     AS TASK_UUID
+      FROM APVL MS
+     INNER JOIN TASK_APVL LK
+        ON MS.TEN_ID     = LK.TEN_ID
+       AND MS.APVL_UUID    = LK.APVL_UUID
+       AND MS.APVL_TYP_CCD = LK.APVL_TYP_CCD
+     WHERE MS.TEN_ID  = #{g.tenant}
+       AND MS.APVL_UUID = #{p.apvl_uuid}
+    </select>
+
+	<select id="findListApprovalMasterForSubmitAndApproval" resultType="map">
+		/* approval-master.findListApprovalMasterForSubmitAndApproval: 결재마스터 목록 조회 */
+		SELECT DISTINCT
+		       MS.TEN_ID
+		     , MS.APVL_UUID
+		     , MS.APVL_TYP_CCD
+		     , MS.APVL_DOCNO
+		     , MS.APVL_REVNO
+		     , MS.APVL_TIT
+		     , MS.APVL_RPTG_DTTM
+		     , MS.APVL_STS_CCD
+		     , MS.FNL_APVL_DTTM
+		     , MS.APVL_RES_CCD
+		     , MS.ATHG_UUID
+		     , MS.STS
+		     , MS.REGR_ID
+		     , MS.REG_DTTM
+		     , MS.MODR_ID
+		     , MS.MOD_DTTM
+		     , LN.USR_ID
+		     , US.USR_NM
+		     <if test='p.list_type == "receipt"'>
+		         , APVR.CURR_APVR_YN
+		         , APVR.USR_ID AS APVR_ID
+		     </if>
+		  FROM APVL MS
+		 INNER JOIN APVLLN_APVR_PRGS_STS LN
+		    ON MS.TEN_ID       = LN.TEN_ID
+		   AND MS.APVL_UUID    = LN.APVL_UUID
+		   AND LN.APVR_TYP_CCD = 'DFT'  /* 기안자 */
+		   AND LN.STS         != 'D'
+		   <if test='p.list_type == "submit"'>
+		       AND LN.USR_ID = #{g.username}
+		   </if>
+		 INNER JOIN USR US
+		    ON LN.TEN_ID = US.TEN_ID
+		   AND LN.USR_ID = US.USR_ID
+		   <if test='p.line_usr_nm != null and p.line_usr_nm != ""'>
+		       <bind name="pattern" value="'%' + p.line_usr_nm + '%'" />
+		       INNER JOIN (
+		                   SELECT A.TEN_ID
+		                        , A.APVL_UUID
+		                     FROM APVLLN_APVR_PRGS_STS A
+		                    INNER JOIN USR B
+		                       ON A.TEN_ID           = B.TEN_ID
+		                      AND A.USR_ID           = B.USR_ID
+		                      AND (UPPER(B.USR_NM) LIKE UPPER(#{pattern}) OR UPPER(B.USR_NM_EN) LIKE UPPER(#{pattern}) )
+		                    WHERE A.STS != 'D'
+		                  ) LN2
+		          ON MS.TEN_ID  = LN2.TEN_ID
+		         AND MS.APVL_UUID = LN2.APVL_UUID
+		   </if>
+		   <if test='p.list_type == "receipt"'>
+			   INNER JOIN APVLLN_APVR_PRGS_STS APVR
+			      ON APVR.TEN_ID = LN.TEN_ID
+			     AND APVR.APVL_UUID = LN.APVL_UUID
+			     AND (
+			          APVR.USR_ID = #{g.username}
+			          <if test="p.apvr_ids != null and p.apvr_ids.size > 0">
+			              OR APVR.USR_ID IN
+			              <foreach collection="p.apvr_ids" item="apvr_id" open="(" close=")" separator=",">
+			                 #{apvr_id}
+			              </foreach>
+			          </if> OR
+			          APVR.DPTY_APVL_UUID = (
+			                                 SELECT DPTY_APVL_UUID
+			                                   FROM DPTY_APVL
+			                                  WHERE DPTY_APVR_ID = #{g.username}
+			                                  <bind name="nowDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+				                                AND #{nowDate} BETWEEN ABSN_ST_DT AND ABSN_EXP_DT
+				                                AND STS != 'D'
+			                                )
+			         )
+			   <choose>
+				   <when test='p.curr_apvr_yn == "Y"'>
+					   AND APVR.CURR_APVR_YN = 'Y'
+					   AND APVR.APVLLN_APVL_RES_CCD = 'WTG'
+				   </when>
+				   <otherwise>
+					   AND (
+					        APVR.APVLLN_APVL_RES_CCD IN ('APVD', 'RET') OR
+					        (
+					         APVR.CURR_APVR_YN = 'Y' AND
+					         APVR.APVLLN_APVL_RES_CCD = 'WTG'
+					        )
+					       )
+				   </otherwise>
+			   </choose>
+		   </if>
+		 WHERE MS.TEN_ID = #{g.tenant}
+		   <if test='p.apvl_typ_ccd != null and p.apvl_typ_ccd != ""'>
+		   AND MS.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		   </if>
+		   <if test='p.list_type == "receipt"'>
+		   AND MS.APVL_STS_CCD != 'CRNG'
+		   </if>
+		   <if test='p.apvl_sts_ccd != null and p.apvl_sts_ccd != ""'>
+		   AND MS.APVL_STS_CCD = #{p.apvl_sts_ccd}
+		   </if>
+		   <choose>
+		       <when test="p.aprv_docnos != null and p.aprv_docnos.size() != 0">
+		           AND MS.APVL_DOCNO IN
+		           <foreach collection="p.aprv_docnos" item="apvl_docno" separator="," open="(" close=")">
+		               #{apvl_docno}
+		           </foreach>
+		       </when>
+		       <otherwise>
+		           <if test="p.apvl_docno != null and p.apvl_docno != ''">
+		               <bind name="docnoPattern" value="'%' + p.apvl_docno + '%'" />
+		               AND MS.APVL_DOCNO LIKE #{docnoPattern}
+		           </if>
+		       </otherwise>
+		   </choose>
+		   <if test='p.from_rpt_dt != null'>
+		   AND MS.APVL_RPTG_DTTM >= #{p.from_rpt_dt}
+		   </if>
+		   <if test='p.to_rpt_dt != null'>
+		       <bind name="toRptDt" value="g.getPlusDays(p.to_rpt_dt, 1)"/>
+		   AND MS.APVL_RPTG_DTTM &lt; #{toRptDt}
+		   </if>
+		   <if test='p.from_last_aprv_dt != null'>
+		   AND MS.FNL_APVL_DTTM >= #{p.from_last_aprv_dt}
+		   </if>
+		   <if test='p.to_last_aprv_dt != null'>
+		       <bind name="toLastAprvDt" value="g.getPlusDays(p.to_last_aprv_dt, 1)"/>
+		   AND MS.FNL_APVL_DTTM &lt; #{toLastAprvDt}
+		   </if>
+		   <if test='p.apvl_tit != null and p.apvl_tit != ""'>
+		       <bind name="titPattern" value="'%' + p.apvl_tit + '%'" />
+		   AND UPPER(MS.APVL_TIT) LIKE UPPER(#{titPattern})
+		   </if>
+		   AND MS.STS != 'D'
+		   AND MS.APVL_STS_CCD != 'CRNG' /*작성중인건은 제외*/
+		   <choose>
+		       <when test='p.list_type == "receipt"'>
+		 ORDER BY MS.APVL_RPTG_DTTM DESC
+		       </when>
+		       <otherwise>
+		 ORDER BY MS.REG_DTTM DESC
+		       </otherwise>
+		   </choose>
+	</select>
+    
+    <resultMap id="errContMap" type="java.util.HashMap">
+    	<result property="apvl_err_cont" column="APVL_ERR_CONT"	jdbcType="CLOB"	javaType="string"/>
+    </resultMap>
+    
+    <select id="findApprovedErrorContext" resultMap="errContMap">
+    SELECT APVL_ERR_CONT
+      FROM APVL
+     WHERE TEN_ID = #{g.tenant}
+       AND APVL_UUID = #{p.apvl_uuid}
+    </select>
+
+    <select id="getMaxRevisionApprovalMaster" resultType="int">
+    /* po.getMaxRevisionApprovalMaster: 결재차수(최대값) */
+    SELECT MAX(MS.APVL_REVNO)
+      FROM APVL MS
+     WHERE MS.TEN_ID = #{g.tenant}
+       AND MS.APVL_DOCNO = #{p.apvl_docno}
+       AND MS.STS != 'D'
+    </select>
+    
+    <select id="checkAppMasterDupAppId" resultType="string">
+    /* approval-master.checkAppMasterDupAppId : 결재 신규 생성 시 중복 체크 */
+    	SELECT (SELECT APVL_STS_CCD
+    	          FROM APVL
+    	         WHERE TEN_ID = TASK_APVL.TEN_ID
+    	           AND APVL_UUID = TASK_APVL.APVL_UUID
+    	           AND APVL_STS_CCD != 'RET' ) AS APVL_STS_CCD
+		  FROM TASK_APVL TASK_APVL
+		 WHERE TEN_ID = #{g.tenant}
+		   AND TASK_UUID = #{p.task_uuid}
+		   AND APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		   AND USE_YN = 'Y' 
+    </select>
+    
+    <select id="compareAprvSts" resultType="map">
+    /* approval-master.compareAprvSts : 결재 상태 체크 (수정/상신/삭제 시) */
+    	SELECT TEN_ID
+    	,      APVL_UUID
+    	,      APVL_TIT
+    	,      APVL_STS_CCD
+    	,      CASE WHEN APVL_STS_CCD = #{p.prev_apvl_sts_ccd} THEN 'Y'
+    	       ELSE 'N'
+    	       END VALID_YN
+    	FROM APVL
+    	WHERE TEN_ID = #{g.tenant}
+    	AND APVL_UUID = #{p.apvl_uuid}
+    </select>
+
+	<update id="updateApprovalErrorCodeAndMessage">
+	/* approval-master.updateApprovalErrorCodeAndMessage */
+	UPDATE APVL
+	   SET APVL_RES_CCD   = #{p.apvl_res_ccd}
+	     <if test="p.apvl_err_cont != null and p.apvl_err_cont != ''">
+	     , APVL_ERR_CONT = #{p.apvl_err_cont}
+	     </if>
+	 WHERE TEN_ID  = #{g.tenant}
+	   AND APVL_UUID = #{p.apvl_uuid}
+	</update>
+	
+	 <select id="findListDeputyApproval" resultType="map">
+	 /* approval-master.findListDeputyApproval : 대리결재 목록 조회 */
+		<include refid="findListDeputyApprovalByApvlId"/>
+
+		UNION
+
+		<include refid="findListDeputyApprovalByDptyApvlId"/>
+
+		ORDER BY ABSN_ST_DT DESC
+    </select>
+
+	<sql id="findListDeputyApprovalByApvlId">
+		/* approval-master.findListDeputyApprovalByApvlId : 대리결재 목록 조회 결재자 기반 */
+		SELECT
+			DPTY_APVL.TEN_ID
+			,	DPTY_APVL.DPTY_APVL_UUID
+			,	DPTY_APVL.APVR_ID
+			,	DPTY_APVL.DPTY_APVR_ID
+			,	DPTY_APVL.ABSN_ST_DT
+			,	DPTY_APVL.ABSN_EXP_DT
+			,	DPTY_APVL.ABSN_RSN
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+					ELSE USR.USR_NM
+					END AS APRV_USR_NM
+			,	USR.DEPT_CD AS APRV_DEPT_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+					ELSE DEPT.DEPT_NM
+					END AS APRV_DEPT_NM
+			,	USR.JOBTIT_CCD AS APRV_RSPNS_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DPTY_USR.USR_NM_EN
+					ELSE DPTY_USR.USR_NM
+					END AS DPTY_APRV_USR_NM
+			,	DPTY_USR.DEPT_CD AS DPTY_APRV_DEPT_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DPTY_DEPT.DEPT_NM_EN
+					ELSE DPTY_DEPT.DEPT_NM
+					END AS DPTY_APRV_DEPT_NM
+			,	DPTY_USR.JOBTIT_CCD AS DPTY_APRV_RSPNS_CD
+			,	(SELECT COUNT(*) FROM APVLLN_APVR_PRGS_STS WHERE TEN_ID = DPTY_APVL.TEN_ID AND DPTY_APVL_UUID = DPTY_APVL.DPTY_APVL_UUID AND STS != 'D') AS DPTY_CNT
+		FROM DPTY_APVL DPTY_APVL
+		LEFT OUTER JOIN USR USR
+		ON USR.TEN_ID = DPTY_APVL.TEN_ID
+		AND USR.USR_ID = DPTY_APVL.APVR_ID
+		AND USR.STS != 'D'
+		LEFT OUTER JOIN USR DPTY_USR
+		ON DPTY_USR.TEN_ID = DPTY_APVL.TEN_ID
+		AND DPTY_USR.USR_ID = DPTY_APVL.DPTY_APVR_ID
+		AND DPTY_USR.STS != 'D'
+		LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+		ON USR.TEN_ID = ODM.TEN_ID
+		AND USR.CO_CD = ODM.LOGIC_ORG_CD
+		AND USR.DEPT_CD = ODM.DEPT_CD
+		AND ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		LEFT OUTER JOIN DEPT DEPT
+		ON DEPT.TEN_ID = DPTY_APVL.TEN_ID
+		AND ODM.LOGIC_ORG_CD = USR.CO_CD
+		AND DEPT.DEPT_CD = ODM.DEPT_CD
+		AND DEPT.STS != 'D'
+		LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG DPTY_ODM
+		ON DPTY_USR.TEN_ID = DPTY_ODM.TEN_ID
+		AND DPTY_USR.CO_CD = DPTY_ODM.LOGIC_ORG_CD
+		AND DPTY_USR.DEPT_CD = DPTY_ODM.DEPT_CD
+		AND DPTY_ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		LEFT OUTER JOIN DEPT DPTY_DEPT
+		ON DPTY_DEPT.TEN_ID = DPTY_APVL.TEN_ID
+		AND DPTY_ODM.LOGIC_ORG_CD = DPTY_USR.CO_CD
+		AND DPTY_DEPT.DEPT_CD = DPTY_USR.DEPT_CD
+		AND DPTY_DEPT.STS != 'D'
+		WHERE DPTY_APVL.TEN_ID = #{g.tenant}
+		<if test="p.usr_id != null and p.usr_id != ''">
+			AND DPTY_APVL.APVR_ID = #{p.usr_id}
+		</if>
+		<if test="p.absn_dt != null">
+			AND #{p.absn_dt} BETWEEN DPTY_APVL.ABSN_ST_DT AND DPTY_APVL.ABSN_EXP_DT
+		</if>
+		AND DPTY_APVL.STS  != 'D'
+	</sql>
+
+	<sql id="findListDeputyApprovalByDptyApvlId">
+		/* approval-master.findListDeputyApprovalByDptyApvlId : 대리결재 목록 조회 대리결재자 기반 */
+		SELECT
+			DPTY_APVL.TEN_ID
+			,	DPTY_APVL.DPTY_APVL_UUID
+			,	DPTY_APVL.APVR_ID
+			,	DPTY_APVL.DPTY_APVR_ID
+			,	DPTY_APVL.ABSN_ST_DT
+			,	DPTY_APVL.ABSN_EXP_DT
+			,	DPTY_APVL.ABSN_RSN
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN USR.USR_NM_EN
+					ELSE USR.USR_NM
+					END AS APRV_USR_NM
+			,	USR.DEPT_CD AS APRV_DEPT_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+					ELSE DEPT.DEPT_NM
+					END AS APRV_DEPT_NM
+			,	USR.JOBTIT_CCD AS APRV_RSPNS_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DPTY_USR.USR_NM_EN
+					ELSE DPTY_USR.USR_NM
+					END AS DPTY_APRV_USR_NM
+			,	DPTY_USR.DEPT_CD AS DPTY_APRV_DEPT_CD
+			, 	CASE WHEN 'en_US' = #{g.locale} THEN DPTY_DEPT.DEPT_NM_EN
+					ELSE DPTY_DEPT.DEPT_NM
+					END AS DPTY_APRV_DEPT_NM
+			,	DPTY_USR.JOBTIT_CCD AS DPTY_APRV_RSPNS_CD
+			,	(SELECT COUNT(*) FROM APVLLN_APVR_PRGS_STS WHERE TEN_ID = DPTY_APVL.TEN_ID AND DPTY_APVL_UUID = DPTY_APVL.DPTY_APVL_UUID AND STS != 'D') AS DPTY_CNT
+		FROM DPTY_APVL DPTY_APVL
+		LEFT OUTER JOIN USR USR
+		ON USR.TEN_ID = DPTY_APVL.TEN_ID
+		AND USR.USR_ID = DPTY_APVL.APVR_ID
+		AND USR.STS != 'D'
+		LEFT OUTER JOIN USR DPTY_USR
+		ON DPTY_USR.TEN_ID = DPTY_APVL.TEN_ID
+		AND DPTY_USR.USR_ID = DPTY_APVL.DPTY_APVR_ID
+		AND DPTY_USR.STS != 'D'
+		LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG ODM
+		ON USR.TEN_ID = ODM.TEN_ID
+		AND USR.CO_CD = ODM.LOGIC_ORG_CD
+		AND USR.DEPT_CD = ODM.DEPT_CD
+		AND ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		LEFT OUTER JOIN DEPT DEPT
+		ON DEPT.TEN_ID = DPTY_APVL.TEN_ID
+		AND ODM.LOGIC_ORG_CD = USR.CO_CD
+		AND DEPT.DEPT_CD = ODM.DEPT_CD
+		AND DEPT.STS != 'D'
+		LEFT OUTER JOIN LOGIC_ORG_DEPT_MAPG DPTY_ODM
+		ON DPTY_USR.TEN_ID = DPTY_ODM.TEN_ID
+		AND DPTY_USR.CO_CD = DPTY_ODM.LOGIC_ORG_CD
+		AND DPTY_USR.DEPT_CD = DPTY_ODM.DEPT_CD
+		AND DPTY_ODM.LOGIC_ORG_TYP_CCD = 'COMPANY'
+		LEFT OUTER JOIN DEPT DPTY_DEPT
+		ON DPTY_DEPT.TEN_ID = DPTY_APVL.TEN_ID
+		AND DPTY_ODM.LOGIC_ORG_CD = DPTY_USR.CO_CD
+		AND DPTY_DEPT.DEPT_CD = DPTY_USR.DEPT_CD
+		AND DPTY_DEPT.STS != 'D'
+		WHERE DPTY_APVL.TEN_ID = #{g.tenant}
+		<if test="p.usr_id != null and p.usr_id != ''">
+			AND DPTY_APVL.DPTY_APVR_ID = #{p.usr_id}
+		</if>
+		<if test="p.absn_dt != null">
+			AND #{p.absn_dt} BETWEEN DPTY_APVL.ABSN_ST_DT AND DPTY_APVL.ABSN_EXP_DT
+		</if>
+		AND DPTY_APVL.STS  != 'D'
+	</sql>
+    
+    <select id="getCountDeputyApprovalInfoEither" resultType="int">
+    	/* approval-master.getCountDeputyApprovalInfoEither: 대리결재 존재여부 (시작과 마감사이 조회) */
+    	SELECT
+    		COUNT(*)
+    	FROM DPTY_APVL
+    	WHERE TEN_ID = #{g.tenant}
+	    AND APVR_ID = #{p.apvr_id}
+	    AND STS != 'D'
+    	AND (#{p.absn_st_dt} BETWEEN ABSN_ST_DT AND ABSN_EXP_DT OR #{p.absn_exp_dt} BETWEEN ABSN_ST_DT AND ABSN_EXP_DT)
+	    <if test='p.dpty_apvl_uuid != null and p.dpty_apvl_uuid != ""'>
+		    AND DPTY_APVL_UUID != #{p.dpty_apvl_uuid}
+	    </if>
+	</select>
+
+	<select id="getCountDeputyApprovalInfoBoth" resultType="int">
+		/* approval-master.getCountDeputyApprovalInfoBoth: 대리결재 존재여부 (시작보다 이전, 마감보다 이후 조회) */
+	    SELECT
+		    COUNT(*)
+		FROM DPTY_APVL
+		WHERE TEN_ID = #{g.tenant}
+		AND APVR_ID = #{p.apvr_id}
+		AND STS != 'D'
+    	AND (#{p.absn_st_dt} <![CDATA[<=]]> ABSN_ST_DT AND #{p.absn_exp_dt} <![CDATA[>=]]> ABSN_EXP_DT)
+	    <if test='p.dpty_apvl_uuid != null and p.dpty_apvl_uuid != ""'>
+		    AND DPTY_APVL_UUID != #{p.dpty_apvl_uuid}
+	    </if>
+    </select>
+    
+    <select id="selectDeputyApprovalUuid" resultType="map">
+    	/* approval-master.selectDeputyApprovalUuid: 대리결재 아이디 조회 */
+    	SELECT
+    		DPTY_APVL_UUID
+    	FROM DPTY_APVL
+    	WHERE TEN_ID = #{g.tenant}
+    	AND APVR_ID = #{p.apvr_id}
+    	AND DPTY_APVR_ID = #{p.dpty_apvr_id}
+    	AND STS != 'D'
+    	AND TO_CHAR(#{g.now}, 'YYYYMMDD') BETWEEN ABSN_ST_DT AND ABSN_EXP_DT
+    </select>
+    
+    <insert id="insertDeputyApprovalInfo">
+	    /* approval-master.insertDeputyApprovalInfo: 대리결재 목록 저장 */
+	    INSERT
+	      INTO DPTY_APVL (
+	              TEN_ID
+	            , DPTY_APVL_UUID
+				, APVR_ID
+				, DPTY_APVR_ID
+				, ABSN_ST_DT
+				, ABSN_EXP_DT
+				, ABSN_RSN
+				, STS
+				, REGR_ID
+				, REG_DTTM
+				, MODR_ID
+				, MOD_DTTM
+	    ) VALUES (
+	           #{g.tenant}
+	         , #{p.dpty_apvl_uuid}
+	         , #{p.apvr_id}
+	         , #{p.dpty_apvr_id}
+	         , #{p.absn_st_dt}
+	         , #{p.absn_exp_dt}
+	         , #{p.absn_rsn}
+	         , 'C'
+	         , #{g.username}
+	         , #{g.now}
+	         , #{g.username}
+	         , #{g.now}
+	    )
+    </insert>
+
+	<update id="updateDeputyApprovalInfo">
+		/* approval-master.updateDeputyApprovalInfo : 대리결재 목록 수정 */
+		UPDATE DPTY_APVL
+		SET DPTY_APVR_ID = #{p.dpty_apvr_id}
+		  , ABSN_ST_DT = #{p.absn_st_dt}
+		  , ABSN_EXP_DT = #{p.absn_exp_dt}
+		  , ABSN_RSN = #{p.absn_rsn}
+		  , STS   = 'U'
+		  , MOD_DTTM = #{g.now}
+		  , MODR_ID = #{g.username}
+		WHERE TEN_ID  = #{g.tenant}
+		AND DPTY_APVL_UUID = #{p.dpty_apvl_uuid}
+	</update>
+    
+    <update id="deleteDeputyApprovalInfo">
+    	/* approval-master.deleteDeputyApprovalInfo : 대리결재 목록 삭제 */
+		UPDATE DPTY_APVL
+		   SET STS   = 'D'
+		     , MOD_DTTM = #{g.now}
+	         , MODR_ID = #{g.username}
+		 WHERE TEN_ID  = #{g.tenant}
+		   AND DPTY_APVL_UUID = #{p.dpty_apvl_uuid}
+	</update>
+	
+	 <select id="findListDeputyApprovalCount" resultType="map">
+	 /* approval-master.findListDeputyApprovalCount : 대리결재건수 목록 조회 */
+			   SELECT 
+			    	DISTINCT
+			    	  MS.TEN_ID
+			         , MS.APVL_UUID
+			         , MS.APVL_TYP_CCD
+			         , MS.APVL_DOCNO
+			         , MS.APVL_REVNO
+			         , MS.APVL_TIT
+			         , MS.APVL_RPTG_DTTM
+			         , MS.APVL_STS_CCD
+			         , MS.FNL_APVL_DTTM
+			         , LN.USR_ID
+			         , US.USR_NM
+			  FROM APVL MS
+			  INNER JOIN APVLLN_APVR_PRGS_STS LN
+			  ON LN.TEN_ID = MS.TEN_ID
+			  AND LN.APVL_UUID = MS.APVL_UUID
+			  AND LN.DPTY_APVL_UUID = #{p.dpty_apvl_uuid}
+			  AND LN.STS != 'D'
+			  LEFT OUTER JOIN USR US
+			  ON US.TEN_ID = MS.TEN_ID
+			  AND US.USR_ID = LN.USR_ID
+			  AND US.STS != 'D'
+			  WHERE MS.TEN_ID = #{g.tenant}
+			  AND MS.STS != 'D'
+			  ORDER BY MS.APVL_RPTG_DTTM DESC
+    </select>
+	
+	<select id="findListApprovalReceipt" resultType="map">
+		/* approval-master.findListApprovalReceipt: 수신참조 목록 조회 */
+		SELECT APVL.TEN_ID
+		     , APVL.APVL_UUID
+		     , APVL.APVL_TYP_CCD
+		     , APVL.APVL_DOCNO
+		     , APVL.APVL_REVNO
+		     , APVL.APVL_TIT
+		     , APVL.APVL_RPTG_DTTM
+		     , APVL.APVL_STS_CCD
+		     , APVL.FNL_APVL_DTTM
+		     , APVL.APVL_RES_CCD
+		     , APVL.ATHG_UUID
+		     , APVL.STS
+		     , APVL.REGR_ID
+		     , APVL.REG_DTTM
+		     , APVL.MODR_ID
+		     , APVL.MOD_DTTM
+		     , APVL_RDG.RDG_TYP_CCD
+		     , DFT_USR.USR_ID AS DFT_USR_ID
+		     , CASE WHEN 'en_US' = #{g.locale} THEN DFT_USR.USR_NM_EN
+		            ELSE DFT_USR.USR_NM
+		        END AS DISP_DFT_USR_NM
+		  FROM APVL APVL
+		 INNER JOIN APVL_RDG APVL_RDG
+		    ON APVL.TEN_ID    = APVL_RDG.TEN_ID
+		   AND APVL.APVL_UUID = APVL_RDG.APVL_UUID
+		 INNER JOIN USR APVL_RDG_USR
+		    ON APVL_RDG.TEN_ID = APVL_RDG_USR.TEN_ID
+		   AND APVL_RDG.USR_ID = APVL_RDG_USR.USR_ID
+		 INNER JOIN APVLLN_APVR_PRGS_STS APVLLN_APVR_PRGS_STS
+		    ON APVLLN_APVR_PRGS_STS.TEN_ID = APVL.TEN_ID
+		   AND APVLLN_APVR_PRGS_STS.APVL_UUID = APVL.APVL_UUID
+		   AND APVLLN_APVR_PRGS_STS.APVR_TYP_CCD = 'DFT'
+		 INNER JOIN USR DFT_USR
+		    ON DFT_USR.TEN_ID = APVLLN_APVR_PRGS_STS.TEN_ID
+		   AND DFT_USR.USR_ID = APVLLN_APVR_PRGS_STS.USR_ID
+		 WHERE APVL.TEN_ID = #{g.tenant}
+		   AND APVL_RDG.USR_ID = #{g.username}
+		   AND (
+		        (APVL_RDG.RDG_TYP_CCD = 'RCPT' AND APVL.APVL_STS_CCD = 'APVD') OR
+		        (APVL_RDG.RDG_TYP_CCD = 'REF' AND APVL.APVL_STS_CCD IN ('PRGSG', 'APVD'))
+		       )
+		   <if test='p.apvl_typ_ccd != null and p.apvl_typ_ccd != ""'>
+		       AND APVL.APVL_TYP_CCD = #{p.apvl_typ_ccd}
+		   </if>
+		   <choose>
+		       <when test="p.aprv_docnos != null and p.aprv_docnos.size() != 0">
+		           AND APVL.APVL_DOCNO IN
+		           <foreach collection="p.aprv_docnos" item="apvl_docno" separator="," open="(" close=")">
+		               #{apvl_docno}
+		           </foreach>
+		       </when>
+		       <otherwise>
+		           <if test="p.apvl_docno != null and p.apvl_docno != ''">
+		               <bind name="docnoPattern" value="'%' + p.apvl_docno + '%'" />
+		               AND APVL.APVL_DOCNO LIKE #{docnoPattern}
+		           </if>
+		       </otherwise>
+		   </choose>
+		   <if test='p.from_rpt_dt != null'>
+		       AND APVL.APVL_RPTG_DTTM >= #{p.from_rpt_dt}
+		   </if>
+		   <if test='p.to_rpt_dt != null'>
+		       <bind name="toRptDt" value="g.getPlusDays(p.to_rpt_dt, 1)"/>
+		       AND APVL.APVL_RPTG_DTTM &lt; #{toRptDt}
+		   </if>
+		   <if test='p.from_last_aprv_dt != null'>
+		       AND APVL.FNL_APVL_DTTM >= #{p.from_last_aprv_dt}
+		   </if>
+		   <if test='p.to_last_aprv_dt != null'>
+		       <bind name="toLastAprvDt" value="g.getPlusDays(p.to_last_aprv_dt, 1)"/>
+		       AND APVL.FNL_APVL_DTTM &lt; #{toLastAprvDt}
+		   </if>
+		   <if test='p.apvl_tit != null and p.apvl_tit != ""'>
+		       <bind name="titPattern" value="'%' + p.apvl_tit + '%'" />
+		       AND UPPER(APVL.APVL_TIT) LIKE UPPER(#{titPattern})
+		   </if>
+		   <if test="p.rdg_typ_ccd != null">
+		       AND APVL_RDG.RDG_TYP_CCD = #{p.rdg_typ_ccd}
+		   </if>
+		   AND APVL.STS != 'D'
+		 ORDER BY APVL.REG_DTTM DESC
+	</select>
+	
+	<select id="findDptyApproverIds" resultType="string">
+		<bind name="nowDate" value="g.getFormatNow(g.now, 'yyyyMMdd')"/>
+		SELECT APVR_ID
+		  FROM DPTY_APVL
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DPTY_APVR_ID = #{g.username}
+		   AND STS != 'D'
+		   AND #{nowDate} BETWEEN ABSN_ST_DT AND ABSN_EXP_DT
+	</select>
+	
+</mapper>

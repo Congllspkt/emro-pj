@@ -1,0 +1,196 @@
+<dom-module id="sc-portal-pagination">
+    <template>
+        <style>
+            :host {
+                display: flex;
+
+                --box: {
+                    border: 1px solid #d8d8d8;
+                    background-color: #fafafa;
+                    height: 20px;
+                    border-radius: 3px;
+                    -webkit-box-shadow: 0px 1px 1px #d8d8d8;
+                    -moz-box-shadow: 0px 1px 1px #d8d8d8;
+                    box-shadow: 0px 1px 1px #d8d8d8;
+                    -webkit-box-sizing: border-box;
+                    -moz-box-sizing: border-box;
+                    box-sizing: border-box;
+                };
+
+                --lg-red: #c00c3f;
+            }
+
+            ul {
+                @apply(--box);
+                display: inline-block;
+                margin: 0;
+                padding: 2px 6px;
+            }
+
+            li {
+                margin: 3px;
+            }
+
+            .dot {
+                width: 7px;
+                height: 7px;
+                background-color: #999999;
+                display: inline-block;
+                -webkit-border-radius: 5px;
+                -moz-border-radius: 5px;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            .selected {
+                background-color: var(--lg-red);
+            }
+
+            button {
+                @apply(--box);
+                margin: 0 5px;
+            }
+
+            #btnDelPage {
+                background-color: var(--lg-red);
+                border: none;
+                color: white;
+                padding: 0 7px;
+            }
+        </style>
+
+        <sc-ajax auto id="protocolGetTotalPages" url="findAllPageIds.do" handle-as="json" last-response="{{_totalPages}}" on-response="_switchToPage" debounce-duration="300"></sc-ajax>
+        <sc-ajax id="protocolAddPage" url="saveUserLayout.do" handle-as="json" on-response="_refreshPages" debounce-duration="300"></sc-ajax>
+        <sc-ajax id="protocolDeletePage" url="deleteUserLayout.do" handle-as="json" on-response="_relocatePageAfterDelete" debounce-duration="300"></sc-ajax>
+
+        <iron-signals on-iron-signal-enable-toggle="_onEnableToggle"></iron-signals>
+
+        <button id="btnDelPage" class="hide">-</button>
+
+        <ul>
+            <template is="dom-repeat" items="{{_totalPages}}" as="page" index="index">
+                <li id$="page_{{index}}" class$="dot {{_isSelected(index)}}" on-tap="_onTapPage" value="{{page.lyt_typ}}"></li>
+            </template>
+        </ul>
+
+        <button id="btnAddPage" class="hide">+</button>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-portal-pagination',
+            
+            nonReusable: true,
+
+            properties: {
+                page: {
+                    type: Number,
+                    value: 0
+                },
+                _totalPages: Array,
+                _isChanging: {
+                    type: Boolean,
+                    value: false
+                },
+                _editMode: {
+                    type: Boolean,
+                    value: false
+                },
+                _doSwitch: {
+                    type: Boolean,
+                    value: false
+                }
+            },
+
+            _isSelected: function (page) {
+                return this.page == page ? "selected" : "";
+            },
+
+            _onTapPage: function (e) {
+                if (!this._isChanging) {
+                    var pageId = e.target.value;
+                    var prevPageObj = this.$$('li.selected');
+                    var curPageObj = e.target;
+
+                    this.page = Number(e.target.id.substr(5, 2));
+                    prevPageObj.classList.remove('selected');
+                    curPageObj.classList.add('selected');
+
+                    this.fire('iron-signal', {name: 'goto-page', data: pageId});
+                    this._isChanging = true;
+                }
+            },
+
+            toggleEditMode: function () {
+                this._editMode = !this._editMode;
+
+                if (this._editMode) {
+                    this.$.btnAddPage.classList.remove('hide');
+                    this.listen(this.$.btnAddPage, 'tap', '_onAddPage');
+
+                    this.$.btnDelPage.classList.remove('hide');
+                    this.listen(this.$.btnDelPage, 'tap', '_onDelPage');
+                } else {
+                    this.$.btnAddPage.classList.add('hide');
+                    this.unlisten(this.$.btnAddPage, 'tap', '_onAddPage');
+
+                    this.$.btnDelPage.classList.add('hide');
+                    this.unlisten(this.$.btnDelPage, 'tap', '_onDelPage');
+                }
+            },
+
+            _onAddPage: function (e) {
+                this.$.protocolAddPage.generateRequest();
+            },
+
+            _refreshPages: function() {
+                this._doSwitch = true;
+                this.page = this._totalPages.length;
+                this.$.protocolGetTotalPages.generateRequest();
+            },
+
+            _switchToPage: function() {
+                if (this._doSwitch && !this._isChanging) {
+                    var pageId = this._totalPages[this._totalPages.length-1].lyt_typ;
+                    var prevPageObj = this.$$('li.selected');
+                    prevPageObj.classList.remove('selected');
+
+                    this.fire('iron-signal', {name: 'goto-page', data: pageId});
+                    this._isChanging = true;
+                    this._doSwitch = false;
+                }
+            },
+
+            _onDelPage: function () {
+                if (this._totalPages.length == 1) {
+                    UT.alert(this.translate("Unable to delete. Minimum of one page has to exist."));
+                    return false;
+                }
+
+                UT.confirm(this.translate('Delete page?'), function() {
+                    this.fire('iron-signal', {name:'del-page', data:null});
+                    this.fire('iron-signal', {name: 'goto-page', data: this._totalPages[this.page >= 1 ? this.page - 1 : this.page + 1].lyt_typ})
+                    this.$.protocolDeletePage.body =  {
+                        lyt_typ : this._totalPages[this.page].lyt_typ
+                    };
+                    this.$.protocolDeletePage.generateRequest();
+                }.bind(this));
+            },
+
+            _relocatePageAfterDelete: function() {
+                this.page = this.page >= 1 ? this.page - 1 : this.page;
+                var prevPageObj = this.$$('li.selected');
+                prevPageObj.classList.remove('selected');
+
+                var curPageObj = this.$$('#page_' + this.page);
+                curPageObj.classList.add('selected');
+
+                this.$.protocolGetTotalPages.generateRequest();
+            },
+
+            _onEnableToggle: function (e) {
+                this._isChanging = false;
+            }
+        })
+    </script>
+</dom-module>

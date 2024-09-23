@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="printout">
+	<!-- 문서 출력 관리(DOC_OUTP_MGMT) SELECT -->
+	<select id="findListDocumentOutputManagement" resultType="map">
+		/* printout.findListDocumentOutputManagement */
+	    SELECT TEN_ID        	/*시스템 아이디*/
+	    	 , DOC_OUTP_UUID 	/*문서 출력 UUID*/
+	         , CAT_ID			/*카테고리 아이디*/
+	         , CAT_EXPLN		/*카테고리 설명*/
+	         , DOC_ID			/*문서 아이디*/
+	         , DOC_EXPLN		/*문서 설명*/
+	         , TASK_TYP_CCD		/*업무 유형 공통코드*/
+	         , SCR_HGT_SIZE		/*화면 높이 사이즈*/
+	         , SCR_WID_SIZE		/*화면 가로 사이즈*/
+	         , DOC_CALL_CD		/*문서 호출 코드*/
+	         , RMK				/*비고*/
+	         , STS				/*상태*/
+	         , REGR_ID			/*등록자 아이디*/
+	         , REG_DTTM			/*등록 일시*/
+	         , MODR_ID			/*수정자 아이디*/
+	         , MOD_DTTM			/*수정 일시*/
+	      FROM DOC_OUTP_MGMT
+	     WHERE TEN_ID = #{g.tenant}
+	   	 <if test="p.doc_outp_uuid != null and p.doc_outp_uuid != ''">
+	       AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+		 </if>
+		 <if test="p.task_typ_ccd != null and p.task_typ_ccd != ''">
+		   AND TASK_TYP_CCD = #{p.task_typ_ccd}
+		 </if>
+		 <if test="p.doc_id != null and p.doc_id != ''">
+		 	<bind name="docIdPattern" value="'%' + p.doc_id + '%'" />
+			  AND UPPER(DOC_ID) LIKE UPPER(#{docIdPattern})
+		 </if>
+		 <if test="p.doc_expln != null and p.doc_expln != ''">
+		 	<bind name="docExplnPattern" value="'%' + p.doc_expln + '%'" />
+		 	  AND UPPER(DOC_EXPLN) LIKE UPPER(#{docExplnPattern})
+		 </if>
+		   AND STS != 'D'
+	   	 ORDER BY TASK_TYP_CCD
+	</select>
+	
+	<!-- 문서 출력 관리(DOC_OUTP_MGMT) UPDATE -->
+	<update id="updateListDocumentOutputManagement">
+		/* printout.updateListDocumentOutputManagement */
+		UPDATE DOC_OUTP_MGMT
+		   SET CAT_ID 		= #{p.cat_id}			/*카테고리 아이디*/
+			 , CAT_EXPLN	= #{p.cat_expln}		/*카테고리 설명*/
+			 , DOC_EXPLN 	= #{p.doc_expln}		/*문서 설명*/
+	   		 , SCR_HGT_SIZE = #{p.scr_hgt_size} 	/*화면 높이*/
+	 		 , SCR_WID_SIZE = #{p.scr_wid_size}		/*화면 높이 사이즈*/
+	 		 , DOC_CALL_CD  = #{p.doc_call_cd}		/*문서 호출 타입*/
+	 		 , STS    		= 'U'					/*상태*/
+	         , MODR_ID 		= #{g.username}			/*수정자 아이디*/
+	         , MOD_DTTM 	= #{g.now}				/*수정 일시*/
+	     WHERE TEN_ID = #{g.tenant}
+	       AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+	</update>
+	
+	<!-- 문서 출력 관리(DOC_OUTP_MGMT) INSERT -->
+	<insert id="insertListDocumentOutputManagement">
+		/* printout.insertListDocumentOutputManagement */
+		INSERT INTO DOC_OUTP_MGMT
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+           	TEN_ID				/*테넌트 아이디*/
+		   ,DOC_OUTP_UUID		/*문서 UUID*/
+           ,CAT_ID				/*카테고리 아이디*/
+           ,CAT_EXPLN			/*카테고리 설명*/
+           ,DOC_ID				/*문서 아이디*/
+           ,DOC_EXPLN			/*문서 설명*/
+           ,TASK_TYP_CCD		/*업무 유형 공통코드*/
+           ,SCR_HGT_SIZE		/*화면 높이 사이즈*/
+           ,SCR_WID_SIZE		/*화면 가로 사이즈*/
+           ,DOC_CALL_CD			/*문서 호출 코드*/
+           ,STS					/*상태*/
+           ,REGR_ID				/*등록자 아이디*/
+           ,REG_DTTM			/*등록 일시*/
+      	</trim>
+      	<trim prefix="values (" suffix=")" prefixOverrides=",">
+	   		#{g.tenant}
+	   	   ,#{p.doc_outp_uuid}
+	   	   ,#{p.cat_id}
+	   	   ,#{p.cat_expln}
+   		   ,#{p.doc_id}
+   		   ,#{p.doc_expln}
+   		   ,#{p.task_typ_ccd}
+   		   ,#{p.scr_hgt_size}
+   		   ,#{p.scr_wid_size}
+   		   ,#{p.doc_call_cd}
+   		   ,'C'
+   		   ,#{g.username}
+   		   ,#{g.now}
+      	</trim>
+	</insert>
+	
+	<!-- 문서 출력 관리(DOC_OUTP_MGMT) DELETE -->
+	<delete id="deleteDocumentOutputManagment">
+		/* printout.deleteDocumentOutputManagment */
+		DELETE 
+		  FROM DOC_OUTP_MGMT
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+	</delete>
+	
+	<!-- 문서 출력 데이터 설정 정보(DOC_OUTP_DAT_SETUP) SELECT -->
+	<select id="findListDocumentOutputSetup" resultType="map">
+		/* printout.findListDocumentOutputSetup */
+	    SELECT TEN_ID        			/*시스템 아이디*/
+	         , DOC_OUTP_DAT_SETUP_UUID  /*문서 출력 데이터 설정 UUID*/
+	         , DOC_OUTP_UUID			/*문서 출력 UUID*/
+	         , DOC_OUTP_DAT_NM			/*문서 출력 데이터 명*/
+	         , DOC_OUTP_DAT_EXPLN  		/*문서 출력 데이터 설명*/
+	         , RMK						/*비고*/
+	         , STS						/*상태*/
+	         , REGR_ID					/*등록자 아이디*/
+	         , REG_DTTM					/*등록 일시*/
+	         , MODR_ID					/*수정자 아이디*/
+	         , MOD_DTTM					/*수정 일시*/
+	      FROM DOC_OUTP_DAT_SETUP 
+	     WHERE TEN_ID = #{g.tenant}	
+	     <if test="p.doc_outp_uuid != null and p.doc_outp_uuid != ''">
+	       AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+	     </if>
+	       AND STS != 'D'
+	     ORDER BY DOC_OUTP_DAT_NM
+	</select>
+	
+	<!-- 문서 출력 데이터 설정 정보(DOC_OUTP_DAT_SETUP) UPDATE -->
+	<update id="updateListDocumentOutputSetup">
+		/* printout.updateListDocumentOutputSetup */
+		UPDATE DOC_OUTP_DAT_SETUP
+		   SET DOC_OUTP_DAT_EXPLN = #{p.doc_outp_dat_expln} /*문서 데이터 설명*/
+			 , STS    		 = 'U'
+	         , MODR_ID 		 = #{g.username}
+	         , MOD_DTTM 	 = #{g.now}
+	     WHERE TEN_ID = #{g.tenant}
+	       AND DOC_OUTP_DAT_SETUP_UUID = #{p.doc_outp_dat_setup_uuid}
+	</update>
+	
+	<!-- 문서 출력 데이터 설정 정보(DOC_OUTP_DAT_SETUP) INSERT -->
+	<insert id="insertListDocumentOutputSetup">
+		/* printout.insertListDocumentOutputSetup */
+		INSERT INTO DOC_OUTP_DAT_SETUP
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+       	    TEN_ID						/*시스템 아이디*/
+	   	   ,DOC_OUTP_DAT_SETUP_UUID    	/*문서 데이터 설정 아이디(UUID)*/
+           ,DOC_OUTP_UUID				/*문서 마스터 아이디(UUID)*/
+           ,DOC_OUTP_DAT_NM  			/*문서 데이터 명*/
+           ,DOC_OUTP_DAT_EXPLN			/*문서 데이터 설명*/
+           ,STS							/*상태*/
+           ,REGR_ID						/*등록자 아이디*/
+           ,REG_DTTM					/*등록 일시*/
+     	</trim>
+     	<trim prefix="values (" suffix=")" prefixOverrides=",">
+   			#{g.tenant}
+   		   ,#{p.doc_outp_dat_setup_uuid}
+   		   ,#{p.doc_outp_uuid}
+   		   ,#{p.doc_outp_dat_nm}
+   		   ,#{p.doc_outp_dat_expln}
+   		   ,'C'
+   		   ,#{g.username}
+   		   ,#{g.now}
+     	</trim>
+	</insert>
+	
+	<!-- 문서 출력 데이터 설정 정보(DOC_OUTP_DAT_SETUP) DELETE -->
+	<delete id="deleteDocumentOutputDataSetup">
+		/* printout.deleteDocumentOutputDataSetup */
+		DELETE 
+		  FROM DOC_OUTP_DAT_SETUP
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_DAT_SETUP_UUID = #{p.doc_outp_dat_setup_uuid}
+	</delete>
+	
+	<!-- 문서 출력 데이터 설정 정보(DOC_OUTP_DAT_SETUP) DELETE BY MGMT -->
+	<delete id="deleteDocumentOutputDataSetupByManagement">
+		/* printout.deleteDocumentOutputDataSetupByManagement */
+		DELETE 
+		  FROM DOC_OUTP_DAT_SETUP
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+	</delete>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) SELECT -->
+	<select id="findListDocumentOutputDataParam" resultType="map">
+		/* printout.findListDocumentOutputDataParam */
+        SELECT TEN_ID        			/*테넌트 아이디*/
+              ,DOC_OUTP_DAT_PARM_UUID	/*문서 출력 데이터 파라미터 UUID*/
+              ,DOC_OUTP_DAT_SETUP_UUID	/*문서 출력 데이터 설정 UUID*/
+              ,DOC_OUTP_UUID   			/*문서 출력 UUID*/
+              ,DOC_OUTP_DAT_PARM_NM		/*문서 출력 데이터 파라미터 명*/
+           	  ,DOC_OUTP_DAT_PARM_EXPLN	/*문서 출력 데이터 파라미터 설명*/
+              ,RMK						/*비고*/
+              ,STS						/*상태*/
+              ,REGR_ID					/*등록자 아이디*/
+              ,REG_DTTM					/*등록 일시*/
+              ,MODR_ID					/*수정자 아이디*/
+              ,MOD_DTTM					/*수정 일시*/
+          FROM DOC_OUTP_DAT_PARM
+         WHERE TEN_ID = #{g.tenant}
+           AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+           AND DOC_OUTP_DAT_SETUP_UUID = #{p.doc_outp_dat_setup_uuid}
+         <if test="p.doc_outp_dat_parm_uuid != null and p.doc_outp_dat_parm_uuid != ''">
+   		   AND DOC_OUTP_DAT_PARM_UUID = #{p.doc_outp_dat_parm_uuid}
+         </if>
+   		   AND STS != 'D'
+   		 ORDER BY DOC_OUTP_DAT_PARM_NM
+	</select>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) UPDATE -->
+	<update id="updateListDocumentOutputDataParam">
+		/* printout.updateListDocumentOutputDataParam */
+		UPDATE DOC_OUTP_DAT_PARM
+		   SET DOC_OUTP_DAT_PARM_NM 		= #{p.doc_outp_dat_parm_nm}		/*문서 데이터 설명*/
+		   	 , DOC_OUTP_DAT_PARM_EXPLN 		= #{p.doc_outp_dat_parm_expln}		/*문서 데이터 설명*/
+		   	 , STS    		 				= 'U'
+	       	 , MODR_ID 		 				= #{g.username}
+	       	 , MOD_DTTM 		 			= #{g.now}
+	   	 WHERE TEN_ID = #{g.tenant}
+	       AND DOC_OUTP_DAT_SETUP_UUID = #{p.doc_outp_dat_setup_uuid}
+	       AND DOC_OUTP_DAT_PARM_UUID = #{p.doc_outp_dat_parm_uuid}
+	</update>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) INSERT -->
+	<insert id="insertListDocumentOutputDataParam">
+		/* printout.insertListDocumentOutputDataParam */
+		INSERT INTO DOC_OUTP_DAT_PARM
+		<trim prefix="(" suffix=")" prefixOverrides=",">
+           	TEN_ID						/*시스템 아이디*/
+		   ,DOC_OUTP_DAT_PARM_UUID      /*문서 출력 데이터 파라미터 UUID*/
+           ,DOC_OUTP_DAT_SETUP_UUID		/*문서 출력 데이터 설정 UUID*/
+           ,DOC_OUTP_UUID   			/*문서 출력 UUID*/
+           ,DOC_OUTP_DAT_PARM_NM		/*문서 출력 데이터 파라미터 명*/
+           ,DOC_OUTP_DAT_PARM_EXPLN		/*문서 출력 데이터 파라미터 설명*/
+           ,STS							/*상태*/
+      	   ,REGR_ID						/*수정자 아이디*/
+           ,REG_DTTM					/*수정 일시*/
+      	</trim>
+      	<trim prefix="values (" suffix=")" prefixOverrides=",">
+   			#{g.tenant}
+   		   ,#{p.doc_outp_dat_parm_uuid}
+   		   ,#{p.doc_outp_dat_setup_uuid}
+   		   ,#{p.doc_outp_uuid}
+   		   ,#{p.doc_outp_dat_parm_nm}
+   		   ,#{p.doc_outp_dat_parm_expln}
+   		   ,'C'
+   		   ,#{g.username}
+   		   ,#{g.now}
+      	</trim>
+	</insert>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) DELETE-->
+	<delete id="deleteDocumentOutputDataParam">
+		/* printout.deleteDocumentOutputDataParam */
+		DELETE 
+		  FROM DOC_OUTP_DAT_PARM
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_DAT_PARM_UUID = #{p.doc_outp_dat_parm_uuid}
+	</delete>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) DELETE BY SETUP-->
+	<delete id="deleteDocumentOutputDataParamByDataSetupUuid">
+		/* printout.deleteDocumentOutputDataParamByDataSetupUuid */
+		DELETE 
+		  FROM DOC_OUTP_DAT_PARM
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_DAT_SETUP_UUID = #{p.doc_outp_dat_setup_uuid}
+	</delete>
+	
+	<!-- 문서 출력 데이터  파라미터(DOC_OUTP_DAT_PARM) DELETE BY MGMT-->
+	<delete id="deleteDocumentOutputDataParamByManagement">
+		/* printout.deleteDocumentOutputDataParamByManagement */
+		DELETE 
+		  FROM DOC_OUTP_DAT_PARM
+		 WHERE TEN_ID = #{g.tenant}
+		   AND DOC_OUTP_UUID = #{p.doc_outp_uuid}
+	</delete>
+</mapper>

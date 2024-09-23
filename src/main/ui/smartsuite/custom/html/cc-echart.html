@@ -1,0 +1,120 @@
+<script type="text/javascript" src="/ui/lib/echarts/echarts.min.js"></script>
+
+<dom-module id="cc-echart">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+		
+		.echart-container {
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+		
+		.chart-main {
+			position: relative;
+			width: 100%;
+			height: 100%;
+		}
+	
+	</style>
+	<template>
+		<div class="echart-container">
+			<div class="chart-main"></div>
+		</div>
+	
+	</template>
+	<script>
+		
+		Polymer({
+			is: 'cc-echart',
+			
+			behaviors: [
+				Polymer.SCResizableBehavior
+			],
+			
+			properties: {
+				echart: {
+					type: Object,
+					value: function() {
+						return null;
+					}
+				},
+				option: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				}
+			},
+			listeners: {
+				'sc-resize': '_onIronResize',
+			},
+			
+			get chartContainer() {
+				if(!this._chartContainer) {
+					this._chartContainer = this.querySelector('.echart-container');
+				}
+				return this._chartContainer;
+			},
+			
+			get chartMain() {
+				if(!this._chartMain) {
+					this._chartMain = this.querySelector('.chart-main');
+				}
+				return this._chartMain;
+			},
+			
+			
+			initialized: function() {
+				var me = this;
+				console.log('initialized')
+			},
+			
+			attached: function() {
+				var me = this;
+				me.echart = echarts.init(me.chartMain);
+			},
+			
+			generateChart: function(option) {
+				var me = this;
+				
+				if(!UT.isEmpty(me.echart)) {
+					me.echart.dispose();
+					
+				}
+				var echart = me.echart = echarts.init(me.chartMain);
+				
+				if(option.dataset) {
+					if(option.dataset[1].transform.type == 'ecStat:clustering') {
+						echarts.registerTransform(ecStat.transform.clustering);
+					}
+				}
+				echart.resize();
+				echart.setOption(option);
+				return echart;
+			},
+			
+			_onIronResize: function() {
+				this.debounce('_debounceGridResize', this._doContentElementResize, 200);
+			},
+			_doContentElementResize: function() {
+				var me = this;
+				/*var rect = this.getBoundingClientRect();
+				me.chartContainer.style.height = rect.height;
+				me.chartContainer.style.width = rect.height;*/
+				if(me.echart) {
+					me.echart.resize();
+				}
+			},
+			
+			reset: function() {
+				var me = this;
+				if(!UT.isEmpty(me.echart)) {
+					me.echart.dispose();
+				}
+			}
+		});
+	</script>
+</dom-module>

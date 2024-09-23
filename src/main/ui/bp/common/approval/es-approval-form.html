@@ -1,0 +1,271 @@
+<sc-link rel="import" href="../tmp/ep-tmp-preview.html"></sc-link>
+
+<dom-module id="es-approval-form">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<!-- 공통코드 ( C009 : 사용여부, C015: 결재전송구분 ) -->
+			<sc-code-group>
+				<sc-code code="C009" value="{{codes.use_yn}}" ></sc-code>
+				<sc-code code="C015" value="{{codes.eml_snd_typ_ccd}}" ></sc-code>
+				<sc-code code="C002" value="{{codes.langCd}}"></sc-code> <!-- 언어코드 -->
+			</sc-code-group>
+			<!-- 콤보박스 템플릿 목록 -->
+			<sc-ajax id="findCommonTemplateCode" url="findListApprovalTemplateComboboxItemByApprovalTemplateClass.do"
+					 last-response="{{codes.template}}">
+			</sc-ajax>
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax id="findApprovalTemplateByApprovalTypeCode"
+				 url="findApprovalTemplateByApprovalTypeCode.do"
+				 body="{{searchParam}}">
+		</sc-ajax>
+
+		<!-- 템플릿 조회 -->
+		<sc-ajax id="findTemplateBaseInfoByTemplateBaseId"
+				 url="findTemplateBaseInfoByTemplateBaseId.do"
+				 on-response="completeFindInfoTmp">
+		</sc-ajax>
+
+		<!-- 저장 -->
+		<sc-ajax id="saveList"
+				 url="saveApprovalTemplate.do"
+				 body="{{approvalInfo}}"
+				 on-response="completeSaveListApproval">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		<div class="vbox flex-4">
+			<cc-sub-title-bar title-text="결재 양식">
+				<sc-button text="저장" on-click="onSaveList" auth-s></sc-button>
+			</cc-sub-title-bar>
+			<cc-form-panel validation-group="save">
+				<cc-fieldset>
+					<sc-label text="결재 템플릿 언어"></sc-label>
+					<sc-combobox-field value="{{approvalInfo.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data"
+									   required="true" placeholder="필수" on-select="onSelectTemplateLangCode" readonly="[[!formula('isEditable')]]">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="결재 유형"></sc-label>
+					<sc-text-field value="{{approvalInfo.apvl_typ_ccd}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="사용 여부"></sc-label>
+					<sc-combobox-field display-field="label" value-field="data"
+									   items="{{codes.use_yn}}" value="{{approvalInfo.use_yn}}" placeholder="선택" readonly="[[!formula('isEditable')]]">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="결재 템플릿 명"></sc-label>
+					<sc-text-field value="{{approvalInfo.ctmpl_nm}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="공용템플릿 아이디"></sc-label>
+					<sc-combobox-field
+							display-field="basc_ctmpl_nm" value-field="basc_ctmpl_cd"
+							items="{{codes.template}}" value="{{approvalInfo.basc_ctmpl_cd}}" placeholder="선택" readonly="[[!formula('isEditable')]]">
+					</sc-combobox-field>
+				</cc-fieldset>
+			</cc-form-panel>
+
+			<cc-sub-title-bar title-text="내용">
+				<sc-button text="미리보기" on-click="onPreview" auth-r></sc-button>
+			</cc-sub-title-bar>
+			<!-- 템플릿 에디터 -->
+			<cc-source-editor id="editor" class="vbox flex" value="{{approvalInfo.ctmpl_cont}}" editable="true" disabled="[[!formula('isEditable')]]" view-hidden="true"></cc-source-editor>
+		</div>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-approval-form',
+
+            properties:{
+
+				// 코드 데이터
+                codes: {
+                    type: Object,
+					reset: false,
+                    value: function() {
+                        return {
+							use_yn:[],
+							eml_snd_typ_ccd:[]
+						};
+                    }
+                },
+				// 조회 조건
+				searchParam: {
+                    type: Object,
+					value: function() {
+                        return {};
+					}
+				},
+
+				// 결재 정보
+                approvalInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                }
+
+
+            },
+
+            formulas : {
+
+                // 수정 가능 상태
+                isEditable : function() {
+                    return !UT.isEmpty(this.searchParam.apvl_typ_ccd);
+                }
+            },
+
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data){
+                var me = this;
+
+                me.set("searchParam", {
+                    apvl_typ_ccd : data.apvl_typ_ccd,
+					lang_ccd : SCLocaleManager.getLocale()
+                });
+
+				me.set("approvalInfo.lang_ccd",SCLocaleManager.getLocale());
+
+                me.applyFormula();
+                me.onFindInfoApproval(me.completeFindInfoApproval);
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+                me.applyFormula();
+            },
+
+			onSelectTemplateLangCode:function (){
+				var me = this;
+				me.set("approvalInfo.ctmpl_cont", "");
+				me.set("approvalInfo.ctmpl_nm", "");
+				
+				me.set("searchParam.lang_ccd", me.get("approvalInfo.lang_ccd"));
+				me.onFindInfoApproval(me.completeFindMultiLangTemplateInfo);
+			},
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+
+			// 결재 상세 조회
+            onFindInfoApproval: function(callback){
+                var me = this;
+
+                UT.request(me.$.findApprovalTemplateByApprovalTypeCode, function(e, res) {
+					callback.call(me, e, res);
+				});
+            },
+
+            // 결재 조회 완료
+            completeFindInfoApproval: function(e, res){
+                var me = this,
+					result = res.response;
+
+                var approvalInfo =  result;
+                if(approvalInfo) {
+                    me.set("approvalInfo", approvalInfo);
+                    me.$.editor.value = approvalInfo.ctmpl_cont;
+                } else {
+                    me.set("approvalInfo", {});
+                    me.$.editor.value = "";
+                    me.set("approvalInfo.apvl_typ_ccd", me.get("searchParam.apvl_typ_ccd"));
+                    me.set("approvalInfo.ctmpl_nm", me.get("searchParam.ctmpl_nm"));
+                }
+
+				if(UT.isEmpty(me.get("approvalInfo.lang_ccd"))) {
+					me.set("approvalInfo.lang_ccd", me.get("searchParam.lang_ccd"));
+				}
+			},
+
+			completeFindMultiLangTemplateInfo: function(e, res){
+				var me = this,
+						result = res.response;
+				if(UT.isNotEmpty(result)){
+					me.set("approvalInfo.apvl_typ_ccd",result.apvl_typ_ccd);
+					me.set("approvalInfo.ctmpl_nm",result.ctmpl_nm);
+					me.set("approvalInfo.ctmpl_cont",result.ctmpl_cont);
+					me.set("approvalInfo.basc_ctmpl_cd",result.basc_ctmpl_cd);
+				}
+			},
+
+
+			// 저장
+            onSaveList: function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('결재 유형')),null,true); //"'{0}'을(를) 선택하십시오"
+					return;
+                }
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function(){ // 저장 하시겠습니까?
+					me.$.editor.syncValue();
+                    UT.request(me.$.saveList);
+				});
+            },
+
+            // 저장 완료
+            completeSaveListApproval: function(){
+                var me = this;
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.fire("save-approval");
+
+					me.set("searchParam.lang_ccd",me.get("approvalInfo.lang_ccd"));
+					me.onFindInfoApproval(me.completeFindMultiLangTemplateInfo);
+
+				});
+            },
+
+            // 미리보기 팝업
+            onPreview: function() {
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('결재 유형')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                me.$.editor.syncValue();
+                
+                var defaultParam = {
+                	tmpl_typ_ccd 		: 'APVL'								// 템플릿 구분(APVL:결재양식)
+                    ,basc_ctmpl_cd 	: me.approvalInfo.basc_ctmpl_cd		// 템플릿 코드(템플릿 기초 아이디)
+                	,task_uuid			: me.approvalInfo.apvl_typ_ccd 		// id
+                	,lang_ccd			: me.approvalInfo.lang_ccd 		// lang_ccd
+                	,contents		: me.approvalInfo.ctmpl_cont || ""	// 템플릿 안의 내용
+                };
+
+                var tmpPopup = UT.popup('ep-tmp-preview', me, 800, 600, {}, {titleText : "미리보기"});
+                tmpPopup.show();
+                tmpPopup.getWindowContent().load({defaultParam:defaultParam});
+            }
+
+        });
+	</script>
+
+</dom-module>

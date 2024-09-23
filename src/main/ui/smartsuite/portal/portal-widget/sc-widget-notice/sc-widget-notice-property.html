@@ -1,0 +1,75 @@
+<!--
+ * @Desc notice property
+ * @Author patrick.sung
+ * @Created 2016-05-03
+ -->
+
+<link rel="import" href="../sc-widget-content-behavior.html"/>
+<dom-module id="sc-widget-notice-property">
+    <template>
+        <style>
+            :host {
+                height: 100%;
+                border: 1px solid #d6d6d6;
+                margin: 5px 15px 15px 15px;
+                padding: 10px;
+                overflow: hidden;
+                -webkit-box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                box-sizing: border-box;
+            }
+
+            table {
+                margin: 33px;
+            }
+
+            table tr {
+                height: 30px;
+            }
+
+            .label {
+                width: 30%;
+                text-align: right;
+                padding-right: 10px;
+            }
+
+            #showCount {
+                width: 45px;
+            }
+        </style>
+
+        <sc-ajax id="protocolSave" url="../portal/saveWidgetProperties.do" body="{{settingsParsed}}"
+                 contentType="application/json" handle-as="json" method="post"></sc-ajax>
+
+        <table>
+            <tbody>
+            <tr>
+                <td class="label">#{표시 개수}</td>
+                <td><sc-text-field id="showCount" type="number" max-length="1" text-align="right" value="{{_data.count}}"></sc-text-field></td>
+            </tr>
+            </tbody>
+        </table>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-widget-notice-property',
+
+            behaviors: [BehaviorWidgetContent],
+
+            saveData: function() {
+                this.settingsParsed = {
+                    wdgt_id : this._data.widgetId,
+                    attr : JSON.stringify(this._data)
+                };
+
+                this.$.protocolSave.generateRequest();
+            }/* ,
+            
+            refresh: function() {
+                this.$.scope.value = this._data.scope;
+            } */
+        })
+    </script>
+</dom-module>

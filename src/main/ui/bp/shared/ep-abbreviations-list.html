@@ -1,0 +1,87 @@
+<dom-module id="ep-abbreviations-list">
+	<template>
+		<style>
+			:host {
+				position:absolute;
+				z-index: 2;
+				left:10px; top:3px;
+				/*transform: translate(-50%);*/
+				opacity: 1; width:300px; height:1px;
+			}
+			
+			.field-set {
+				display: inline-block;
+				margin-right: 20px;
+			}
+			
+			.tb-data {
+				width : 100%;
+				border-collapse:collapse;
+				border-spacing:0;
+				table-layout:auto;
+			}
+			
+			.tb-data td {
+				padding-left: 5px;
+				height:28px; vertical-align:middle; text-align:left;
+				border-bottom:1px solid #C2C2C2;
+			}
+			
+			.tb-data td > * {vertical-align : middle}
+			
+			.tb-form {position:sticky; top:0px;}
+			.tb-form th {position:sticky; top:0px; background-color:#e6ecef;}
+			.tb-form th, .tb-form td {height:20px; color:#000; padding:3px 5px; border:1px solid #ccc; text-align:center}
+			.tb-form th:first-child, .tb-form td:first-child  {border-left:0;}
+			.tb-form th:last-child, .tb-form td:last-child {border-right:0;}
+			.tb-data .status {display:inline-block; background:#d31144; border-radius:20px; line-height:20px; min-width:80px; color:#fff; padding: 0 7px}
+		</style>
+		
+		<cc-sub-title-bar title-text="축약어 정보" i18n-abbr="false"></cc-sub-title-bar>
+		
+		<div style="text-align:center">
+			<div class="field-set">
+				<table class="tb-form">
+					<colgroup>
+						<col style="width:250px"></col>
+						<col style="width:250px"></col>
+						<col></col>
+					</colgroup>
+					<tr>
+						<th style="text-align:center"/><sc-label text="축약어"></sc-label></td>
+						<th style="text-align:center"/><sc-label text="메세지"></sc-label></td>
+					</tr>
+				</table>
+				<template is="dom-repeat" items="[[resultList]]">
+					<table class="tb-data">
+						<tr>
+							<td style="text-align:left;width:250px;">[[item.key]]</td>
+							<td style="text-align:left;width:250px;">[[item.value]]</td>
+						</tr>
+					</table>
+				</template>
+			</div>
+		</div>
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-abbreviations-list",
+            properties: {
+                resultList: {
+                    type: Array,
+                    value: function(){
+                        return [];
+                    }
+                }
+            },
+			initialized : function() {
+			},
+			
+            load: function(resultList) {
+                var me = this;
+                me.set("resultList", resultList);
+            }
+        });
+    </script>
+</dom-module>

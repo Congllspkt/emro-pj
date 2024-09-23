@@ -1,0 +1,205 @@
+@charset "utf-8";
+
+/* -------------------------------------------------------------------------
+2020.01.20 ch.byeon - 디자인팀
+2020.06.19 ch.byeon - 디자인팀 : content add
+-------------------------------------------------- ----------------------  */
+
+/* The Modal (background) */
+.modal {
+  display: none;  /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1000; /* Sit on top */
+  padding-top: 20em; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+/* popup Content */
+.modal-content {
+  position: relative;
+  background-color: #fff;
+  margin: auto;
+  padding: 0;
+  letter-spacing: -1px;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  -webkit-animation-name: animatetop;
+  -webkit-animation-duration: 0.4s;
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+/* Add Animation - 움직이는 효과 주고 싶을 때 사용
+@-webkit-keyframes animatetop {
+  from {top:-300px; opacity:0}
+  to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+  from {top:-300px; opacity:0}
+  to {top:0; opacity:1}
+} */
+
+/* The Close Button */
+hr {margin-top:17px; margin-bottom:17px; border:0; border-top:1px solid #d8d8d8}
+.close {position:absolute; display:block; width:20px; height:20px; background: url('../img/login/close.png') no-repeat 0 0; font-weight:normal; top:12px; right:30px}
+.close:hover, .close:focus {background: url('../img/login/close.png') no-repeat 0 -20px; cursor:pointer}
+.modal-header {padding:10px 30px 12px; background:#6171ea; border-top:2px solid #3d4dc1; color:#ffffff}
+.modal-header h1 {font-weight:500; font-size:17px;}
+.modal-header img {width:170px}
+.modal-body {padding:20px 30px; line-height: 1.5; box-sizing:border-box}
+.modal-body h2 {color:#333333; font-weight:500; font-size:15px; line-height:15px; border-left: 3px solid #6171ea; padding-left: 5px; margin-bottom:10px}
+.modal-body p {color:#666666; font-size:13px; margin-bottom:15px}
+.modal-body .content {padding:20px; background:#f8f8f8; margin-bottom:20px; color:#666666}
+.modal-body .content ul {width:100%; box-sizing:border-box}
+.modal-body .content ul li {padding-left:12px; font-size:13px}
+.modal-body .content ul.style {padding-left:10px}
+.modal-body .content ul.style li{background: url('../img/login/li_style.png') no-repeat 2px 10px}/*20200701*/
+.modal-footer {text-align:center}
+.modal-footer a {display:inline-block; color:#fff; background:#252b7a; font-size:13px; font-weight:600; text-align:center; padding:7px 10px; border-radius:5px}
+.modal-footer a:hover {background:#1b2167}
+
+/* PW찾기 */
+#Modal1 .modal-content{width:490px}
+#my_frame1 {width:490px; height:313px}
+.pw_serach p {background: url('../img/login/li_style_2.png') no-repeat left 8px; padding-left:8px; color:#777777; font-size:13px; margin-bottom:15px}
+.pw_serach .content ul.style {padding-left:0}
+.pw_serach .content ul li {display:flex; flex-flow:row wrap}
+.pw_serach .content ul li label {color:#666666}
+.pw_serach .content ul li input {height:27px; line-height:27px}/* 20200630 */
+.pw_serach .content ul li {margin-bottom:10px}
+.pw_serach .content ul li:nth-last-child(1) {margin-bottom:0}
+.pw_serach .content ul li label {display:flex; vertical-align:middle; line-height: 1.8; width:30%}
+.pw_serach .content ul li span {display:flex; vertical-align:middle; width:70%}
+.pw_serach .content ul li span input,.pw_serach .content ul li select{display:inline-block; width:100%; box-sizing:border-box; border:1px solid #b8b8b8}
+.pw_serach .content ul li select {padding:0 10px; height:27px; background:#ffffff url(../img/login/select_arr.png) no-repeat 95% 50%; border-radius:5px; letter-spacing:0; box-sizing:border-box}
+.pw_result {height: 195px;box-sizing:border-box;padding: 30px 20px !important;}/* 20200629 */
+.pw_result p, .id_result p{margin-bottom: 5px}
+
+/* ID찾기 */
+#Modal7 .modal-content{width:490px}
+#my_frame7 {width:490px; height:276px}
+.id_serach .content {padding:38px 20px}
+.id_serach .content ul li.form_2 span input {display:inline-block; margin:0 0.25em; box-sizing:border-box}
+.id_serach .content ul li.form_2 span input:nth-child(1) {margin-left:0}
+.id_serach .content ul li.form_2 span input:nth-child(3) {margin-right:0}
+.id_serach p b{color:#333333}/* 20200630 */
+.id_result {height: 160px;box-sizing:border-box; padding:15px !important;}/* 20200701 */
+.id_result b{margin:0 5px; color:#6171ea !important;}/* 20200701 */
+.id_result ul {height:130px; overflow:auto;}/* 20200701 */
+.id_result ul li{ background: url('../img/login/li_style.png') no-repeat 2px 10px; margin-bottom:0 !important;}/* 20200701 */
+
+/* 신용평가안내 */
+#Modal8.modal {padding-top:14.5em}
+#Modal8 .modal-content{width:630px}
+#my_frame8 {width:630px; height:457px}
+.credit_box {padding:50px 30px 20px}
+.credit_box h1 {margin-bottom:50px; font-size:24px; font-weight:500; text-align:center}
+.credit_box p {margin-bottom:5px}
+.credit_box .content {margin:30px 0}
+.credit_box .content ul.style {padding-left:0}
+.credit_box .content ul.style li{margin-bottom:8px; font-weight:600; background: url(../img/login/li_style.png) no-repeat left 7px;}
+.credit_box .content ul.style li:last-child{margin-bottom:0}
+.credit_box .credit_btn {display:flex; justify-content:space-between; padding:12px 0 20px}
+.credit_box .credit_btn a {margin:0 5px; padding:10px; width:33.3333%}
+.credit_box .credit_btn span.icon {display:inline-block; margin-left:5px; width:7px; height:9px; background: url(../img/login/arr_over.png) no-repeat center center;}
+
+/* 시스템문의 */
+#Modal9 .modal-content{width:490px}
+#my_frame9 {width:490px; height:230px}
+.help_desk .content {padding:40px 50px}
+.help_desk ul {padding-left:85px; height:65px; background: url(../img/login/h_icon.png) no-repeat left center; box-sizing:border-box; letter-spacing:-0.05em}
+.help_desk ul li {padding-left:0}
+.help_desk ul li:nth-child(1) {font-size:25px; font-weight:600; color:#333333}
+
+/* 윤리경영 */
+#Modal10 .modal-content{width:490px}
+#my_frame10 {width:490px; height:193px}
+.ethical .content {padding:40px; text-align:center}
+.ethical p {margin-bottom:0}
+
+/* 공지사항 */
+#Modal2.modal, #Modal3.modal {padding-top:14em}
+#Modal2 .modal-content, #Modal3 .modal-content {width:760px; height:545px}
+#my_frame2, #my_frame3 {width:760px; height:515px}
+div.notice_box {border-top:1px solid #000000; border-bottom:1px solid #808080; margin-bottom:20px}/*20200701*/
+.modal-body table.notice {width:100%; text-align:center; font-size:13px}/*20200701*/
+.modal-body table.notice th, .modal-body table.notice td {vertical-align:middle; padding:8px 10px; box-sizing:border-box; overflow:hidden; border-right:1px solid #dddddd}
+.modal-body table.notice th {font-weight:500; background:#f5f5f5; color:#333333}
+.modal-body table.notice td {color:#666666}
+.modal-body table.notice td:nth-child(2) {text-align:left;}
+.modal-body table.notice td:nth-child(2) a {width:440px; overflow:hidden; display:inline-block; text-overflow:ellipsis; white-space:nowrap}
+.modal-body table.notice th:last-child,
+.modal-body table.notice td:last-child {border-right:0}
+.modal-body table.notice td a {color:#333333}
+.modal-body table.notice td a:hover {color:#6171ea; text-decoration:underline}
+.view_table table.notice th, .view_table table.notice td {table-layout:fixed; border-right:0; border-bottom:1px solid #dddddd}
+.view_table table.notice td {text-align:left}
+.view_table table.notice td:nth-child(1) {border-bottom:0}
+.view_table table.notice td span.title{max-width:500px; overflow:hidden; display:block; text-overflow:ellipsis; white-space:nowrap; box-sizing:border-box; color:#6171ea; font-weight:600}
+.view_table table.notice td a.file {max-width:180px; overflow:hidden; display:block; text-overflow:ellipsis; white-space:nowrap; box-sizing:border-box}
+.view_table table.notice td div.table_cont {padding:20px; overflow:auto; height:295px; line-height:18px; box-sizing:border-box; color:#333333}
+.view_table table.notice td div.table_cont p {background:none; margin-bottom:5px; color:#333333}
+.notice_list {height:520px}/* 20200630 */
+
+/*page number*/
+.paging {display:flex; justify-content:center; width:100%}
+.paging a {display:inline-block; font-size:13px; color:#c2c2c2; padding:3px 10px; margin:0 2px}
+.paging a.on, .paging a:hover {color:#333333; font-size:13px; border-radius:5px}
+.paging a.on {font-weight:600}
+.paging a.btnFro,.paging a.btnPre,
+.paging a.btnNex,.paging a.btnEnd {width:27px; height:27px; margin: 0 1px; background:#fff url('../img/login/arr_paging.png') no-repeat ; box-sizing:border-box; border:1px solid #dbdbdb; border-radius:5px}
+.paging a.btnFro:hover,.paging a.btnPre:hover,
+.paging a.btnNex:hover,.paging a.btnEnd:hover {border:1px solid #aaaaaa;}
+.paging a.btnFro {background-position:6px center}
+.paging a.btnPre {background-position:-26px center; margin-right:10px}
+.paging a.btnNex {background-position:-49px center; margin-left:10px}
+.paging a.btnEnd {background-position:-82px center}
+
+/* 신규협력사등록안내 */
+#Modal4.modal {padding-top:7em}
+#Modal4 .modal-content {width:860px; height:760px}
+#my_frame4 {width:860px; height:717px}
+.new_info .header {display:flex; justify-content: space-between}
+.new_info .header p {background: url('../img/login/li_style_2.png') no-repeat left 8px; padding-left:8px; color:#777777; font-size:13px; margin-bottom:15px}
+.new_info .header div {width:607px}
+.new_info .header a {display:inline-block; width:194px; height:60px; line-height:60px; background: url('../img/login/new_btn.png') no-repeat 18px 14px; text-align:center; color:#4a59c5; font-weight:600; letter-spacing:-1px; border:2px solid #6171ea; border-radius:5px}
+.new_info .header a:hover {background:#f4f5ff url('../img/login/new_btn.png') no-repeat 18px 14px;}
+.new_info .content {padding-bottom:0; margin-bottom:0}
+.new_info .modal-footer {height:86px; padding:25px 20px; box-sizing:border-box; background:#ececf0 url('../img/login/f_icon.png') no-repeat 20px 20px;}
+.new_info .modal-footer ul {width:760px; font-size:0; display:flex; justify-content: space-between}
+.new_info .modal-footer ul li {height:36px; box-sizing:border-box}
+.new_info .modal-footer ul li:nth-child(1) {width:210px; line-height:36px; padding-left: 46px; font-size:14px; font-weight:600; color:#666666}
+.new_info .modal-footer ul li:nth-child(2) {width:550px; padding-left:15px; border-left:1px solid #d6d6d6; font-size:13px; text-align:left}
+.new_info .modal-footer ul li:nth-child(2) span {display:block; margin-bottom:3px}
+.new_info .modal-footer ul li:nth-child(2) span:nth-child(1) {margin-top:-3px}
+.new_info .modal-footer ul li:nth-child(2) span:nth-child(2) {margin-bottom:0}
+
+/* 개인정보처리방침 이용약관 */
+#Modal5.modal, #Modal6.modal {padding-top:9em}
+#Modal5 .modal-content, #Modal6 .modal-content {width:880px; height:670px}
+#my_frame5, #my_frame6 {width:880px; height:627px}
+.clause_box {padding:30px; box-sizing:border-box;}
+.clause_box .content {padding:20px; font-size:13px; min-height:480px; height:502px; margin-bottom:0; overflow:auto}
+.clause_box .content h1 {font-size:14px; font-weight:600; color:#333333; margin:10px 0}
+.clause_box .content h1:nth-child(1) {margin-top:0}
+.clause_box .content h3 {font-weight:600; padding-top:10px;}
+.clause_box .content p {margin-bottom:5px}
+.clause_box .content ol {list-style:decimal; padding-left:15px; padding-bottom:5px}
+.clause_box .content ul {padding-bottom:5px; padding-left:5px}
+
+
+/* 입찰공고 */
+#Modal11.modal {padding-top:14em}
+#Modal11 .modal-content {width:760px; height:545px}
+#my_frame11 {width:760px; height:502px}
+
+/* sc-window *//* 20200629 */
+sc-window {border:0 !important; box-shadow: none !important;}
+sc-window>.header {padding: 5px 25px; height: 42px; background-color: #6171ea;  box-sizing: border-box;}
+sc-window>.header>sc-button {background-color:#6171ea}
+sc-window>.header>sc-button:hover {background-color:#5464dc}
+sc-window>div.content-wrap>div.content {border-radius: 0 !important;}

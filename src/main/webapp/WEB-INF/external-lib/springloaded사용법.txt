@@ -1,0 +1,10 @@
+1. tomcat VM arguments에 아래 구문 추가
+-javaagent:[프로젝트경로]\src\main\webapp\WEB-INF\external-lib/springloaded-1.2.7.RELEASE.jar   -noverify
+
+2. tomcat 설정의 Publishing 패널에 Automatically publish when resources changed 체크
+
+3. tomcat 설정의 Server Options 패널의 모든 체크 해제
+
+4. tomcat 설정의 module 탭의 Edit... 클릭해서 Auto Reloading Enabled 체크 해제
+
+위 설정 완료 시 class 파일을 hot swapping 하여 재기동 없이 배포할 수 있습니다.  

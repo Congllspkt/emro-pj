@@ -1,0 +1,136 @@
+<dom-module id="cc-collapse-panel">
+<style>
+	:host {
+				display: block;
+			}
+</style>
+	<template>
+		
+		<!-- Title 영역 -->
+		<div id="title" class="title">
+			<div class="title-text">[[translate(titleText)]]</div>
+			<!-- folding-down : 접기 이미지  -->
+			<sc-button class="folding-down collapsible" hidden="{{!collapsible}}"></sc-button>
+		</div>
+        
+        <!-- Content 영역 -->
+		<div class="content-wrap">
+			<content></content>
+		</div>
+		
+	</template>
+	
+	<script>
+		Polymer({
+    		is: 'cc-collapse-panel',
+    	 
+    		/**
+			* `<sc-panel>` 엘리먼트의 클래스 명입니다.
+			* @type {String}
+			* @default SCPanel
+			*/
+    	 	className : 'CCCollapsePanel',
+    	 	
+    	 	properties : {
+    			/** 헤더에 표현될 타이틀 문자열 */
+    			titleText : String,
+    			
+    			__panelCollapsibleEnabled__: {
+					type: Object,
+					value: true
+				},
+				
+				collapsible: {
+					type: Object,
+					value: true
+				},
+    		},
+    		
+    		observers : [
+				'_collapsibleChanged(collapsible, disabled, hidden)'
+			],
+			
+			/** [Smartsuite 10] 검색(Content) 영역 엘리먼트 */
+			get _contentElement() {
+				if(!this._contentEl) {
+					this._contentEl = this.querySelector('.content-wrap');
+				}
+				return this._contentEl;
+			},
+			
+			ready: function(){
+			},
+			
+			attached : function() {
+				this.defer(this._deferPanelAttachedCallback);
+			},
+			
+			_deferPanelAttachedCallback : function() {
+				if(this.__panelCollapsibleEnabled__) {
+					this._addPanelCollapseButtonTapListener();
+				}
+			},
+			
+			/**
+			* collapsible 프로퍼티가 변경되면 접기버튼의 이벤트를 등록/해지 합니다.
+			*/
+			_collapsibleChanged : function(collapsible, disabled, hidden) {
+				var oldCollapsibleEnabled = this.__panelCollapsibleEnabled__,
+					collapsibleEnabled = (collapsible === true && !disabled && !hidden);
+				
+				this.__panelCollapsibleEnabled__ = collapsibleEnabled;
+				if(!this.isAttached || oldCollapsibleEnabled === collapsibleEnabled) {
+					return;
+				}
+				if(this.__panelCollapsibleEnabled__) {
+					this._addPanelCollapseButtonTapListener();	
+				}
+				else if(this.__panelCollapseButtonTapEventListening__) {
+					this._removePanelCollapseButtonTapListner();
+				}
+			},
+			
+			/**
+			* 패널의 접기버튼에 이벤트를 등록합니다.
+			*/
+			_addPanelCollapseButtonTapListener : function() {
+				if(!this.__panelCollapseButtonTapEventListening__) {
+					this.__panelCollapseButtonTapEventListening__ = true;
+					this.listen(this._collapseButtonElement, 'click', '_onPanelCollapseButtonClick');
+				}
+			},
+			
+			/**
+			* 패널의 접기버튼에 이벤트를 해지합니다.
+			*/
+			_removePanelCollapseButtonTapListner : function() {
+				if(this.__panelCollapseButtonTapEventListening__) {
+					delete this.__panelCollapseButtonTapEventListening__;
+					this.unlisten(this._collapseButtonElement, 'click', '_onPanelCollapseButtonClick');
+				}
+			},
+			
+			/**
+			* 패널의 접기버튼 클릭 이벤트 핸들러 입니다.
+			*/
+			_onPanelCollapseButtonClick : function(e) {
+				if(this.collapsed) {
+					this.expand();
+				}
+				else {
+					this.collapse();
+				}
+				this.fire("sc-resize", e);
+			},
+			
+    	 	behaviors : [
+    	 		Polymer.SCElementBehavior,
+    	 		Polymer.SCCSSClassStyleBehavior,
+    			Polymer.SCCollapsibleBehavior
+    	 	]
+		
+	  	});
+		
+	</script>
+	
+</dom-module>

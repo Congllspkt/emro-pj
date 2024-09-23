@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+ATHF: 첨부파일
+ -->
+
+<mapper namespace="mobile-attach">
+
+  <select id="findListAttach" resultType="map">
+    /* mobile-attach.findListAttach: 첨부파일 목록 조회 */
+    SELECT ATHF_UUID
+    	 , ATHF_ORIG_NM
+         , ATHF_PATH
+         , ATHF_SIZE
+      FROM ATHF
+     WHERE TEN_ID = #{p.tenant}
+       AND ATHG_UUID = #{p.athg_uuid}
+       AND STS != 'D'
+     ORDER BY SORT ASC
+    </select>
+    
+    <update id="deleteAttach">
+    /* mobile-attach.deleteAttach: 첨부파일 삭제 */
+    UPDATE ATHF
+       SET STS = 'D'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{p.username}
+     WHERE TEN_ID = #{p.tenant}
+       AND ATHF_UUID = #{p.athf_uuid}
+    </update>
+    
+</mapper>

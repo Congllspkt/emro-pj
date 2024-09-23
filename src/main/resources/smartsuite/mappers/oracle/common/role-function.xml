@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+ROLE_ACT: 롤기능
+ -->
+
+<mapper namespace="role-function">
+
+    <insert id="insertRoleFunc">
+    /* role-function.insertRoleFunc: 롤기능 등록 */
+    INSERT 
+      INTO ROLE_ACT (
+           TEN_ID
+         , ROLE_CD
+         , MENU_CD
+         , ACT_CD
+         , REGR_ID
+         , REG_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.role_cd}
+         , #{p.menu_cd}
+         , #{p.act_cd}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <delete id="deleteRoleFunc">
+    /* role-function.deleteRoleFunc: 롤기능 삭제 */
+    DELETE 
+      FROM ROLE_ACT
+     WHERE TEN_ID = #{g.tenant}
+       AND ROLE_CD = #{p.role_cd}
+       AND MENU_CD = #{p.menu_cd}
+       AND ACT_CD = #{p.act_cd}
+    </delete>
+
+    <select id="getCountRoleFunc" resultType="int">
+    /* role-function.getCountRoleFunc: 롤기능 카운트 */
+    SELECT COUNT(*)
+      FROM ROLE_ACT
+     WHERE TEN_ID = #{g.tenant}
+       <if test='p.role_cd != null'>
+       AND ROLE_CD = #{p.role_cd}
+       </if>
+       AND MENU_CD = #{p.menu_cd}
+       AND ACT_CD = #{p.act_cd}
+    </select>
+
+    <delete id="deleteRoleFuncAll">
+    /* role-function.deleteRoleFuncAll : 매핑된 롤메뉴 삭제 */
+        DELETE FROM ROLE_ACT
+         WHERE TEN_ID  = #{g.tenant}
+           AND MENU_CD = #{p.menu_cd}
+    </delete>
+
+
+    <select id="findListRoleMenuWithMenuFunc" resultType="map">
+        /* findListRoleMenuWithMenuFunc */
+        SELECT MM.PAR_MENU_CD
+             , MM.TEN_ID
+             , MM.MENU_CD
+             , MM.USR_TYP_CCD
+             , MM.MENU_SORT
+             , CASE
+                   WHEN MLANG.MENU_NM IS NULL THEN MM.ACT_NM
+                   ELSE MLANG.MENU_NM
+            END MENU_NM
+             , MLANG.LANG_CCD
+             , MLANG.MENU_CD AS ML_MENU_CD
+             , RMENU.ROLE_CD
+             , CASE
+                   WHEN RACT.ACT_CD IS NULL OR RACT.ACT_CD = '' THEN 'N'
+                   ELSE 'Y'
+            END AS USE_YN
+             , MM.ACT_CD
+        FROM (
+                 SELECT MN.PAR_MENU_CD
+                      , MN.TEN_ID
+                      , MN.MENU_CD
+                      , MN.USR_TYP_CCD
+                      , MN.MENU_SORT
+                      , '' AS ACT_NM
+                      , '' AS ACT_CD
+                      , MN.USE_YN
+                      , MN.STS
+                      , #{p.role_cd} AS ROLE_CD
+                 FROM MENU MN
+                 WHERE MN.TEN_ID = #{g.tenant}
+                   AND MN.USR_TYP_CCD = #{p.usr_typ_ccd}
+                   AND MN.STS != 'D'
+                   AND MN.USE_YN = 'Y'
+                 UNION ALL
+                 SELECT MA.MENU_CD AS PAR_MENU_CD
+                      , MA.TEN_ID
+                      , CONCAT(MA.MENU_CD, MA.ACT_CD) AS MENU_CD
+                      , #{p.usr_typ_ccd} AS USR_TYP_CCD
+                      , 0 AS MENU_SORT
+                      , MA.ACT_NM
+                      , MA.ACT_CD AS ACT_CD
+                      , 'Y' AS USE_YN
+                      , 'C' AS STS
+                      , #{p.role_cd} AS ROLE_CD
+                 FROM MENU_ACT MA
+             ) MM
+                 LEFT OUTER JOIN MENU_MULTLANG MLANG
+                                 ON MM.TEN_ID = MLANG.TEN_ID
+                                     AND MM.MENU_CD = MLANG.MENU_CD
+                                     AND MLANG.LANG_CCD = #{p.lang_ccd}
+                 LEFT OUTER JOIN ROLE_MENU RMENU
+                                 ON MM.TEN_ID = RMENU.TEN_ID
+                                     AND MM.MENU_CD = RMENU.MENU_CD
+                                     AND RMENU.ROLE_CD = #{p.role_cd}
+                 LEFT OUTER JOIN ROLE_ACT RACT
+                                 ON MM.TEN_ID = RACT.TEN_ID
+                                     AND MM.PAR_MENU_CD = RACT.MENU_CD
+                                     AND MM.ROLE_CD = RACT.ROLE_CD
+                                     AND MM.ACT_CD = RACT.ACT_CD
+        WHERE MM.TEN_ID = #{g.tenant}
+          AND MM.USR_TYP_CCD = #{p.usr_typ_ccd}
+          AND MM.STS != 'D'
+          AND MM.USE_YN = 'Y'
+        ORDER BY MM.MENU_SORT
+    </select>
+
+    <select id="findListMenuFuncRole" resultType="map">
+        /* role.findListMenuFuncRole: 기능코드 맵핑된 롤 조회 */
+        SELECT RH.ROLE_CD
+             ,RH.ROLE_NM
+             ,(CASE WHEN RF.ACT_CD IS NOT NULL THEN 'Y' ELSE 'N' END) AS USE_YN
+             ,RF.MENU_CD
+        FROM ROLE RH
+                 LEFT OUTER JOIN ROLE_ACT RF
+                                 ON RF.TEN_ID = RH.TEN_ID
+                                     AND RF.ROLE_CD = RH.ROLE_CD
+                                     AND RF.MENU_CD = #{p.menu_cd}
+                                     AND RF.ACT_CD = #{p.act_cd}
+        WHERE RH.TEN_ID = #{g.tenant}
+          AND RH.USE_YN = 'Y'
+          AND RH.STS != 'D'
+    </select>
+
+    <delete id="deleteRoleMenuFunc">
+        DELETE
+        FROM ROLE_ACT
+        WHERE
+        TEN_ID = #{g.tenant}
+        AND
+        ROLE_CD = #{p.role_cd}
+        <if test="p.menu_cd != null and p.menu_cd != ''">
+            AND MENU_CD = #{p.menu_cd}
+        </if>
+    </delete>
+    
+</mapper>

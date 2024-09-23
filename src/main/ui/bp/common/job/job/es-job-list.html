@@ -1,0 +1,273 @@
+<dom-module id="es-job-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+
+    </style>
+
+    <template>
+        <!-- 코드 조회 -->
+        <sc-request-group init>
+            <!-- 공통 코드 조회 -->
+            <sc-code-group>
+                <sc-code code="C010" value="{{codes.C010}}" ></sc-code> <!-- 구매 그룹 유형 -->
+            </sc-code-group>
+            <!-- 전체 회사 목록 -->
+            <sc-ajax id="comboAllCompanyList"
+                     url="findListCompanyCodeForCombobox.do"
+                     body="{{searchParam}}"
+                     last-response="{{codes.allCompanyList}}">
+            </sc-ajax>
+        </sc-request-group>
+
+        <!-- 직무코드 조회 -->
+        <sc-ajax id="findListPurchaseGroupCategory"
+                 url="findListPurchaseGroupCategory.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <!-- 직무코드 삭제 -->
+        <sc-ajax id="deleteListJobAndPurchaseGroupCategory"
+                 url="deleteListJobAndPurchaseGroupCategory.do"
+                 on-response="completeDeleteList">
+        </sc-ajax>
+
+        <!-- 직무코드 저장 -->
+        <sc-ajax id="saveListPurchaseGroupCategory"
+                 url="saveListPurchaseGroupCategory.do"
+                 on-response="completeSaveList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row" auth-r>
+            <cc-fieldset>
+                <sc-label text="회사 명"></sc-label>
+                <sc-combobox-field display-field="comp_nm" value-field="co_cd" selected-index="0" required="true"
+                                   items="{{codes.allCompanyList}}" value="{{searchParam.co_cd}}" placeholder="선택"
+                                   validation-group="search"></sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset hidden="true">
+                <sc-label text="유형"></sc-label>
+                <sc-combobox-field display-field="label" value-field="data" selected-index="0"
+                                   items="{{codes.C010}}" value="{{searchParam.purc_grp_typ_ccd}}" placeholder="선택"></sc-combobox-field>
+            </cc-fieldset>
+        </cc-search-condition-panel>
+
+        <sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex"
+                 validation-group="save">
+            <cc-grid-toolbar>
+                <sc-button text="추가" on-click ="onAddRow" auth-s></sc-button>
+                <sc-button text="삭제" on-click = "onDeleteList" auth-s></sc-button>
+                <sc-button text="저장" on-click="onSaveList" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="purc_grp_cd" header-text="구매 그룹 코드" width="100" text-align="center" required="true" max-length
+                                item-editable-function="onInsertEditable"></sc-data-column>
+                <!--<sc-combobox-column data-field="purc_grp_typ_ccd" header-text="구매 그룹 유형 명" width="130" text-align="center" items="{{codes.C010}}" display-field="label" value-field="data"></sc-combobox-column>-->
+                <sc-data-column data-field="purc_grp_nm" header-text="구매 그룹 명" width="200" text-align="left" editable="true" required="true" max-length="60"></sc-data-column>
+                <sc-data-column data-field="purc_grp_nm_en" header-text="구매 그룹 명 영문" width="200" text-align="left" editable="true" required="true" max-length="60"></sc-data-column>
+                <sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="60" text-align="center" editable="true" checked-value="Y" un-checked-value="N" display-checkbox="false"></sc-checkbox-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="co_cd"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "es-job-list",
+            properties: {
+                // 코드 데이터
+                codes : {
+                    type : Object,
+                    reset : false,
+                    value : function() {
+                        return {
+                            allCompanyList : [], // 회사콤보
+                            C010 : [] //구매 그룹 유형콤보
+                        };
+                    }
+                },
+
+                // 조회 조건
+                searchParam : {
+                    type : Object,
+                    value : function() {
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+            // 초기화 완료 후 호출 함수
+            initialized: function() {
+                var me = this;
+                // 직무코드 현황 조회
+                me.onFindList();
+            },
+
+            /******************************
+             * 그리드 이벤트
+             ******************************/
+            // 신규추가 후 editable 제어
+            onInsertEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+
+            /******************************
+             * 버튼 이벤트
+             ******************************/
+            // 검색(조회)
+            onFindList: function() {
+                var me = this;
+
+                // 조회 유효성 체크
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.request(me.$.findListPurchaseGroupCategory);
+            },
+
+            // 추가
+            onAddRow: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+				
+				// 추가 시 필수 조회 조건 체크
+                if(!me.validate('search')){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+				/* 유형 콤보 박스 hidden 처리에 따라 해당 부분 주석 처리 */
+                /*if(UT.isEmpty(me.searchParam.purc_grp_typ_ccd)){
+                    UT.alert(me.translate("STD.E1012",null,me.translate('구매 그룹 유형')),null,true); // "'{0}'을(를) 선택하십시오"
+                    return;
+                }*/
+
+                // 그리드 신규행 추가
+                provider.addItemAt(0,{
+                    purc_grp_typ_ccd :  me.searchParam.purc_grp_typ_ccd,  	// 구매 그룹 유형
+                    co_cd: me.searchParam.co_cd,                // 회사
+                    use_yn: "Y"
+                });
+            },
+
+            // 삭제
+            onDeleteList: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+
+                var checked = provider.selectionCheckedItems();
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600"); // "선택된 항목이 없습니다",
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteListJobAndPurchaseGroupCategory.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteListJobAndPurchaseGroupCategory);
+                    }
+                });
+
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this;
+                UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+                    me.onFindList();
+                });
+            },
+
+            // 저장
+            onSaveList: function() {
+                var me = this;
+
+                // 저장 유효성 체크
+                if(!me.validation()) {
+                    return;
+                }
+
+                var provider = me.$.gridPanel.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { //저장 하시겠습니까?
+                    me.$.saveListPurchaseGroupCategory.body = {
+                        insertPurchaseGroupCategoryList: created,
+                        updatePurchaseGroupCategoryList: updated
+                    };
+                    UT.request(me.$.saveListPurchaseGroupCategory);
+                });
+
+            },
+
+            // 저장 유효성 체크
+            validation: function() {
+                var me = this;
+
+                // 기본 validate
+                if(!me.validate('save')) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return false;
+                }
+
+                // 중복 체크
+                var provider = me.$.gridPanel.getDataProvider(),
+                    rows = provider.getItems();
+                var unique_check = {};
+                for (var i=0, len = rows.length; i<len; i++) {
+                    if(typeof unique_check[rows[i].purc_grp_cd] == "undefined"){
+                        unique_check[rows[i].purc_grp_cd] = 0;
+                    } else {
+                        UT.alert(me.translate("STD.E1000",null, me.translate('직무코드')),null,true); // "'{0}'에 동일한 값이 존재합니다"
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this
+
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onFindList();
+                });
+            }
+
+        });
+    </script>
+
+</dom-module>

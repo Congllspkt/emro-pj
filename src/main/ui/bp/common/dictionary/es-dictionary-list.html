@@ -1,0 +1,200 @@
+<dom-module id="es-dictionary-list">
+
+	<style>
+        :host {
+            @apply(--hbox-layout);
+        }
+    </style>
+	
+	<template>
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		
+    	<sc-ajax id="findListDictionary"
+                 url="findListDictionary.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+        
+        <sc-ajax id="saveListDictionary"
+                 url="saveListDictionary.do"
+                 on-response="completeSaveListDictionary">
+        </sc-ajax>
+        
+        <sc-ajax id="deleteDictionary"
+                 url="deleteDictionary.do"
+                 on-response="completeDeleteDictionary">
+        </sc-ajax>
+        
+    	<div class="vbox flex">
+
+			<cc-search-condition-panel on-search="onFindList" on-enter="onEnter" search-condition-cls="label-row" auth-r>
+				<cc-fieldset>
+					<sc-label text="한국어"></sc-label>
+					<sc-text-field value="{{searchParam.att_nm}}" max-length="20"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="영문"></sc-label>
+					<sc-text-field value="{{searchParam.att_en}}" max-length="20"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="영문 대체"></sc-label>
+					<sc-text-field value="{{searchParam.att_en_alt}}" max-length="20"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset>
+					<sc-label text="영문 약어"></sc-label>
+					<sc-text-field value="{{searchParam.att_en_abb}}" max-length="20"></sc-text-field>
+				</cc-fieldset>
+			</cc-search-condition-panel>
+				
+			<sc-grid id="gridPanel" class="flex" editable="[[isEditMode]]" use-state="[[isEditMode]]" use-selection="[[isEditMode]]" use-selection="[[isEditMode]]" 
+				data-provider="{{resultList}}" on-item-click="onItemClick">
+				<cc-grid-toolbar title-text="용어집 목록">
+        			<sc-button text="추가" on-click="onClickAdd" 	hidden="[[!isEditMode]]"></sc-button>
+        			<sc-button text="저장" on-click="onClickSave" 	hidden="[[!isEditMode]]"></sc-button>
+        			<sc-button text="삭제" on-click="onClickDelete" 	hidden="[[!isEditMode]]"></sc-button>
+					<sc-button text="[[formula('modeChangeBtnText')]]" on-click="onClickChangeBtn" auth-s i18n-disabled></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column	data-field="att_nm"		header-text="한국어"		width="100"	text-align="left" 	item-editable-function="onDictionaryEditable"></sc-data-column>
+					<sc-data-column	data-field="att_en"		header-text="영문"		width="150"	text-align="left" 	item-editable-function="onDictionaryEditable"></sc-data-column>
+					<sc-data-column	data-field="att_en_alt"	header-text="영문 대체"	width="150"	text-align="left" 	editable="[[isEditMode]]"></sc-data-column>
+					<sc-data-column	data-field="att_en_abb"	header-text="영문 약어"	width="150"	text-align="left" 	editable="[[isEditMode]]"></sc-data-column>
+					<sc-data-column	data-field="comment"	header-text="의견"		width="150"	text-align="left" 	editable="[[isEditMode]]"></sc-data-column>
+					<sc-checkbox-column	data-field="del"	header-text="삭제 여부"		width="80"	text-align="left" 	editable="[[isEditMode]]" display-checkbox="false"></sc-checkbox-column>
+				</sc-grid-columns>
+			</sc-grid>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'es-dictionary-list',
+			properties: {
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                },
+                isEditMode: {
+                    type: Boolean,
+                    value : false
+                }
+            },
+            
+            formulas: {
+                modeChangeBtnText : function() {
+                    return this.isEditMode ? this.translate('취소') : this.translate("수정");
+                }
+            },
+         	/* 용어집 editable 제어 : 신규 일 경우만 수정 가능 */
+            onDictionaryEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+            /* 조회 완료 */
+            onFindList: function(){
+            	var me = this;
+            	UT.request(me.$.findListDictionary);
+            },
+
+            onEnter: function() { 
+            	var me = this;
+            	me.onFindList();
+            },
+         	/* 선택 버튼 클릭 시 */
+            onClickChangeBtn: function() {
+            	var me = this,
+            		provider = me.$.gridPanel.getDataProvider();
+                
+            	me.set("isEditMode", !me.isEditMode);
+                me.applyFormula();
+            },
+            /* 추가 버튼 클릭 시 */
+            onClickAdd: function() {
+            	var me = this,
+            		provider = me.$.gridPanel.getDataProvider();
+            	
+                var row = {
+               		att_nm : "",
+               		att_en : "",
+               		att_en_alt : "",
+               		att_en_abb : "",
+               		commnet : "",
+               		del : ""
+                };
+             	// 그리드 신규행 추가
+                provider.addItemAt(0,row);
+            },
+            /* 저장 버튼 클릭 시 */
+            onClickSave: function() {
+            	var me = this;
+            	
+            	var provider = me.$.gridPanel.getDataProvider(),
+                	created = provider.getNewItems(),
+                	updated = provider.getUpdateItems();
+            	
+            	if(created.length + updated.length === 0) {
+	                UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+	                return;
+	            }
+            	
+            	UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+	                me.$.saveListDictionary.body = {
+	                    insertList: created,
+	                    updateList: updated
+	                };
+	                UT.request(me.$.saveListDictionary);
+	            });
+            },
+            /* 저장 완료 */
+            completeSaveListDictionary: function() {
+            	var me = this,
+                	message = "STD.N1500"; // 저장하였습니다.
+                	
+				UT.alert(message, function(){
+					me.onFindList();
+				});
+            },
+            /* 삭제 버튼 클릭 시 */
+            onClickDelete: function() {
+            	var me = this,
+	            	message = "STD.N1300", // 삭제 하시겠습니까?
+					provider = me.$.gridPanel.getDataProvider(), 
+					checked = provider.selectionCheckedIndexes();
+            	
+	            if (checked && checked.length > 0) {
+					UT.confirm(message, function() {
+						var deleted = provider.removeItems();
+						if (UT.isNotEmpty(deleted)) {
+							me.$.deleteDictionary.body = {
+								deleteList : deleted
+							};
+							UT.request(me.$.deleteDictionary);
+						}
+					});
+				} else {
+					UT.alert("STD.N1600");	// 선택된 항목이 없습니다
+				}
+			},
+			/* 삭제 완료 */
+			completeDeleteDictionary : function() {
+				var me = this,
+					message = "삭제되었습니다."; // 삭제되었습니다.
+					
+				UT.alert(message, function() {
+					me.onFindList();
+				});
+			}
+		});
+	</script>
+</dom-module>

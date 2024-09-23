@@ -1,0 +1,229 @@
+<sc-link rel="import" href="../../shared/ep-user-list.html"></sc-link>
+<dom-module id="es-boardconfig-account">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <!-- Admin 계정 : 조회 -->
+        <sc-ajax id="findAdminUserList"
+                 url="findAdminUserList.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <!-- Admin 계정 : 저장 -->
+        <sc-ajax id="saveAdminUserList"
+                 url="saveAdminUserList.do"
+                 on-response="completeSaveAdminUserList">
+        </sc-ajax>
+
+        <!-- Admin 계정 : 삭제 -->
+        <sc-ajax id="deleteAdminUserList"
+                 url="deleteAdminUserList.do"
+                 on-response="completeDeleteAdminUserList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <sc-grid id="gridPanel" data-provider="{{resultList}}" class="flex">
+            <cc-grid-toolbar title-text="관리자">
+                <sc-button text="추가" on-click="onAddAdminUser" auth-s></sc-button>
+                <sc-button text="삭제" on-click="onDeleteAdminUser" auth-s></sc-button>
+                <sc-button text="저장" on-click="onSaveAdminUser" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="usr_id" header-text="사용자 아이디" width="120" text-align="left"></sc-data-column>
+                <sc-data-column data-field="usr_nm" header-text="사용자 명" width="100" text-align="center"></sc-data-column>
+                <sc-data-column data-field="usr_nm_en" header-text="사용자 명 영문" width="100" text-align="center"></sc-data-column>
+                <sc-data-column data-field="comp_nm" header-text="회사 명" width="150" text-align="center"></sc-data-column>
+                <sc-data-column data-field="comp_nm_en" header-text="회사 명 영문" width="150" text-align="center"></sc-data-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="co_cd"></sc-grid-field>
+                <sc-grid-field data-field="bbd_uuid"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is : "es-boardconfig-account",
+            properties: {
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+            },
+
+            formulas: {
+                // 수정 상태
+                isMod: function() {
+                    return (!UT.isEmpty(this.searchParam.bbd_uuid));
+                }
+            },
+
+            load: function(data) {
+                var me = this;
+
+                me.set("searchParam", data);
+                me.onSearch();
+
+            },
+
+            onSearch: function(){
+                var me = this;
+                UT.request(me.$.findAdminUserList);
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+            },
+
+            // Admin 계정 : 추가 (사용자 팝업 호출)
+            onAddAdminUser: function() {
+                var me = this;
+
+                // 한번 저장된 게시판만 추가가능
+                if(!me.formula('isMod')){
+                    UT.alert("STD.ADM1008"); //"저장 후 추가를 할 수 있습니다."
+                    return;
+                }
+
+                var userPopup = UT.popup('ep-user-list', me, '50%', '70%', {
+                    'selected-items' : function(popup, e) {
+                        me.onAddAdminUserList(e.detail);
+                        popup.close();
+                    }
+                }, {titleText : "사용자 추가"});
+                userPopup.show();
+                userPopup.getWindowContent().load();
+            },
+
+            // Admin 계정 : 사용자검색 팝업 callback
+            onAddAdminUserList: function(selectedItems) {
+                var me = this,
+                    boardAdminInfo = me.get("searchParam"),
+                    provider = me.$.gridPanel.getDataProvider(),
+                    targetItems = provider.getItems(),
+                    dupCnt = 0 ; // 중복 건수
+
+                if(selectedItems.length === 0){
+                    UT.alert("STD.N1600"); //선택된 항목이 없습니다.
+                    return;
+                }
+
+                for(var i=0; i<selectedItems.length; i++) {
+                    var exist = false;
+
+                    for(var j=0; j<targetItems.length; j++){
+                        var usrId = targetItems[j].usr_id;
+
+                        // 아이디를 비교해서 데이터 존재여부 체크
+                        if(usrId === selectedItems[i].usr_id){
+                            exist = true;
+                            dupCnt++;
+                            break;
+                        }
+                    }
+
+                    // 그리드에 존재하지 않는 데이터만 그리드에 신규 추가
+                    if(!exist){
+                        // 그리드 신규행 추가
+                        var row = {
+                            // key 값
+                            bbd_uuid 	: boardAdminInfo.bbd_uuid,	// 게시판아이디
+                            co_cd 	: selectedItems[i].co_cd,			// 회사 코드
+                            usr_id 		: selectedItems[i].usr_id,			// 사용자아이디
+                            // display 값
+                            comp_nm 	: selectedItems[i].comp_nm,			// 회사명
+                            usr_nm 		: selectedItems[i].usr_nm			// 사용자명
+                        };
+                        provider.addItem(row);
+                    }
+                }
+
+                if(dupCnt > 0){
+                    // 중복 데이터 {0}건 제외 후 추가하였습니다
+                    UT.alert(me.translate("STD.N2010", null, dupCnt),null,true);
+                }
+            },
+
+            // Admin 계정 : 삭제
+            onDeleteAdminUser: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    checked = provider.selectionCheckedIndexes();
+
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600"); //선택된 항목이 없습니다.
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    var deleted = provider.removeItems();
+                    if(deleted.length > 0){
+                        me.$.deleteAdminUserList.body = {
+                            deleteList: deleted
+                        };
+                        UT.request(me.$.deleteAdminUserList);
+                    }
+                });
+
+            },
+
+            // Admin 계정 : 삭제 완료
+            completeDeleteAdminUserList:function() {
+                var me = this;
+                UT.alert("STD.N2500", function(){
+                    me.onSearch();
+                });
+
+            },
+
+            // Admin 계정 : 저장
+            onSaveAdminUser: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    created = provider.getNewItems(),
+                    updated = provider.getUpdateItems();
+
+                if(created.length + updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveAdminUserList.body = {
+                        insertList: created,
+                        updateList: updated
+                    };
+                    UT.request(me.$.saveAdminUserList);
+                });
+
+            },
+
+            // Admin 계정 : 저장 완료
+            completeSaveAdminUserList: function() {
+                var me = this;
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onSearch();
+                });
+            },
+
+        })
+    </script>
+</dom-module>

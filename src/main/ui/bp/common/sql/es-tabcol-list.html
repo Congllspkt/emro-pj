@@ -1,0 +1,178 @@
+<sc-link rel="import" href="es-dml.html"></sc-link>
+
+<dom-module id="es-tabcol-list">
+
+    <style>
+        :host {
+            @apply(--layout-vertical);
+            width : 100%;
+            height : 100%;
+        }
+        #gridTabColList {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+    
+    <template>
+    
+        <sc-overlay id="overlay" with-backdrop>로딩중...</sc-overlay>
+        
+        <!-- 조회 -->
+        <sc-ajax 
+            id="findListTabCol"
+            url="findListTabCol.do"
+            body="{{searchParam}}"
+            last-response="{{resultList}}"
+            on-response="completefindListTabCol">
+        </sc-ajax>
+        
+        <sc-toolbar>
+            <sc-label text="SQL - oracle"></sc-label>
+            <sc-spacer></sc-spacer>
+            <sc-button text="조회" on-click="onfindListTabCol"></sc-button>
+        </sc-toolbar>
+        
+        <table class="tb-search">
+            <tr>
+                <th width="120">[[translate('컬럼 포함')]]</th>
+                <td colspan="3"><sc-combobox-field value="{{searchParam.column_yn}}" value-field="data" display-field="data"
+                                            items="{{clsList}}" placeholder="선택"></sc-combobox-field></td>
+            </tr>
+            <tr>
+                <th width="120">[[translate('테이블 명')]]</th>
+                <td><sc-text-field value="{{searchParam.table_name}}" allowedpattern="[A-Z]"></sc-text-field></td>
+                <th width="120">[[translate('테이블 설명')]]</th>
+                <td><sc-text-field value="{{searchParam.table_comments}}"></sc-text-field></td>
+            </tr>
+            <tr>
+                <th width="120">[[translate('컬럼 명')]]</th>
+                <td><sc-text-field value="{{searchParam.column_name}}" allowedpattern="[A-Z]"></sc-text-field></td>
+                <th width="120">[[translate('컬럼 설명')]]</th>
+                <td><sc-text-field value="{{searchParam.column_comments}}"></sc-text-field></td>
+            </tr>
+        </table>
+        
+        <sc-panel title-text="테이블 목록" height="100%">
+            <!-- 그리드 -->
+            <div id="gridTabColList"></div>
+        </sc-panel>
+    </template>
+    
+    <script>
+        Polymer({
+            is: "es-tabcol-list",
+            
+            properties: {
+                /* 검색 조건 데이터 binding object */
+                searchParam: {
+                    type: Object,
+                    value: {}
+                },
+                /* 조회 결과 데이터 binding object */
+                resultList: {
+                    type: Object,
+                    value: {}
+                },
+                
+                clsList : {
+                    type : Array,
+                    value : [{data:'Y'}, {data:'N'}]
+                },
+            },
+            
+            ready: function() {
+                this.$.overlay.open();
+            },
+            
+            // 화면 생성 완료 후 실행
+            attached: function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    this.$.overlay.close();
+                
+	                // 그리드 생성 및 초기화
+	                this.initGrid();
+	                
+	                // 조회
+	                //this.onfindListTabCol();
+                }
+            },
+            
+            //리얼그리드가 렌더링 되지 않는 현상으로 임시방편으로 리사이즈를 강제로 호출하기 위해 이벤트 리스너를 추가함
+            listeners: {
+                activatePage: "onActivatePage"
+            },
+            
+            //리얼그리드가 렌더링 되지 않는 현상으로 임시방편으로 리사이즈를 강제로 호출하도록 함
+            onActivatePage: function() {
+                this.gridView.resetSize();
+            },
+            
+            /* 그리드 초기화 */
+            initGrid: function() {
+                var me = this;
+                var fields = [], columns = [];
+                
+                me.dataProvider = new RealGridJS.LocalDataProvider();
+                me.gridView = new RealGridJS.GridView("gridTabColList");
+                me.gridView.setDataSource(me.dataProvider);
+                
+                fields.push({fieldName: "table_name"});
+                fields.push({fieldName: "table_comments"});
+                fields.push({fieldName: "column_name"});
+                fields.push({fieldName: "column_comments"});
+                
+                columns.push({fieldName: "table_name"     , width: 150, header: {text: "테이블"}, styles: {fontBold: true, foreground: "#0000ff"}});
+                columns.push({fieldName: "table_comments" , width: 200, header: {text: "테이블 설명"}, styles: {textAlignment: "near"}});
+                columns.push({fieldName: "column_name"    , width: 150, header: {text: "컬럼"}, styles: {textAlignment: "near"}});
+                columns.push({fieldName: "column_comments", width: 300, header: {text: "컬럼 설명"}, styles: {textAlignment: "near"}});
+                
+                me.dataProvider.setFields(fields);
+                me.gridView.setColumns(columns);
+                
+                /* 클릭 시 사용자 이벤트 생성 */
+                /* 이벤트는 em 모듈에서 처리 */
+                me.gridView.onDataCellClicked = function(grid, cell) {
+                    if(cell.column == "table_name") {
+                        //dataProvider 에 접근하여 index 에 해당하는 값을 가져옴
+                        var data = grid.getDataProvider().getJsonRow(cell.dataRow);
+                        //me.fire("find-dmlinfo", data);
+                        
+                        var window = SCPopupManager.create("es-dml", 1000, 800, true);
+                        window.show();
+                        
+                        //조회
+                        window.getContent().onfindListDml(data);
+                    }
+                }
+                
+                me.gridView.setOptions({
+                    checkBar: {visible: false},
+                    stateBar: {visible: false}
+                });
+            },
+            
+            // 조회
+            onfindListTabCol: function() {
+                this.$.overlay.open();
+                this.gridView.showProgress();
+                
+                this.$.findListTabCol.generateRequest();
+            },
+            
+            // 조회 완료
+            completefindListTabCol: function() {
+                this.dataProvider.setRows(this.resultList);
+                
+                this.gridView.closeProgress();
+                this.$.overlay.close();
+                
+                // 행 선택 스타일 - 선언과 동시에 첫행에 반영됨, 조회 후에 처리
+                this.gridView.setSelectOptions({style: "singleRow"});
+            }
+        });
+        </script>
+
+</dom-module>

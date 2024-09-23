@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+USR_ACCT_SEC_RULE: 계정관리 테이블
+ -->
+
+<mapper namespace="account">
+
+	<select id="load" resultType="smartsuite.security.account.info.AccountSettings">
+		/* account.xml load */
+
+		SELECT A.TEN_ID
+			 , A.PWD_MIN_LEN AS PASSWORDMINLENGTHRULE
+             , A.PWD_MAX_LEN AS PASSWORDMAXLENGTHRULE
+             , A.PWD_ALPHA_RULE AS PASSWORDALPHABETCHARACTERRULE
+             , A.PWD_NUMC_RULE AS PASSWORDDIGITCHARACTERRULE
+             , A.PWD_ORD_RULE AS PASSWORDSEQUENCECHARACTERRULE
+             , A.PWD_RPT_RULE AS PASSWORDREPEATCHARACTERRULE
+             , A.PWD_SPCL_STR_RULE AS PASSWORDSEPECIALCHARACTERRULE
+             , A.PWD_INPERR_LMT_CNT AS LIMITLOGININVALIDPASSWORDCOUNT
+             , A.PWD_EXP_CY AS PASSWORDEXPIREDPERIOD
+             , A.TEL_LMT_RULE AS PASSWORDPHONENODUPLICATERULE
+             , A.UNUD_ACCT_ST_DT AS ACCOUNTDISABLEFORSPECIFIEDDATE
+             , A.UNUD_ACCT_SUBJ_CD AS ACCOUNTDISABLECODE
+             , A.UNUD_ACCT_ALRM_CY_CD AS ACCOUNTDISABLEUSERNOTIFYCODE
+             , A.UNUD_ACCT_USE_YN AS DISABLEONSPECIFIEDDATE
+             , A.MGR_2nd_AUTH_USE_YN AS ADMINADDITIONALAUTHENTICATION
+		FROM USR_ACCT_SEC_RULE A
+		WHERE A.TEN_ID = #{g.tenant}
+	</select>
+	
+	<insert id="create">
+		/* account.xml create */
+		INSERT INTO USR_ACCT_SEC_RULE
+		(
+			TEN_ID,
+			PWD_MIN_LEN,
+			PWD_MAX_LEN,
+			PWD_ALPHA_RULE,
+			PWD_NUMC_RULE,
+			PWD_ORD_RULE,
+			PWD_RPT_RULE,
+			PWD_SPCL_STR_RULE,
+			TEL_LMT_RULE,
+			PWD_INPERR_LMT_CNT,
+			PWD_EXP_CY,
+			UNUD_ACCT_ST_DT,
+			UNUD_ACCT_SUBJ_CD,
+			UNUD_ACCT_ALRM_CY_CD,
+			UNUD_ACCT_USE_YN,
+			MGR_2nd_AUTH_USE_YN,
+			REGR_ID,
+			REG_DTTM
+		)
+		VALUES 
+		(
+			#{g.tenant},
+			#{p.passwordMinLengthRule},
+			#{p.passwordMaxLengthRule},
+			#{p.passwordAlphabetCharacterRule},
+			#{p.passwordDigitCharacterRule},
+			#{p.passwordSequenceCharacterRule},
+			#{p.passwordRepeatCharacterRule},
+			#{p.passwordSepecialCharacterRule},
+			#{p.passwordPhoneNoDuplicateRule},
+			#{p.limitLoginInvalidPasswordCount},
+			#{p.passwordExpiredPeriod},
+			#{p.accountDisableForSpecifiedDate},
+			#{p.accountDisableCode},
+			#{p.accountDisableUserNotifyCode},
+			#{p.disableOnSpecifiedDate},
+			#{p.adminAdditionalAuthentication},
+			'ACCOUNT_ADMIN',
+			#{g.now}
+		)
+	</insert>
+	
+	<update id="update">
+		/* account.xml update */
+		UPDATE USR_ACCT_SEC_RULE SET
+			PWD_MIN_LEN = #{p.passwordMinLengthRule},
+			PWD_MAX_LEN = #{p.passwordMaxLengthRule},
+			PWD_ALPHA_RULE = #{p.passwordAlphabetCharacterRule},
+			PWD_NUMC_RULE = #{p.passwordDigitCharacterRule},
+			PWD_ORD_RULE = #{p.passwordSequenceCharacterRule},
+			PWD_RPT_RULE = #{p.passwordRepeatCharacterRule},
+			PWD_SPCL_STR_RULE = #{p.passwordSepecialCharacterRule},
+			PWD_INPERR_LMT_CNT = #{p.limitLoginInvalidPasswordCount},
+			PWD_EXP_CY = #{p.passwordExpiredPeriod},
+			TEL_LMT_RULE = #{p.passwordPhoneNoDuplicateRule},
+			UNUD_ACCT_ST_DT = #{p.accountDisableForSpecifiedDate},
+			UNUD_ACCT_SUBJ_CD = #{p.accountDisableCode},
+			UNUD_ACCT_ALRM_CY_CD = #{p.accountDisableUserNotifyCode},
+			UNUD_ACCT_USE_YN = #{p.disableOnSpecifiedDate},
+			MGR_2nd_AUTH_USE_YN = #{p.adminAdditionalAuthentication},
+			MODR_ID = #{g.username},
+			MOD_DTTM = #{g.now}
+		WHERE TEN_ID = #{g.tenant}
+	</update>
+	
+	<update id="accountDisable">
+		/* account.xml accountDisable */
+		UPDATE USR SET USE_YN = 'N'
+		WHERE  TEN_ID = #{g.tenant}
+		AND    LAST_LOGIN_DTTM &lt; #{p}
+	</update>
+	
+	<select id="ipAddressLoad" resultType="map">
+		/* account.xml ipAddressLoad */
+		SELECT TEN_ID,
+			   MGR_IP
+		FROM MGR_IP
+		WHERE TEN_ID = #{g.tenant}
+	</select>
+	
+	<insert id="ipAddressSave">
+		/* account.xml ipAddressSave */
+		INSERT INTO MGR_IP
+		(
+			TEN_ID,
+			MGR_IP,
+			REGR_ID,
+			REG_DTTM
+		)
+		VALUES
+		(
+			#{g.tenant},
+			#{p.mgr_ip},
+			#{g.username},
+			#{g.now}
+		)
+	</insert>
+	
+	<delete id="ipAddressDelete">
+		/* account.xml ipAddressDelete */
+		DELETE FROM MGR_IP
+		WHERE TEN_ID = #{g.tenant}
+		AND   MGR_IP = #{p.mgr_ip}
+	</delete>
+
+	<select id="findListDormantAccountForBuyer" resultType="map">
+	/* account.findListDormantAccountForBuyer */
+		SELECT A.USR_ID
+			,A.USR_NM
+			,A.EML
+			, '' AS VD_CD
+		    , '' AS VD_NM
+		FROM USR A
+		INNER JOIN USR_ACCT_SEC_RULE B
+			ON A.TEN_ID = B.TEN_ID
+		WHERE A.TEN_ID = #{g.tenant}
+			AND   A.LAST_LOGIN_DTTM <![CDATA[>=]]> #{p.notic_day}
+			AND   A.LAST_LOGIN_DTTM <![CDATA[<]]> #{p.notic_one_day}
+			AND A.USE_YN  = 'Y'
+		 	AND A.USR_TYP_CCD ='BUYER'
+	</select>
+</mapper>

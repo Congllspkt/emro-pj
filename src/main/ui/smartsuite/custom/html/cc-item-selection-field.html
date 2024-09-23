@@ -1,0 +1,317 @@
+<!--
+    * 사용 예제 *
+	<cc-item-selection-field name="카테고리" placeholder="카테고리를 선택하세요" value="{{data.cate_cds}}" items="{{codes.cateCds}}" required-cnt="2" required="true">
+	</cc-item-selection-field>
+ -->
+<dom-module id="cc-item-selection-field">
+	<style>
+		:host {
+			@apply(--vbox-layout)
+		}
+	</style>
+	
+	<template>
+    	<!-- 필드 영역 -->
+		<div class="field-box">
+			<sc-text-field id="field" value="[[label]]"
+					placeholder="[[placeholder]]"
+					required="[[required]]"
+					validator="validateFn"
+					readonly="true">
+			</sc-text-field>
+			<sc-trigger-field id="popupTrigger" on-trigger-click="onShowPopup" trigger-cls="none" hidden="[[readonly]]"></sc-trigger-field>
+		</div>
+		
+		<!-- 다이얼로그 -->
+		<sc-dialog id="itemDialog" modal="true" closable="false">
+			<!-- 타이틀바 -->
+			<cc-detail-title-bar>
+				<sc-button class="reset_btn" text="재선택" on-click="onReset" tabindex="0"></sc-button>
+				<sc-button class="close_btn" text="닫기" on-click="onClosePopup" tabindex="0"></sc-button>
+			</cc-detail-title-bar>
+			<!-- 선택된 데이터 라벨 영역 -->
+			<div id="selectedLabelBox">
+			</div>
+			<!-- 데이터 선택 영역 -->
+			<div id="selectionBox"> 
+				<sc-label text="[[_computeTitle(name, requiredCnt)]]" i18n-disabled></sc-label>
+				<sc-listbox id="itemList" items="[[items]]" multi="true"
+							on-item-select="_onItemSelectChanged"
+							on-item-deselect="_onItemSelectChanged"
+							on-item-activate="_onItemActivate">
+					<template>
+						<div class="item" data-args="[[_computeItemData(item, 'valueField')]]">[[_computeItemData(item, 'labelField')]]</div>
+					</template>
+				</sc-listbox>
+			</div>
+		</sc-dialog>
+	</template>
+	
+	<script>
+	Polymer({
+		is : 'cc-item-selection-field',
+		properties : {
+			name: {
+				type: Object,
+				value: function() {
+					return {};
+				}
+			},
+			// 선택할 대상 (ex. 공통코드 데이터)
+			items: {
+				type: Array,
+				value: function() {
+					return [];
+				}
+			},
+			// items에서 value에 해당하는 필드
+			valueField: {
+				type: String,
+				value: function() {
+					return "data";
+				}
+			},
+			// items에서 label에 해당하는 필드
+			labelField: {
+				type: String,
+				value: function() {
+					return "label";
+				}
+			},
+			// 선택된 값들
+			value: {
+				type: Array,
+				value: function() {
+					return [];
+				},
+				notify: true,
+				observer: "_onValueChanged"
+			},
+			// 선택된 값들에 대한 인덱스
+			selectedIndexes: {
+				type: Array,
+				value: function() {
+					return [];
+				}
+			},
+			// 텍스트필드에 보여질 label
+			label: {
+				type: String,
+				value: function() {
+					return "";
+				}
+			},
+			// 필수여부
+			required: {
+				type: Object,
+				value: function() {
+					return false;
+				}
+			},
+			// 읽기전용 여부
+			readonly: {
+				type: Object,
+				value: function() {
+					return false;
+				}
+			},
+			// 선택 필요한 개수
+			requiredCnt: {
+				type: Number,
+				value: function() {
+					return 0;
+				}
+			}
+		},
+		/**
+		 * item 별 특정 field 값
+		 */
+		_computeItemData: function(item, fieldType) {
+			var me = this;
+			return item[me.get(fieldType)];
+		},
+		
+		/**
+		 * 타이틀 설정
+		 */
+		_computeTitle: function(name, requiredCnt) {
+			var me = this;
+			if(requiredCnt === 0) {
+				// '{0}'을(를) 선택하세요.
+				return me.translate("STD.N4200", null, me.translate(name));
+			} else {
+				// '{0}'을(를) {1}개 선택하세요.
+				return me.translate("STD.N4300", null, me.translate(name), requiredCnt);
+			}
+		},
+		
+		/**
+		 * value 변경 시 이벤트
+		 */
+		_onValueChanged: function(newValue, oldValue) {
+			var me = this,
+				items = me.items,
+				labels = [],
+				indexes = [];
+			if(newValue) {
+				newValue.forEach(function(val) {
+					for(var i=0, len=items.length; i<len; i++) {
+						var item = items[i];
+						// 변경된 value에 해당하는 라벨 값들을 담아둠
+						if(val === item[me.valueField]) {
+							labels.push(item[me.labelField]);
+							indexes.push(i);
+							break;
+						}
+					}
+				});
+			}
+			// 선택한 아이템의 인덱스를 관리 (value 값이 양방향 바인딩 되어있으므로 itemList.selectedValues 를 체크하는 것에 문제가 있음)
+			me.set("selectedIndexes", indexes);
+			// 텍스트필드에 보여줄 라벨 값
+			me.set("label", labels.toString());
+			// 다이얼로그에 보여지는 라벨 초기화
+			me._removeLabels();
+			// 다이얼로그에 보여지는 라벨 생성
+			me._createLabels(labels);
+		},
+		
+		/**
+		 * trigger 클릭 시 다이얼로그 띄우기
+		 */
+		onShowPopup: function() {
+			var me = this,
+				value = me.value,
+				items = me.items,
+				indexes = [];
+			if(value) {
+				value.forEach(function(val) {
+					for(var i=0, len=items.length; i<len; i++) {
+						var item = items[i];
+						// value에 해당하는 인덱스들을 담아둠
+						if(val === item[me.valueField]) {
+							indexes.push(i);
+							break;
+						}
+					}
+				});
+			}
+			// sc-listbox에 해당 값들을 선택 처리
+			me.$.itemList.selectedValues = indexes;
+			// 다이얼로그 띄움
+			me.$.itemDialog.show();
+		},
+		
+		/**
+		 * 다이얼로그 닫기
+		 */
+		onClosePopup: function() {
+			var me = this;
+			// 다이얼로그 닫기
+			me.$.itemDialog.close();
+		},
+		
+		/**
+		 * 다시선택 버튼 클릭 시 다이얼로그 내용 초기화
+		 */
+		onReset: function() {
+			var me = this;
+			// sc-listbox의 선택 해제
+			me.$.itemList.selectedValues = [];
+			// value 초기화 -> _onValueChanged 발생되어 텍스트필드의 label 값 및 다이얼로그에 보여주는 라벨 초기화
+			me.set("value", []);
+		},
+		
+		/**
+		 * 다이얼로그의 라벨박스 내용 초기화
+		 */
+		_removeLabels: function() {
+			var me = this,
+				selectedLabelBox = me.$.selectedLabelBox,
+				children = Polymer.dom(selectedLabelBox).childNodes;
+			// 라벨박스의 자식노드들을 삭제
+			if(UT.isNotEmpty(children)) {
+				for(var i=0, len=children.length; i<len; i++) {
+					Polymer.dom(selectedLabelBox).removeChild(children[i]);
+				}
+			}
+		},
+		
+		/**
+		 * 다이얼로그의 라벨박스 내용 생성
+		 */
+		_createLabels: function(labels) {
+			var me = this,
+				selectedLabelBox = me.$.selectedLabelBox;
+			// span 태그 생성하여 라벨박스의 자식노드로 추가
+			labels.forEach(function(lab) {
+				var span = document.createElement("span");
+				span.innerHTML = lab;
+				Polymer.dom(selectedLabelBox).appendChild(span);
+			});
+		},
+		
+		/**
+		 * sc-listbox의 item-activate 이벤트
+		 */
+		_onItemActivate: function(e) {
+			var me = this,
+				item = e.detail,
+				indexes = me.$.itemList.selectedValues;
+			// 현재 activate한 item이 기존에 선택된 데이터가 아닌데, requiredCnt 개수를 이미 충족한 경우 더 이상 선택 불가
+			if(me.requiredCnt > 0 && indexes.indexOf(item.selectedIndex) === -1 && indexes.length === me.requiredCnt) {
+				// {0}개만 선택 가능합니다.
+				UT.alert(me.translate("STD.N4400", null, me.requiredCnt), null, true);
+				e.preventDefault();
+			}
+		},
+		
+		/**
+		 * sc-listbox의 item-select / item-deselect 시 이벤트
+		 */
+		_onItemSelectChanged: function(e) {
+			var me = this,
+				item = e.detail;
+			// 초기 데이터 셋팅될 때에도 이벤트를 타서 임시로 item.index 존재여부를 확인하도록 함
+			if(UT.isNotEmpty(item.index)) {
+				var indexes = me.$.itemList.selectedValues;
+				me._setValueBySelectedIndexes(indexes);
+				// requiredCnt 개수 만큼 선택되었다면 다이얼로그를 닫는다.
+				if(indexes.length === me.requiredCnt) {
+					me.onClosePopup();
+				}
+			}
+		},
+		
+		/**
+		 * 선택된 index 들을 가지고, items에서 해당하는 data 값들을 value로 설정
+		 */
+		_setValueBySelectedIndexes: function(indexes) {
+			var me = this,
+				values = [],
+				items = me.items;
+			indexes.forEach(function(i) {
+				var item = items[i];
+				values.push(item[me.valueField]);
+			});
+			me.set("value", values);
+		},
+		
+		/**
+		 * custom validator
+		 */
+		validateFn: function() {
+			var me = this,
+				selectedCnt = me.selectedIndexes.length,
+				requiredCnt = me.requiredCnt;
+			
+			if(me.required && me.requiredCnt > 0 && selectedCnt !== requiredCnt) {
+				// '{0}'을(를) {1}개 선택해야 합니다. ({2}개 선택됨)
+				return me.translate("STD.N4500", null, me.translate(me.name), requiredCnt, selectedCnt);
+			} else {
+				return true;
+			}
+		}
+	});
+	</script>
+</dom-module>

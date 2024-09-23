@@ -1,0 +1,19 @@
+<!--
+-->
+<dom-module id="cc-detail-title-bar">
+    <template>
+        <h3>[[_title]]</h3>
+        <div class="wrap_btn">
+            <content></content>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'cc-detail-title-bar',
+            
+            behaviors:[
+               Polymer.CCTitleBarBehavior
+           ]
+        });
+    </script>
+</dom-module>

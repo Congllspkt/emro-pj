@@ -1,0 +1,83 @@
+<dom-module id="ep-remark">
+<!-- 
+/**
+ *
+ *	@description : 평가 항목 설명 팝업
+ *  <pre>
+ * </pre>
+ * @author : Yeon-u Kim
+ * @FileName : 
+ * @변경이력 : [2017. 01. 05.] Yeon-u Kim 최초작성 9.1conversion
+ */
+-->
+    <style>
+       :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    
+    <template>
+    	<div class="vbox flex">
+	        <cc-page-title-bar>
+	            <sc-button text="적용" on-click="onApply" hidden="[[!uiBind.editable]]"></sc-button>
+	        </cc-page-title-bar>
+	            <sc-textarea-field id="remark" value={{remark}} readOnly="[[!uiBind.editable]]"></sc-textarea-field>
+        </div>
+    </template>
+    
+    <script>
+        Polymer({
+            is: "ep-remark",
+            properties: {
+                remark: {
+                    type: String,
+                    value: function() {
+                    	return "";
+                    }
+                },
+                uiBind: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            editable: false
+                        }
+                    }
+                },
+                titleText: {
+                	type: Object,
+                	value: function() {
+                		return "비고";
+                	}
+                }
+            },
+
+            // 화면 생성 완료
+            initialized: function() {
+                var me = this;
+                me.$.remark.setAttribute("style", "flex: 1");
+            },
+
+            // 기본 파라미터 설정
+            load: function(param) {
+                var me = this;
+                var remark = "" || param.remark;
+                
+                me.set("remark", remark);
+                
+                if (UT.isBoolean(param.editable)) {
+                    me.set("uiBind.editable", param.editable);
+                }
+            },
+            
+            // 적용
+            onApply: function() {
+                var me = this;
+                var remark = me.get("remark");
+                
+                me.fire("apply-remark", remark);
+            }
+            
+        });
+    </script>
+
+</dom-module>

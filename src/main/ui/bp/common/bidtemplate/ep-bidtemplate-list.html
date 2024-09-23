@@ -1,0 +1,193 @@
+<sc-link rel="stylesheet" type="text/css" href="dynamic/template-form.css"></sc-link>
+<sc-link rel="import" href="ep-bidtemplate-info.html"></sc-link>
+
+
+<dom-module id="ep-bidtemplate-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		<sc-code-group>
+			<sc-code code="BID001" value="{{codes.SheetType}}" ></sc-code> <!-- 컬럼 타입 -->
+			<sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+			<sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+			<sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+		</sc-code-group>
+
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findListConfirmBidTemplate"
+				url="findListConfirmBidTemplate.do"
+				body="{{searchParam}}"
+				last-response="{{resultList}}">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<!-- 조회조건 -->
+			<cc-search-container on-search="onSearch" >
+				<table>
+					<colgroup>
+						<col style="width:120px">
+						<col>
+						<col style="width:120px">
+						<col>
+					</colgroup>
+					<tr>
+						<th><sc-label text="템플릿 코드"></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.templ_cd}}" maxlength="50"></sc-text-field>
+						</td>
+						<th><sc-label text="템플릿 이름"></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.templ_nm}}" ></sc-text-field>
+						</td>
+					</tr>
+				</table>
+			</cc-search-container>
+
+			<!-- 그리드 -->
+			<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="false" class="flex" use-selection="false"  on-item-click="onDataCellClicked">
+				<cc-grid-toolbar>
+
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="templ_cd" header-text="템플릿 코드" width="150" text-align="center" style-name="link"></sc-data-column>
+					<sc-data-column data-field="templ_nm" header-text="템플릿 이름" width="150" text-align="left" editable="true" required="true"></sc-data-column>
+				</sc-grid-columns>
+				<sc-grid-fields>
+					<sc-data-column data-field="templ_id"></sc-data-column>
+					<sc-data-column data-field="confirm_yn"></sc-data-column>
+				</sc-grid-fields>
+			</sc-grid>
+
+		</div>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "ep-bidtemplate-list",
+			properties : {
+				codes: {
+					type : Object,
+					reset : false,
+					value : function() {
+						return {
+							currencyCodeList: []
+						}
+					}
+				},
+
+				// 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				},
+				prData : {
+					type : Object,
+					value : function() {
+						return {
+							saveType       : "",
+							pr_uuid          : "",
+							pr_no          : "",
+							pr_rev         : 1,
+							pr_purp   : "NC",
+							purc_typ_ccd       : "MT",
+							cur            : "KRW",
+							pr_sts_ccd    : "T",
+							pr_tot_amt     : 0
+						};
+					}
+				},
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+				var me = this;
+
+				me.onSearch();
+			},
+			onSearch : function(param) {
+				var me = this;
+
+				me.set("prData",param);
+				UT.request(me.$.findListConfirmBidTemplate);
+			},
+
+			load:function(data){
+				var me = this;
+				var param = UT.copy(data);
+				me.onSearch(param);
+			},
+
+
+			onDataCellClicked: function(e){
+				var me = this,
+						item = e.detail.item,
+						data = e.detail.data,
+						provider = this.$.gridPanel.getDataProvider();
+				if(item.dataField === "templ_cd"){
+
+					data.prData = me.get("prData");
+					me.fire("selected-items",data);
+
+					/*var templateInfoPopup = UT.popup("ep-bidtemplate-info", me, "900", "700", {
+						"selected-items": function (popup, e) {
+							popup.close();
+						}
+					}, {titleText: "BidTemplate 가져오기"});
+
+					templateInfoPopup.show();
+					templateInfoPopup.getWindowContent().load(data);*/
+
+
+				}
+			},
+
+
+			onImageChange: function(data, item){
+				if(item.dataField === "templ_cd" && UT.isNotEmpty(data["templ_cd"])) {
+					return "link";
+				}
+				return null;
+			},
+
+
+		});
+	</script>
+
+</dom-module>

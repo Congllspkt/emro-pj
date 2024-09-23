@@ -1,0 +1,266 @@
+<dom-module id="es-sheet-master-list">
+	<!--
+        ******************************************************************************************
+        ** @Program-name    : BID SheetMaster 관리
+        ** @Description     : 
+        ** @Author          : GaRam, Choi
+        ** @Create Date     : 2020.07.31
+        ******************************************************************************************
+    -->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		<sc-code-group>
+			<sc-code code="BID001" value="{{codes.SheetType}}" ></sc-code> <!-- 컬럼 타입 -->
+			<sc-code code="BID002" value="{{codes.fieldAlign}}" ></sc-code> <!-- 필드 정렬 -->
+			<sc-code code="BID003" value="{{codes.precHndlTyp}}" ></sc-code> <!-- 소수점 처리방법 -->
+			<sc-code code="C022" value="{{codes.C022}}" ></sc-code> <!-- 사용여부 -->
+		</sc-code-group>
+
+
+		<!-- 조회 -->
+		<sc-ajax
+				id="findListSheetMaster"
+				url="findListSheetMaster.do"
+				body="{{searchParam}}"
+				last-response="{{resultList}}">
+		</sc-ajax>
+		<!-- 삭제 -->
+		<sc-ajax
+				id="deleteListSheetMaster"
+				url="deleteListSheetMaster.do"
+				on-response="completeDeleteInfo">
+		</sc-ajax>
+		<!-- 저장 -->
+		<sc-ajax
+				id="saveListSheetMaster"
+				url="saveListSheetMaster.do"
+				on-response="completeSaveInfo">
+		</sc-ajax>
+
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+			<!-- 조회조건 -->
+			<cc-search-container on-search="onSearch" >
+				<table>
+					<colgroup>
+						<col style="width:120px">
+						<col>
+						<col style="width:120px">
+						<col>
+					</colgroup>
+					<tr>
+						<th><sc-label text="시트 이름"></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.sheet_nm}}" on-enter="onSearch" maxlength="50"></sc-text-field>
+						</td>
+						<th><sc-label text="시트 타입" ></sc-label></th>
+						<td>
+							<sc-text-field value="{{searchParam.sheet_typ}}" on-enter="onSearch" ></sc-text-field>
+						</td>
+					</tr>
+				</table>
+			</cc-search-container>
+
+			<!-- 그리드 -->
+			<sc-grid id="gridPanel" data-provider="{{resultList}}" editable="true" class="flex" validation-group="save" on-item-click="onDataCellClicked">
+				<cc-grid-toolbar>
+					<sc-button text="추가" on-click="onAddDialogShow" auth-s></sc-button>
+					<sc-button text="삭제" on-click="onDelete" auth-s></sc-button>
+					<sc-button text="저장" on-click="onSave" auth-s></sc-button>
+				</cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="sheet_cd" header-text="시트 코드" width="180" text-align="center" style-name="link"></sc-data-column>
+					<sc-data-column data-field="sheet_nm" header-text="시트 이름" width="300" text-align="left" editable="true" required="true"></sc-data-column>
+					<!--<sc-data-column data-field="sheet_typ" header-text="시트 타입" width="150" text-align="right" editable="true"></sc-data-column>-->
+				</sc-grid-columns>
+				<sc-grid-fields>sc
+					<sc-grid-field	data-field="sheet_id"	></sc-grid-field>
+				</sc-grid-fields>
+			</sc-grid>
+		</div>
+
+
+
+		<sc-dialog id="dialog_sheet_append" title-text="시트 추가" title-align="left" style="width:600px;height:110px" modal="true">
+			<cc-page-title-bar>
+				<sc-button text="추가"	on-click="onAppendSheet"></sc-button>
+			</cc-page-title-bar>
+			<table class="tb-form">
+				<colgroup>
+					<col style="width:150px"></col>
+					<col></col>
+				</colgroup>
+				<tr>
+					<th>
+						<sc-label text="시트 이름"></sc-label>
+					</th>
+					<td>
+						<sc-text-field id="append_sheet_nm" required="true"></sc-text-field>
+					</td>
+				</tr>
+			</table>
+		</sc-dialog>
+
+	</template>
+
+	<!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+	<script>
+		Polymer({
+			is: "es-sheet-master-list",
+			properties : {
+				codes: {
+					type : Object,
+					reset : false,
+					value : function() {
+						return {
+							currencyCodeList: []
+						}
+					}
+				},
+
+				// 조회조건
+				searchParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+
+				// 조회 결과 리스트
+				resultList: {
+					type: Array,
+					value : function() {
+						return [];
+					}
+				}
+			},
+
+			/******************************
+			 * 초기화 설정
+			 ******************************/
+			// 초기화 완료 후 호출 함수
+			initialized : function() {
+				var me = this;
+
+				me.onSearch();
+			},
+			onSearch : function() {
+				var me = this;
+				UT.request(me.$.findListSheetMaster);
+			},
+			onAddDialogShow : function(){
+				var me = this;
+
+				me.$.append_sheet_nm.value =  "";
+				me.$.dialog_sheet_append.show();
+			},
+			onAppendSheet : function(){
+				var me = this;
+
+				var sheetName = me.$.append_sheet_nm.value;
+
+				me.$.saveListSheetMaster.body = {
+					insertList: [{sheet_nm:sheetName}]
+				};
+
+				UT.request(me.$.saveListSheetMaster);
+				me.$.dialog_sheet_append.close();
+			},
+			onDelete: function(){
+				var me = this;
+				var provider = me.$.gridPanel.getDataProvider();
+				var item = provider.selectionCheckedItems();
+
+				if(item.length < 1){
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다.
+					return;
+				}
+
+				UT.confirm("STD.N1300", function () {	// 삭제 하시겠습니까?
+					me.$.deleteListSheetMaster.body = {
+						deleteItem : item
+					};
+					UT.request(me.$.deleteListSheetMaster);
+				});
+
+			},
+
+			onSave : function(){
+				var me = this;
+				// 데이터 유효성 확인
+				if(!me.validate()){
+					UT.alert('STD.E0000');
+					return;
+				}
+
+				var provider = me.$.gridPanel.getDataProvider(),
+						created = provider.getNewItems(),
+						updated = provider.getUpdateItems();
+
+				if(created.length + updated.length === 0) {
+					UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+					return;
+				}
+
+				UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+					me.$.saveListSheetMaster.body = {
+						insertList: created,
+						updateList: updated
+					};
+
+					UT.request(me.$.saveListSheetMaster);
+				});
+			},
+
+
+			completeSaveInfo : function(e,res){
+				var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onSearch();
+				});
+			},
+			completeDeleteInfo : function(e,res){
+				var me = this;
+				UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+					me.onSearch();
+				});
+			},
+
+
+			onDataCellClicked: function(e){
+				var me = this,
+						item = e.detail.item,
+						data = e.detail.data,
+						provider = this.$.gridPanel.getDataProvider();
+
+				if (item.dataField === "sheet_cd" && !(provider.getItemState(item.rowIndex) === "created")){
+					me.fire("show-detail", data);
+				}
+			},
+
+		});
+	</script>
+
+</dom-module>

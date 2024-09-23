@@ -1,0 +1,105 @@
+<dom-module id="es-export-log">
+
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+
+		<!-- 파일 다운로드 로그 목록 조회 -->
+		<sc-ajax id="findListExportLog"
+				 url="findListExport.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<cc-search-container on-search="onSearch" auth-r>
+			<table>
+				<colgroup>
+					<col style="width:120px">
+					<col>
+					<col style="width:120px">
+					<col>
+					<col style="width:120px">
+					<col>
+				</colgroup>
+				<tr>
+					<th><sc-label text="다운로드일자" ></sc-label></th>
+					<td>
+						<sc-period-date-field from-value="{{searchParam.from_create_date}}" to-value="{{searchParam.to_create_date}}" default-from-value="-7d" default-to-value="0d" string-date="false" required="true"></sc-period-date-field>
+					</td>
+
+					<th><sc-label text="사용자 아이디" ></sc-label></th>
+					<td>
+						<sc-text-field value="{{searchParam.usr_id}}"></sc-text-field>
+					</td>
+					<th><sc-label text="파일 명" ></sc-label></th>
+					<td>
+						<sc-text-field value="{{searchParam.att_nm}}"></sc-text-field>
+					</td>
+				</tr>
+			</table>
+		</cc-search-container>
+
+
+		<sc-grid id="gridPanel" data-provider="{{resultList}}" class="flex" use-selection="false" use-state="false">
+			<cc-grid-toolbar></cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-date-column data-field="access_time" header-text="호출 일시" width="240" text-align="center" display-format="yyyy/MM/dd HH:mm:ss"></sc-date-column>
+				<sc-data-column data-field="menu_code" header-text="메뉴 코드" width="120" text-align="center"></sc-data-column>
+				<sc-data-column data-field="att_nm" header-text="파일 명" width="300" text-align="left"></sc-data-column>
+				<sc-data-column data-field="usr_id" header-text="사용자 아이디" width="120" text-align="center"></sc-data-column>
+				<sc-data-column data-field="usr_typ_ccd" header-text="사용자 유형" width="120" text-align="center"></sc-data-column>
+				<sc-data-column data-field="remote_address" header-text="접속 주소" width="200" text-align="center"></sc-data-column>
+			</sc-grid-columns>
+		</sc-grid>
+
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-export-log',
+
+            properties : {
+                // 조회조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            from_create_date : "",	// 호출일자 (from)
+                            to_create_date : "",	// 호출일자 (to)
+                            usr_id : "",			// 사용자ID
+                            att_nm : ""				// 파일명
+                        };
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                }
+
+            },
+
+            // 조회
+            onSearch : function() {
+                var me = this;
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+                UT.request(me.$.findListExportLog);
+            }
+
+        });
+
+	</script>
+
+</dom-module>

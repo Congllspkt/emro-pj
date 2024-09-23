@@ -1,0 +1,142 @@
+<!--
+CSR 처리 이력 정보를 작성 및 수정하여 제출하는 팝업입니다.
+
+하나의 요청 ( processHistoryRequest.do ) 으로 처리 되며, 인자로 넘긴 process_type 값을 기준으로
+CSRService.java 에 정의된 CSRProcess enum 에 따라 상태가 update 처리 됩니다.
+-->
+<dom-module id="ep-csr-hndl">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+
+        <!-- 처리 정보 제출 -->
+        <sc-ajax id="submitCSR"
+                 url="processHistoryRequest.do"
+                 body="{{hndlInfo}}"
+                 on-response="completeSubmitCSR"></sc-ajax>
+
+        <!-- 처리 정보 내용수정 -->
+        <sc-ajax id="processHistoryContentModify"
+                 url="processHistoryContentModify.do"
+                 body="{{hndlInfo}}"
+                 on-response="completeSubmitCSR"></sc-ajax>
+
+        <cc-sub-title-bar>
+            <sc-button text="{{param.label}}" on-click="onSubmitCSR"></sc-button>
+        </cc-sub-title-bar>
+        <cc-form-panel column="1" form-cls="label-row" label-width="160" >
+            <cc-fieldset hidden="[[!formula('isReceipt')]]">
+                <sc-label text="담당자 아이디"></sc-label>
+                <cc-user-search value="{{hndlInfo.chr_nm}}" result-field="usr_id" result-value="{{hndlInfo.pic_id}}" required="[[formula('isReceipt')]]"></cc-user-search>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="CSR 처리 내용"></sc-label>
+                <sc-editor id="editorPanel" class="h-400" value="{{hndlInfo.csr_prcsg_cont}}"></sc-editor>
+            </cc-fieldset>
+        </cc-form-panel>
+    </template>
+    <script>
+        Polymer({
+            is:"ep-csr-hndl",
+
+            properties: {
+                hndlInfo: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+
+                param: {
+                    type: Object,
+                    value: function() {
+                        return {};
+                    }
+                },
+                csrProcessType: {
+                    type: Array,
+                    value: function() {
+                        return [
+                            /**
+                             * 처리 담당자
+                             */
+                            {key: "RECEIPT",     label:this.translate('접수')},
+                            {key: "START",       label:this.translate('처리 시작')},
+                            {key: "STOP",        label:this.translate('처리 중지')},
+                            {key: "RESOLVE",     label:this.translate('처리 완료')},
+                            {key: "REOPEN",      label:this.translate('처리 회수')},
+                            /**
+                             * 요청자
+                             */
+                            {key: "CLOSE", label:this.translate('확인 완료')},
+                            {key: "REPROCESS", label:this.translate('재처리 요청')},
+                            /**
+                             * 공통
+                             */
+                            {key: "MODIFY",      label:this.translate('수정')}
+                        ];
+
+                    }
+                }
+            },
+
+            formulas: {
+                // 접수
+                isReceipt : function() {
+                    return this.param.key === "RECEIPT" && this.hndlInfo.csr_sts_ccd !== "RPRCSG_REQ";
+                },
+
+                // 처리 이력 수정
+                isModify : function() {
+                    return this.param.key === "MODIFY";
+                }
+            },
+
+            load:function(data, type) {
+                var me = this;
+                me.set("hndlInfo.csr_prcsg_cont","");
+                me.set("hndlInfo", data);
+                me.set("hndlInfo.process_type", type);
+                me.set("hndlInfo.pic_id", SCSessionManager.getCurrentUser().usr_id);
+                me.set("hndlInfo.chr_nm", SCSessionManager.getCurrentUser().usr_nm);
+                me.param = me.csrProcessType.filter(function(obj) {
+                    return obj.key === type;
+                })[0];
+                me.applyFormula();
+            },
+
+            // CSR 처리 정보 제출
+            onSubmitCSR: function() {
+                var me = this;
+
+                if(!me.validate()){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm(me.translate("STD.COM1003", "", me.translate(me.param.label)), function() { // {0} 하시겠습니까?
+                    me.$.editorPanel.syncValue();
+                    if(me.formula('isModify')){
+                        UT.request(me.$.processHistoryContentModify);
+                    } else {
+                        UT.request(me.$.submitCSR);
+                    }
+
+                }, null, true);
+            },
+
+            // CSR 처리 정보 제출 완료
+            completeSubmitCSR: function() {
+                var me = this;
+                UT.alert(me.translate("STD.COM1004", "", me.translate(me.param.label)), function() { // {0} 하였습니다.
+                    me.fire("submit");
+                    me.reset();
+                }, true);
+
+            }
+        })
+    </script>
+</dom-module>

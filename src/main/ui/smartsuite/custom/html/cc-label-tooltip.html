@@ -1,0 +1,79 @@
+<dom-module id="cc-label-tooltip">
+    <style>
+        .question {
+			display: inline-block;
+            position: relative ;
+            margin-left: 5px;
+            font : normal normal normal 14px/1 FontAwesome;
+        }
+
+        .question:before {
+            content : "\f059";
+        }
+
+        .question:hover {
+            color: #505050;
+            cursor: pointer;
+        }
+
+
+        .question .tooltip-content {
+            visibility: hidden;
+            background-color: #ffffff;
+            border: 1px solid #C2121A;
+            color: #0f0f0f;
+            padding: 5px;
+            border-radius: 6px;
+
+            position: absolute;
+            margin-top: 15px;
+            margin-left: 10px;
+            z-index: 30;
+
+            font-size: 12px;
+            font-weight:bold;
+            line-height: 1.4;
+
+            display: inline-flex;
+            transition: opacity 0.3s;
+        }
+
+        .question:hover .tooltip-content {
+           visibility: visible;
+             white-space: nowrap; /* 줄 바꿈 없이 내용을 표시 */
+            display: flex; /* 내용을 가로로 표시하기 위해 flex 속성 추가 */
+        }
+
+    </style>
+    <template>
+        <div class="question">
+            <div class="tooltip-content">
+                <span id="tooltip"></span>
+            </div>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: "cc-label-tooltip",
+            properties: {
+                text: {
+                    type: String,
+                    observer: "_getToolTip"
+                },
+                i18nDisabled: {
+                    type: Object,
+                    value: function() {
+                        return false;
+                    }
+                }
+            },
+            _getToolTip: function() {
+                if(this.text && this.text != "") {
+                    var message = this.i18nDisabled ? this.text : this.translate(this.text);
+                    this.$.tooltip.innerHTML = message;
+                }
+            }
+
+        })
+    </script>
+</dom-module>

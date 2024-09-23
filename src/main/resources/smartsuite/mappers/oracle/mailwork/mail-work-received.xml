@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mail-work-received">
+
+	<select id="findLastReceivedMail" resultType="map">
+	    /* mail.findLastReceivedMail */
+	    SELECT MAX(RCPT_DTTM) SND_DTTM
+	      FROM EML_TASK_RCPT_HISTREC
+	     WHERE TEN_ID= #{g.tenant}
+	</select>
+	
+	<resultMap type="map" id="resultMap-findUnProcessedMails">
+	    <result property="eml_cont" column="EML_CONT" jdbcType="CLOB" javaType="string" />
+	</resultMap>
+	<select id="findNotProcessedMailWork" resultMap="resultMap-findUnProcessedMails">
+	    /* mail.findNotProcessedMailWork */
+	    SELECT TEN_ID
+	         , EML_RCPT_HISTREC_UUID
+	         , EML_TASK_SUBJ_UUID
+	         , RCPT_EML_TYP_CCD
+	         , RCPT_STS_CCD
+	         , SNDR_EML
+	         , SNDR_NM
+	         , RCPNT_EML
+	         , RCPNT_NM
+	         , EML_TIT
+	         , EML_CONT
+	         , ATHG_UUID
+	         , RCPT_RES_MSG
+	         , RCPT_DTTM
+	         , REGR_ID
+	         , REG_DTTM
+	         , MOD_DTTM
+	         , MODR_ID
+	      FROM EML_TASK_RCPT_HISTREC
+	     WHERE RCPT_EML_TYP_CCD = 'RE'
+	       AND RCPT_STS_CCD = 'SYS_PRCSG_PRGSG'
+	     ORDER BY REG_DTTM ASC
+	</select>
+	
+	<update id="updateEmailWorkReceivedStatus">
+	    /* mail-work.updateEmailWorkReceivedStatus :재전송 시 기존 회신 내역에 대해서는 처리 하지 않는다.*/
+	    UPDATE EML_TASK_RCPT_HISTREC
+	       SET RCPT_STS_CCD ='PRE_EML_CNCL'
+	     WHERE TEN_ID = #{g.tenant}
+	       AND EML_TASK_SUBJ_UUID = #{p.eml_task_subj_uuid}
+	       AND EML_RCPT_HISTREC_UUID = #{p.eml_rcpt_histrec_uuid}
+	       AND EML_SND_HISTREC_UUID = #{p.eml_snd_histrec_uuid}
+	</update>
+	
+	<resultMap type="map" id="resultMap-findExcelReceiveMailById">
+	    <result property="eml_add_cont" column="EML_ADD_CONT" jdbcType="CLOB" javaType="string" />
+	    <result property="eml_cont" column="EML_CONT" jdbcType="CLOB" javaType="string" />
+	    <result property="rcpt_res_msg" column="RCPT_RES_MSG " jdbcType="CLOB" javaType="string" />
+	</resultMap>
+	<select id="findExcelReceiveMailById" resultMap="resultMap-findExcelReceiveMailById">
+	    /* mail.findExcelReceiveMailById : 이메일 업무 수신 메일 상세 조회 */
+	    SELECT RH.EML_RCPT_HISTREC_UUID
+	         , SH.EML_SND_HISTREC_UUID
+	         , SH.EML_ADD_CONT
+	         , RH.RCPT_EML_TYP_CCD
+	         , RH.SNDR_EML
+	         , RH.SNDR_NM
+	         , RH.RCPNT_EML
+	         , RH.RCPNT_NM
+	         , RH.EML_TIT
+	         , RH.EML_CONT
+	         , RH.ATHG_UUID
+	         , RH.RCPT_RES_MSG
+	         , RH.RCPT_DTTM
+	         , RH.RCPT_STS_CCD
+	         , AP.EML_TASK_SUBJ_UUID
+	         , AP.EML_TASK_UUID
+	         , AP.TASK_UUID
+	         , AP.EML_TASK_DTL_UUID
+	         , AP.EML_RE_YN
+	         , AP.CLSG_YN
+	         , AP.EML_TASK_STS_CCD
+	         , EX.EML_TASK_UUID
+	         , EX.EML_TASK_NM
+	         , EX.EML_TASK_EXPLN
+	         , EX.EML_TASK_TYP_CCD
+	         , ML.EML_TMPL_CD
+	         , ML.CTMPL_UUID
+	      FROM EML_TASK_EXCEL_ATH EX
+	     INNER JOIN EML_TMPL_SETUP ML
+	        ON EX.TEN_ID = ML.TEN_ID
+	       AND EX.EML_TMPL_CD = ML.EML_TMPL_CD
+	     INNER JOIN EML_TASK_PRGS_STS AP
+	        ON EX.TEN_ID = AP.TEN_ID
+	       AND EX.EML_TASK_UUID = AP.EML_TASK_UUID
+	     INNER JOIN EML_TASK_RCPT_HISTREC RH
+	        ON AP.TEN_ID = RH.TEN_ID
+	       AND AP.EML_TASK_SUBJ_UUID = RH.EML_TASK_SUBJ_UUID
+	      LEFT OUTER JOIN EML_TASK_SND_HISTREC SH
+	        ON AP.TEN_ID = SH.TEN_ID
+	       AND AP.EML_TASK_SUBJ_UUID = SH.EML_TASK_SUBJ_UUID
+	     WHERE EX.TEN_ID = #{g.tenant}
+	       AND RH.EML_RCPT_HISTREC_UUID = #{p.eml_rcpt_histrec_uuid}
+	       AND RH.EML_TASK_SUBJ_UUID = #{p.eml_task_subj_uuid}
+	       AND RH.RCPT_EML_TYP_CCD = 'RE'
+	       AND (RH.RCPT_STS_CCD = 'SYS_PRCSG_PRGSG' OR RH.RCPT_STS_CCD ='EML_RCPT_FAIL')
+	       AND SH.SND_STS_CCD ='SND_PASS'
+	</select>
+	
+	<update id="updateRepliedMail">
+	    /*mail.updateRepliedMail 회신된 메일에 대한 상태 수정*/
+	    UPDATE EML_TASK_RCPT_HISTREC
+	       SET MODR_ID = #{g.username}
+	         , MOD_DTTM = #{g.now}
+	         , RCPT_STS_CCD = #{p.rcpt_sts_ccd}
+	         , RCPT_RES_MSG = #{p.rcpt_res_msg}
+	     WHERE TEN_ID = #{g.tenant}
+	       AND EML_RCPT_HISTREC_UUID = #{p.eml_rcpt_histrec_uuid}
+	       AND EML_TASK_SUBJ_UUID = #{p.eml_task_subj_uuid}
+	</update>
+	
+	<insert id="insertReceivedMail">
+	    /* mail.insertReceivedMail 수신 메일 신규저장*/
+	    INSERT INTO EML_TASK_RCPT_HISTREC (
+	        TEN_ID
+	        , EML_RCPT_HISTREC_UUID
+	        , EML_TASK_SUBJ_UUID
+	        , RCPT_EML_TYP_CCD
+	        , SNDR_EML
+	        , SNDR_NM
+	        , RCPNT_EML
+	        , RCPNT_NM
+	        , EML_TIT
+	        , EML_CONT
+	        , ATHG_UUID
+	        , RCPT_RES_MSG
+	        , RCPT_DTTM
+	        , RCPT_STS_CCD
+	        , REGR_ID
+	        , REG_DTTM
+	        , MOD_DTTM
+	        , MODR_ID
+	        , EML_SND_HISTREC_UUID
+	    ) VALUES (
+	        #{g.tenant}
+	        , #{p.eml_rcpt_histrec_uuid}
+	        , #{p.eml_task_subj_uuid}
+	        , #{p.rcpt_eml_typ_ccd}
+	        , #{p.sndr_eml}
+	        , #{p.sndr_nm}
+	        , #{p.rcpnt_eml}
+	        , #{p.rcpnt_nm}
+	        , #{p.eml_tit}
+	        , #{p.eml_cont}
+	        , #{p.athg_uuid}
+	        , #{p.rcpt_res_msg}
+	        , #{p.rcpt_dttm}
+	        , #{p.rcpt_sts_ccd}
+	        , #{g.username}
+	        , #{g.now}
+	        , #{g.now}
+	        , #{g.username}
+	        , #{p.eml_snd_histrec_uuid}
+	    )
+	</insert>
+	
+	<delete id="deleteEmailWorkReceivedMailList" parameterType="map">
+	    /* mail-work.deleteEmailWorkReceivedMailList: 이메일 업무 발송 후 수신 내역 삭제 */
+	    DELETE
+	      FROM EML_TASK_RCPT_HISTREC
+	     WHERE TEN_ID = #{g.tenant}
+	       AND EML_TASK_SUBJ_UUID IN
+		<foreach collection="p.emailTaskSubjectList" item="eml_task_subj_uuid" separator="," open="(" close=")">
+			#{eml_task_subj_uuid}
+		</foreach>
+	</delete>
+	
+	<select id="findLastReceivedMailCheck" resultType="map">
+	    /* mail.findLastReceivedMailCheck */
+	    SELECT EML_TASK_SUBJ_UUID
+	      FROM EML_TASK_PRGS_STS
+	     WHERE TEN_ID = #{g.tenant}
+	       AND EML_TASK_SUBJ_UUID = #{p.eml_task_subj_uuid}
+	</select>
+
+</mapper>

@@ -1,0 +1,231 @@
+<dom-module id="es-operorguser-org-list">
+
+  <style>
+    :host {
+      @apply(--vbox-layout);
+    }
+  </style>
+
+  <template>
+
+    <!-- 코드 -->
+    <sc-request-group init>
+      <sc-code-group>
+        <sc-code code="C009" value="{{codes.useYn}}" ></sc-code> <!-- 사용여부 -->
+      </sc-code-group>
+      <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+      <sc-ajax url="../operunit/getAllListOperUnit.do" last-response="{{codes.operUnit}}"></sc-ajax> <!-- 운영단위 -->
+    </sc-request-group>
+
+    <!-- 목록 조회 -->
+    <sc-ajax id="findList"
+             url="findListOperationOrganization.do"
+             body="{{searchParam}}"
+             on-response="completeFindList">
+    </sc-ajax>
+
+    <!-- 목록 삭제 -->
+    <sc-ajax id="deleteList"
+             url="deleteListOperationOrganization.do"
+             on-response="completeDeleteList">
+    </sc-ajax>
+
+    <!-- 목록 저장 -->
+    <sc-ajax id="saveList" url="saveListOperationOrganization.do" on-response="completeSaveList"></sc-ajax>
+
+    <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+    <div class="vbox flex">
+      <cc-sub-title-bar title-text="운영조직 목록">
+      </cc-sub-title-bar>
+      <cc-search-condition-panel on-search="onFindList" search-condition-cls="label-row"  auth-r>
+        <cc-fieldset>
+          <sc-label text="운영단위" ></sc-label></th>
+          <sc-combobox-field value="{{searchParam.ounit_cd}}" items="{{codes.operUnit}}" display-field="ounit_nm" value-field="ounit_cd"
+                             selected-index="0" required="true" placeholder="선택"
+                             validation-group="search">
+          </sc-combobox-field>
+        </cc-fieldset>
+        <cc-fieldset>
+          <sc-label text="회사"></sc-label></th>
+          <sc-combobox-field value="{{searchParam.logic_org_cd}}" items="{{codes.company}}" display-field="comp_nm" value-field="co_cd"
+                             selected-index="0" required="true" placeholder="선택"
+                             validation-group="search">
+          </sc-combobox-field>
+        </cc-fieldset>
+      </cc-search-condition-panel>
+
+      <sc-grid id="gridPanel" editable="true" is-tree="true" class="flex" use-selection="false"
+               on-item-click="onItemClick" >
+        <cc-grid-toolbar>
+        </cc-grid-toolbar>
+        <sc-grid-columns>
+          <sc-data-column data-field="oorg_nm" header-text="운영조직 명" width="210"></sc-data-column>
+          <sc-data-column data-field="oorg_nm_en" header-text="운영조직 명 영문" width="210"></sc-data-column>
+          <sc-data-column data-field="oorg_cd" header-text="운영조직 코드" width="130" text-align="center"  item-style-function="onStyle"	 text-align="left"></sc-data-column>
+          <sc-data-column data-field="logic_org_typ_nm" header-text="논리 조직 유형 명" width="170" text-align="center"></sc-data-column>
+          <sc-data-column data-field="logic_org_nm" header-text="논리 조직 명" width="140" text-align="center"></sc-data-column>
+          <sc-data-column data-field="logic_org_nm_en" header-text="논리 조직 명 영문" width="140" text-align="center"></sc-data-column>
+          <sc-data-column data-field="logic_org_cd" header-text="논리 조직 코드" width="140" text-align="center"></sc-data-column>
+          <sc-checkbox-column data-field="use_count_yn" header-text="운영조직 연결 여부" width="170" text-align="center" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+          <sc-checkbox-column data-field="use_yn" header-text="운영조직 사용 여부" width="170" text-align="center" item-style-function="onItemStyleFn" display-checkbox="false" checked-value="Y" un-checked-value=""></sc-checkbox-column>
+        </sc-grid-columns>
+        <sc-grid-fields>
+          <sc-grid-field	data-field="parnode_oorg_cd"></sc-grid-field>
+          <sc-grid-field	data-field="parnode_logic_org_cd"></sc-grid-field>
+          <sc-grid-field	data-field="ounit_cd"></sc-grid-field>
+          <sc-grid-field	data-field="logic_org_typ_ccd"></sc-grid-field>
+          <sc-grid-field	data-field="chdnode_yn"></sc-grid-field>
+          <sc-grid-field	data-field="logic_org_use_yn"></sc-grid-field>
+          <sc-grid-field	data-field="use_count_oper_org_user" data-type="number"></sc-grid-field>
+          <sc-grid-field	data-field="use_count_oper_org_link" data-type="number"></sc-grid-field>
+          <sc-grid-field	data-field="is_new"></sc-grid-field>
+        </sc-grid-fields>
+      </sc-grid>
+
+    </div>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: "es-operorguser-org-list",
+      properties: {
+        // 코드 데이터
+        codes: {
+          type: Object,
+          reset: false,
+          value:  function() {
+            return {
+              company: [],
+              operUnit: [],
+              useYn: []
+            }
+          }
+        },
+
+        // 조회 조건
+        searchParam: {
+          type: Object,
+          value: function() {
+            return {};
+          }
+        },
+
+        // 조회 결과
+        resultList: {
+          type: Array,
+          value: function() {
+            return [];
+          }
+        },
+
+        checkedAddNodeItem: {
+          type: String,
+          value: "child"
+        }
+      },
+
+      /******************************
+       * 초기화 설정
+       ******************************/
+      // 초기화 완료 후 호출 함수
+      initialized: function() {
+        var me = this;
+        me.onFindList();
+      },
+
+      /******************************
+       * 그리드 이벤트
+       ******************************/
+      // 그리드 cell click 이벤트
+      onItemClick: function(event) {
+        var me = this,
+                data = event.detail.data,
+                item = event.detail.item,
+                provider = event.detail.provider;
+
+        if(provider.getItemState(item.rowIndex) == "created"){
+          return;
+        }
+        var value = data["use_yn"];
+        var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+        if(item.dataField === "oorg_cd" && value === 'Y' && (!childIndexes || childIndexes.length === 0)){
+          data.co_cd = me.get("searchParam.logic_org_cd");
+          me.fire("selected-operorg", data);
+        }
+      },
+      onStyle: function(data, item){
+        var me = this;
+
+         var value = data["use_yn"],
+                styleObj = {};
+
+        var provider = me.$.gridPanel.getDataProvider();
+        var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+        if(value === 'Y' && (!childIndexes || childIndexes.length === 0)){
+          styleObj.fontWeight = "bold";
+          styleObj.fontColor = "#0e006f";
+        }
+        return styleObj;
+      },
+
+      onItemStyleFn : function(data, item){
+        var me = this;
+        var dataField = item.dataField,
+                value = data[dataField],
+                styleObj = {};
+        var provider = me.$.gridPanel.getDataProvider();
+        var childIndexes = provider.getChildIndexes(item.nodeIndex);
+
+        if(!(!childIndexes || childIndexes.length === 0)){
+          styleObj.shapeSize = "0";
+        }
+        return styleObj;
+      },
+
+
+      // checkBar editable 제어
+      onSelectionOption: function(item){
+        // 연결된 조직과 사용자가 없는 leaf 노드 만 체크 가능
+        if(item.use_count_yn != 'Y' && item.isLeaf) {
+          return true;
+        }
+        // 신규 노드 체크 가능
+        return (item.is_new);
+      },
+      /******************************
+       * 버튼 이벤트
+       ******************************/
+      // 검색(조회)
+      onFindList: function() {
+        var me = this;
+
+        // 조회 조건 유효성 체크
+        if(!me.validate('search')) {
+          UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+          return false;
+        }
+
+        UT.request(me.$.findList);
+      },
+
+      // 검색(조회) 완료
+      completeFindList: function(e, res) {
+        var me = this,
+                result = res.response;
+
+        var hier = new CCHierachicalData();
+        var hierachiDatas = hier.HierachyTransformByKey(result, "oorg_cd", "parnode_oorg_cd", "children", "ROOT", null, true);
+        me.$.gridPanel.setHierachyDataProvider(hierachiDatas, "children");
+
+        me.$.gridPanel.expandAll();
+        me.fire("found-operorg", me.get("searchParam"));
+      }
+
+    });
+  </script>
+
+</dom-module>

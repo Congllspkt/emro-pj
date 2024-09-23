@@ -1,0 +1,89 @@
+<dom-module id="ep-code-compare-info">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<!-- 그룹코드(GRP_CD) 조회 -->
+    	<sc-ajax id="findListGrpCd"
+                 url="findListGrpCd.do"
+                 body="{{searchParam}}"
+                 last-response="{{grpCd}}">
+        </sc-ajax>
+    
+    	<div class="vbox flex">
+        	<cc-search-condition-panel>
+        		<cc-fieldset>
+                    <sc-label text="공통코드"></sc-label>
+                    <sc-text-field value="{{param.grp_cd}}" max-length="200" readonly="ture"></sc-text-field>
+	        	</cc-fieldset>            
+        	</cc-search-condition-panel>
+    	
+    		<!-- 그룹코드(GRP_CD) 그리드 -->
+        	<sc-grid id="grpCdgridPanel" class="flex" data-provider="{{grpCd}}" use-state="false" use-selection="false">
+        		<cc-grid-toolbar></cc-grid-toolbar>
+	            <sc-grid-columns>
+                    <sc-data-column data-field="module"			header-text="모듈 명"				width="80"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="grp_cd"			header-text="공통코드"				width="80"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="as_grp_nm"		header-text="9.1 공통코드 명"			width="120"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_cd"		header-text="9.1 상세코드"			width="100"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_nm_kr"	header-text="9.1 상세코드 명(KR)"		width="150"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="as_dtl_nm_en"	header-text="9.1 상세코드 명(EN)"		width="200"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="to_grp_nm_kr"	header-text="10.0 공통코드 명(KR)"	width="150"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="to_grp_nm_en"	header-text="10.0 공통코드 명(EN)"	width="200"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_cd"		header-text="10.0 상세코드"			width="100"	text-align="center"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_nm_kr"	header-text="10.0 상세코드 명(KR)"	width="150"	text-align="left"></sc-data-column>
+                    <sc-data-column data-field="to_dtl_nm_en"	header-text="10.0 상세코드 명(EN)"	width="200"	text-align="left"></sc-data-column>
+                    <sc-checkbox-column data-field="del_yn"		header-text="삭제 여부"				width="80"	text-align="center"	display-checkbox="false"></sc-checkbox-column>
+	            </sc-grid-columns>
+        	</sc-grid>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'ep-code-compare-info',
+            properties: {
+            	// 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                param: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                // 조회 결과
+                grpCd: {
+                    type: Array,
+                    value: function () {
+                        return [];
+                    }
+                }
+            },
+            
+            load: function(data) {
+            	var me = this;
+            	param = UT.copy(data);
+            	me.set("param", param);
+            	me.onFindList();
+            },
+            
+            onFindList: function() {
+            	var me = this;
+            	me.$.findListGrpCd.body = {
+                    grp_cd: param.grp_cd
+   	            };
+            	UT.request(me.$.findListGrpCd);
+            }
+        });
+    </script>
+
+</dom-module>

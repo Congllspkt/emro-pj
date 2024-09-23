@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+OUNIT: 운영단위
+OORG: 운영조직
+ -->
+
+<mapper namespace="operation-unit">
+
+    <insert id="insertOperationUnit">
+    /* operUnit.insertOperationUnit: 운영단위 등록 */
+    INSERT 
+      INTO OUNIT (
+           TEN_ID
+         , OUNIT_CD
+         , OUNIT_NM
+         , OUNIT_NM_EN
+         , RMK
+         , STS
+         , REGR_ID
+         , REG_DTTM
+         , MODR_ID
+         , MOD_DTTM
+    ) VALUES (
+           #{g.tenant}
+         , #{p.ounit_cd}
+         , #{p.ounit_nm}
+         , #{p.ounit_nm_en}
+         , #{p.rmk}
+         , 'C'
+         , #{g.username}
+         , #{g.now}
+         , #{g.username}
+         , #{g.now}
+    )
+    </insert>
+    
+    <update id="updateOperationUnit">
+    /* operUnit.updateOperationUnit: 운영단위 수정 */
+    UPDATE OUNIT
+       SET STS = 'U'
+         , MOD_DTTM = #{g.now}
+         , MODR_ID = #{g.username}
+         , OUNIT_NM = #{p.ounit_nm}
+         , OUNIT_NM_EN = #{p.ounit_nm_en}
+         , RMK = #{p.rmk}
+     WHERE TEN_ID = #{g.tenant}
+       AND OUNIT_CD = #{p.ounit_cd}
+    </update>
+    
+    <delete id="deleteOperationUnit">
+    /* operUnit.deleteOperationUnit: 운영단위 삭제 */
+    DELETE 
+      FROM OUNIT
+     WHERE TEN_ID = #{g.tenant}
+       AND OUNIT_CD = #{p.ounit_cd}
+    </delete>
+
+    <select id="findListOperationUnit" resultType="map">
+    /* operUnit.findListOperationUnit: 운영단위 목록 */
+    SELECT OU.TEN_ID
+         , OU.OUNIT_CD
+         , OU.OUNIT_NM
+         , OU.OUNIT_NM_EN
+         , OU.RMK
+         , OU.STS
+         , OU.REGR_ID
+         , OU.REG_DTTM
+         , OU.MODR_ID
+         , OU.MOD_DTTM
+         , (SELECT COUNT(*)
+              FROM OORG
+             WHERE TEN_ID = OU.TEN_ID
+               AND OUNIT_CD = OU.OUNIT_CD
+               AND STS != 'D'
+           ) AS USE_COUNT_OPER_ORG
+      FROM OUNIT OU
+     WHERE OU.TEN_ID = #{g.tenant}
+       AND OU.STS != 'D'
+     ORDER BY OU.REG_DTTM  
+    </select>
+
+	<select id="findListOperationUnitForCode" resultType="map">
+    /* operUnit.findListOperationUnit: 운영단위 목록(코드성 조회) */
+    SELECT A.TEN_ID
+         , A.OUNIT_CD
+         , CASE WHEN 'en_US' = #{g.locale}
+                THEN A.OUNIT_NM_EN
+                ELSE A.OUNIT_NM
+           END OUNIT_NM
+      FROM OUNIT A
+     WHERE A.TEN_ID = #{g.tenant}
+       AND A.STS != 'D'
+     ORDER BY REG_DTTM  
+    </select>
+    <select id="getCountOperationUnitByOperationUnitCode" resultType="int">
+    /* operUnit.getCountOperationUnitByOperationUnitCode: 운영단위 카운트 by 운영단위코드 */
+    SELECT COUNT(*)
+      FROM OUNIT
+     WHERE TEN_ID = #{g.tenant}
+       AND OUNIT_CD = #{p.ounit_cd}
+    </select>
+    
+</mapper>

@@ -1,0 +1,86 @@
+<dom-module id="sc-mdi-login-info-popup">
+
+    <style>
+		:host {
+            @apply(--vbox-layout);
+        }
+   	</style>
+    
+    <template>
+    	
+<!--     	<sc-dialog id="loginInfoDialog" title-text="알람" title-align="left"  -->
+<!--     			   style="width:400px;height:200px" modal="true" closable="false"> -->
+			<table class="tb-form">
+				<colgroup>
+					<col style="width:200px"/>
+					<col/>
+				</colgroup>
+				<tr>
+					<th>
+						<sc-label text="최근 접속한 시간"></sc-label>
+					</th>
+					<td>
+						<span>[[loginInfo.last_login_dttm]]</span>
+					</td>
+				</tr>
+				<tr>
+					<th>
+						<sc-label text="최근 접속한 IP"></sc-label>
+					</th>
+					<td>
+						<span>[[loginInfo.last_login_ip]]</span>
+					</td>
+				</tr>
+			</table>
+<!-- 		</sc-dialog> -->
+        
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-mdi-login-info-popup',
+            
+            get userModel() {
+    			return SCMdiManager.userModel;
+    		},
+    		
+    		get currentUser() {
+        		return SCMdiManager.currentUser;
+    		},
+            
+            properties: {
+                
+            	// 로그인 정보
+				loginInfo: {
+					type: Object,
+					value: function() {
+						return {};
+					}
+				},
+            	
+            },
+            
+            ready : function() {
+            	SCPreloader.onApplicationComplete(function() {
+            		this.initialze();
+            	}.bind(this));
+            },
+            
+            initialze : function(){
+            	
+            	// 1. 최근 로그인 정보 alert
+                var last_login_dttm = this.currentUser[this.userModel.last_login_dt] || new Date();
+                if(this.currentUser[this.userModel.last_login_dt].getTime() == 0){
+                	last_login_dttm = new Date();
+                }
+				
+                this.set("loginInfo", {
+					last_login_dttm: UT.formatDate(last_login_dttm, "yyyy/MM/dd HH:mm:ss"),
+					last_login_ip: this.currentUser[this.userModel.last_login_ip] || ""
+				});
+            }
+            
+
+        });
+    </script>
+</dom-module>

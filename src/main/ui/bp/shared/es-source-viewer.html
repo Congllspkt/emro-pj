@@ -1,0 +1,117 @@
+<script src="../../lib/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<dom-module id="es-source-viewer">
+    <!-- layout Style -->
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <!--  화면 구성 시작-->
+    <template>
+        <sc-ajax
+            id="findSource"
+            url="[[url]]"
+            method = "GET"
+            handle-as = "text"
+            on-response="onResponse"></sc-ajax>
+
+        <sc-tab-navigation id="tabNavi" class="flex"> 
+        <!-- id="sourceEditor"  id="dataEditor"-->
+           	<sc-container  title-text="source" class="fit" ></sc-container>
+          	<sc-container  title-text="data"  class="fit"></sc-container>
+       </sc-tab-navigation>
+    </template>
+    <!--  화면 구성 끝-->
+    
+    <!--  Polymer script 시작 -->
+    <script>
+        
+        Polymer({
+            is: 'es-source-viewer',
+            behaviors:[
+                Polymer.SCAutoGenIdBehavior
+            ],
+            
+            properties : {
+                sourceEditor : {
+                    type : Object,
+                    value : null
+                },
+                dataEditor : {
+                    type : Object,
+                    value : null
+                },
+                url : {
+                    type : String
+                }
+            },
+            
+            listeners : {
+            	'area-resize' : '_onAreaResize'            	
+            },
+            
+           // 화면 생성 완료
+            initialized: function() {
+                var me = this;
+                var sourceId = this.generateId();
+                var dataId = this.generateId();
+                me.sourceEditorEle._contentElement.id = sourceId;
+                me.dataEditorEle._contentElement.id = dataId;
+
+                me.sourceEditor = ace.edit(sourceId);
+                me.dataEditor = ace.edit(dataId);
+                 
+                me.sourceEditor.setTheme("ace/theme/crimson_editor");
+                me.sourceEditor.getSession().setMode("ace/mode/html");
+                me.sourceEditor.setReadOnly(true); 
+                
+                
+                me.dataEditor.setTheme("ace/theme/crimson_editor");
+                me.dataEditor.getSession().setMode("ace/mode/json");
+                me.dataEditor.setReadOnly(true);
+                
+                me.sourceLoad();
+            },
+            
+            sourceLoad : function(){
+                this.$.findSource.service();
+            },
+            
+            onResponse: function(e, res){
+           		this.sourceEditor.setValue(res.response);
+           		this.sourceEditor.selection.clearSelection();
+           		this.sourceEditor.gotoLine(0);
+            },
+            setData: function(data){
+            	this.dataEditor.setValue(data);
+            	this.dataEditor.selection.clearSelection();
+           		this.dataEditor.gotoLine(0);
+            },
+            viewersResize: function(){
+            	this.sourceEditorResize();
+            	this.dataEditorResize();
+            },
+            sourceEditorResize: function(){
+            	this.sourceEditor.resize();
+            },
+            dataEditorResize: function(){
+            	this.dataEditor.resize();
+            },
+            get sourceEditorEle(){
+                return this.$.tabNavi.querySelector('[title-text=source]');
+            },
+            get dataEditorEle(){
+                return this.$.tabNavi.querySelector('[title-text=data]');
+            },
+            
+            _destroy: function(){
+            	this.sourceEditor.destroy();
+            	this.dataEditor.destroy();
+            }
+            
+        });
+    </script>
+<!--  Polymer script 끝 -->
+
+</dom-module>

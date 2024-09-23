@@ -1,0 +1,191 @@
+<dom-module id="sc-mdi-authentication">
+
+	<style>
+		:host {
+			display : none;
+			position : absolute;
+			width : 100%;
+			height : 100%;
+			background-color : #fff;
+			top : 0;
+			left : 0;
+			z-index : 1;
+		}
+		
+		.wrapper {
+		    position: absolute;
+		    width: 500px;
+		    height: 280px;
+		    background-color: #fbfbfb;
+		    top: 0;
+		    bottom: 0;
+		    left: 0;
+		    right: 0;
+		    margin: auto;
+		    border : 1px solid #d4d0d0;
+		    border-radius : 3px;
+		    padding : 20px;
+		}
+
+		.title {
+			font-size : 24px;
+		}
+
+		:host input {
+			height : 20px;
+			width : 200px;
+		}
+
+		:host input[name=password] {
+			border : 1px solid #d4d0d0;
+			border-radius : 3px;
+			padding : 5px;
+		}
+
+		.label {
+			width : 100px;
+			font-weight : bold;
+		}
+
+		.loginTable {
+			padding : 10px 0px;
+			position : relative;
+			left : 40px;
+			top : 20px;
+		}
+
+		.loginTable tr {
+			height : 40px;
+		}
+
+		.loginTable button {
+			border : 1px solid #d4d0d0;
+			border-radius : 3px;
+			padding : 5px 10px;
+			background-color : #eaeaea;
+		}
+
+		.loginTable button[cancel] {
+			margin-left : 10px;
+		}
+
+		.content {
+			padding : 5px 0px;
+		}
+
+	</style>
+
+	<template>
+		<sc-ajax id="authentication" url="/account/checkRoleAdminAuthenticate.do" on-response="_onResponse" on-error="_onError"></sc-ajax>
+		<div class="wrapper">
+			<div class="title">[[translate('관리자페이지 접근')]]</div>
+			<div class="content">
+				[[translate('관리자 메뉴를 사용하려면 아래 계정에 대한 추가인증을 거쳐야 합니다.')]]
+			</div>
+
+			<div class="loginForm">
+				<cc-form-panel label-width="120" column="1">
+					<cc-fieldset>
+						<sc-label text="사용자 아이디"></sc-label>
+						<input type="text" name="username" readonly style="border:0px;font-weight:bold;background-color:#fbfbfb;" tabindex="-1"></input>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="비밀번호"></sc-label>
+						<input type="password" name="password" required on-enter="_onConfirmClick"></input>
+					</cc-fieldset>
+					<cc-sub-title-bar>
+						<sc-button text="확인" on-click="_onConfirmClick" auth-s></sc-button>
+						<sc-button text="취소" on-click="_onCancelClick" auth-s></sc-button>
+					</cc-sub-title-bar>
+				</cc-form-panel>
+			</div>
+		</div>
+	</template>
+	
+	<script>
+		Polymer({
+			
+			is : 'sc-mdi-authentication',
+			
+			behaviors : [
+				Polymer.SCA11yKeysBehavior
+			],
+			
+			keyBindings: {
+		      	'enter:keypress': '_onConfirmClick'
+		    },
+		    
+			get usernameElement() {
+				return this.querySelector('input[name=username]');
+			},
+			
+			get passwordElement() {
+				return this.querySelector('input[name=password]');
+			},
+			
+			isShowing : function() {
+				return this._showing;
+			},
+			
+			show : function() {
+			    var me = this;
+
+				this._showing = true;
+				this.style.display = 'block';
+				this.usernameElement.value = SCSessionManager.currentUser.usr_id;
+				setTimeout(function () {
+                    me.passwordElement.focus();
+				}, 0)
+			},
+			
+			hide : function() {
+				this._showing = false;
+				this.style.display = 'none';
+			},
+			
+			_onConfirmClick : function() {
+				var me = this;
+				if(!me.passwordElement.value) {
+					UT.alert("STD.ADM1027", function() {
+						me.passwordElement.focus();
+					});
+					return;
+				}
+				me.$.authentication.body = {
+					pw : PasswordEncryptor.encryptpw(me.passwordElement.value)
+				};
+				me.$.authentication.request();
+			},
+			
+			_onCancelClick : function() {
+				this.hide();
+				this.fire('sc-mdi-window-close');
+			},
+			
+			_onResponse : function(e, res) {
+				var me = this;
+				if(res.response.authenticated === true) {
+					SCSessionManager.loadSession().then(function() {
+						me.hide();
+						me.fire('sc-mdi-window-load');
+					});
+				}
+			},
+			
+			_onError: function(e, res) {
+				var xhr = res.error.xhr,
+					response = xhr.response,
+					message;
+				
+				e.preventDefault();
+				if(SCUtil.isObject(response)) {
+					message = response.message;
+				}
+				else {
+					message = JSON.parse(response).message;
+				}
+				UT.alert(message);
+			}
+		});
+	</script>
+</dom-module>

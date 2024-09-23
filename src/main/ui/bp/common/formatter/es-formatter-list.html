@@ -1,0 +1,227 @@
+<sc-link rel="import" href="ep-user-formatter-list.html"></sc-link>
+<dom-module id="es-formatter-list">
+<!-- 
+/**
+ *
+ *	@description : display formatter 리스트
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 3. 04.
+ */
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<sc-code-group>
+			<sc-code code="C061"	value="{{codes.C061}}"></sc-code>
+		</sc-code-group>
+		
+		<sc-ajax id="findListDisplayFormat"
+				url="findListDisplayFormat.do"
+				last-response="{{displayFormatList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="saveListDisplayFormat"
+				url="saveListDisplayFormat.do"
+				on-response="completeSaveListDisplayFormat">
+		</sc-ajax>
+		
+		<sc-ajax id="deleteListDisplayFormat"
+				url="deleteListDisplayFormat.do"
+				on-response="completeDeleteListDisplayFormat">
+		</sc-ajax>
+		
+		<!-- 역할 체크 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+        	<sc-grid id="gridPanel" data-provider="{{displayFormatList}}" editable="true" class="flex"
+                     on-item-click="onDataCellClick" validation-group="dispFormatSave">
+                <cc-grid-toolbar title-text="포맷터 유형 관리">
+                	<sc-button text="로케일 표기법 관리" on-click="onShowUserFormat" auth-s></sc-button>
+                    <sc-button text="추가" on-click="onAddDisplayFormat" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteDisplayFormat" auth-s></sc-button>
+                    <sc-button text="저장" on-click="onSaveDisplayFormat" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="fmter_cd" header-text="코드" required="true" width="180" text-align="center" style-name="link"  max-length="36" item-editable-function="onFormatterGrpCdEditable"></sc-data-column>
+                    <sc-combobox-column	data-field="dat_typ_ccd"		header-text="데이터 타입"		width="150"	text-align="center" editable="true" required="true"
+									display-field="label"			value-field="data"		items="{{codes.C061}}"></sc-combobox-column>
+                    <sc-data-column data-field="fmter_expln" header-text="설명" width="250" editable="true" text-align="left"	max-length="250"></sc-data-column>
+                </sc-grid-columns>
+            </sc-grid>
+        </div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'es-formatter-list',
+			properties : {
+				codes: {
+					type: Object,
+					value: function(){
+						return {
+							C061: {}
+						};
+					},
+					reset: false
+				},
+				displayFormatList: {
+					type: Array,
+					value: function(){
+						return [];
+					}
+				},
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			initialized : function(){
+				var me = this;
+				me.onFindListDisplayFormatter();
+			},
+			load: function(){
+				var me = this;
+				me.onFindListDisplayFormatter();
+			},
+			onFindListDisplayFormatter: function(){
+				var me = this;
+				UT.request(me.$.findListDisplayFormat);
+				me.applyFormula();
+			},
+			/*************************************************
+			* 그룹포맷터코드 그리드
+			**************************************************/
+			// 그룹포맷터코드 editable 제어 : 신규 일 경우만 수정 가능
+            onFormatterGrpCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider();
+                return (provider.getItemState(item.rowIndex) == "created");
+            },
+			/*************************************************
+			* 그룹 display 포맷터 관리
+			**************************************************/
+			//추가
+			onAddDisplayFormat: function(){
+				var me = this,
+                provider = me.$.gridPanel.getDataProvider();
+
+	            // 그리드 신규행 추가
+	            var row = {
+	                format_grp_cd: "",
+	                format_grp_desc: ""
+	            };
+	            provider.addItemAt(0,row);
+			},
+			//삭제
+			onDeleteDisplayFormat: function(){
+				var me = this,
+                provider = me.$.gridPanel.getDataProvider(),
+                checked = provider.selectionCheckedIndexes();
+
+	            if (checked.length === 0) {
+	                UT.alert("STD.N1600");
+	                return;
+	            }
+
+	            UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?",
+	                var deleted = provider.removeItems();
+	                if(deleted.length > 0){
+	                    me.$.deleteListDisplayFormat.body = {
+	                    	deleteDisplayFormats: deleted
+	                    };
+	                    UT.request(me.$.deleteListDisplayFormat);
+	                }
+	            });
+			},
+			completeDeleteListDisplayFormat: function(){
+				var me = this,
+            		message = "STD.N2500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onFindListDisplayFormatter();
+					me.onDetailClear();
+				});
+			},
+			//저장
+			onSaveDisplayFormat: function(){
+				var me = this,
+					provider = me.$.gridPanel.getDataProvider(),
+					inserted = provider.getNewItems(),
+					updated = provider.getUpdateItems();
+			
+				if((inserted.length + updated.length) === 0){
+					UT.alert("STD.N1700");
+					return;
+				}
+				
+				if(!me.validate('dispFormatSave')){
+					UT.alert("STD.E0000");
+					return;
+				}
+					
+				UT.confirm("STD.N1200",function(){
+					me.$.saveListDisplayFormat.body = {
+							insertDisplayFormatList: inserted,
+							updateDisplayFormatList: updated
+					};
+					UT.request(me.$.saveListDisplayFormat);
+				});
+			},
+			completeSaveListDisplayFormat: function(){
+				var me = this,
+	        		message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onFindListDisplayFormatter();
+					me.onDetailClear();
+				});
+			},
+			onDetailClear: function(){
+				var me = this;
+				me.applyFormula();
+				me.fire("reset-detail");
+			},
+			/************************************************
+			* 그룹 Display Format 관리 그리드 이벤트
+			***********************************************/
+			onDataCellClick: function(e){
+				var me = this,
+            	data = e.detail.data,
+            	item = e.detail.item;
+            	var provider = me.$.gridPanel.getDataProvider();
+			
+				var editable = (provider.getItemState(item.rowIndex) != "created");
+	            if(item.dataField === "fmter_cd" && editable){
+	            	me.fire('selected-detail',data);
+	            }
+			},
+			/**********************************************
+			* 사용자표기법관리
+			*********************************************/
+			onShowUserFormat: function(){
+				var me = this;
+				
+				var popup = UT.popup('ep-user-formatter-list',me,640,480,{
+					'selected-items': function(popup, e){
+						var provider = me.$.detailGridPanel.getDataProvider(),
+       					result = e.detail;
+	             		popup.close();
+					}
+				});
+				popup.show();
+				popup.getWindowContent().load();
+			}
+		});
+	</script>
+</dom-module>

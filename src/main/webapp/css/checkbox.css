@@ -1,0 +1,76 @@
+@charset "utf-8";
+
+/* ----------------------------
+2020.01.20 ch.byeon - 디자인팀
+---------------------------- */
+
+/* input-style */
+.checks {position: relative;}
+.checks input[type="checkbox"] {  /* 실제 체크박스는 화면에서 숨김 */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip:rect(0,0,0,0);
+  border: 0
+}
+.checks input[type="checkbox"] + label {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.checks input[type="checkbox"] + label:before {  /* 가짜 체크박스 */
+  content: ' ';
+  display: inline-block;
+  width: 15px;  /* 체크박스의 너비를 지정 */
+  height: 15px;  /* 체크박스의 높이를 지정 */
+  line-height: 15px; /* 세로정렬을 위해 높이값과 일치 */
+  margin: -1px 5px 0 0;
+  text-align: center;
+  vertical-align: middle;
+  background: #808df3;
+  border: 1px solid #808df3;
+  border-radius : 15px;
+  /*box-shadow: 0px 1px 2px rgba(0,0,0,0.05), inset 0px -15px 10px -12px rgba(0,0,0,0.05);*/
+}
+.checks input[type="checkbox"] + label:active:before,
+.checks input[type="checkbox"]:checked + label:active:before {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), inset 0px 1px 3px rgba(0,0,0,0.1);
+}
+.checks input[type="checkbox"]:checked + label:before {  /* 체크박스를 체크했을때 */
+  content: '\2714';  /* 체크표시 유니코드 사용 */
+  color: #ffffff;
+  font-size:11px; /*체크표시 크기*/
+  font-weight:600; /*체크표시 굵기*/
+  background: #808df3;
+  /*border:1px solid #808df3;*/
+  box-shadow: 0px 1px 2px rgba(0,0,0,0.05), inset 0px -15px 10px -12px rgba(0,0,0,0.05), inset 15px 10px -12px rgba(255,255,255,0.1);
+}
+.checks input[type="checkbox"]:focus + label:before {
+  /*border-color:#a5cdf1;체크표시 후 선 색상*/
+  box-shadow:0 0 4px #89bfef; /* 체크표시 후 쉐도우 및 탭이동시 표시 */
+}
+
+/* ==== in login (내부) ==== */
+.in_container .checks input[type="checkbox"] + label:before {  /* 가짜 체크박스 */
+    background: #fff;
+    border: 1px solid #ceced4;
+}
+.in_container .checks input[type="checkbox"]:checked + label:before {  /* 체크박스를 체크했을때 */
+    content: '\2714';  /* 체크표시 유니코드 사용 */
+    color: #6171ea; /*체크표시 색상*/
+    font-size:11px; /*체크표시 크기*/
+    font-weight:600; /*체크표시 굵기*/
+    background: #ffffff;
+    /*border:1px solid #808df3;*/
+    box-shadow: 0px 1px 2px rgba(0,0,0,0.05), inset 0px -15px 10px -12px rgba(0,0,0,0.05), inset 15px 10px -12px rgba(255,255,255,0.1);
+  }
+.in_container .checks input[type="checkbox"]:focus + label:before {
+    /* border-color:#6171ea; 체크표시 후 선 색상*/
+    box-shadow:0 0 3px #d8d8d8; /*체크표시 후 쉐도우 및 탭이동시 표시 */
+  }

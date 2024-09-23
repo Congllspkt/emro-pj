@@ -1,0 +1,498 @@
+<!--
+	******************************************************************************************
+	** @Program-name 	: 일반 배열 구조 트리 구조로 변경 및 정렬
+	** @Description		: 
+	** @Author 			: swahn
+	** @Create Date 	: 2016.10.28
+	** @History 		: 2017.3.28 swahn 최종 수정
+	******************************************************************************************
+-->
+
+<script>
+(function() {
+	window.CCHierachicalData = (function() {
+		
+		var CCHierachicalDataImpl = function() {
+			
+		};
+		
+		
+		/*	cloneResult(default:false)
+			원본 데이터를 복사해서 트리데이터를 생성할 것이면 true 
+			원본 데이터를 수정해 트리를 생성할 것이면 false
+			
+			생성하려는 데이터양이 많을경우 복사를 권장하지 않는다
+			복사 테스트 결과 배열 173건 배열요소24개 기준 대략 1000배 가량 느려짐  
+		*/
+		CCHierachicalDataImpl.prototype.cloneResult = false;
+		
+		// 대용량 지연 처리 시 한 타임에 처리할 노드 숫자
+		CCHierachicalDataImpl.prototype.massProcessingUnit = 10000;
+		
+		CCHierachicalDataImpl.prototype.massProcessDelay = 10;
+
+		// 대용량 지연처리
+		CCHierachicalDataImpl.prototype.massProcessing = false;
+	    
+		// 이상데이터 발견 시 로깅 처리 여부
+		CCHierachicalDataImpl.prototype.debug = false;
+		
+		// 정렬 기능을 사용할 것인지 여부
+		CCHierachicalDataImpl.prototype.usingSort = false;
+		
+		// 어떤 키를 기준으로 정렬을 할지
+	    CCHierachicalDataImpl.prototype.sortName = 'sort';
+	    
+		// 오름차순 정렬(false 시 내림차순 정렬)
+	    CCHierachicalDataImpl.prototype.orderByASC = true;
+		
+		// 객체의 식별자 키명
+	    CCHierachicalDataImpl.prototype.keyName = 'id';
+	    
+		// 객체의 상위노드 키 명
+	    CCHierachicalDataImpl.prototype.superKeyName = 'superid';
+	    
+		// json 형식의 데이터 생성 시 자식 노드 배열을 어떤 키 명으로 생성 할지
+	    CCHierachicalDataImpl.prototype.childName = 'children';
+	    
+		// 최상위 노드의 id
+	    CCHierachicalDataImpl.prototype.rootKeyValue = 'ROOT';
+		
+	    CCHierachicalDataImpl.prototype.generateFakeRoot = false;
+		
+	 	// 노드 추가 시 발생하는 이벤트
+	    CCHierachicalDataImpl.prototype.onNodeAppend = function(parentNode, node, parentNodeLevel){};
+	    
+		// 기본 옵션을 가지고 key값을 기준으로 트리데이터를 생성함
+	    CCHierachicalDataImpl.prototype.HierachyTransform = function(array){
+	    	this.HierachyTransformByKey(array,this.keyName, this.superKeyName, this.childName, this.rootKeyValue, this.sortName);
+	    };
+	    
+	    CCHierachicalDataImpl.prototype.onTransformComplete = function(tree){
+	    	
+	    };
+	    
+	    CCHierachicalDataImpl.prototype._MassProcess = function(array, keyName, superKeyName, childName, rootKeyValue, sortName, generateFakeRoot){
+	    	
+	    	var rootNodes = [], rootNodesMap = { length:0 }, 
+	    		printWarning = (console && console.warn && this.debug === true) ? function(){console.warn.apply(this,arguments);} : function(){},
+	    		addToArray = this._addToArray.bind(this),
+	    		orderByASC = this.orderByASC,
+	    		usingSort = this.usingSort,
+	    		onNodeAppend = this.onNodeAppend,
+	    		massProcessDelay = this.massProcessDelay,
+	    		massProcessingUnit = this.massProcessingUnit,
+	    		disconnectedNodes = [],
+	    		fakeRoot = {},
+	    		onTransformComplete = this.onTransformComplete,
+	    		onComplete = !generateFakeRoot ? onTransformComplete : function(tree){
+	    			fakeRoot[childName] = tree;
+	    			return onTransformComplete.call(this,fakeRoot);
+	    		};
+				
+	    		fakeRoot[keyName] = rootKeyValue;
+	    	
+			var findRoot = function(array, currentIndex, rootNodes, limit, callback){
+				//rootNode 들을 찾는다.
+				var roofCount = 0;
+				
+		    	while(currentIndex < array.length && roofCount++ < limit){
+		    		var item = array[currentIndex];
+		    		// 필수값이 누락된 노드들을 제거한다
+		    		if(!item || item[keyName] == null || (item[superKeyName] != rootKeyValue && item[superKeyName] == null)){
+		    			printWarning("Some required values are missing");
+		    			disconnectedNodes.push(array.splice(currentIndex, 1)[0]);
+	    			}
+	    			else if(item[superKeyName] == rootKeyValue) {
+	    				var rootNode = array.splice(currentIndex, 1)[0];
+	    				onNodeAppend(fakeRoot, item, 0);
+	    				addToArray(rootNodes, rootNode, usingSort, sortName, orderByASC);
+	    				rootNodesMap[item[keyName]] = rootNode;
+	    				rootNodesMap.length++;
+	    			}
+	    			else{
+	    				currentIndex++;
+	    			}
+		    	}
+		    	
+		    	if(currentIndex < array.length){
+		    		setTimeout(arguments.callee.bind(this, array, currentIndex, rootNodes, limit, callback), massProcessDelay);
+		    	}else{
+		    		callback.call(this, array, rootNodes);
+		    	}
+		    	
+	    	};
+	    	
+	    	
+	
+	    	
+	    	
+	    	var connectChild = function(array, currentLevelNodesMap, currentLevel, nextLevelNodesMap, roofCount, callback, rootNodes){
+	    		var startIndex = roofCount++;
+	    		var target = array.slice(startIndex * massProcessingUnit , (startIndex * (massProcessingUnit + 1))-1),
+	    			isLast = (target.length !== (massProcessingUnit-1));
+	    		
+	    		do{
+					var item = target.splice(0,1)[0],
+						superNode = currentLevelNodesMap[item[superKeyName]];
+	    			if(superNode){
+    					var childrens = superNode[childName] = superNode[childName] || [];
+    					onNodeAppend(superNode, item, currentLevel);
+    					addToArray(childrens, item, usingSort, sortName, orderByASC);
+    					nextLevelNodesMap[item[keyName]] = item;
+    					nextLevelNodesMap.length++;
+	    			}
+	    		}while (target.length > 0)
+	    		
+	    			
+	    		if(isLast){
+	    			if(nextLevelNodesMap.length > 0){
+	    				setTimeout(arguments.callee.bind(this, array, nextLevelNodesMap, currentLevel+1, {length : 0}, 0, callback, rootNodes), massProcessDelay);
+	    			}else{
+	    				callback.call(this, rootNodes);
+	    			}
+	    		}else{
+	    			setTimeout(arguments.callee.bind(this, array, currentLevelNodesMap, currentLevel, nextLevelNodesMap, roofCount, callback, rootNodes), massProcessDelay);
+	    		}
+	    	};
+	    	
+	    	findRoot.call(this, array, 0, [], massProcessingUnit, function(array, rootNodes){
+	    		connectChild.call(this, array, rootNodesMap, 1, {length : 0}, 0, onComplete, rootNodes)
+	    	});
+	    };
+	    
+	    CCHierachicalDataImpl.prototype._validateNodes = function(array, keyName, debug){
+	    	var indexedNodes = {},
+	    		printWarning = (debug === true && console.warn ? function(){
+	    			console.warn.apply(this,arguments);
+	    		} : function(){});
+	    	
+	    	for(var i = 0; i < array.length; i++){
+    			if(array[i][keyName] == null){
+    				var node = array.splice(i, 1)[0];
+    				printWarning("There's no key!", node, "node is removed");
+    				i--;
+    				continue;
+	    		}
+    			if(indexedNodes[array[i][keyName]]){
+    				var node = array.splice(i, 1)[0];
+    				printWarning("keyName : "+keyName + "is duplicate!", node, "node is removed");
+    				i--;
+    				continue;
+	    		}
+	    		
+	    		indexedNodes[array[i][keyName]] = array[i]; 
+	    	}
+	    	return indexedNodes;
+	    };
+	    
+	    CCHierachicalDataImpl.prototype._groupBySuperKey = function(array, superkeyName){
+	    	var len = array.length,
+	    		superKeygroups = {};
+	    	
+	    	for(var i = 0; i < len; i++){
+	    		if(!superKeygroups[array[i][superkeyName]]){
+	    			superKeygroups[array[i][superkeyName]] = [];
+	    		}
+	    		
+	    		superKeygroups[array[i][superkeyName]].push(array[i]); 
+	    	}
+	    	
+	    	return superKeygroups;
+	    };
+	    
+	    /*
+	    array : Array 
+	    keyName : String
+	    superKeyName : String
+	    sortName : String
+	    childName : String
+	    rootKeyValue : String
+	    */
+	    CCHierachicalDataImpl.prototype.HierachyTransformByKey = function(array, keyName, superKeyName, childName, rootKeyValue, sortName, generateFakeRoot){
+	    	if(!this.isArray(array))
+				return;
+	    	
+	    	if(this.cloneResult === true){
+	    		array = this.clone(array);
+	    	}
+	    	
+	    	keyName = this.isFilledString(keyName) ? keyName : this.keyName;
+	    	superKeyName = this.isFilledString(superKeyName) ? superKeyName : this.superKeyName;
+	    	sortName = this.isFilledString(sortName) ? sortName : this.sortName;
+	    	childName = this.isFilledString(childName) ? childName : this.childName;
+	    	//rootKeyValue = this.isFilledString(rootKeyValue) ? rootKeyValue : this.rootKeyValue;
+	    	generateFakeRoot = (generateFakeRoot === true || generateFakeRoot === false) ? generateFakeRoot : this.generateFakeRoot;
+	    	
+	    	if(this.massProcessing === true){
+	    		this._MassProcess(array, keyName, superKeyName, childName, rootKeyValue,sortName, generateFakeRoot);
+	    		return;
+	    	}
+	    	
+	    	this._validateNodes(array, keyName, this.debug);
+	    	
+	    	var printWarning = (console && console.warn && this.debug === true) ? function(){console.warn.apply(this,arguments);} : function(){},
+	    		addToArray = this._addToArray.bind(this),
+	    		orderByASC = this.orderByASC,
+	    		usingSort = this.usingSort,
+	    		onNodeAppend = this.onNodeAppend,
+	    		_groupBySuperKey = this._groupBySuperKey(array,superKeyName);
+	    		
+	    		
+	    	var addChild = function(parentNode, childs, parentNodeLevel){
+	    		parentNode[childName] = [];
+	    		for(var i = 0; i < childs.length; i++){
+	    			var child = childs[i];
+	    			onNodeAppend(parentNode, child, parentNodeLevel);
+	    			addToArray(parentNode[childName], child, usingSort, sortName, orderByASC);
+	    		}
+	    	};
+	    	
+	    	var fakeRoot = {};
+	    	
+	    	fakeRoot[keyName] = rootKeyValue;
+	    	
+	    	if(!_groupBySuperKey[rootKeyValue]){
+		    	_groupBySuperKey = null;
+	    		if(generateFakeRoot){
+	    			return fakeRoot;
+	    		}else{
+	    			return [];
+	    		}
+	    	}
+	    	
+	    	addChild(fakeRoot, _groupBySuperKey[rootKeyValue], 0);
+	    	
+	    	rootNodes = fakeRoot[childName];
+	    	
+	    	var currentLevel = 1, currentLevelNodes = rootNodes, nextLevelNodes;
+	    	do{
+	    		nextLevelNodes = [];
+	    		for(var i = 0; i < currentLevelNodes.length; i++){
+	    			var parentNode = currentLevelNodes[i];
+	    			var child = _groupBySuperKey[parentNode[keyName]];
+	    			if(child){
+	    				addChild(parentNode, child, currentLevel);
+	    				nextLevelNodes = nextLevelNodes.concat(child);
+	    			}	
+	    		}
+	    		currentLevelNodes = nextLevelNodes;
+	    		currentLevel++;
+	    	}while (nextLevelNodes.length > 0)
+	    	
+	    	
+	    	_groupBySuperKey = null;
+	    	if(generateFakeRoot === true){
+	    		
+	    		return fakeRoot;
+	    	}else{
+	    		return rootNodes;
+	    	}
+	    };
+	    
+	    
+	    CCHierachicalDataImpl.prototype.CompareTypes = {
+	    	EQUALS : 0,
+	    	AISGREATER : 1,
+	    	AISLESSER : -1
+	    };
+	    
+	    /*
+			정렬 비교 함수 구현 예정
+		*/
+		CCHierachicalDataImpl.prototype.customCompareFunction = null;
+	    
+		
+	    CCHierachicalDataImpl.prototype._defaultCompareFunction = function(aNode, bNode, sortKey){
+    		if(!aNode && !bNode){
+    			return this.CompareTypes.EQUALS;
+    		}
+    		
+    		if(aNode[sortKey] == null && bNode[sortKey] == null){
+    			return this.CompareTypes.EQUALS;
+    		}
+    		
+    		if(aNode[sortKey] == null){
+    			return this.CompareTypes.AISGREATER;
+    		}
+    		
+    		if(bNode[sortKey] == null){
+    			return this.CompareTypes.AISLESSER;
+    		}
+    		
+    		if(aNode[sortKey] > bNode[sortKey]){
+    			return this.CompareTypes.AISGREATER;
+    		}
+    		if(aNode[sortKey] < bNode[sortKey]){
+    			return this.CompareTypes.AISLESSER;
+    		}
+    		if(aNode[sortKey] == bNode[sortKey]){
+    			return this.CompareTypes.EQUALS;
+    		}
+	    };
+	    
+	    /*
+	    	1. 정렬 시 향후 compareFunction 을 이용하여 정렬하는 방안으로 개선 예정
+	    	2. 기본 정렬 함수로 객체의 sortName을 기준으로 배열 사이 적정한 정렬 위치에 item을 추가 한다.
+	    		정렬 시 소팅 값이 null인 경우는 소팅 값이 제일 높다고 가정된다.
+	    		예) 오름차순 정렬 시 높은 인덱스 값을 가짐, 내림차순 정렬 시 낮은 인덱스 값을 가짐
+	    */
+	    CCHierachicalDataImpl.prototype._addToArray = function(array, item, usingSort, sortName, orderByASC){
+	    	if(usingSort !== true){
+	    		array.push(item);
+	    		return;
+	    	}
+	    	
+	    	var compareFunction = this.customCompareFunction ? this.customCompareFunction : this._defaultCompareFunction;
+	    	
+	    	if(orderByASC === true){
+	    		var i = 0;
+	    		do{
+	    			if(i === array.length){
+	    				array.push(item);
+						break;
+	    			}
+	    			else if(compareFunction.call(this, array[i], item, sortName) > 0 ){
+	    				array.splice(i, 0, item);
+						break;
+	    			}
+	    			
+	    		}while(i++ < array.length)
+	    	}
+	    	else{
+	    		var i = array.length-1;
+	    		do{
+	    			if(i < 0){
+	    				array.unshift(item);
+	    				break;
+	    			}
+	    			if(compareFunction.call(this, array[i], item, sortName) > 0 ){
+						array.splice(i+1, 0, item);
+						break;
+					}
+	    		}while(i-- >= 0)
+	    	}
+	    };
+	    
+		CCHierachicalDataImpl.prototype.getLength = function(treeList, childKeyName){
+			if(!treeList){
+				return;
+			}
+			
+			var result = treeList.length;
+			for(var i = 0; i < treeList.length; i++){
+				if(treeList[i][childKeyName]){
+					result += arguments.callee(treeList[i][childKeyName], childKeyName);
+				}else{
+					continue;
+				}
+			}
+			return result;
+		}
+	    
+	    CCHierachicalDataImpl.prototype.findNode = function(treeList, id, keyName, childKeyName){
+			var result;
+			for(var i=0, child; child = treeList[i]; i++) {
+				if(child[keyName] === id) {
+					return child;
+				}
+				else{
+					if(!child[childKeyName]){
+						continue;
+					}
+					result = arguments.callee(child[childKeyName], id, keyName, childKeyName) || result;
+					if(result){
+						return result;
+					}
+				}
+			}
+			return result;
+	    };
+	    
+	    CCHierachicalDataImpl.prototype.clone = function(target){
+	    	if (this.isArray(target))
+	        {
+	            var clone = [];
+	            for (var i=0; i<target.length; i++)
+	                clone[i] = arguments.callee.call(this,target[i]);
+	
+	            return clone;
+	        } 
+	        else if (this.isObject(target))
+	        {
+	            var clone = {};
+	            for (var prop in target)
+	                if (target.hasOwnProperty(prop))
+	                    clone[prop] = arguments.callee.call(this,target[prop]);
+	
+	            return clone;
+	        }
+	        else
+	            return target;
+	    };
+	    
+	    /*
+	    	퀵정렬 알고리즘, 현재 미사용
+	    */
+	    CCHierachicalDataImpl.prototype.sort = function(values, sortKey, start, end){
+	    	if (!this.isArray(values)){
+	    		return;
+	    	}
+	    	
+	    	start = (this.isNumber(start) &&  start >= 0) ? start : 0;
+	    	end = (this.isNumber(end) && end >= 1 && end < values.length) ? end : values.length-1;  
+	    	
+	    	
+	    	var i,j,p;
+	    	if (start < end) {
+	            i = start+1; // 양끝에서 접근할 값 정의
+	            j = end;
+	            p = values[start]; // pivot을 맨 처음 값으로 설정
+	            do {
+	                while (values[i][sortKey] < p[sortKey]){
+	                    i++; // pivot보다 크거나 같은 값 만날 때까지
+	                };
+	                while (values[j][sortKey] > p[sortKey]) {
+	                    j--; // pivot보다 작거나 같은 값 만날 때까지
+	                }
+	                // 구한 i, j 인덱스의 값을 서로 스왑
+	                if (i < j){
+	                    tempValue = values[j];
+	                    values[j] = values[i];
+	                    values[i] = tempValue;
+	                }
+	            } while (i < j); // i보다 j가 클때만 동작
+	            num[start] = num[j];
+	            num[j] = p; 
+	            arguments.callee.call(this,values,sortKey,start,j-1); // 왼쪽 편 같은 방법으로 sorting
+	            arguments.callee.call(this,values,sortKey,j+1,end); // 오른쪽 편 같은 방법으로 sorting
+	        }
+	    };
+	    
+	    CCHierachicalDataImpl.prototype.isObject = function(o) {
+	    	return Object.prototype.toString.call(o) === '[object Object]';
+	    };
+	    
+	    CCHierachicalDataImpl.prototype.isNumber = function(o) {
+			return Object.prototype.toString.call(o) === '[object Number]';
+		};
+	    
+	    CCHierachicalDataImpl.prototype.isArray = function(o) {
+			return Object.prototype.toString.call(o) === '[object Array]';
+		};
+	    
+		CCHierachicalDataImpl.prototype.isString = function(o) {
+			return Object.prototype.toString.call(o) === '[object String]';
+		};
+		
+		CCHierachicalDataImpl.prototype.isFilledString = function(o){
+			if(this.isString(o) && o.length > 0){
+				return true;
+			}
+			return false;
+		};
+		return CCHierachicalDataImpl;
+	}());
+	
+}());
+</script>

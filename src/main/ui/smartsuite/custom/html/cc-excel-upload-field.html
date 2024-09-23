@@ -1,0 +1,480 @@
+<!--
+    ******************************************************************************************
+    ** Description     : cc-excel-upload-field
+    ** Author          : ChoiGaram
+    ** Create Date     : 2018.06.19
+    ** History         : 2018.06.19 choijh 최초작성 내역에 대해서 Excel Upload용으로 사용하기 위하여 별도 수정
+    ** Description     : 첨부파일 API를 활용한 단건 Upload Field 구현
+    ******************************************************************************************
+-->
+<dom-module id="cc-excel-upload-field">
+    <style>
+    </style>
+    <template>
+        <!-- 첨부파일 목록조회 -->
+        <!--<sc-ajax id="list" url="upload/list.do" headers="[[_headers]]"></sc-ajax>-->
+        <!-- 첨부파일 삭제 -->
+        <sc-ajax id="delete" url="upload/delete.do" headers="[[headers]]"></sc-ajax>
+
+        <div class="field-container">
+            <input type="file" id="fileInput" hidden multiple="false">
+            <sc-text-field id="fileName" value="[[_currentFile.name]]" readonly="true" required="[[required]]" input-clear="true" reset="false" on-click="_onFileDownload"></sc-text-field>
+            <sc-button text="파일추가" on-click="_onClickFileUpload" style="white-space: nowrap; margin-left:3px;" hidden="{{!editable}}"></sc-button>
+        </div>
+        <sc-upload id="uploader" hidden></sc-upload>
+    </template>
+    <script>
+        (function() {
+            var document = Polymer.getDocument(),
+                meta = document.querySelector('meta[name=_csrf]'),
+                csrf = (function(meta) {
+                    if(meta) {
+                        return {
+                            csrf : meta.content,
+                            csrfHeader : document.querySelector('meta[name=_csrf_header]').content,
+                            csrfParameter : document.querySelector('meta[name=_csrf_parameter]').content
+                        };
+                    }
+                }(meta)),
+                defaultConfig = (function(csrf) {
+                    var xhr = new XMLHttpRequest(),
+                        //기본설정
+                        config = {
+                            maxFileSize : '10MB',
+                            minFileSize : '0bytes',
+                            maxTotalFileSize : '100MB',
+                            maxTotalFileCount : 100,
+                            extension : 'xlsx',
+                            restrictExtension : 'html,jsp,java,class,js,exe',
+                        };
+
+                    xhr.open('POST', 'upload/config.do', false);
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    if(csrf) {
+                        xhr.setRequestHeader(csrf.csrfHeader, csrf.csrf);
+                    }
+                    xhr.addEventListener('loadend', function(event) {
+                        var responseType,
+                            preferResponseText,
+                            prefixLen;
+
+                        if(xhr.status === 200) {
+                            responseType = xhr.responseType || xhr._responseType,
+                                preferResponseText = !xhr.responseType;
+                            prefixLen = (xhr._jsonPrefix && xhr._jsonPrefix.length) || 0;
+
+                            if(preferResponseText || xhr.response === undefined) {
+                                config = JSON.parse(xhr.responseText);
+                            }
+                            else {
+                                config = event.response;
+                            }
+                        }
+                        else {
+                            var ajaxException = function(message, code, xhr) {
+                                this.name = 'ajaxException';
+                                this.message = message;
+                                this.code = code;
+                                this.xhr = xhr;
+                            };
+                            SCAjax.prototype.ajaxExceptionHandler(new ajaxException('', xhr.status, xhr));
+                        }
+                    });
+                    xhr.addEventListener('error', function(event) {
+                        //to-do 메세지 처리 alert();
+                    });
+                    xhr.send(null);
+                    return config;
+                }(csrf));
+
+
+            Polymer({
+                is: 'cc-excel-upload-field',
+                properties: {
+                    /**
+                     * 첨부파일 컴포넌트 별 첨부할 수 있는 파일 총 사이즈 제한설정으로 bytes,KB,MB,GB,TB,PB,EB 단위를 사용할 수 있습니다.
+                     * @type {String}
+                     * @default 100MB
+                     */
+                    maxTotalFileSize : {
+                        type : String,
+                        value : function() {
+                            return defaultConfig.maxTotalFileSize;
+                        }
+                    },
+
+                    /**
+                     * 단일파일별 첨부할 수 있는 파일 최대 사이즈 제한설정으로 bytes,KB,MB,GB,TB,PB,EB 단위를 사용할 수 있습니다.
+                     * @type {String}
+                     * @default 10MB
+                     */
+                    maxFileSize : {
+                        type : String,
+                        value : function() {
+                            return defaultConfig.maxFileSize;
+                        }
+                    },
+
+                    /**
+                     * 단일파일별 첨부할 수 있는 파일 최소 사이즈 제한설정으로 bytes,KB,MB,GB,TB,PB,EB 단위를 사용할 수 있습니다.
+                     * @type {String}
+                     * @default 0bytes
+                     */
+                    minFileSize : {
+                        type : String,
+                        value : function() {
+                            return defaultConfig.minFileSize;
+                        }
+                    },
+
+                    /**
+                     * 첨부 가능한 파일의 확장자를 설정하는 프로퍼티 입니다.
+                     * @type {String}
+                     * @default undefined
+                     */
+                    extension : {
+                        type : String,
+                        value : function() {
+                            return defaultConfig.extension;
+                        }
+                    },
+
+                    /**
+                     * 첨부 불가능한 파일의 확장자를 설정하는 프로퍼티 입니다.
+                     * @type {String}
+                     * default html,jsp,java,class,js,exe
+                     */
+                    restrictExtension : {
+                        type : String,
+                        value : function() {
+                            return defaultConfig.restrictExtension;
+                        }
+                    },
+
+                    /**
+                     * Required 여부
+                     * @type {Boolean}
+                     */
+                    required: {
+                        type: Object,
+                        value: function () {
+                            return false;
+                        }
+                    },
+
+                    /**
+                     * Editable 여부
+                     * @type {Boolean}
+                     */
+                    editable: {
+                        type: Object,
+                        value: function () {
+                            return true;
+                        }
+                    },
+
+                    /**
+                     * Upload File Group Id
+                     * @type {String}
+                     */
+                    value: {
+                        type: String,
+                        notify: true,
+                        observer : '_valueChanged'
+                    },
+
+                    /**
+                     * Uploader 객체
+                     * @type {Object}
+                     */
+                    _uploader: Object,
+
+                    /**
+                     * 현재 담고 있는 파일 객체
+                     * @type {Object}
+                     */
+                    _currentFile: {
+                        type: Object,
+                        value: function () {
+                            return {
+                                remote: false
+                            }
+                        }
+                    },
+
+                    /**
+                     * csrf 정보
+                     * @type {String}
+                     */
+                    _headers: {
+                        type: Object,
+                        value: function(){
+                            return this.$.uploader._getHeaders();
+                        }
+                    },
+
+                    _groupId: String
+                },
+
+                observers : [
+                    '_onRemoteStateChanged(_currentFile.remote)'
+                ],
+
+                /**
+                 * SCUploadUtil 을 반환합니다.
+                 * @type {Object}
+                 */
+                get uploadUtil() {
+                    if(!this._uploadUtil) {
+                        this._uploadUtil = SCUploadUtil;
+                    }
+                    return this._uploadUtil;
+                },
+
+                init: function () {
+                    this._uploader = new SMART_UPLOADER({
+                        browseButton: this.$.fileInput, //Upload Input Button
+                        url: 'upload/upload.do', //Upload URL
+                        filters	: {
+                            maxAllFileCount  : 1,
+                            minFileSize 	 : this.uploadUtil.displaySizeToByte(this.minFileSize),
+                            maxFileSize		 : this.uploadUtil.displaySizeToByte(this.maxFileSize),
+                            maxAllFileSize 	 : this.uploadUtil.displaySizeToByte(this.maxTotalFileSize),
+                            extensions		 : this.extension,
+                            restrictFileName : this.restrictExtension
+                        },
+                        headers : this._headers,
+                    });
+
+                    this._uploader.bind('FileAdded', this._onFileAdded.bind(this)); //파일 객체 추가 이벤트 등록
+                    this._uploader.bind('UploadCompleted', this._onUploadCompleted.bind(this)); //파일 객체 업로드 완료 이벤트 등록
+                    this._uploader.bind('UploadFailed', this._onUploadFailed.bind(this)); //파일 객체 업로드 실패 이벤트 등록
+                    this._uploader.bind('FilterError', this._onFilterError.bind(this)); //파일 객체 업로드 에러 이벤트 등록
+                },
+
+                /**
+                 * 업로드 생성, 이벤트 바인딩
+                 */
+                attached: function () {
+                    var me = this;
+                    if(window.SMART_UPLOADER && window.SCUploadUtil) { //SCUpload 완료되는 시점을 정확하게 잡을 수 없어 주기적으로 확인
+                        me.reset();
+                        me.init();
+                    } else {
+                        setTimeout(function() {
+                            me.attached();
+                        }, 100);
+                    }
+                },
+
+                /**
+                 * 첨부파일 목록을 조회합니다.
+                 * @return {Promise} promise
+                 */
+                load: function(){
+                    /*this.$.list.body = {
+                        groupId : (this.value || '')
+                    };*/
+                    //return this.$.list.request();
+                    this.$.uploader.value = this.value;
+                    return this.$.uploader.load();
+                },
+
+                /**
+                 * 파일 업로드
+                 * 기존 파일이 있으면 삭제 후 업로드
+                 * @return {Promise} promise
+                 */
+                upload: function () {
+                    var me = this;
+                    var promise = me._generatePromise();
+
+                    if(!me.value) {
+                        me.value = me.groupId = Polymer.SCAutoGenIdBehavior.generateId(true);
+                    }
+
+                    //해당 그룹 ID의 파일 리스트를 가져온다
+                    me.load().then(function(result) {
+                        var files = result.response;
+
+                        //파일이 있으면 지우고 업로드
+                        if(files && files.length > 0 && files[0].groupId != me.value) {
+                            me.deleteFiles(files).then(function () {
+                                if(!me._uploadFileEmptyCheck()) {
+                                    me._uploader.upload({
+                                        groupId: me.value
+                                    });
+                                }
+                            });
+                        }
+                        //파일이 없으면 바로 업로드
+                        else {
+                            if(!me._uploadFileEmptyCheck()) {
+                                me._uploader.upload({
+                                    groupId: me.value
+                                });
+                            }
+                        }
+                    });
+
+                    return promise;
+                },
+
+                /**
+                 * 파일 삭제
+                 * @return {Promise} promise
+                 */
+                deleteFiles: function (files) {
+                    var fileIds = files.map(function(file) {
+                        return file.id;
+                    });
+                    this.$.delete.body = fileIds;
+                    return this.$.delete.request();
+                },
+
+                /**
+                 * 업로드 생성, 이벤트 바인딩
+                 */
+                _onClickFileUpload: function (e) {
+                    this.reset(); //현재 별도의 Delete 기능이 없기 때문에 파일추가 버튼 눌렀을 때 reset을 하게 되어있음.
+                    this.$.fileInput.click();
+                },
+
+                /**
+                 * 파일 추가 이벤트 핸들러
+                 * 파일을 업로드한다
+                 */
+                _onFileAdded: function (newFile) {
+                    this._currentFile = newFile[0]; //현재 파일
+
+                    // 기존 업로드 되지 않은 파일이 있다면 로컬 파일리스트에서 삭제한다 (서버에 올라간 경우에는 Upload 시점에 삭제됨)
+                    var localFiles = this._uploader.getLocalFiles();
+                    var deleteLists = [];
+                    for(var i=0,len=localFiles.length; i<len; i++) {
+                        var localFile = localFiles[i];
+                        if(localFile !== this._currentFile) {
+                            deleteLists.push(localFile.id);
+                        }
+                    }
+                    if(deleteLists.length > 0) {
+                        this._uploader.deleteFiles(deleteLists);
+                    }
+                },
+
+                /**
+                 * 파일 업로드 완료 이벤트 핸들러
+                 */
+                _onUploadCompleted: function (e) {
+                    this.set("_currentFile.remote", "true");
+                    this.__promiseResolve(this, e);
+                },
+
+                /**
+                 * 파일 업로드 실패 이벤트 핸들러
+                 */
+                _onUploadFailed: function (e) {
+                    this.__promiseResolve(this, e);
+                    UT.alert("component.sc-upload.uploadFailedText.파일 업로드에 실패하였습니다.");
+                },
+
+                /**
+                 * 첨부파일 필터(확장자, 사이즈)의 설정된 조건에 벗어나는 파일을 첨부할 때 호출되는 이벤트 핸들러로 `filter-error` 이벤트를 전파합니다.
+                 * @param {Object} error
+                 * @private
+                 */
+                _onFilterError : function(error) {
+                    UT.alert(error.message, null, true);
+                },
+
+                /**
+                 * 파일 업로드 대상이 없는 경우
+                 * Promise 반환
+                 */
+                _uploadFileEmptyCheck: function () {
+                    var localFiles = this._uploader.getLocalFiles();
+                    if(localFiles.length === 0) {
+                        this.__promiseResolve(this, null);
+                        return true;
+                    }
+                    return false;
+                },
+
+                /**
+                 * 파일 다운로드
+                 * Promise 반환
+                 */
+                _onFileDownload: function () {
+                    if(this._currentFile && this._currentFile.remote) {
+                        this.load().then(function(result) {
+                            var files = result.response;
+                            this.$.uploader.download(files[0].id);
+                        }.bind(this));
+                    }
+                },
+
+                /**
+                 * Value 변경되었을 때 동작
+                 * 빈값이면 파일 객체 초기화 값이 있으면 조회
+                 */
+                _valueChanged: function (value) {
+                    if(UT.isEmpty(value)) {
+                        this.reset();
+                        return;
+                    }
+
+                    this.load().then(function(result) {
+                        var files = result.response;
+                        if(files && files[0]) {
+                            this._currentFile = files[0];
+                            this.set("_currentFile.remote", "true");
+                        }
+                    }.bind(this));
+                },
+
+                /**
+                 * Reset
+                 */
+                reset: function () {
+
+                    if(this._uploader != null) this._uploader.trigger("Clear");
+                    this._currentFile = null;
+                    this.value = null;
+                },
+
+                /**
+                 * 첨부파일 업로드에 사용할 Promise 객체를 생성하여 반환합니다.
+                 * @private
+                 */
+                _generatePromise : function() {
+                    return new Promise(function(resolve, reject) {
+                        this.__promiseResolve = resolve;
+                        this.__promiseReject = reject;
+                    }.bind(this));
+                },
+
+                _onRemoteStateChanged: function (remote) {
+                    if(remote) {
+                        this.setAttribute("remote", "");
+                    } else {
+                        this.removeAttribute("remote");
+                    }
+                },
+
+                /**
+                 * 이벤트 리스너 삭제 / 객체 초기화
+                 */
+                 _destroy: function () {
+                    this._uploader.unbind('FileAdded', this._onFileAdded.bind(this)); //파일 객체 추가 이벤트 삭제
+                    this._uploader.unbind('UploadCompleted', this._onUploadCompleted.bind(this)); //파일 객체 업로드 완료 이벤트 삭제
+                    this._uploader.unbind('UploadFailed', this._onUploadFailed.bind(this)); //파일 객체 업로드 실패 이벤트 삭제
+                    this._uploader.unbind('FilterError', this._onFilterError.bind(this)); //파일 객체 업로드 에러 이벤트 등록
+                    this._uploader.destroy(); //업로드 객체 제거
+                    this._uploader = null;
+                    this._currentFile = null;
+                },
+            });
+        })();
+    </script>
+</dom-module>

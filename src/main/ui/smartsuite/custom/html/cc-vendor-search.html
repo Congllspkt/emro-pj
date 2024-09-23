@@ -1,0 +1,201 @@
+<!-- 
+/**
+ * 협력사 검색 자동완성 text-field 커스텀 태그
+ *
+ *     <cc-vendor-search class="w-150" value="{{value값}}" oper-unit-cd="운영단위" search-result="{{결과Object}}" link-type="POEO" job-cls-cd="RX" result-field="fieldName" result-value="{{결과단건ValueBind}}" oper-org-cd="{{ArrayType or Object}}" item-cds="[]"></cc-vendor-search>
+ *
+ * @element cc-dept-search
+ *
+ *
+ * @attribute value 해당 텍스트 필드 input value binding <br>
+ * [string] [optional] 
+ *
+ *
+ * @attribute search-result  검색 결과 object값 <br>
+ * [string] [optional]
+ *
+ *
+ * @attribute result-field  단건으로 검색결과가 필요할 경우 검색 결과 object에 field <br>
+ * [string] [optional]
+ *
+ *
+ * @attribute result-value search-field에서 지정한 결과 object의 field의 value <br>
+ * [boolean] [optional]
+ *
+ *
+ * @attribute label-disabled label text가 보이지않도록 처리 <br>
+ * [boolean] [optional]
+ *
+  * @attribute purcGrpTyp 직무유형<br>
+ * [string] [optional]
+ *
+ * @attribute job-cls-cd 담당자 직무 코드 <br>
+ * [string] [optional] 
+ *
+  * @attribute item_cds 아이템코드들 <br>
+ * [string] [optional]
+ *
+ */
+-->
+<!-- 
+ author : Yeon-u Kim
+ Since 2016. 5. 03.
+ 변경이력 : [2016. 5. 03.] Yeon-u Kim 최초작성
+-->
+<sc-link rel="import" href="../../../bp/shared/ep-vendor-list.html" lazy></sc-link>
+<dom-module id="cc-vendor-search">
+    <style>
+        :host {
+            display: inline-flex;
+            width : 100%;
+        }
+    </style>
+    <template>
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+        <sc-text-field class$="[[valueClass]] value-field"
+                       placeholder="[[valuePlaceholder]]"
+                       required="[[required]]"
+                       disabled="[[disabled]]"
+                       readonly="[[readonly]]"
+                       value="{{value}}"
+                       on-keydown="onKeyDown"
+                       on-enter="onFindVendor"
+                       max-length="200">
+        </sc-text-field>
+        <div class="hspace-5" hidden="[[hideTrigger]]"></div>
+        <sc-trigger-field trigger-cls="field-search" on-trigger-click="onPopFindVendor" disabled="[[disabledTrigger]]" hide-trigger="[[hideTrigger]]"></sc-trigger-field>
+        <div class="hspace-5" hidden="[[resultHidden]]"></div>
+        <sc-text-field class$="[[resultClass]]" value="{{resultValue}}" placeholder="[[resultPlaceholder]]" hidden="[[resultHidden]]" readonly></sc-text-field>
+    </template>
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is : 'cc-vendor-search',
+
+            behaviors : [
+                Polymer.CCSearchFieldBehavior
+            ],
+            properties : {
+                // value Field
+                valueField: {
+                    type: String,
+                    value: "vd_nm"
+                },
+
+                valueFieldEn: {
+                    type: String,
+                    value: "vd_nm_en"
+                },
+
+                // result-Value Field
+                resultField: {
+                    type: String,
+                    value: "vd_cd"
+                },
+
+                valuePlaceholder : {
+                    type: String,
+                    value:I18N.translate("협력사 명")
+                },
+
+                resultPlaceholder : {
+                    type: String,
+                    value: I18N.translate("코드")
+                },
+
+                linkTyp : {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+                jobClsCd : {
+                    type : Object,
+                    value : function(){
+                        return "";
+                    }
+                },
+
+                itemCds : {
+                    type : Array,
+                    value: []
+                },
+
+                operUnitCd : {
+                    type: String,
+                    value : ""
+                },
+
+                operOrgCd : {
+                    type : Object,
+                    value : function(){
+                        return {};
+                    }
+                },
+            },
+
+            // text-field 검색
+            onFindVendor : function() {
+                var me = this;
+                if(!me.readonly){
+                    me.onPopFindVendor();
+                }
+            },
+
+            // 검색버튼 클릭
+            onPopFindVendor : function(){
+                var me = this;
+
+                if(!me.linkTyp){
+                    UT.alert("STD.ADM1027");
+                    return false;
+                }
+                var defaultParam = {
+                    co_cd : SCSessionManager.currentUser.co_cd,
+                    conn_typ_ccd : me.linkTyp,
+                    task_typ_ccd : me.jobClsCd,
+                    item_cds : me.itemCds,
+                    ounit_cd : me.get("operUnitCd") || 'PO'
+                };
+
+                //운영조직이 array형
+                if(UT.isArray(me.operOrgCd)){
+                    defaultParam.oper_org_cds = me.operOrgCd;
+                }else{
+                    defaultParam.oorg_cd = me.operOrgCd;
+                }
+
+
+                //협력사 검색 팝업을 호출한다.
+                var vendorPopup = UT.popup("ep-vendor-list", me, 1000, 500,{
+                    "selected-items": function(popup, e) {
+                        var result = e.detail[0];
+                        //결과값 처리하는 callback
+
+                        if(result){
+                            me.clearFlag = false;
+                            me.set("resultValue", result[me.resultField]);
+                            if(UT.multiLocaleCheck()){
+                                me.set("value",       result[me.valueFieldEn]);  // 코드명 영문
+                            }else{
+                                me.set("value",       result[me.valueField]);  // 코드명
+                            }
+                            me.fire("result",result);
+                        }
+                        popup.close();
+                    }
+                },{titleText : "협력사 검색",maximizable : true});
+                vendorPopup.show();
+                vendorPopup.getWindowContent().load({singleSelect : true,defaultParam : defaultParam});
+            }
+        });
+    </script>
+</dom-module>

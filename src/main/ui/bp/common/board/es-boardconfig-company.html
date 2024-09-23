@@ -1,0 +1,127 @@
+<sc-link rel="import" href="../../shared/ep-user-list.html"></sc-link>
+<dom-module id="es-boardconfig-company">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+    <template>
+        <!-- Admin 계정 : 조회 -->
+        <sc-ajax id="findCompanyListForBoard"
+                 url="findCompanyListForBoard.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultList}}">
+        </sc-ajax>
+
+        <!-- Admin 계정 : 저장 -->
+        <sc-ajax id="saveBoardCompanyList"
+                 url="saveBoardCompanyList.do"
+                 on-response="completeSaveBoardCompanyList">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <sc-grid id="gridPanel" data-provider="{{resultList}}" class="flex" editable="true" use-selection="false">
+            <cc-grid-toolbar title-text="회사">
+                <sc-button text="저장" on-click="onSaveCompany" hidden="[[!formula('isMod')]]" auth-s></sc-button>
+            </cc-grid-toolbar>
+            <sc-grid-columns>
+                <sc-data-column data-field="co_cd" header-text="회사 코드" width="120" text-align="center"></sc-data-column>
+                <sc-data-column data-field="co_nm" header-text="회사 명" width="140" text-align="center"></sc-data-column>
+                <sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="80" text-align="center" editable="[[formula('isMod')]]" display-checkbox="false" checked-value="Y" un-checked-value="N"></sc-checkbox-column>
+            </sc-grid-columns>
+            <sc-grid-fields>
+                <sc-grid-field data-field="bbd_uuid"></sc-grid-field>
+            </sc-grid-fields>
+        </sc-grid>
+    </template>
+    <script>
+        Polymer({
+            is : "es-boardconfig-company",
+            properties: {
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultList: {
+                    type: Array,
+                    value: function() {
+                        return [];
+                    }
+                },
+
+                isEdit : {
+                    type: Boolean,
+                    value : true
+                }
+            },
+
+            formulas: {
+                // 수정 상태
+                isMod: function() {
+                    return (!UT.isEmpty(this.searchParam.bbd_uuid) && this.isEdit);
+                }
+            },
+
+            load: function(data) {
+                var me = this;
+
+                me.set("searchParam", data);
+                me.doFormulas(data);
+                me.onSearch();
+
+            },
+
+            onSearch: function(){
+                var me = this;
+                UT.request(me.$.findCompanyListForBoard);
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+            },
+
+            // Admin 계정 : 저장
+            onSaveCompany: function() {
+                var me = this,
+                    provider = me.$.gridPanel.getDataProvider(),
+                    updated = provider.getUpdateItems();
+
+                if(updated.length === 0) {
+                    UT.alert("STD.N1700"); // "변경된 내용이 없습니다"
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                    me.$.saveBoardCompanyList.body = {
+                        updateList: updated
+                    };
+                    UT.request(me.$.saveBoardCompanyList);
+                });
+
+            },
+
+            // Admin 계정 : 저장 완료
+            completeSaveBoardCompanyList: function() {
+                var me = this;
+                UT.completeAlert("", function(){ // 저장하였습니다.
+                    me.onSearch();
+                });
+            },
+
+            doFormulas: function(data){
+                var me = this;
+                me.set("isEdit", data.co_bbd_use_yn === "Y");
+                me.applyFormula('isMod');
+            }
+
+        })
+    </script>
+</dom-module>

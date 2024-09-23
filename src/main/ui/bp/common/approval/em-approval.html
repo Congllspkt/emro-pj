@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-approval-list.html"></sc-link>
+<sc-link rel="import" href="es-approval-form.html"></sc-link>
+
+<dom-module id="em-approval">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<cc-page-title-bar></cc-page-title-bar>
+    	<div class="hbox flex">
+	        <es-approval-list id="list" on-selected-approval="onFindApproval" on-add-approval="onAddApproval" class="flex-4"></es-approval-list>
+	        <div class="hspace-10"></div>
+	        <es-approval-form id="form" title-text="결재 양식" on-save-approval="onSaveApprovalList" class="flex-6"></es-approval-form>
+    	</div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'em-approval',
+
+            // 결재 유형목록 : 결재 유형 선택
+            onFindApproval: function(e, data){
+                var me = this;
+                me.$.form.load(data);            // 결재양식
+            },
+
+            // 결재양식 저장
+            onSaveApprovalList: function(){
+                var me = this;
+                me.$.list.onFindList();
+            }
+
+        });
+    </script>
+
+</dom-module>

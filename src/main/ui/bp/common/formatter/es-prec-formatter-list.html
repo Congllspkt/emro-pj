@@ -1,0 +1,293 @@
+<sc-link rel="import" href="ep-common-code-list.html"></sc-link>
+
+<dom-module id="es-prec-formatter-list">
+<!-- 
+/**
+ *
+ *	@description : 동적 소수점 관리 리스트
+ *  <pre>
+ * </pre>
+ * @FileName : 
+ * @Since 2019. 2. 18.
+ */
+-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+	<!-- ajax -->
+		<sc-code-group>
+			<sc-code code="C999" value="{{codes.C999}}"></sc-code>
+		</sc-code-group>
+		<sc-ajax id="findListPrecisionGroupCode"
+				url="findListPrecisionGroupCode.do"
+				last-response="{{precGrpCdList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="findListPrecisionDetailCode"
+				url="findListPrecisionDetailCode.do"
+				body="{{selectedParam}}"
+				last-response="{{precDtlCdList}}">
+		</sc-ajax>
+		
+		<sc-ajax id="insertListPrecisionGroupCode"
+				url="insertListPrecisionGroupCode.do"
+				on-response="completeinsertPrecisionGroupCodes">
+		</sc-ajax>
+		<!-- 공통코드 소수점관리 삭제 -->
+		<sc-ajax id="deleteListPrecisionGroupCode"
+				url="deleteListPrecisionGroupCode.do"
+				on-response="completedeletePrecisionGroupCode">
+		</sc-ajax>
+		<!-- 코드상세 소수점자리 저장 -->
+		<sc-ajax id="saveListPrecisionDetailCode"
+				url="saveListPrecisionDetailCode.do"
+				on-response="complteSavePrecDtlCd">
+		</sc-ajax>
+		
+		<!-- 역할 체크 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+		<!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+		<div class="vbox flex">
+        	<sc-grid id="gridPanel" data-provider="{{precGrpCdList}}" editable="false" class="flex-3"
+                     on-item-click="onGrpCdItemClick">
+                <cc-grid-toolbar title-text="소수점 관리">
+                    <sc-button text="추가" on-click="onAddGrpCode" auth-s></sc-button>
+                    <sc-button text="삭제" on-click="onDeleteGrpCode" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="decpt_use_ccd" header-text="코드" width="180" text-align="center" style-name="link"  max-length="36"></sc-data-column>
+                    <sc-data-column data-field="ccd_nm" header-text="코드 명" width="250" text-align="left" max-length="60" ></sc-data-column>
+                    <sc-data-column data-field="no_data_cnt" header-text="미지정 건수" width="170" text-align="right" editable="false" data-type="number" format-type="integer"></sc-data-column>
+                </sc-grid-columns>
+            </sc-grid>
+            
+            <div class="flex-1" style="color:red;font-weight:bold;">[[messageDesc]]</div>
+            
+            <sc-grid id="codeDetailGridPanel" data-provider="{{precDtlCdList}}" editable="true" class="flex-6" use-selection="false"
+                     validation-group="save">
+                <cc-grid-toolbar title-text="{{selectedParam.ccd_nm}}" i18n-disabled>
+                    <sc-button text="저장" on-click="onSavePrecDtlCd" hidden="[[!formula('isEditable')]]" auth-s></sc-button>
+                </cc-grid-toolbar>
+                <sc-grid-columns>
+                    <sc-data-column data-field="dtlcd" header-text="상세코드" width="100" text-align="center" editable="false" required="true" max-length="18"></sc-data-column>
+                	<sc-data-column data-field="dtlcd_nm" header-text="상세코드 명" width="150" text-align="left" editable="false" max-length="60"></sc-data-column>
+                	<sc-data-column data-field="decpt_len" header-text="소수점 길이" width="180" text-align="right" editable="true" data-type="number" format-type="integer" validator-type="integer" max-length="2"></sc-data-column>
+                	<sc-combobox-column	data-field="decpt_trunc_typ_ccd"		header-text="소수점 절사 유형"		width="220"	text-align="center" editable="true"
+									display-field="label"			value-field="data"		items="{{codes.C999}}"></sc-combobox-column>
+                </sc-grid-columns>
+                <sc-grid-fields>
+                	<sc-grid-field	data-field="decpt_use_dtlcd"></sc-grid-field>
+                	<sc-grid-field	data-field="decpt_use_ccd"></sc-grid-field>
+                </sc-grid-fields>
+            </sc-grid>
+        </div>
+	</template>
+	
+	<script>
+	Polymer({
+			is : 'es-prec-formatter-list',
+			properties : {
+				codes: {
+					type: Object,
+					value: function(){
+						return {
+							"C999": []
+						};
+					},
+					reset: false
+				},
+				precGrpCdList: {
+					type: Array,
+					value: function(){
+						return [];
+					}
+				},
+				selectedParam: {
+					type: Object,
+					value: function(){
+						return {};
+					}
+				},
+				precDtlCdList: {
+					type: Array,
+					value: function(){
+						return [];
+					}
+				},
+				messageDesc: {
+					type: Object,
+					value: function(){
+						return this.translate('※포맷팅 미지정 시 기본 반올림, 연산수행 결과는 모두 반올림입니다.');
+					}
+				}
+			},
+			formulas: {
+				isEditable: function(){
+					var me = this;
+					return (UT.isNotEmpty(me.get("selectedParam")));
+				}
+			},
+			/************************************************** 
+			 * 초기화 설정
+			 **************************************************/
+			// 1. 화면 로딩시 최초 호출
+			initialized : function(){
+				var me = this;
+				me.onfindListPrecisionGroupCode();
+			},
+			load: function(){
+				var me = this;
+				me.reset();
+				me.onfindListPrecisionGroupCode();
+			},
+			/*************************************************
+			* 공통코드- 소수점관리 
+			**************************************************/
+			onfindListPrecisionGroupCode: function(){
+				var me = this;
+				UT.request(me.$.findListPrecisionGroupCode);
+				me.applyFormula();
+			},
+			//그룹 코드추가
+			onAddGrpCode: function(){
+				var me = this,
+					grid = me.$.gridPanel;
+				
+					var codeListPop = UT.popup("ep-common-code-list",me,600,700,{
+						'selected-items': function(popup,e){
+							me.addItemList(e.detail);
+							popup.close();
+						}
+					});
+					codeListPop.show();
+			},
+			//추가
+			addItemList: function(selectedList){
+				var me = this;
+
+				var prData = me.prData;
+				var provider = me.$.gridPanel.getDataProvider();
+				
+				var dupCnt = 0,
+					ccCnt = 0,
+					exceptItems = [];
+				
+				if(selectedList.length > 0 ) {
+					
+					UT.confirm("STD.N1113",function(){
+						me.$.insertListPrecisionGroupCode.body = {
+								insertPrecisionCommonCodeList: selectedList
+						};
+						UT.request(me.$.insertListPrecisionGroupCode);
+					});
+				} else {
+					UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                }
+			},
+			//저장완료후 호출
+			completeinsertPrecisionGroupCodes: function(){
+				var me = this,
+                	message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.load();
+					me.fire("reset-prec-format");
+				});
+			},
+			//소수점 적용 공통 코드 삭제
+			onDeleteGrpCode: function(){
+				var me = this,
+                provider = me.$.gridPanel.getDataProvider(),
+                checked = provider.selectionCheckedIndexes();
+
+	            if (checked.length === 0) {
+	                UT.alert("STD.N1600");
+	                return;
+	            }
+
+	            UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?",
+	                var deleted = provider.removeItems();
+	                if(deleted.length > 0){
+	                    me.$.deleteListPrecisionGroupCode.body = {
+	                    	deletedPrecGrpCds: deleted
+	                    };
+	                    UT.request(me.$.deleteListPrecisionGroupCode);
+	                }
+	            });
+			},
+			//소수점 적용 코드 삭제
+			completedeletePrecisionGroupCode: function(){
+				var me = this,
+            		message = "STD.N2500"; // 저장하였습니다.
+				UT.alert(message, function(){
+					me.load();
+					me.fire("reset-prec-format");
+				});
+			},
+			
+			onGrpCdItemClick: function(e){
+				var me = this,
+                	data = e.detail.data,
+                	item = e.detail.item;
+				
+                if(item.dataField === "decpt_use_ccd"){
+                	me.set("selectedParam",data);
+                	me.onfindListPrecisionDetailCode();
+                }
+			},
+			/*************************************************
+			* 공통 상세 코드 - 소수점관리 
+			**************************************************/
+			onfindListPrecisionDetailCode: function(){
+				var me = this;
+				
+				if(UT.isEmpty(me.get("selectedParam.decpt_use_ccd"))){
+					UT.alert(me.translate("STD.E1012",null,me.translate('그룹코드')),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+				}
+				me.applyFormula();
+				UT.request(me.$.findListPrecisionDetailCode);
+			},
+			//공통 상세 코드 소수점 정보 저장
+			onSavePrecDtlCd: function(){
+				var me = this,
+					provider = me.$.codeDetailGridPanel.getDataProvider(),
+					updated = provider.getUpdateItems();
+				
+				if((updated.length) === 0){
+					UT.alert("STD.N1700");
+					return;
+				}
+				
+				if(!me.validate('save')){
+					UT.alert("STD.E0000");
+					return;
+				}
+					
+				UT.confirm("STD.N1113",function(){
+					me.$.saveListPrecisionDetailCode.body = {
+							updatePrecisionDetailCodeList: updated
+					};
+					UT.request(me.$.saveListPrecisionDetailCode);
+				});
+			},
+			complteSavePrecDtlCd: function(){
+				var me = this,
+            		message = "STD.N1500"; // 저장하였습니다.
+
+				UT.alert(message, function(){
+					me.onfindListPrecisionGroupCode();
+					me.onfindListPrecisionDetailCode();
+				});
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,469 @@
+<sc-link import="rel" href="sc-mdi-mail-choice-popup.html"></sc-link>
+<dom-module id="sc-mdi-user-popup">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+        
+        :host table.tb-form th {
+        	width: 150px;
+        	max-width: 150px;
+        }
+    </style>
+    
+    <template>
+
+        <!-- 사용자 기본정보 조회 -->
+        <sc-ajax id="findCurrntUserInfo"
+            url="../findCurrntUserInfo.do"
+            last-response="{{userInfo}}"
+            on-response="completeFindUser">
+        </sc-ajax>
+        
+        <!-- 사용자 기본정보 저장 -->
+        <sc-ajax id="saveUser"
+            url="../saveUser.do"           
+            body="{{userInfo}}"
+            on-response="completeSaveUser">
+        </sc-ajax>
+        
+        <!-- format정보 조회 -->
+        <sc-ajax id="findCurrentUserFormatInfo"
+        		url="../findCurrentUserFormatInfo.do"
+        		last-response="{{formatInfo}}"
+        		on-response="completeCurrUserFormatInfo">
+        </sc-ajax>
+        
+        <!-- format정보 저장 -->
+        <sc-ajax id="saveCurrentUserFormatter"
+            url="saveCurrentUserFormatter.do"           
+            body="{{formatInfo}}">
+        </sc-ajax>
+        
+        <!-- 코드 -->
+        <sc-request-group init>
+            <sc-ajax url="findListCompanyCodeForCombobox.do" last-response="{{codes.company}}"></sc-ajax> <!-- 회사목록 -->
+            <sc-code-group>
+                <!-- 타임존 -->
+                <sc-code code="C025" value="{{codes.C025}}" ></sc-code>
+                <!-- 직급 -->
+				<sc-code code="C005" value="{{codes.C005}}" ></sc-code>
+				<!-- 직책 -->
+                <sc-code code="G012" value="{{codes.G012}}" ></sc-code>
+                <sc-code code="C080" value="{{codes.C080}}" ></sc-code>
+            </sc-code-group>
+            <sc-ajax url="findAllUserExpFormat.do" last-response="{{userExpFormats}}"></sc-ajax> <!-- 회사목록 -->
+            <!-- HOME 유형 -->
+            <sc-ajax id="findListCommonCodeAttributeCode"
+                     url="findListCommonCodeAttributeCode.do"
+                     body ="{{codes.homeTypParam}}"
+                     last-response="{{codes.homeTyp}}">
+            </sc-ajax>
+        </sc-request-group>
+
+        <cc-sub-title-bar>
+            <sc-button text="비밀번호 변경" on-click="onPasswordChange"></sc-button>
+            <sc-button text="저장" on-click="onSaveUser"></sc-button>
+        </cc-sub-title-bar>
+
+        <cc-form-panel hidden$="[[!formula('isVendor')]]" label-width="120">
+            <cc-fieldset>
+                <sc-label text="협력사 코드"></sc-label>
+                <sc-text-field value="{{userInfo.erp_vd_cd}}" class="w-150" readonly="true"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="협력사 명"></sc-label>
+                <sc-text-field value="{{userInfo.vd_nm}}" class="w-150" required="true" readonly="true"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 명"></sc-label>
+                <sc-text-field value="{{userInfo.usr_nm}}" class="w-150" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 아이디"></sc-label>
+                <sc-text-field value="{{userInfo.usr_id}}" class="w-150" required="true" readonly="true"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 명 영문"></sc-label>
+                <sc-text-field value="{{userInfo.usr_nm_en}}" class="w-150" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="이메일"></sc-label>
+                <sc-text-field value="{{userInfo.eml}}" validator-type="email" readonly="[[!formula('isEditable')]]"	max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전화"></sc-label>
+                <sc-text-field value="{{userInfo.tel}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="phone"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="모바일"></sc-label>
+                <sc-text-field value="{{userInfo.mob}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="mobile"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="팩스"></sc-label>
+                <sc-text-field value="{{userInfo.fax}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="phone"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="이메일 수신" ></sc-label>
+                <sc-checkbox-field input-value="{{userInfo.eml_rcpt_yn}}" readonly="[[!formula('isEditable')]]" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+				<sc-button text="이메일 수신 제외" on-click="onChoiceEmailTemplate" style="text-overflow: ellipsis;white-space: nowrap;overflow: hidden;"></sc-button>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="SMS 수신"></sc-label>
+                <sc-checkbox-field input-value="{{userInfo.sms_rcpt_yn}}" readonly="[[!formula('isEditable')]]" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="레이블 정렬 유형"></sc-label>
+                <sc-combobox-field required="true" readonly="[[!formula('isEditable')]]" placeholder="선택"
+                                   display-field="label" value-field="data" items="{{codes.C080}}" value="{{userInfo.lbl_sort_typ_ccd}}">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="타임존"></sc-label>
+                <sc-combobox-field value="{{userInfo.tmz_ccd}}" items="{{codes.C025}}" display-field="label" value-field="data"
+                                   required="true" readonly="[[!formula('isEditable')]]" placeholder="선택"></sc-combobox-field>
+            </cc-fieldset>
+        </cc-form-panel>
+        <cc-form-panel  hidden$="[[formula('isVendor')]]" label-width="120">
+            <cc-fieldset>
+                <sc-label text="회사"></sc-label>
+                <sc-combobox-field
+                        class="w-150" display-field="comp_nm" value-field="co_cd"
+                        items="{{codes.company}}"  value="{{userInfo.co_cd}}" placeholder="선택"
+                        readonly="true" >
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 아이디"></sc-label>
+                <sc-text-field value="{{userInfo.usr_id}}" class="w-150" required="true" readonly="true"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 명"></sc-label>
+                <sc-text-field value="{{userInfo.usr_nm}}" class="w-150" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="사용자 명 영문"></sc-label>
+                <sc-text-field value="{{userInfo.usr_nm_en}}" class="w-150" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="부서"></sc-label>
+                <cc-dept-search id="deptSearch" class="w-150"
+                                value="{{userInfo.disp_dept_nm}}" result-field="dept_cd" result-value="{{userInfo.dept_cd}}" disabled="[[!formula('isEditable')]]">
+                </cc-dept-search>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="이메일"></sc-label>
+                <sc-text-field value="{{userInfo.eml}}" class="w-150" validator-type="email" readonly="[[!formula('isEditable')]]"	max-length="60"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="직책"></sc-label>
+                <sc-combobox-field value="{{userInfo.jobtit_ccd}}" items="{{codes.G012}}" display-field="label" value-field="data"
+                                   readonly="[[!formula('isEditable')]]" placeholder="선택"></sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="직위"></sc-label>
+                <sc-combobox-field value="{{userInfo.posi_ccd}}" items="{{codes.C005}}" display-field="label" value-field="data"
+                                   readonly="[[!formula('isEditable')]]" placeholder="선택"></sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="전화"></sc-label>
+                <sc-text-field value="{{userInfo.tel}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="phone"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="모바일"></sc-label>
+                <sc-text-field value="{{userInfo.mob}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="mobile"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="팩스"></sc-label>
+                <sc-text-field value="{{userInfo.fax}}" readonly="[[!formula('isEditable')]]" mask-re="/[0-9\-+]/"	max-length="60"	validator-type="phone"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="HOME 화면 유형"></sc-label>
+                <sc-combobox-field required="true" readonly="[[!formula('isEditable')]]" placeholder="선택"
+                                   display-field="label" value-field="data" items="{{codes.homeTyp}}" value="{{userInfo.home_scr_typ_ccd}}">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="레이블 정렬 유형"></sc-label>
+                <sc-combobox-field required="true" readonly="[[!formula('isEditable')]]" placeholder="선택"
+                                   display-field="label" value-field="data" items="{{codes.C080}}" value="{{userInfo.lbl_sort_typ_ccd}}">
+                </sc-combobox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="이메일 수신" ></sc-label>
+				<sc-checkbox-field input-value="{{userInfo.eml_rcpt_yn}}" readonly="[[!formula('isEditable')]]" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+				<sc-button text="이메일 수신 제외" on-click="onChoiceEmailTemplate"  style="text-overflow: ellipsis;white-space: nowrap;overflow: hidden;"></sc-button>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="SMS 수신"></sc-label>
+                <sc-checkbox-field input-value="{{userInfo.sms_rcpt_yn}}" readonly="[[!formula('isEditable')]]" checked-value="Y" un-checked-value="N"></sc-checkbox-field>
+            </cc-fieldset>
+        </cc-form-panel>
+        
+        <br/>
+        <cc-form-panel label-width="120">
+            <cc-fieldset column-span="2">
+                <sc-label text="locale"></sc-label>
+                <div>
+                    <sc-label text="타임존"></sc-label>
+                    <sc-combobox-field value="{{userInfo.tmz_ccd}}" items="{{codes.C025}}" display-field="label" value-field="data"
+                                       required="true" readonly="[[!formula('isEditable')]]" placeholder="선택"></sc-combobox-field>
+                    <sc-label text="로케일 포맷 표현식"></sc-label>
+                    <sc-combobox-field value="{{formatInfo.date.loc_fmt_expr_uuid}}" items="{{userExpFormats.userDateExpList}}" display-field="loc_fmt_expr" value-field="loc_fmt_expr_uuid"
+                                       readonly="[[!formula('isEditable')]]" placeholder="선택"></sc-combobox-field>
+                    <sc-label text="숫자 표현식"></sc-label>
+                    <div>
+                        <sc-combobox-field id="thousandExp" value="{{formatInfo.thousand.loc_fmt_expr_uuid}}" items="{{userExpFormats.userThouExpList}}" display-field="loc_fmt_expr" value-field="loc_fmt_expr_uuid"
+                                           on-change="onChangeFormatNum"
+                                           class="w-150" readonly="[[!formula('isEditable')]]" placeholder="천단위"></sc-combobox-field>
+                        <sc-combobox-field id="precExp" value="{{formatInfo.prec.loc_fmt_expr_uuid}}" items="{{userExpFormats.userPrecExpList}}" display-field="loc_fmt_expr" value-field="loc_fmt_expr_uuid"
+                                           on-change="onChangeFormatNum"
+                                           class="w-150" readonly="[[!formula('isEditable')]]" placeholder="소수점"></sc-combobox-field>
+                        <div class="hspace-5"></div>
+                        <sc-label text="[[translate('예시)')]] {{formatExample}}" i18n-disabled></sc-label>
+                    </div>
+                </div>
+            </cc-fieldset>
+        </cc-form-panel>
+        <sc-label text="[[translate('미사용 계정 적용(마지막 로그인 일자 기준)')]] : {{disabledAccountInfo}}" style="padding: 5px 3px 0 0;font-weight: bold;text-align:right;color:red;" i18n-disabled></sc-label>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sc-mdi-user-popup',
+            properties: {
+                /* 파라미터 데이터 binding object */
+                searchParam: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                /* 사용자 기본정보 binding 객체 */
+                userInfo: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                },
+                formatInfo: {
+                	type: Object,
+                	value: function(){
+                		return {};
+                	}
+                },
+                /* 사용자 기본정보 binding 객체 */
+                resultCount: {
+                    type: Number,
+                    value: 0
+                },
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function () {
+                        return {
+                        	G012: [],	 //직책공통코드
+                        	C005: [],		//직급공통코드
+                            company: [],
+                            homeTyp: [], // home 유형
+                            homeTypParam : {
+                                ccd : "C017",
+                                cstr_cnd_cd : "USR_TYP",
+                                cstr_cnd_val: SCSessionManager.currentUser.usr_typ_ccd
+                            }
+                        };
+                    }
+                },
+                /* 조회 결과 데이터 집합 */
+                result: {
+                    type: Object,
+                    value: function () {
+                        return {
+                            user: {}
+                        };
+                    }
+                },
+                
+                userExpFormats: {
+                	type: Object,
+                	value: function(){
+                		return {
+                			userDateExpList: [],
+                			userThouExpList: [],
+                			userPrecExpList: []
+                		};
+                	},
+                    reset:false
+                },
+                /* 미사용 계정 기준 정보*/
+                disabledAccountInfo: {
+                	type: String
+                },
+                formatExample: {
+                	type: String,
+                	value: "1234567.123"
+                }
+            },
+
+            formulas: {
+                // 비밀번호 변경 가능 상태 (비밀번호 변경 여부Y 일경우)
+                isPwChangeable: function () {
+                    return this.userInfo.pw_change_yn === "Y";
+                },
+                // (확장성을 위해 formula로 구현)
+                isEditable: function () {
+                    return true;
+                },
+                isVendor: function () {
+                    return this.userInfo.usr_typ_ccd === "VD";
+                }
+            },
+
+            observers: [
+                'onPwChangeYn(userInfo.pw_change_yn)'
+            ],
+
+            load: function () {
+                var me = this;
+                UT.request(me.$.findCurrntUserInfo);
+                UT.request(me.$.findCurrentUserFormatInfo);
+                me.onSetDisabledAccountRule();
+            },
+            onSetDisabledAccountRule: function () {
+            	var me = this,
+            		disableCode = SCSessionManager.getAccountSettings().accountDisableCode,
+            		unitInCode = disableCode.split('')[disableCode.length - 1],
+            		period = disableCode.substr(0, disableCode.length - 1),
+            		unit = ['년', '개월'];
+            	
+            	if(unitInCode == 'Y') {
+            		period += ' ' + me.translate(unit[0]);
+            	}
+            	else if(unitInCode == 'M') {
+            		period += ' ' + me.translate(unit[1]);
+            	}
+            	
+            	me.set('disabledAccountInfo', period);
+            },
+
+            completeFindUser: function (e, res) {
+                var me = this;
+                me.applyFormula();
+            },
+            
+            completeCurrUserFormatInfo: function(e,res){
+            	var me = this;
+            	var example = 1234567.123;
+            	example = SCFormatter.format('amt',example);
+            	me.set("formatExample",example);
+            },
+            onChangeFormatNum: function(){
+            	var me = this;
+            	var example = 1234567.123;
+            	var prec = me.$.precExp.selectedItem;
+        		var thousand = me.$.thousandExp.selectedItem;
+            	if(UT.isNotEmpty(prec) && UT.isNotEmpty(thousand)){
+            		var precExp = prec.loc_fmt_expr;
+            		var thousandExp = thousand.loc_fmt_expr;
+            		var exampleStr = example.toString();
+            		if(precExp != "."){
+            			exampleStr = exampleStr.replace(/\./g,precExp);
+            		}else{
+            			exampleStr = exampleStr.replace(/\,/g,precExp);
+            		}
+            		exampleStr = exampleStr.replace(/\B(?=(\d{3})+(?!\d))/g, thousandExp);
+            		me.set("formatExample",exampleStr);
+            	}
+            },
+            // 비밀 번호 변경 여부
+            onPwChangeYn: function () {
+                var me = this;
+                me.applyFormula('isPwChangeable');
+            },
+
+            // 사용자 정보 저장 (신규저장/수정)
+            onSaveUser: function () {
+                var me = this,
+                message = "STD.N1200";
+                if(!me.validate()) {
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                //타임존 체크
+                if(me.get("userInfo.tmz_ccd") != SCSessionManager.currentUser.tmz_ccd){
+                	message = "STD.N3600";	//"타임존이 변경되었습니다. <br> 타임존이 변경될경우 새로고침됩니다. <br> 저장하시겠습니까?";
+                }
+                UT.confirm(message,function(){
+                	// 비밀번호 체크
+                    if(me.formula('isPwChangeable') === true) {
+                        if(me.get("userInfo.usr_pw") !== me.get("userInfo.pw_check")) {
+                            UT.alert("STD.MDI1002");
+                            me.set("userInfo.usr_pw", "");
+                            me.set("userInfo.pw_check", "");
+                            return;
+                        }
+
+                        if(me.get("userInfo.usr_pw")) {
+                            // 비밀번호 암호화
+                            me.set("userInfo.enc_pw", CipherUtil.encrypt(me.get("userInfo.usr_pw")));
+                        }
+
+                        // 평문 비밀번호 제거
+                        me.set("userInfo.usr_pw", "");
+                        me.set("userInfo.pw_check", "");
+                    }
+
+                    UT.request(me.$.saveUser);
+                    UT.request(me.$.saveCurrentUserFormatter);
+                });
+            },
+            
+            onPasswordChange : function() {
+            	var me = this;
+            	SCMdiPopupManager.changePasswordPopup();
+            },
+
+            completeSaveUser: function (e, res) {
+                var me = this,
+                    result = res.response;
+
+                me.set("userInfo.enc_pw", "");
+
+                if(result.resultStatus === 'S') { // 저장하였습니다.
+                    UT.completeAlert("", function () {
+                    	if(me.get("userInfo.tmz_ccd") != SCSessionManager.currentUser.tmz_ccd ||
+                            me.get("userInfo.home_scr_typ_ccd") != SCSessionManager.currentUser.home_scr_typ_ccd ||
+                            me.get("userInfo.lbl_sort_typ_ccd") != SCSessionManager.currentUser.lbl_sort_typ_ccd){
+                    		me.reload();
+                    	}else{
+                    		me.load();
+
+                    		// 세션 정보 반영
+                            SCSessionManager._session();
+                    	}
+                    });
+                } else {
+                    UT.alert(result.result_message);
+                }
+            },
+
+            onClose: function () {
+                var me = this;
+
+                me.reset();
+                me.fire("close");
+            },
+
+            behaviors: [
+                Polymer.CCModuleBehavior
+            ],
+			
+			onChoiceEmailTemplate: function() {
+				SCMdiPopupManager.selectReceptionMailPopup();
+			},
+
+        });
+    </script>
+</dom-module>

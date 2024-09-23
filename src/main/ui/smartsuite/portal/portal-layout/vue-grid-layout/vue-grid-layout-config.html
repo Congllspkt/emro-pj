@@ -1,0 +1,100 @@
+<!--
+ * @Desc VueGrid 포탈 설정화면
+ * @Author dmwon
+ * @Created 2017-06-20
+ -->
+
+<dom-module id="vue-grid-layout-config">
+	<style>
+		:host {
+			width:100%;
+			height:100%;
+		}
+	</style>
+
+	<template>
+		<!-- 기본 레이아웃 저장 -->
+		<sc-ajax id="saveDefaultLayout" 
+				 url="portlet/saveDefaultLayout.do"
+				 handle-as="json" method="post"
+				 body="{{portletStateful}}" 
+				 contentType="application/json"></sc-ajax>
+				 
+		<!-- 기본 레이아웃 조회 -->
+		<sc-ajax id="findDefaultLayout" 
+				 url="portlet/findDefaultLayout.do"
+				 handle-as="json" method="post"
+				 contentType="application/json"
+				 last-response="{{layout}}" 
+				 on-response="onFindDefaultLayoutCompleted"></sc-ajax>
+				 
+		<!-- 위젯 추가 컴포넌트 -->
+	    <div id="managerHandle" on-tap="onShowWidgets"></div>
+	
+		<div id="vueGridConfigApp1" style="width: 100%;min-height:100%;">
+	        <div id="content" style="display:block;">
+	            <grid-layout @mousedown="mouseDown"
+	            			 :layout="layout"
+	                         :col-num="colNum"
+	                         :row-height="rowHeight"
+	                         :is-draggable="draggable"
+	                         :is-resizable="resizable"
+	                         :vertical-compact="true"
+	                         :use-css-transforms="false">
+	                <grid-item v-for="item in layout"
+	                           :x="item.x" :y="item.y"
+	                           :w="item.w" :h="item.h"
+	                           :i="item.i"
+	                           :drag-ignore-from="item.ignore"
+	                           :resize-ignore-from="item.ignore"
+	                           @resized="resizedEvent"
+	                           @moved="movedEvent">
+	                </grid-item>
+	            </grid-layout>
+	        </div>
+	    </div>
+	
+	    <!-- 위젯 툴바 -->
+	    <sc-toolbar id="portalToolbar" class="portal-toolbar vertical v-bottom" style="z-index:2;height:50px !important;padding:0px !important">
+	    	<sc-button text="위젯 추가" icon-cls="btn add-col" class="portal-tool-button add-button" on-click="onShowWidgetManager"></sc-button>
+	    	<sc-button text="모두 제거" icon-cls="btn add-col" class="portal-tool-button remove-button" on-click="removeAllWidget"></sc-button>
+	    </sc-toolbar> 
+		
+		<!-- 기존 위젯 관리자 -->
+		<sc-portal-manager id="widgetManager" on-widget-loaded="onAfterWidgetLoaded"
+			portal-cls="{{layoutTarget}}"
+			style="position:absolute;z-index:3;display:none;left:10px;top:4px;">
+		</sc-portal-manager>
+	    
+	    <!-- 포틀릿 Manager -->
+	    <vue-grid-portlet-manager id="portletManager"
+	    						  on-portlet-close="onPortletClose"></vue-grid-portlet-manager>
+		
+	</template> 
+
+	<script>
+        Polymer({
+            is: 'vue-grid-layout-config',
+
+            behaviors: [
+					Polymer.SCInteractDraggableBehavior,
+					Polymer.BehaviorIDGenerator,
+					Polymer.VueGridLayoutBehavior,
+					Polymer.VueGridLayoutConfigBehavior,
+					Polymer.SCResizableBehavior
+			],
+
+			properties: {
+				portletContainerCls : {
+					type: String,
+					value : function() {
+						return '.vue-grid-item.vue-grid-layout-config';	
+					}
+				},
+				commonConfig: {
+					type: Object
+				}
+			}
+        });
+    </script> 
+</dom-module>

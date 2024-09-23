@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="workingday">
+
+	<select id="findCntWorkingday" resultType="int">
+		/* workingday.findCntWorkingday : 근무일 목록 count */
+		SELECT
+			count(*)
+		FROM WRKGDAY
+		WHERE TEN_ID = #{g.tenant}
+		  AND CO_CD = #{p.co_cd}
+		  AND TO_CHAR(WRKGDAY_DT, 'YYYY') = #{p.wrkgday_yr}
+		  AND STS != 'D'
+	</select>
+
+	<select id="findListWorkingday" resultType="map">
+		/* workingday.findListWorkingday : 근무일 목록 조회 */
+		SELECT
+			TEN_ID
+			, CO_CD
+			, WRKGDAY_DT
+			, DOW
+			, CTRY_HOL_YN
+			, CTRY_HOL_RSN
+			, CO_HOL_YN
+			, CO_HOL_RSN
+		FROM WRKGDAY
+		WHERE TEN_ID = #{g.tenant}
+		AND CO_CD = #{p.co_cd}
+		AND TO_CHAR(WRKGDAY_DT, 'YYYY') = #{p.wrkgday_yr}
+		<if test="p.dow_yn != '' and p.dow_yn != null">
+			<if test='p.dow_yn == "Y"'>
+				AND DOW NOT IN (1, 7)
+			</if>
+		</if>
+		AND STS != 'D'
+		ORDER BY WRKGDAY_DT ASC
+	</select>
+
+	<insert id="insertInfoWorkingday">
+		/* workingday.insertInfoWorkingday : 근무일 data insert */
+		INSERT INTO WRKGDAY (
+			TEN_ID
+			, CO_CD
+			, WRKGDAY_DT
+			, DOW
+			, CTRY_HOL_YN
+			, CTRY_HOL_RSN
+			, CO_HOL_YN
+			, CO_HOL_RSN
+			, RMK
+			, STS
+			, REGR_ID
+			, REG_DTTM
+		) VALUES (
+			#{g.tenant}
+			, #{p.co_cd}
+			, #{p.wrkgday_dt}
+			, #{p.dow}
+			, #{p.ctry_hol_yn}
+			, #{p.ctry_hol_rsn}
+			, #{p.co_hol_yn}
+			, #{p.co_hol_rsn}
+			, #{p.rmk}
+			, 'C'
+			, #{g.username}
+			, #{g.now}
+		)
+	</insert>
+
+	<update id="updateInfoWorkingday">
+		/* workingday.updateInfoWorkingday : 근무일 목록 저장 */
+		UPDATE WRKGDAY SET
+			CO_HOL_YN = #{p.co_hol_yn}
+			, CO_HOL_RSN = #{p.co_hol_rsn}
+		WHERE TEN_ID = #{g.tenant}
+		AND CO_CD = #{p.co_cd}
+		AND TO_CHAR(WRKGDAY_DT, 'YYYYMMDD') = #{p.wrkgday_dt}
+	</update>
+
+	<delete id="deleteListWorkingday">
+		/* workingday.deleteListWorkingday : 근무일 목록 삭제 */
+		DELETE FROM WRKGDAY
+		WHERE TEN_ID = #{g.tenant}
+		AND TO_CHAR(WRKGDAY_DT, 'YYYY') = #{p.wrkgday_yr}
+	</delete>
+
+	<select id="findListHolidayFromNow" resultType="string">
+		/* workingday.findListHolidayFromNow : 현재 이후의 휴일을 select */
+		SELECT
+			TO_CHAR(WRKGDAY_DT, 'YYYYMMDD') AS WRKGDAY_DT
+		FROM WRKGDAY
+		WHERE TEN_ID = #{g.tenant}
+		  AND CO_CD = #{p.co_cd}
+		  AND WRKGDAY_DT > TO_CHAR(#{g.now}, 'YYYYMMDD')
+		  AND CO_HOL_YN = 'Y'
+		  AND STS != 'D'
+		ORDER BY WRKGDAY_DT
+	</select>
+</mapper>

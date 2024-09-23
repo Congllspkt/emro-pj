@@ -1,0 +1,815 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="formatter">
+
+	<!-- 그룹코드 목록의 값을 반환한다. -->
+	<select id="findListGroupCodeByNoFormatter" resultType="map">
+	/* formatter."findListGroupCodeByNoFormatter" */
+	SELECT * FROM (
+           SELECT GRPCD.CCD        /*그룹 코드*/
+                 , GRPCD.CCD_TYP        /*코드 유형*/
+                 , GRPCD.CCD_NM     /*그룹 코드 명*/
+                 , GRPCD.CCD_NM_EN  /*그룹 코드 영문 명*/
+                 , CASE WHEN b.DECPT_USE_CCD IS NULL THEN 0 ELSE (SELECT COUNT(c.DECPT_USE_DTLCD) AS CNT
+                   FROM DECPT_USE_CCD_LOV c
+                   WHERE c.TEN_ID = b.TEN_ID
+                   AND c.DECPT_USE_CCD = b.DECPT_USE_CCD) END CNT
+             FROM CCD GRPCD
+             LEFT OUTER JOIN DECPT_USE_CCD b
+             ON (b.TEN_ID = GRPCD.TEN_ID
+             AND b.DECPT_USE_CCD = GRPCD.CCD)
+		<trim prefix="WHERE" prefixOverrides="AND">
+		      AND GRPCD.TEN_ID = #{g.tenant}
+			<if test="p.ccd != null and p.ccd != ''">
+			<bind name="grpCdPattern" value="'%' + p.ccd + '%'" />
+			  AND UPPER(GRPCD.CCD) LIKE UPPER(#{grpCdPattern})
+			</if>
+			<if test="p.ccd_typ != null and p.ccd_typ != ''">
+              AND GRPCD.CCD_TYP = #{p.ccd_typ}
+			</if>
+			<if test="p.ccd_nm != null and p.ccd_nm != ''">
+				AND (UPPER(GRPCD.CCD_NM_EN) LIKE UPPER(#{grpCdNmPattern}) OR AND UPPER(GRPCD.CCD_NM) LIKE UPPER(#{grpCdNmPattern}))
+			</if>
+		</trim>
+		ORDER BY GRPCD.CCD_TYP
+                 ,GRPCD.CCD
+		) d
+		WHERE d.CNT = 0
+	</select>
+	
+	<insert id="insertPrecisionGroupCode">
+	/* formatter.insertPrecisionGroupCode */
+		INSERT INTO DECPT_USE_CCD
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+		TEN_ID
+		,DECPT_USE_CCD
+		,REGR_ID
+		,REG_DTTM
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+		#{g.tenant}
+		,#{p.decpt_use_ccd}
+		,#{g.username}
+		,#{g.now}
+		</trim>
+	</insert>
+	
+	<select id="findListExistPrecisionGroupCode" resultType="map">
+	/* formatter.findListExistPrecisionGroupCode */
+		SELECT 
+			DUC.DECPT_USE_CCD
+			, CCD.CCD
+			, CCD.CCD_NM
+			, CCD.CCD_NM_EN
+		FROM CCD CCD
+		INNER JOIN DECPT_USE_CCD DUC
+		ON (CCD.TEN_ID = DUC.TEN_ID
+		AND CCD.CCD = DUC.DECPT_USE_CCD)
+		WHERE CCD.TEN_ID = #{g.tenant} AND DUC.DECPT_USE_CCD IN
+			<foreach collection="p.insertPrecisionCommonCodeList" item="inserted" separator="," open="(" close=")">
+				#{inserted.ccd}
+			</foreach>
+	</select>
+	
+	<select id="findListPrecisionGroupCode" resultType="map">
+		/* formatter.findListPrecisionGroupCode */
+		SELECT 
+			DUC.DECPT_USE_CCD
+			, COMCODE.CCD
+			, COMCODE.CCD_NM
+			, COMCODE.CCD_NM_EN
+			, ( (SELECT COUNT(DC.DTLCD) AS CNT FROM DTLCD DC WHERE DC.TEN_ID = COMCODE.TEN_ID AND DC.CCD = DUC.DECPT_USE_CCD)
+			- (SELECT COUNT(DUCL.DECPT_USE_DTLCD) AS CNT FROM DECPT_USE_CCD_LOV DUCL WHERE DUCL.TEN_ID = DUC.TEN_ID AND DUCL.DECPT_USE_CCD = DUC.DECPT_USE_CCD) ) AS NO_DATA_CNT
+		FROM CCD COMCODE
+		INNER JOIN DECPT_USE_CCD DUC
+		ON (COMCODE.TEN_ID = DUC.TEN_ID
+		AND COMCODE.CCD = DUC.DECPT_USE_CCD)
+		WHERE COMCODE.TEN_ID = #{g.tenant}
+		ORDER BY COMCODE.CCD_TYP
+				,COMCODE.CCD
+	</select>
+	
+	<select id="findListPrecisionDetailCode" resultType="map">
+		/* formatter.findListPrecisionDetailCode */
+		SELECT 
+			DUCL.DECPT_USE_CCD
+      		, DUCL.DECPT_USE_DTLCD
+			, DC.DTLCD
+      		, DC.CCD
+			, DCML.DTLCD_NM
+      		, DUCL.DECPT_LEN
+      		, DUCL.DECPT_TRUNC_TYP_CCD
+		FROM DTLCD DC
+         LEFT OUTER JOIN DTLCD_MULTLANG DCML
+               ON DC.TEN_ID 	= DCML.TEN_ID
+              AND DC.CCD 	= DCML.CCD
+              AND DC.DTLCD 	= DCML.DTLCD
+              AND DCML.LANG_CCD = #{g.locale}
+         LEFT OUTER JOIN DECPT_USE_CCD_LOV DUCL
+          	ON (DC.TEN_ID = DUCL.TEN_ID
+          	AND DC.DTLCD = DUCL.DECPT_USE_DTLCD
+          	AND DC.CCD = DUCL.DECPT_USE_CCD)
+        WHERE DC.TEN_ID 	= #{g.tenant}
+              AND DC.CCD	= #{p.decpt_use_ccd}
+              AND DC.STS != 'D'
+		ORDER BY DC.DTLCD_SORT
+                 ,DC.DTLCD
+	</select>
+	
+	<delete id="deletePrecisionDetailCodeByGroupCode">
+	/* formatter.deletePrecisionDetailCodeByGroupCode */
+		DELETE FROM DECPT_USE_CCD_LOV WHERE TEN_ID = #{g.tenant} AND DECPT_USE_CCD = #{p.decpt_use_ccd}
+	</delete>
+	
+	<delete id="deletePrecisionGroupCode">
+	/* formatter.deletePrecisionGroupCode */
+		DELETE FROM DECPT_USE_CCD WHERE TEN_ID = #{g.tenant} AND DECPT_USE_CCD = #{p.decpt_use_ccd}
+	</delete>
+	
+	<insert id="insertPrecisionDetailCode">
+	/* formatter.insertPrecisionDetailCode */
+		INSERT INTO DECPT_USE_CCD_LOV
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+		TEN_ID
+		,DECPT_USE_CCD
+		,DECPT_USE_DTLCD
+		,DECPT_LEN
+		,DECPT_TRUNC_TYP_CCD
+		,REGR_ID
+		,REG_DTTM
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+		#{g.tenant}
+		,#{p.decpt_use_ccd}
+		,#{p.dtl_cd}
+		,#{p.decpt_len}
+		,#{p.decpt_trunc_typ_ccd}
+		,#{g.username}
+		,#{g.now}
+		</trim>
+	</insert>
+	
+	<update id="updatePrecisionDetailCode">
+	/* formatter.updatePrecisionDetailCode */
+		UPDATE DECPT_USE_CCD_LOV
+		SET DECPT_LEN = #{p.decpt_len}
+		, DECPT_TRUNC_TYP_CCD = #{p.decpt_trunc_typ_ccd}
+		WHERE TEN_ID = #{g.tenant}
+		AND DECPT_USE_CCD = #{p.decpt_use_ccd}
+		AND DECPT_USE_DTLCD = #{p.decpt_use_dtlcd}
+	</update>
+	
+	<select id="findListDisplayFormat" resultType="map">
+	/* formatter.findListDisplayFormat */
+		SELECT 
+			FMTER_CD
+			, DAT_TYP_CCD
+			, FMTER_EXPLN
+		FROM FMTER
+		WHERE TEN_ID = #{g.tenant}
+	</select>
+	
+	<select id="findListDisplayFormatDetail" resultType="map">
+	/* formatter.findListDisplayFormatDetail */
+		SELECT FMT_SETUP_UUID
+			,	FMTER_CD
+			,	FMT_TYP_CCD
+			,	FMT_EXPR_1
+			,	FMT_EXPR_2
+			,	CASE WHEN DECPT_USE_CCD IS NULL THEN 'DIRECTBLANK' ELSE DECPT_USE_CCD END DECPT_USE_CCD
+			,	DECPT_STR
+			,	DECPT_LEN_LMT
+			,	DECPT_TRUNC_TYP_CCD
+			,	ADD_TXT_USE_YN
+			,	FMT_USE_YN
+			,	FMT_EXPLN
+			,	FMT_PRFX
+			,	FMT_SUF
+		FROM FMTER_FMT_SETUP
+		WHERE TEN_ID = #{g.tenant}
+		AND FMTER_CD = #{p.fmter_cd}
+	</select>
+	
+	<insert id="insertDisplayFormat">
+	/* formatter.insertDisplayFormat */
+		INSERT INTO FMTER
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			TEN_ID
+			, FMTER_CD
+			, DAT_TYP_CCD
+			, FMTER_EXPLN
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			#{g.tenant}
+			, #{p.fmter_cd}
+			, #{p.dat_typ_ccd}
+			, #{p.fmter_expln}
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+		</trim>
+	</insert>
+	
+	<update id="updateDisplayFormat">
+	/* formatter.updateDisplayFormat */
+		UPDATE FMTER
+		SET DAT_TYP_CCD = #{p.dat_typ_ccd}
+		,	FMTER_EXPLN = #{p.fmter_expln}
+		WHERE TEN_ID = #{g.tenant}
+		AND FMTER_CD = #{p.fmter_cd}
+	</update>
+	
+	<update id="updateDisplayPrecisionFormat">
+	/* formatter.updateDisplayPrecisionFormat */
+		UPDATE FMTER_FMT_SETUP
+		SET 
+		<choose>
+			<when test='p.decpt_use_ccd != "DIRECTBLANK"'>
+			DECPT_USE_CCD =  #{p.decpt_use_ccd}
+			</when>
+			<otherwise>
+			DECPT_USE_CCD =  ''
+			</otherwise>
+		</choose>
+			,	DECPT_LEN_LMT = #{p.decpt_len_lmt}
+			,	DECPT_TRUNC_TYP_CCD = #{p.decpt_trunc_typ_ccd}
+		WHERE TEN_ID = #{g.tenant}
+		 AND FMT_SETUP_UUID = #{p.fmt_setup_uuid}
+	</update>
+	<delete id="deleteDisplayFormatDetailByFormatName">
+	/* formatter.deleteDisplayFormatDetailByFormatName */
+		DELETE FROM FMTER_FMT_SETUP WHERE TEN_ID = #{g.tenant} AND FMTER_CD = #{p.fmter_cd}
+	</delete>
+	
+	<delete id="deleteDisplayFormatGroup">
+	/* formatter.deleteDisplayFormat */
+		DELETE FROM FMTER WHERE TEN_ID = #{g.tenant} AND FMTER_CD = #{p.fmter_cd}
+	</delete>
+	
+	<insert id="insertDisplayFormatDetail">
+	/* formatter.insertDisplayFormatDetail */
+		INSERT INTO FMTER_FMT_SETUP
+		(
+			TEN_ID
+			, FMT_SETUP_UUID
+			, FMTER_CD
+			, FMT_TYP_CCD
+			, FMT_EXPR_1
+			, FMT_EXPR_2
+			, DECPT_USE_CCD
+			, DECPT_STR
+			, DECPT_LEN_LMT
+			, DECPT_TRUNC_TYP_CCD
+			, ADD_TXT_USE_YN
+			, FMT_USE_YN
+			, FMT_EXPLN
+			, FMT_PRFX
+			, FMT_SUF
+			, REGR_ID
+			, REG_DTTM
+			, MODR_ID
+			, MOD_DTTM
+		)
+		VALUES (
+			#{g.tenant}
+			, #{g.uuid}
+			, #{p.fmter_cd}
+			, #{p.fmt_typ_ccd}
+			, #{p.fmt_expr_1}
+			, #{p.fmt_expr_2}
+			<choose>
+			<when test='p.decpt_use_ccd != "DIRECTBLANK"'>
+			, #{p.decpt_use_ccd}
+			</when>
+			<otherwise>
+			, ''
+			</otherwise>
+			</choose>
+			, #{p.decpt_str}
+			, #{p.decpt_len_lmt}
+			, #{p.decpt_trunc_typ_ccd}
+			, #{p.add_txt_use_yn}
+			, #{p.fmt_use_yn}
+			, #{p.fmt_expln}
+			, #{p.fmt_prfx}
+			, #{p.fmt_suf}
+			, #{g.username}
+			, #{g.now}
+			, #{g.username}
+			, #{g.now}
+		)
+	</insert>
+	
+	<update id="updateDisplayFormatDetail">
+	/* formatter.updateDisplayFormatDetail */
+		UPDATE FMTER_FMT_SETUP
+		SET FMT_TYP_CCD = #{p.fmt_typ_ccd}
+			, FMT_EXPR_1 = #{p.fmt_expr_1}
+			, FMT_EXPR_2 = #{p.fmt_expr_2}
+			<choose>
+			<when test='p.decpt_use_ccd != "DIRECTBLANK"'>
+			, DECPT_USE_CCD = #{p.decpt_use_ccd}
+			</when>
+			<otherwise>
+			, DECPT_USE_CCD = ''
+			</otherwise>
+			</choose>
+			, DECPT_STR = #{p.decpt_str}
+			, DECPT_LEN_LMT = #{p.decpt_len_lmt}
+			, DECPT_TRUNC_TYP_CCD = #{p.decpt_trunc_typ_ccd}
+			, ADD_TXT_USE_YN = #{p.add_txt_use_yn}
+			, FMT_USE_YN = #{p.fmt_use_yn}
+			, FMT_EXPLN = #{p.fmt_expln}
+			, FMT_PRFX = #{p.fmt_prfx}
+			, FMT_SUF = #{p.fmt_suf}
+			, MODR_ID = #{g.username}
+			, MOD_DTTM = #{g.now}
+		WHERE TEN_ID = #{g.tenant}
+			AND FMT_SETUP_UUID = #{p.fmt_setup_uuid}
+	</update>
+	
+	<delete id="deleteDisplayFormatDetail">
+	/* formatter.deleteDisplayFormatDetail */
+		DELETE FROM FMTER_FMT_SETUP WHERE TEN_ID = #{g.tenant} AND FMT_SETUP_UUID = #{p.fmt_setup_uuid}
+	</delete>
+	
+	<select id="findListPrecisionFormatByGroupCode" resultType="map">
+	/* formatter.findListPrecisionFormatByGroupCode */
+		SELECT DC.TEN_ID      /*시스템 아이디*/
+                 ,DC.CCD      /*그룹 코드*/
+                 ,DC.DTLCD      /*상세 코드*/
+                 ,DC.DTLCD_SORT    /*정렬 순서*/
+                 ,DC.USE_YN      /*사용 여부*/
+                 ,DC.RMK         /*비고*/
+                 ,DC.STS         /*상태*/
+                 ,DC.REGR_ID      /*등록자 아이디*/
+                 ,DC.REG_DTTM      /*등록 일시*/
+                 ,DC.MODR_ID      /*수정자 아이디*/
+                 ,DC.MOD_DTTM      /*수정 일시*/
+                 ,DCML.DTLCD_NM   /*상세 코드 명*/
+                 ,DUCL.DECPT_USE_CCD
+                 ,DUCL.DECPT_USE_DTLCD
+                 ,DUCL.DECPT_LEN
+             FROM DTLCD DC
+         LEFT OUTER JOIN DTLCD_MULTLANG DCML
+               ON DC.TEN_ID 	= DCML.TEN_ID
+              AND DC.CCD 	= DCML.CCD
+              AND DC.DTLCD 	= DCML.DTLCD
+              AND DCML.LANG_CCD = #{g.locale}
+              LEFT OUTER JOIN DECPT_USE_CCD_LOV DUCL
+              ON (DC.TEN_ID = DUCL.TEN_ID
+              AND DC.CCD = DUCL.DECPT_USE_CCD
+              AND DC.DTLCD = DUCL.DECPT_USE_DTLCD)
+            WHERE DC.TEN_ID 	= #{g.tenant}
+              AND DC.CCD	= #{p}
+              AND DC.STS != 'D'
+         ORDER BY DC.DTLCD_SORT
+                 ,DC.DTLCD
+	</select>
+
+	
+	<select id="findDisplayFormat" resultType="map">
+	/* formatter.findDisplayFormat */
+		SELECT FT.FMTER_CD
+			, FT.DAT_TYP_CCD
+			, FTFS.FMT_SETUP_UUID
+			, FTFS.FMT_TYP_CCD
+			, FTFS.FMT_EXPR_1
+			, FTFS.FMT_EXPR_2
+			, FTFS.DECPT_USE_CCD
+			, FTFS.DECPT_STR
+			, FTFS.DECPT_LEN_LMT
+			, FTFS.DECPT_TRUNC_TYP_CCD
+		FROM FMTER FT
+		INNER JOIN FMTER_FMT_SETUP FTFS
+			ON (FT.TEN_ID = FTFS.TEN_ID
+			AND FT.FMTER_CD = FTFS.FMTER_CD
+			AND FTFS.FMT_USE_YN = 'Y')
+		WHERE FT.TEN_ID = #{g.tenant}
+		AND FT.FMTER_CD = #{p}
+	</select>
+	
+	<select id="getCountDisplayFormatName" resultType="int">
+	/* formatter.getCountDisplayFormatName */
+		SELECT COUNT(FMTER_CD)
+			FROM FMTER
+		WHERE TEN_ID = #{g.tenant}
+			AND FMTER_CD IN
+			<foreach collection="p.insertDisplayFormatList" item="item" separator="," open="(" close=")">
+	              #{item.fmter_cd}
+	        </foreach>
+	</select>
+	<select id="findListUseDisplayFormat" resultType="map">
+	/* formatter.findListUseDisplayFormat */
+		SELECT FTFS.FMT_SETUP_UUID
+			, FTFS.FMTER_CD
+			, FTFS.FMT_TYP_CCD
+			, FTFS.FMT_EXPR_1
+			, FTFS.FMT_EXPR_2
+			, FTFS.DECPT_USE_CCD
+			, FTFS.DECPT_STR
+			, FTFS.DECPT_LEN_LMT
+			, FTFS.DECPT_TRUNC_TYP_CCD
+			, FTFS.ADD_TXT_USE_YN
+			, FTFS.FMT_USE_YN
+			, FTFS.FMT_EXPLN
+			, FT.DAT_TYP_CCD
+			, FTFS.FMT_PRFX
+			, FTFS.FMT_SUF
+		FROM FMTER_FMT_SETUP FTFS
+		INNER JOIN FMTER FT
+		ON (FTFS.TEN_ID = FT.TEN_ID
+		AND FTFS.FMTER_CD = FT.FMTER_CD)
+		WHERE FTFS.TEN_ID = #{g.tenant}
+			AND FTFS.FMT_USE_YN = 'Y'
+	</select>
+	
+	<select id="findListCurrentUserDisplayFormat" resultType="map">
+	/* formatter.findListCurrentUserDisplayFormat */
+		SELECT LF.LOC_FMT_TYP_CCD
+			 , CASE WHEN USRLFE.LOC_FMT_EXPR IS NULL
+						THEN LFE.LOC_FMT_EXPR ELSE USRLFE.LOC_FMT_EXPR END AS LOC_FMT_EXPR
+	         , LF.DAT_TYP_CCD
+	    FROM LOC_FMT LF
+	    INNER JOIN LOC_FMT_EXPR LFE
+			ON (LF.TEN_ID = LFE.TEN_ID
+			AND LF.LOC_FMT_TYP_CCD = LFE.LOC_FMT_TYP_CCD
+			AND LFE.DFLT_YN = 'Y')
+	    LEFT OUTER JOIN LOC_FMT_EXPR_USR_MAPG LFEUM
+			ON (LFE.TEN_ID = LFEUM.TEN_ID
+			AND LF.LOC_FMT_TYP_CCD = LFEUM.LOC_FMT_TYP_CCD
+			AND LFEUM.USR_ID = #{g.username})
+		LEFT OUTER JOIN LOC_FMT_EXPR USRLFE
+			ON (LFEUM.TEN_ID = USRLFE.TEN_ID
+				AND LFEUM.LOC_FMT_EXPR_UUID = USRLFE.LOC_FMT_EXPR_UUID
+				AND LFEUM.LOC_FMT_TYP_CCD = USRLFE.LOC_FMT_TYP_CCD)
+	    WHERE LF.TEN_ID = #{g.tenant}
+	</select>
+	
+	<resultMap id="precFormatGrpMap" type="Map">
+		<id	property="decpt_use_ccd"		column="DECPT_USE_CCD"/>
+		<collection property="precFormatDtls" javaType="list" resultMap="precFormatDtlMap"/>
+	</resultMap>
+	
+	<resultMap id="precFormatDtlMap" type="java.util.HashMap">
+		<id property="decpt_use_ccd"	column="DECPT_USE_CCD"/>
+		<id property="decpt_use_dtlcd"	column="DECPT_USE_DTLCD"/>
+		<result property="dtlcd_nm"	column="DTLCD_NM"/>
+		<result property="decpt_len"		column="DECPT_LEN"/>
+		<result property="decpt_trunc_typ_ccd"	column="DECPT_TRUNC_TYP_CCD"/>
+	</resultMap>
+	
+	<select id="findListPrecisionFormat"	resultMap="precFormatGrpMap">
+	/* formatter.findListPrecisionFormat : 소수점 리스트 조회 */
+		SELECT DUCL.TEN_ID      /*시스템 아이디*/
+                 ,DUCL.DECPT_USE_CCD      /*그룹 코드*/
+                 ,DUCL.DECPT_USE_DTLCD
+                 ,DUCL.DECPT_LEN
+                 ,DUCL.DECPT_TRUNC_TYP_CCD
+                 ,DC.DTLCD      /*상세 코드*/
+                 ,DC.DTLCD_SORT    /*정렬 순서*/
+                 ,DC.USE_YN      /*사용 여부*/
+                 ,DCML.DTLCD_NM   /*상세 코드 명*/
+             FROM DECPT_USE_CCD_LOV DUCL
+         INNER JOIN DECPT_USE_CCD DUC
+               ON DUCL.TEN_ID 	= DUC.TEN_ID
+              AND DUCL.DECPT_USE_CCD 	= DUC.DECPT_USE_CCD
+         INNER JOIN DTLCD DC
+         		ON DC.TEN_ID = DUCL.TEN_ID
+         		AND DC.CCD = DUCL.DECPT_USE_CCD
+         		AND DC.DTLCD = DUCL.DECPT_USE_DTLCD
+         		AND DC.STS != 'D'
+         LEFT OUTER JOIN DTLCD_MULTLANG DCML
+               ON DCML.TEN_ID 	= DC.TEN_ID
+              AND DCML.CCD 	= DC.CCD
+              AND DCML.DTLCD 	= DC.DTLCD
+              AND DCML.LANG_CCD = #{g.locale}
+        WHERE DUCL.TEN_ID 	= #{g.tenant}
+        ORDER BY DC.DTLCD_SORT
+                 ,DC.DTLCD
+	</select>
+	
+	<select id="findListPrecisionFormatCur" resultType="map">
+	/* formatter.findListPrecisionFormatCur : 통화 리스트 조회 */
+		SELECT DC.TEN_ID      /*시스템 아이디*/
+                 ,DC.CCD      /*그룹 코드*/
+                 ,DC.DTLCD      /*상세 코드*/
+                 ,DC.DTLCD_SORT    /*정렬 순서*/
+                 ,DC.USE_YN      /*사용 여부*/
+                 ,DC.RMK         /*비고*/
+                 ,DC.STS         /*상태*/
+                 ,DC.REGR_ID      /*등록자 아이디*/
+                 ,DC.REG_DTTM      /*등록 일시*/
+                 ,DC.MODR_ID      /*수정자 아이디*/
+                 ,DC.MOD_DTTM      /*수정 일시*/
+                 ,DCML.DTLCD_NM   /*상세 코드 명*/
+                 ,DUCL.DECPT_USE_CCD
+                 ,DUCL.DECPT_USE_DTLCD
+                 ,DUCL.DECPT_LEN
+             FROM DTLCD DC
+         LEFT OUTER JOIN DTLCD_MULTLANG DCML
+               ON DC.TEN_ID 	= DCML.TEN_ID
+              AND DC.CCD 	= DCML.CCD
+              AND DC.DTLCD 	= DCML.DTLCD
+              AND DCML.LANG_CCD = #{g.locale}
+              LEFT OUTER JOIN DECPT_USE_CCD_LOV DUCL
+              ON (DC.TEN_ID = DUCL.TEN_ID
+              AND DC.CCD = DUCL.DECPT_USE_CCD
+              AND DC.DTLCD = DUCL.DECPT_USE_DTLCD)
+            WHERE DC.TEN_ID 	= #{g.tenant}
+              AND DC.CCD	= 'C004'
+              AND DC.STS != 'D'
+              <if test='p.dtlcd != null and p.dtlcd != ""'>
+	            <bind name="dtlCdPattern" value="'%' + p.dtlcd + '%'"/>
+		        AND DC.DTLCD LIKE UPPER(#{dtlCdPattern})
+		        </if>
+		        <if test='p.dtlcd_nm != null and p.dtlcd_nm != ""'>
+		            <bind name="dtlCdNmPattern" value="'%' + p.dtlcd_nm + '%'"/>
+		        AND UPPER(DCML.DTLCD_NM) LIKE UPPER(#{dtlCdNmPattern})
+		        </if>
+         ORDER BY DC.DTLCD_SORT
+                 ,DC.DTLCD
+	</select>
+	
+	<select id="findListUserFormat" resultType="map">
+	/* formatter.findListUserFormat */
+		SELECT LOC_FMT_TYP_CCD
+			, DAT_TYP_CCD
+			, LOC_FMT_EXPLN
+		FROM LOC_FMT
+		WHERE TEN_ID = #{g.tenant}
+	</select>
+	
+	<select id="findListUserFormatByUserExpressionClass" resultType="map">
+	/* formatter.findListUserFormatByUserExpressionClass */
+		SELECT LOC_FMT_EXPR_UUID
+			, LOC_FMT_TYP_CCD
+			, LOC_FMT_EXPR
+			, DFLT_YN
+			, LOC_FMT_EXPR_EXPLN
+		FROM LOC_FMT_EXPR
+		WHERE TEN_ID = #{g.tenant}
+		AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+	</select>
+	
+	<insert id="insertUserFormatInfo">
+	/* formatter.insertUserFormatInfo */
+		INSERT INTO LOC_FMT_EXPR
+		(
+		TEN_ID
+		,LOC_FMT_EXPR_UUID
+		,LOC_FMT_TYP_CCD
+		,LOC_FMT_EXPR
+		,DFLT_YN
+		,LOC_FMT_EXPR_EXPLN
+		,REGR_ID
+		,REG_DTTM
+		,MODR_ID
+		,MOD_DTTM
+		)
+		VALUES (
+		#{g.tenant}
+		,#{g.uuid}
+		,#{p.loc_fmt_typ_ccd}
+		,#{p.loc_fmt_expr}
+		,#{p.deft_yn}
+		,#{p.loc_fmt_expr_expln}
+		,#{g.username}
+		,#{g.now}
+		,#{g.username}
+		,#{g.now}
+		)
+	</insert>
+	
+	<update id="updateUserFormatInfo">
+	/* formatter.updateUserFormatInfo */
+		UPDATE LOC_FMT_EXPR
+		SET LOC_FMT_EXPR = #{p.loc_fmt_expr}
+		, DFLT_YN = #{p.deft_yn}
+		, LOC_FMT_EXPR_EXPLN = #{p.loc_fmt_expr_expln}
+		WHERE TEN_ID = #{g.tenant}
+		AND LOC_FMT_EXPR_UUID = #{p.loc_fmt_expr_uuid}
+	</update>
+	
+	<delete id="deleteUserFormatLinkByExpressionId">
+	/* formatter.deleteUserFormatLinkByExpressionId */
+		DELETE FROM LOC_FMT_EXPR_USR_MAPG WHERE TEN_ID = #{g.tenant} AND LOC_FMT_EXPR_UUID = #{p.loc_fmt_expr_uuid}
+	</delete>
+	
+	<delete id="deleteUserFormatInfoByUserExpressionId">
+	/* formatter.deleteUserFormatInfo */
+		DELETE FROM LOC_FMT_EXPR WHERE TEN_ID = #{g.tenant} AND LOC_FMT_EXPR_UUID = #{p.loc_fmt_expr_uuid}
+	</delete>
+	
+	<select id="findCurrentUserFormatInfo" resultType="map">
+	/* formatter.findCurrentUserFormatInfo */
+		SELECT LF.LOC_FMT_TYP_CCD
+			, LFEUM.LOC_FMT_EXPR_UUID
+		FROM LOC_FMT LF
+		LEFT OUTER JOIN LOC_FMT_EXPR LFE
+		ON (LF.TEN_ID = LFE.TEN_ID
+		AND LF.LOC_FMT_TYP_CCD = LFE.LOC_FMT_TYP_CCD
+		AND LFE.DFLT_YN = 'Y')
+		LEFT OUTER JOIN LOC_FMT_EXPR_USR_MAPG LFEUM
+		ON (LF.TEN_ID = LFEUM.TEN_ID
+		AND LF.LOC_FMT_TYP_CCD = LFEUM.LOC_FMT_TYP_CCD
+		AND LFEUM.USR_ID = #{g.username})
+		WHERE LF.TEN_ID = #{g.tenant}
+	</select>
+	
+	<delete id="deleteCurrentUserFormatLink">
+	/* formatter.deleteCurrentUserFormatLink */
+		DELETE FROM LOC_FMT_EXPR_USR_MAPG WHERE LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd} AND USR_ID = #{g.username}
+	</delete>
+	<update id="margeCurrentUserFormatLink">
+	/* formatter.margeCurrentUserFormatLink */
+	MERGE INTO LOC_FMT_EXPR_USR_MAPG LFEUM
+		USING (
+			SELECT	#{p.loc_fmt_expr_uuid}	AS LOC_FMT_EXPR_UUID,
+					#{g.username}		AS USR_ID,
+					#{g.tenant}			AS TEN_ID,
+					#{p.loc_fmt_typ_ccd}		AS LOC_FMT_TYP_CCD,
+					#{g.username}	AS REGR_ID,
+					#{g.now}		AS REG_DTTM
+		   FROM DUM_TBL /* ONE ROW DATA DUMMY TABLE */
+		) DT
+		ON (
+			LFEUM.LOC_FMT_TYP_CCD = DT.LOC_FMT_TYP_CCD
+			AND LFEUM.TEN_ID = DT.TEN_ID
+			AND LFEUM.USR_ID  = DT.USR_ID
+		)
+		WHEN MATCHED THEN
+			UPDATE
+			SET LFEUM.LOC_FMT_EXPR_UUID = DT.LOC_FMT_EXPR_UUID
+		WHEN NOT MATCHED THEN
+			INSERT 
+			(
+				TEN_ID,
+				USR_ID,
+				LOC_FMT_TYP_CCD,
+				LOC_FMT_EXPR_UUID,
+				REGR_ID,
+				REG_DTTM
+			)
+	    	VALUES (
+				DT.TEN_ID,
+				DT.USR_ID,
+				DT.LOC_FMT_TYP_CCD,
+				DT.LOC_FMT_EXPR_UUID,
+				DT.REGR_ID,
+				DT.REG_DTTM
+			 )
+	</update>
+
+	<select id="findCurrentUserFormatLinkByUserExpressionClass" resultType="map">
+	/* formatter.findCurrentUserFormatLinkByUserExpressionClass */
+		SELECT LOC_FMT_EXPR_UUID,
+			USR_ID,
+			TEN_ID,
+			LOC_FMT_TYP_CCD,
+			REGR_ID,
+			REG_DTTM
+		FROM LOC_FMT_EXPR_USR_MAPG
+		WHERE TEN_ID = #{g.tenant}
+		AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+		AND USR_ID  = #{g.username}
+	</select>
+
+
+	<update id="updateCurrentUserFormatLinkByUserExpressionClass">
+		/* formatter.updateCurrentUserFormatLinkByUserExpressionClass */
+		 UPDATE LOC_FMT_EXPR_USR_MAPG
+			 SET LOC_FMT_EXPR_UUID   = #{p.loc_fmt_expr_uuid}
+		  WHERE TEN_ID = #{g.tenant}
+			AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+			AND USR_ID  = #{g.username}
+	</update>
+
+
+	<insert id="insertCurrentUserFormatLinkByUserExpressionClass">
+		/* formatter.insertCurrentUserFormatLinkByUserExpressionClass */
+		 INSERT INTO LOC_FMT_EXPR_USR_MAPG
+		         (  TEN_ID,
+					USR_ID,
+					LOC_FMT_TYP_CCD,
+					LOC_FMT_EXPR_UUID,
+					REGR_ID,
+					REG_DTTM
+	             )
+	      VALUES ( #{g.tenant}
+	             , #{g.username}
+	             , #{p.loc_fmt_typ_ccd}
+	             , #{p.loc_fmt_expr_uuid}
+	             , #{g.username}
+	             , #{g.now}
+	             )
+	</insert>
+
+
+	<select id="findUserFormatInfo" resultType="map">
+	/* formatter.findUserFormatInfo */
+		SELECT LF.LOC_FMT_TYP_CCD
+			, LFEUM.LOC_FMT_EXPR_UUID
+			, #{p.usr_id} AS USR_ID
+		FROM LOC_FMT LF
+		LEFT OUTER JOIN LOC_FMT_EXPR LFE
+		ON (LF.TEN_ID = LFE.TEN_ID
+		AND LF.LOC_FMT_TYP_CCD = LFE.LOC_FMT_TYP_CCD
+		AND LFE.DFLT_YN = 'Y')
+		LEFT OUTER JOIN LOC_FMT_EXPR_USR_MAPG LFEUM
+		ON (LF.TEN_ID = LFEUM.TEN_ID
+		AND LF.LOC_FMT_TYP_CCD = LFEUM.LOC_FMT_TYP_CCD
+		AND LFEUM.USR_ID = #{p.usr_id})
+		WHERE LF.TEN_ID = #{g.tenant}
+	</select>
+	
+	<delete id="deleteUserFormatLinkByUserExpressionClass">
+		DELETE FROM LOC_FMT_EXPR_USR_MAPG WHERE USR_ID = #{p.usr_id} AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+	</delete>
+	
+	<update id="margeUserFormatLink">
+		/* formatter.margeUserFormatLink */
+		MERGE INTO LOC_FMT_EXPR_USR_MAPG LFEUM
+		USING (SELECT #{p.loc_fmt_expr_uuid} AS LOC_FMT_EXPR_UUID,
+					  #{p.usr_id}            AS USR_ID,
+					  #{g.tenant}            AS TEN_ID,
+					  #{p.loc_fmt_typ_ccd}   AS LOC_FMT_TYP_CCD,
+					  #{g.username}          AS REGR_ID,
+					  #{g.now}               AS REG_DTTM
+			   FROM DUM_TBL /* ONE ROW DATA DUMMY TABLE */
+		) DT
+		ON (
+					LFEUM.LOC_FMT_TYP_CCD = DT.LOC_FMT_TYP_CCD
+				AND LFEUM.TEN_ID = DT.TEN_ID
+				AND LFEUM.USR_ID = DT.USR_ID
+			)
+		WHEN MATCHED THEN
+			UPDATE
+			SET LFEUM.LOC_FMT_EXPR_UUID = DT.LOC_FMT_EXPR_UUID
+		WHEN NOT MATCHED THEN
+			INSERT
+			(TEN_ID,
+			 USR_ID,
+			 LOC_FMT_TYP_CCD,
+			 LOC_FMT_EXPR_UUID,
+			 REGR_ID,
+			 REG_DTTM)
+			VALUES (DT.TEN_ID,
+					DT.USR_ID,
+					DT.LOC_FMT_TYP_CCD,
+					DT.LOC_FMT_EXPR_UUID,
+					DT.REGR_ID,
+					DT.REG_DTTM
+					)
+	</update>
+	<select id="findUserFormatLinkByUserExpressionClass" resultType="map">
+	/* formatter.findUserFormatLinkByUserExpressionClass */
+		SELECT LOC_FMT_EXPR_UUID,
+			USR_ID,
+			TEN_ID,
+			LOC_FMT_TYP_CCD,
+			REGR_ID,
+			REG_DTTM
+		FROM LOC_FMT_EXPR_USR_MAPG
+		WHERE TEN_ID = #{g.tenant}
+		AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+		AND USR_ID  = #{p.usr_id}
+	</select>
+
+
+	<update id="updateUserFormatLink">
+		/* formatter.UserFormatLink */
+		 UPDATE LOC_FMT_EXPR_USR_MAPG
+			 SET LOC_FMT_EXPR_UUID   = #{p.loc_fmt_expr_uuid}
+		  WHERE TEN_ID = #{g.tenant}
+			AND LOC_FMT_TYP_CCD = #{p.loc_fmt_typ_ccd}
+			AND USR_ID  = #{p.usr_id}
+	</update>
+
+
+	<insert id="insertUserFormatLink">
+		/* formatter.insertUser*/
+		 INSERT INTO LOC_FMT_EXPR_USR_MAPG
+		         (  TEN_ID,
+					USR_ID,
+					LOC_FMT_TYP_CCD,
+					LOC_FMT_EXPR_UUID,
+					REGR_ID,
+					REG_DTTM
+	             )
+	      VALUES ( #{g.tenant}
+	             , #{p.usr_id}
+	             , #{p.loc_fmt_typ_ccd}
+	             , #{p.loc_fmt_expr_uuid}
+	             , #{g.username}
+	             , #{g.now}
+	             )
+	</insert>
+</mapper>

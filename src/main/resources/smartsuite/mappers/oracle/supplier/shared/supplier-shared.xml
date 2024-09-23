@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="supplier-shared">
+
+    <resultMap id="vendorSgMap" type="java.util.HashMap">
+        <id property="vd_cd"	column="VD_CD"/>
+        <id property="erp_vd_cd" column="ERP_VD_CD"/>
+        <result property="disp_vd_cd" column="DISP_VD_CD"/>
+        <result property="vd_nm" column="VD_NM"/>
+        <result property="disp_vd_nm" column="DISP_VD_NM"/>
+        <result column="VD_NM_EN" property="vd_nm_en" />
+        <result column="BIZREGNO" property="bizregno"/>
+        <result column="CTRY_CCD" property="ctry_ccd"/>
+        <result column="TAX_ID" property="tax_id"/>
+        <result column="EU_VAT_REG_ID" property="eu_vat_reg_id"/>
+        <result column="DTL_ADDR_1" property="dtl_addr_1"/>
+        <result column="DTL_ADDR_2" property="dtl_addr_2"/>
+        <result column="OORG_CD" property="OORG_CD"/>
+        <result column="OBD_TYP_CCD" property="obd_typ_ccd"/>
+        <result column="OORG_INI_TRANSN_ST_DT" property="oorg_ini_transn_st_dt"/>
+        <result column="VD_PIC_UUID" property="vd_pic_uuid"/>
+        <result column="VD_PIC_NM" property="vd_pic_nm"/>
+        <result column="VD_PIC_DEPT_NM" property="vd_pic_dept_nm"/>
+        <result column="VD_PIC_JOBTIT_NM" property="vd_pic_jobtit_nm"/>
+        <result column="VD_PIC_TEL" property="vd_pic_tel"/>
+        <result column="VD_PIC_EML" property="vd_pic_eml"/>
+        <collection property="sg_nms" ofType="string" javaType="list" resultMap="sgGroupNmMap"/>
+        <collection property="sgList" javaType="list" resultMap="sgGroupMap"/>
+    </resultMap>
+
+    <resultMap id="sgGroupNmMap" type="string">
+        <result column="sg_nm" property="SG_NM" />
+    </resultMap>
+
+    <resultMap id="sgGroupMap" type="java.util.HashMap">
+        <id property="sg_cd" column="SG_CD"/>
+        <result column="sg_nm" property="SG_NM" />
+    </resultMap>
+
+    <resultMap id="vendorMap" type="java.util.HashMap">
+        <id property="vd_cd"	column="VD_CD"/>
+        <id property="erp_vd_cd" column="ERP_VD_CD"/>
+        <result property="disp_vd_cd" column="DISP_VD_CD"/>
+        <result property="vd_nm" column="VD_NM"/>
+        <result property="disp_vd_nm" column="DISP_VD_NM"/>
+        <result column="VD_NM_EN" property="vd_nm_en" />
+        <result column="BIZREGNO" property="bizregno"/>
+        <result column="CTRY_CCD" property="ctry_ccd"/>
+        <result column="TAX_ID" property="tax_id"/>
+        <result column="EU_VAT_REG_ID" property="eu_vat_reg_id"/>
+        <result column="DTL_ADDR_1" property="dtl_addr_1"/>
+        <result column="DTL_ADDR_2" property="dtl_addr_2"/>
+        <result column="OORG_CD" property="OORG_CD"/>
+        <result column="OBD_TYP_CCD" property="obd_typ_ccd"/>
+        <result column="OORG_INI_TRANSN_ST_DT" property="oorg_ini_transn_st_dt"/>
+        <result column="CHR_NM" property="chr_nm"/>
+        <result column="EML" property="eml"/>
+        <result column="DEPT_CD" property="dept_cd"/>
+        <result column="DEPT_NM" property="dept_nm"/>
+        <result column="TEL" property="tel"/>
+        <result column="MOB" property="mob"/>
+    </resultMap>
+
+    <select id="findListVendorMaster" resultType="map">
+        /*shared.findListVendorMaster : 협력사 마스터 목록 조회 */
+        SELECT VDGL.VD_CD
+        , CASE WHEN 'ko_KR' = #{g.locale} THEN VDGL.VD_NM ELSE VDGL.VD_NM_EN END AS VD_NM
+        , VDGL.ERP_VD_CD
+        , VDGL.CTRY_CCD
+        , VDGL.BIZREGNO
+        , VDGL.TAX_ID
+        , VDGL.EU_VAT_REG_ID
+        , VDGL.CORPNO
+        FROM VD VDGL
+        WHERE VDGL.TEN_ID      = #{g.tenant}
+        <if test="p.ctry_ccd != null and p.ctry_ccd !=''">
+            AND VDGL.CTRY_CCD      = #{p.ctry_ccd}
+        </if>
+        <if test='p.vd_cd != null and p.vd_cd != ""'>
+            <bind name="vdCdPattern" value='"%" + p.vd_cd + "%"' />
+            AND VDGL.VD_CD   LIKE UPPER(#{vdCdPattern})
+        </if>
+        <if test='p.erp_vd_cd != null and p.erp_vd_cd != ""'>
+            <bind name="erpVdCdPattern" value='"%" + p.erp_vd_cd + "%"' />
+            AND VDGL.ERP_VD_CD   LIKE UPPER(#{erpVdCdPattern})
+        </if>
+        <if test="p.erp_vd_yn != null and p.erp_vd_yn eq 'Y'.toString()">
+            AND VDGL.ERP_VD_CD   IS NOT NULL
+        </if>
+        <if test='p.vd_nm != null and p.vd_nm != ""'>
+            <bind name="vdNmPattern" value='"%" + p.vd_nm + "%"' />
+            AND    (UPPER(VDGL.VD_NM) LIKE UPPER(#{vdNmPattern}) OR UPPER(VDGL.VD_NM_EN) LIKE UPPER(#{vdNmPattern}))      /* 협력사명 검색조건*/
+        </if>
+        <if test="p.bizregno != null and p.bizregno != ''">
+            <bind name="bizRegNoPattern" value='p.bizregno + "%"' />
+            AND VDGL.BIZREGNO  LIKE UPPER(#{bizRegNoPattern})
+        </if>
+        <if test="p.tax_id != null and p.tax_id != ''">
+            <bind name="taxNoPattern" value='p.tax_id + "%"' />
+            AND VDGL.TAX_ID  LIKE UPPER(#{taxNoPattern})
+        </if>
+        <if test="p.eu_vat_reg_id != null and p.eu_vat_reg_id != ''">
+            <bind name="euVatRegNoPattern" value='p.eu_vat_reg_id + "%"' />
+            AND VDGL.EU_VAT_REG_ID  LIKE UPPER(#{euVatRegNoPattern})
+        </if>
+        ORDER BY VDGL.ERP_VD_CD
+    </select>
+
+    <!-- 협력사 VDGL 조회 -->
+    <select id="findListVendorBasicInfo" resultType="map">
+        /*shared.findListVendorBasicInfo */
+        SELECT VDGL.TEN_ID,
+        VDGL.VD_CD,
+        CASE WHEN 'ko_KR' = #{g.locale} THEN VDGL.VD_NM ELSE VDGL.VD_NM_EN END AS VD_NM,
+        VDGL.ERP_VD_CD,
+        VDGL.ERP_VD_CD,
+        VDGL.CORPNO,
+        VDGL.HQ_BIZREGNO,
+        VDGL.CTRY_CCD,
+        WHEN VDGL.CTRY_CCD = 'KR' THEN VDGL.BIZREGNO
+        WHEN VDGL.CTRY_CCD = 'CN' THEN VDGL.TAX_ID
+        WHEN (SELECT COUNT(*)
+        FROM DTLCD
+        WHERE TEN_ID = VDGL.TEN_ID
+        AND CCD = 'C008'
+        AND DTLCD = VDGL.CTRY_CCD) > 0 THEN VDGL.EU_VAT_REG_ID
+        ELSE VDGL.TAX_ID
+        END BIZREGNO,
+        VDGL.VD_EML,
+        CASE WHEN 'ko_KR' = #{g.locale} THEN VDGL.CEO_NM ELSE VDGL.CEO_NM_EN END CEO_NM,
+        CASE WHEN 'ko_KR' = #{g.locale} THEN VDGL.DTL_ADDR_1 ELSE VDGL.DTL_ADDR_EN_1 END DTL_ADDR_1
+        FROM VD VDGL
+        WHERE VDGL.TEN_ID = #{g.tenant}
+        <if test='p.erp_vd_cd != null and p.erp_vd_cd != ""'>
+            <bind name="cdPattern" value='"%" + p.erp_vd_cd + "%"' />
+            AND VDGL.ERP_VD_CD LIKE UPPER(#{cdPattern})
+        </if>
+        <if test='p.vd_nm != null and p.vd_nm != ""'>
+            <bind name="namePattern" value='"%" + p.vd_nm + "%"' />
+            AND    (UPPER(VDGL.VD_NM) LIKE UPPER(#{namePattern}) OR UPPER(VDGL.VD_NM_EN) LIKE UPPER(#{namePattern}))      /* 협력사명 검색조건*/
+        </if>
+        ORDER BY VDGL.VD_CD
+    </select>
+
+    <select id="findListVendorInfo" resultType="map">
+        /*shared.findListVendorInfo : EO 협력사 목록 조회 */
+        SELECT VD.VD_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN VD.VD_NM_EN ELSE  VD.VD_NM END AS DISP_VD_NM
+        , VD.VD_NM
+        , VD.VD_NM_EN
+        , VD.ERP_VD_CD
+        , VD.BIZREGNO
+        , VD.CORPNO
+        , VD.CTRY_CCD
+        , VD.TAX_ID
+        , VDOG.OBD_TYP_CCD
+        , VDOG.OORG_CD
+        FROM VD VD
+        INNER JOIN OORG_VD VDOG
+        ON VDOG.TEN_ID = VD.TEN_ID
+        AND VDOG.VD_CD  = VD.VD_CD
+        WHERE VD.TEN_ID      = #{g.tenant}
+        AND VDOG.OORG_CD = #{p.oorg_cd}
+        AND VD.STS != 'D'
+        <if test='p.erp_vd_cd != null and p.erp_vd_cd != ""'>
+            <bind name="vdCdPattern" value='"%" + p.erp_vd_cd + "%"' />
+            AND VD.ERP_VD_CD   LIKE UPPER(#{vdCdPattern})
+        </if>
+        <if test='p.vd_nm != null and p.vd_nm != ""'>
+            <bind name="vdNmPattern" value='"%" + p.vd_nm + "%"' />
+            AND    (UPPER(VD.VD_NM) LIKE UPPER(#{vdNmPattern}) OR UPPER(VD.VD_NM_EN) LIKE UPPER(#{vdNmPattern}))      /* 협력사명 검색조건*/
+        </if>
+        <if test="p.bizregno != null and p.bizregno != ''">
+            <bind name="bizRegNoPattern" value='"%" + p.bizregno + "%"' />
+            AND VD.BIZREGNO  LIKE UPPER(#{bizRegNoPattern})
+        </if>
+        <if test="p.obd_typ_ccd != null and p.obd_typ_ccd != ''">
+            AND VDOG.OBD_TYP_CCD     = #{p.obd_typ_ccd}
+        </if>
+        ORDER BY VD.ERP_VD_CD
+    </select>
+
+    <select id="findListVendor" resultMap="vendorMap">
+        /** shared.findListVendor */
+        SELECT VD.VD_CD,
+        VD.ERP_VD_CD,
+        CASE WHEN VD.ERP_VD_CD IS NULL THEN VD.VD_CD ELSE VD.ERP_VD_CD END AS DISP_VD_CD,
+         CASE WHEN 'en_US' = #{g.locale} THEN VD.VD_NM_EN ELSE  VD.VD_NM END AS DISP_VD_NM,
+        VD.VD_NM,
+        VD.VD_NM_EN,
+        VD.BIZREGNO,
+        VD.CTRY_CCD,
+        VD.TAX_ID,
+        VD.EU_VAT_REG_ID,
+        VD.DTL_ADDR_1,
+        VD.DTL_ADDR_2,
+        OG.OORG_CD,
+        OG.OBD_TYP_CCD,
+        OG.OORG_INI_TRANSN_ST_DT,
+        CH.CHR_NM,
+        CH.EML,
+        CH.DEPT_CD,
+        CASE WHEN 'en_US' = #{g.locale} THEN CH.DEPT_NM_EN
+        ELSE CH.DEPT_NM
+        END AS DEPT_NM,
+        CH.TEL,
+        CH.MOB
+        FROM VD VD
+        INNER JOIN OORG_VD OG
+            ON OG.TEN_ID = VD.TEN_ID
+            AND OG.VD_CD = VD.VD_CD
+        LEFT OUTER JOIN (	SELECT
+            USR.TEN_ID,
+            USR.VD_CD,
+            USR.USR_NM AS CHR_NM,
+            USR.EML,
+            USR.TEL,
+            USR.MOB,
+            DEPT.DEPT_CD,
+            DEPT.DEPT_NM_EN,
+            DEPT.DEPT_NM
+            FROM USR USR
+            INNER JOIN ROLE ROLE
+                ON ROLE.TEN_ID = USR.TEN_ID
+            INNER JOIN ROLE_USR ROLE_USR
+                ON ROLE.TEN_ID = ROLE_USR.TEN_ID
+                AND ROLE.ROLE_CD = ROLE_USR.ROLE_CD
+                AND ROLE_USR.USR_ID = USR.USR_ID
+            LEFT OUTER JOIN DEPT DEPT
+            ON DEPT.TEN_ID = USR.TEN_ID
+            AND DEPT.DEPT_CD = USR.DEPT_CD
+            AND DEPT.STS != 'D'
+            <if test="p.role_cd != null and p.role_cd != ''">
+                AND ROLE_USR.ROLE_CD = #{p.role_cd} /* 직무 유형을 대체하는 롤코드 */
+            </if>
+
+            GROUP BY USR.TEN_ID, USR.VD_CD, USR.USR_NM, USR.EML, USR.TEL, USR.MOB, DEPT.DEPT_CD, DEPT.DEPT_NM_EN, DEPT.DEPT_NM
+        ) CH         /* 협력사 담당자*/
+        ON CH.TEN_ID = OG.TEN_ID
+        AND CH.VD_CD = OG.VD_CD
+        WHERE VD.TEN_ID = #{g.tenant}
+        AND OG.OORG_CD = #{p.oorg_cd}
+        AND VD.STS != 'D'
+        <if test="p.ctry_ccd != null and p.ctry_ccd != ''">
+            AND VD.CTRY_CCD = #{p.ctry_ccd}         /* 국가 코드   */
+        </if>
+        <if test="p.obd_typ_ccd != null and p.obd_typ_ccd != ''">
+            AND OG.OBD_TYP_CCD = #{p.obd_typ_ccd}	/*	등록유형 거래유형*/
+        </if>
+        <if test="p.erp_vd_cd != null and p.erp_vd_cd != ''">
+            <bind name="p_erp_vd_cd" value='"%" + g.trim(p.erp_vd_cd) + "%"' />
+            AND VD.ERP_VD_CD LIKE UPPER(#{p_erp_vd_cd})
+        </if>
+        <if test="p.vd_nm != null and p.vd_nm != ''">
+            <bind name="p_vd_nm" value='"%" + g.trim(p.vd_nm) + "%"' />
+            AND    (UPPER(VD.VD_NM) LIKE UPPER(#{p_vd_nm}) OR UPPER(VD.VD_NM_EN) LIKE UPPER(#{p_vd_nm}))      /* 협력사명 검색조건*/
+        </if>
+        ORDER BY VD.VD_CD DESC, CH.CHR_NM ASC
+    </select>
+
+    <!--<select id="findListVendor" resultMap="vendorMap">
+    /** shared.findListVendor */
+    	SELECT VD.VD_CD,
+		       VD.ERP_VD_CD,
+		       CASE WHEN VD.ERP_VD_CD IS NULL THEN VD.VD_CD ELSE VD.ERP_VD_CD END AS DISP_VD_CD,
+		       VD.VD_NM,
+		       VD.VD_NM_EN,
+		       VD.BIZREGNO,
+		       VD.CTRY_CCD,
+		       VD.TAX_ID,
+		       VD.EU_VAT_REG_ID,
+		       VD.DTL_ADDR_1,
+		       VD.DTL_ADDR_2,
+		       OG.OORG_CD,
+		       OG.OBD_TYP_CCD,
+		       OG.OORG_INI_TRANSN_ST_DT,
+		       CH.VD_PIC_UUID,
+		       CH.CHR_NM,
+		       CH.VD_PIC_EML,
+		       CH.VD_PIC_DEPT_NM,
+		       CH.VD_PIC_JOBTIT_NM,
+		       CH.VD_PIC_TEL,
+		       CH.CHR_MOBILE,
+		       SG.SG_CD,
+		       SG.SG_STD_NM
+	  FROM VD VD
+	       INNER JOIN OORG_VD OG
+	       ON OG.TEN_ID = VD.TEN_ID
+	       AND OG.VD_CD = VD.VD_CD
+	       LEFT OUTER JOIN
+	       (
+       			SELECT SGPO.TEN_ID
+       			,      SGPO.SG_CD
+       			,      SGPO.SG_STD_NM
+       			,      VDTG.VD_CD
+       			,      VDTG.OORG_CD
+       			FROM SG SGPO
+       			INNER JOIN OFC_VD_OG VDTG
+       			ON VDTG.TEN_ID = SGPO.TEN_ID
+       			AND VDTG.TARG_GRP_CD = SGPO.SG_CD
+       			AND VDTG.TARG_GRP_TYP_CD = 'IS'
+                   AND VDTG.TRAD_YN = 'Y'
+       			WHERE SGPO.TEN_ID = #{g.tenant}
+                <if test="p.item_sgs != null and p.item_sgs.size() > 0">
+                AND SGPO.SG_CD IN
+				<foreach collection="p.item_sgs" item="sg" separator="," open="(" close=")">
+					#{sg}
+				</foreach>
+				</if>
+          ) SG
+	      ON SG.TEN_ID = OG.TEN_ID
+	       AND SG.VD_CD = OG.VD_CD
+	       AND SG.OORG_CD = OG.OORG_CD
+	       LEFT OUTER JOIN
+	       (	SELECT CP.TEN_ID,
+	                     CP.VD_CD,
+	                     CP.VD_PIC_UUID,
+	                     USR.EML AS VD_PIC_EML,
+	                     USR.USR_NM AS CHR_NM,
+	                     USR.USR_ID,
+	                     CP.VD_PIC_DEPT_NM,
+	                     CP.VD_PIC_JOBTIT_NM,
+	                     USR.TEL AS VD_PIC_TEL ,
+	                     USR.MOB AS CHR_MOBILE,
+	                     USR.FAX
+	                FROM VD_PIC CP
+	                     INNER JOIN TASK_VD_PIC CA
+	                     ON CP.TEN_ID = CA.TEN_ID
+	                     AND CP.VD_PIC_UUID = CA.VD_PIC_UUID
+	                     INNER JOIN USR USR
+	                     ON USR.TEN_ID = CP.TEN_ID
+	                     AND USR.USR_ID = CP.VD_USR_ID
+	               WHERE 1=1
+	               	<if test="p.task_typ_ccd != null and p.task_typ_ccd != ''">
+			         AND CA.TASK_TYP_CCD = #{p.task_typ_ccd} /* 직무 유형            */
+			        </if>
+	              ) CH         /* 협력사 담당자*/
+	      ON CH.TEN_ID = OG.TEN_ID
+	       AND CH.VD_CD = OG.VD_CD
+	 WHERE
+	 		VD.TEN_ID = #{g.tenant}
+	       AND OG.OORG_CD = #{p.oorg_cd}
+	       <if test="p.ctry_ccd != null and p.ctry_ccd != ''">
+	       AND VD.CTRY_CCD = #{p.ctry_ccd}         /* 국가 코드   */
+	       </if>
+	       <if test="p.obd_typ_ccd != null and p.obd_typ_ccd != ''">
+	       AND OG.OBD_TYP_CCD = #{p.obd_typ_ccd}	/*	등록유형 거래유형*/
+	       </if>
+	       <if test="p.erp_vd_cd != null and p.erp_vd_cd != ''">
+	       <bind name="p_erp_vd_cd" value='"%" + g.trim(p.erp_vd_cd) + "%"' />
+        	AND VD.ERP_VD_CD LIKE UPPER(#{p_erp_vd_cd})
+	       </if>
+	       <if test="p.vd_nm != null and p.vd_nm != ''">
+	       <bind name="p_vd_nm" value='"%" + g.trim(p.vd_nm) + "%"' />
+	       AND    (UPPER(VD.VD_NM) LIKE UPPER(#{p_vd_nm}) OR UPPER(VD.VD_NM_EN) LIKE UPPER(#{p_vd_nm}))      /* 협력사명 검색조건*/
+	       </if>
+	    ORDER BY VD.VD_CD DESC, CH.CHR_NM ASC
+    </select>-->
+	
+	<select id="findListSourcingGroupVendor" resultMap="vendorSgMap">
+		/** shared.findListSourcingGroupVendor */
+		SELECT VD.VD_CD,
+		VD.ERP_VD_CD,
+		CASE WHEN VD.ERP_VD_CD IS NULL THEN VD.VD_CD ELSE VD.ERP_VD_CD END AS DISP_VD_CD,
+		 CASE WHEN 'en_US' = #{g.locale} THEN VD.VD_NM_EN ELSE  VD.VD_NM END AS DISP_VD_NM,
+		VD.VD_NM,
+		VD.VD_NM_EN,
+		VD.BIZREGNO,
+		VD.CTRY_CCD,
+		VD.TAX_ID,
+		VD.EU_VAT_REG_ID,
+		DTL_ADDR_1,
+		DTL_ADDR_2,
+		OG.OORG_CD,
+		OG.OBD_TYP_CCD,
+		OG.OORG_INI_TRANSN_ST_DT,
+		CH.VD_PIC_UUID,
+		CH.VD_PIC_NM,
+		CH.VD_PIC_EML,
+		CH.VD_PIC_DEPT_NM,
+		CH.VD_PIC_JOBTIT_NM,
+		CH.VD_PIC_TEL,
+		SG_VD.SG_CD,
+	    CASE WHEN 'en_US' = #{g.locale} THEN SG_NM_EN ELSE SG_NM END AS SG_NM
+		FROM VD VD
+		INNER JOIN OORG_VD OG
+		ON OG.TEN_ID = VD.TEN_ID
+		AND OG.VD_CD = VD.VD_CD
+		INNER JOIN
+            (
+            SELECT SG.TEN_ID
+            ,      SG.SG_CD
+            ,      SG.SG_NM
+            , SG.SG_NM_EN
+            , OG.VD_CD
+            , OG.OORG_CD
+            FROM SG SG
+            INNER JOIN VMG VMG
+            ON VMG.TEN_ID = SG.TEN_ID
+            AND VMG.VMG_CD = SG.SG_CD
+            INNER JOIN OORG_VD_VMG VD_VMG
+            ON VD_VMG.TEN_ID = VMG.TEN_ID
+            AND VD_VMG.VMG_UUID = VMG.VMG_UUID
+            INNER JOIN OORG_VD OG
+            ON OG.OORG_VD_UUID = VD_VMG.OORG_VD_UUID
+            WHERE SG.TEN_ID = #{g.tenant}
+            AND VD_VMG.SUPAVL_YN = 'Y'
+            <choose>
+                <when test="p.item_sgs != null and p.item_sgs.size() > 0">
+                    AND SG.SG_CD IN
+                    <foreach collection="p.item_sgs" item="sg" separator="," open="(" close=")">
+                        #{sg}
+                    </foreach>
+                </when>
+            </choose>
+		) SG_VD
+		ON OG.TEN_ID = SG_VD.TEN_ID
+		AND OG.VD_CD = SG_VD.VD_CD
+		AND OG.OORG_CD = SG_VD.OORG_CD
+		LEFT OUTER JOIN
+		(SELECT CP.TEN_ID,
+		CP.VD_CD,
+		CP.VD_PIC_EML,
+		CP.VD_PIC_UUID,
+		CP.VD_PIC_NM,
+		CP.VD_USR_ID,
+		CP.VD_PIC_DEPT_NM,
+		CP.VD_PIC_JOBTIT_NM,
+		CP.VD_PIC_TEL
+		FROM VD_PIC CP
+		INNER JOIN TASK_VD_PIC CA
+		ON  CP.TEN_ID = CA.TEN_ID
+		AND CP.VD_PIC_UUID = CA.VD_PIC_UUID
+		WHERE CA.TASK_TYP_CCD = #{p.task_typ_ccd}
+		) CH
+		ON OG.TEN_ID = CH.TEN_ID
+		AND OG.VD_CD = CH.VD_CD
+		WHERE     VD.TEN_ID = #{g.tenant}
+		AND OG.OORG_CD = #{p.oorg_cd}
+		AND VD.STS != 'D'
+		<if test="p.ctry_ccd != null and p.ctry_ccd != ''">
+			AND VD.CTRY_CCD = #{p.ctry_ccd}         /* 국가 코드   */
+		</if>
+		<if test="p.obd_typ_ccd != null and p.obd_typ_ccd != ''">
+			AND OG.OBD_TYP_CCD = #{p.obd_typ_ccd}	/*	등록유형 거래유형*/
+		</if>
+		<if test="p.erp_vd_cd != null and p.erp_vd_cd != ''">
+			<bind name="p_erp_vd_cd" value='"%" + g.trim(p.erp_vd_cd) + "%"' />
+			AND VD.ERP_VD_CD LIKE UPPER(#{p_erp_vd_cd})
+		</if>
+		<if test="p.vd_nm != null and p.vd_nm != ''">
+			<bind name="p_vd_nm" value='"%" + g.trim(p.vd_nm) + "%"' />
+			AND    (UPPER(VD.VD_NM) LIKE UPPER(#{p_vd_nm}) OR UPPER(VD.VD_NM_EN) LIKE UPPER(#{p_vd_nm}))      /* 협력사명 검색조건*/
+		</if>
+		ORDER BY VD.VD_CD DESC, SG_VD.SG_CD
+	</select>
+
+
+    <select id="findUserIdByBusinessRegistrationNumber" resultType="map">
+        /* shared.findUserIdByBusinessRegistrationNumber: sp 사용자 정보 조회 */
+        SELECT
+            A.CO_CD
+             ,A.USR_ID
+             ,A.USR_NM
+             ,A.USR_NM_EN
+             ,A.POSI_CCD
+             ,A.DEPT_CD
+             ,VDGL.BIZREGNO
+             ,VDGL.VD_CD
+             ,VDGL.VD_NM
+        FROM USR A
+                 INNER JOIN VD VDGL
+                            ON VDGL.TEN_ID = A.TEN_ID
+                                AND VDGL.VD_CD = A.VD_CD
+        WHERE
+            A.TEN_ID = #{p.tenant}
+          AND VDGL.BIZREGNO = #{p.bizregno}
+          AND A.USR_TYP_CCD = 'VD'
+          AND A.USE_YN = 'Y'
+    </select>
+
+    <select id="findListOperationOrganizationLinkVendor" resultType="map">
+        /*shared.findListOperationOrganizationLinkVendor */
+        SELECT GL.VD_CD
+        ,      GL.ERP_VD_CD
+        ,      CASE WHEN 'ko_KR' = #{g.locale} THEN GL.VD_NM ELSE GL.VD_NM_EN END AS DISP_VD_NM
+        ,     GL.VD_NM
+        ,     GL.VD_NM_EN
+        ,      GL.STS
+        ,      GL.BIZREGNO
+        ,      OG.OBD_TYP_CCD
+        FROM VD GL
+        INNER JOIN OORG_MAPG LM
+        ON (
+        LM.TEN_ID = GL.TEN_ID
+        AND LM.CONN_TYP_CCD = #{p.conn_typ_ccd}
+        AND LM.CONNSRC_OORG_CD = #{p.connsrc_oorg_cd}
+        )
+        INNER JOIN OORG_VD OG
+        ON (
+        OG.TEN_ID = GL.TEN_ID
+        AND OG.VD_CD = GL.VD_CD
+        AND OG.OORG_CD = LM.CONNSUBJ_OORG_CD
+        AND OG.OBD_TYP_CCD = 'OFC'  /* 협력사 구분(E902): 거래업체 */
+        AND OG.TRANSN_POSS_YN = 'Y'  /* 거래상태(E035): 거래 */
+        )
+        WHERE GL.TEN_ID = #{g.tenant}
+        AND GL.STS != 'D'
+        <if test='p.erp_vd_cd != null and p.erp_vd_cd != ""'>
+            <bind name="p_erp_vd_cd" value='"%" + p.erp_vd_cd + "%"' />
+            AND GL.ERP_VD_CD LIKE UPPER(#{p_erp_vd_cd})
+        </if>
+        <if test="p.vd_nm != null and p.vd_nm != ''">
+            <bind name="vendorNmPattern" value='"%" + p.vd_nm + "%"' />
+            AND (UPPER(GL.VD_NM_EN) LIKE UPPER(#{vendorNmPattern}) OR UPPER(GL.VD_NM) LIKE UPPER(#{vendorNmPattern}))
+        </if>
+        ORDER BY GL.VD_CD DESC
+    </select>
+    <select id="findUserInfoByEmailAndUserId" resultType="map">
+        /* shared.findUserInfoByEmailAndUserId: portal 사용자 정보 조회 */
+        SELECT
+            A.TEN_ID
+             ,A.CO_CD
+             ,A.USR_ID
+             ,A.USR_NM
+             ,A.USR_NM_EN
+             ,A.POSI_CCD
+             ,A.DEPT_CD
+             ,A.TEL
+             ,A.MOB
+             ,A.FAX
+             ,A.EML
+             ,A.EML_RCPT_YN
+             ,A.SMS_RCPT_YN
+             ,A.USE_YN
+             ,A.TMZ_CCD
+             ,A.JOBTIT_CCD
+             ,A.HOME_SCR_TYP_CCD
+        FROM USR A
+        WHERE
+            TEN_ID = #{p.tenant}
+          AND EML = #{p.eml}
+          AND USR_ID = #{p.usr_id}
+    </select>
+
+
+    <update id="initPasswordByEmailAndUserId">
+        /* shared.initPasswordByEmailAndUserId:  사용자 사용자 비밀번호 초기화  */
+        UPDATE USR
+        SET
+            PWD = #{p.password}
+          ,PWD_INIT_YN = 'Y'
+          ,PWD_INPERR_CNT = 0
+          ,ACCT_LCKD_YN = 'N'
+          ,PWD_CHG_REQD_YN = 'Y'
+          ,PWD_CHG_DTTM = #{g.now}
+          ,MODR_ID = #{g.username}
+          ,MOD_DTTM = #{g.now}
+        WHERE TEN_ID = #{p.ten_id}
+          AND USR_ID = #{p.usr_id}
+          AND EML = #{p.eml}
+    </update>
+
+</mapper>

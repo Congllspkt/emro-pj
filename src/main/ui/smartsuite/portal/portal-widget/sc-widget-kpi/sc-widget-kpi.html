@@ -1,0 +1,225 @@
+<!--
+ * @Desc notice widget
+ * @Author patrick.sung
+ * @Created 2016-05-03
+ -->
+<link rel="import" href="../sc-widget-content-behavior.html"/>
+<dom-module id="sc-widget-kpi">
+    <template>
+        <style>
+            :host {
+                @apply(--fit-layout);		
+            }
+            
+            
+            .box-content {
+				width: 100%;
+				height: 100%;
+				overflow-y: auto;
+				position: absolute
+			}
+			
+			/*.tb-kpi {
+				border: 0px;;
+				width: 100%;
+			}
+			.tb-kpi th {padding:10px 5px;}
+			.tb-kpi td {padding:10px 5px}
+			
+			.kpi-box {
+			    color: #fff;
+			    padding: 15px;
+			    overflow: hidden;
+			    border-radius: 3px;
+			}    
+			
+			.kpi-box h4 {
+				font-size: 40px;
+				font-weight:bold;
+			}
+			.kpi-box.kpi-box-stats {
+			    position: relative;
+			}
+			.kpi-box .bg-blue {
+			    background: #348fe2!important;
+			}
+			.kpi-box .bg-green {
+			    background: #00acac!important;
+			}
+			.kpi-box .bg-red {
+			    background: #ff5b57!important;
+			}
+			.kpi-box .bg-purple {
+			    background: #727cb6!important;
+			}
+			.kpi-box .stats-icon {
+			    font-size: 42px;
+			    height: 56px;
+			    width: 56px;
+			    text-align: center;
+			    line-height: 56px;
+			    margin-left: 15px;
+			    color: #fff;
+			    position: absolute;
+			    right: 15px;
+			    top: 8px;
+			    opacity: .2;
+			    filter: alpha(opacity=20);
+			}
+			
+			.kpi-box .stats-info {
+				font-size: 32px;
+				font-weight: bold;
+				padding: 10px 0;
+				text-align:right;
+			}
+						
+			.kpi-box-stats .stats-link a {
+			    display: block;
+			    margin: 15px -15px -15px;
+			    padding: 7px 15px;
+			    background: rgba(0,0,0,.4);
+			    text-align: right;
+			    color: #ddd;
+			    font-weight: bold;
+			    text-decoration: none;
+			}
+			.kpi-box-stats .stats-link a:focus, .kpi-box-stats .stats-link a:hover {
+			    background: rgba(0,0,0,.6);
+			    color: #fff;
+			}	*/
+			
+			
+.wrap_kpi {margin:18px 20px;}
+.wrap_kpi li {background:url(../img/marks_kpi_title.png) no-repeat; height:43px; padding:8px 0 8px 37px; width:100%; border-bottom:1px solid #e6e6e6; box-sizing:border-box;}
+.wrap_kpi li:last-child {border-bottom:0;}
+.wrap_kpi li:nth-child(1) {background-position:0 5px;}
+.wrap_kpi li:nth-child(2) {background-position:0 -65px;}
+.wrap_kpi li:nth-child(3) {background-position:0 -135px;}
+.wrap_kpi li a {position:relative; width:100%; display:inline-block; font-size:15px; font-weight:bold; color:#000;}
+.wrap_kpi li span {position:absolute; right:0; display:inline-block; border-radius:20px; background:#d31144; height:26px; line-height:26px; width:100px; text-align:center; color:#fff}
+.wrap_kpi h3 {background:#f7f7f7; font-size:16px; font-weight:bold; color:#000; height:30px; line-height:30px; padding:0 15px;}	
+
+
+        </style>
+                 
+        <sc-ajax auto id="protocolGetSetting" url="../portal/findWidgetProperties.do" body$='{"wdgt_id":"[[widgetId]]"}'
+                 handle-as="json"
+                 last-response="{{_data}}" on-response="_onGetSetting" method="post"
+                 contentType="application/json"></sc-ajax>                 
+
+        <sc-ajax id="getList"
+                 url="../portal/findListNoticeInfo.do"
+                 method="post"
+                 body="{{searchParam}}"
+                 last-response="{{responseResult}}">
+        </sc-ajax>
+
+        
+        
+        
+        <div class="box-content">
+        <section class="wrap_kpi">
+			<!-- <h3>KPI</h3> -->
+		    <ul>
+		    <li><a>{{searchParam}} Purchase Cost Savings Rate<span>32.60%</span></a></li>
+		    <li><a>Performed RFx Rate<span>86.70%</span></a></li>
+		    <li><a>Purchase Rate from New Supplier<span>26.72%</span></a></li>
+		    </ul>
+		</section>
+		</div>
+        
+        <!-- <div class="box-content">
+	        <table class="tb-kpi">
+	        	<tr>
+	        		<td>
+						<div class="kpi-box kpi-box-stats bg-blue">
+							<div class="stats-icon"><i class="fa fa-chain-broken"></i></div>
+							<div class="stats-info">
+								<sc-label text="32.6%"></sc-label>
+							</div>
+							<div class="stats-link">
+								<a><sc-label text="구매금액 절감율"></sc-label></a>
+							</div>
+						</div>
+	        		</td>
+	        		<td>
+						<div class="kpi-box kpi-box-stats bg-green">
+							<div class="stats-icon"><i class="fa fa-users"></i></div>
+							<div class="stats-info">
+								<sc-label text="88.7%"></sc-label>
+							</div>
+							<div class="stats-link">
+								<a><sc-label text="RFx 실행율"></sc-label></a>
+							</div>
+						</div>
+	        		</td>
+	        		<td>
+						<div class="kpi-box kpi-box-stats bg-red">
+							<div class="stats-icon"><i class="fa fa-desktop"></i></div>
+							<div class="stats-info">
+								<sc-label text="25.4%"></sc-label>
+							</div>
+							<div class="stats-link">
+								<a><sc-label text="신규협력사 구매비율"></sc-label></a>
+							</div>
+						</div>
+	        		</td>	        			        		
+	        	</tr>
+	        </table>	
+        </div>  -->
+
+    </template>
+    <script>
+        Polymer({
+            is: "sc-widget-kpi",
+
+            behaviors: [BehaviorWidgetContent],
+
+            properties: {
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                    	return {};
+                    }
+                },
+                responseResult: Array,
+                _opened: Boolean
+            },
+
+            _onGetSetting: function () {
+                if (!this._data) {
+                    this._data = {
+                        widgetId: this.widgetId,
+                        count: '5'
+                    };
+                }else{
+                	this._data = JSON.parse(this._data);
+                }
+                this.refresh();
+                this.set("searchParam",this.portletParam);
+            },
+
+            refresh: function() {
+                this.searchParam = {
+                    count: Number(this._data.count)
+                };
+                //this.$.getList.generateRequest();
+            },
+            
+            attached : function() {
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    this.responseResult = [
+	               		{title:"구매 시스템이 Open 되었습니다.",subtitle:"2016/06/30 15:00", task_uuid : "1"},
+	               		{title:"Q&A 는 담당자에게 문의 바랍니다.",subtitle:"2016/06/30 15:00", task_uuid : "2"},
+	               		{title:"매뉴얼 사용법 안내",subtitle:"2016/06/30 15:00", task_uuid : "3"},
+	               		{title:"사용자 교육 일정 안내",subtitle:"2016/06/30 15:00", task_uuid : "4"}
+            		]
+                }
+            }            
+        });
+    </script>
+</dom-module>

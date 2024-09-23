@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-csr-list.html"></sc-link>
+<sc-link rel="import" href="es-csr-detail.html"></sc-link>
+
+<dom-module id="em-csr">
+	<style>
+		:host {
+            @apply(--fit-layout);
+        }
+    </style>
+    
+    <template>
+		<sc-pages id="pages" class="fit">
+	        <es-csr-list id="list" on-show-detail="onShowDetail"></es-csr-list>
+			<template>
+	        	<es-csr-detail id="detail" on-show-list="onShowList"></es-csr-detail>
+			</template>
+		</sc-pages>
+    </template>
+    
+    <script>
+        Polymer({
+            is: 'em-csr',
+
+            onShowDetail: function(e, data){
+                var me = this;
+                me.$.pages.selectItem(me.$.detail);
+                me.$.detail.load(data);
+            },
+
+            onShowList: function(){
+				var me = this;
+                me.$.pages.selectItem(me.$.list);
+            	me.$.list.onFindListCSRInfo();
+            }
+
+        });
+    </script>
+
+</dom-module>

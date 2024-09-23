@@ -1,0 +1,241 @@
+<sc-link rel="import" href="ep-terms-history.html"></sc-link>
+<dom-module id="es-terms-list">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-code-group init>
+			<!-- 약관 템플릿 구분 -->
+			<sc-code code="C054" value="{{codes.termsTmpCls}}" ></sc-code>
+		</sc-code-group>
+
+		<!-- 그리드 목록 조회 -->
+		<sc-ajax id="findList"
+				 url="findListTerms.do"
+				 body="{{searchParam}}"
+				 last-response="{{termsResultList}}"
+		         on-response="completeFindList">
+		</sc-ajax>
+
+		<!-- 저장 후 그리드 목록 조회 -->
+		<sc-ajax id="saveAfterfindList"
+				 url="findListTerms.do"
+				 body="{{searchParam}}"
+				 last-response="{{termsResultList}}"
+		         on-response="completeSaveAfterFindTermsList">
+		</sc-ajax>
+
+		<!-- 그리드 목록 삭제 -->
+		<sc-ajax id="deleteTermsInfo"
+				 url="deleteTermsInfo.do"
+				 on-response="completeDeleteTerms">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<sc-grid id="termsClsGridPanel"
+				 data-provider="{{codes.termsTmpCls}}"
+				 editable="true"
+				 class="flex-3"
+				 use-state="false"
+				 use-selection="false"
+				 on-item-click="onItemClick"
+				 use-dummy="false" column-fit-style="evenFill">
+			<cc-grid-toolbar title-text="약관 구분">
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column     data-field="data"  header-text="구분 코드" width="250" text-align="left"></sc-data-column>
+				<sc-combobox-column data-field="label" header-text="구분"     width="500" text-align="left" style-name="link"></sc-combobox-column>
+			</sc-grid-columns>
+		</sc-grid>
+
+		<sc-splitter split-type="horizontal"></sc-splitter>
+
+		<sc-grid id="termsGridPanel"
+				 data-provider="{{termsResultList}}"
+				 editable="true"
+				 class="flex-7"
+				 use-state="false"
+				 use-selection="true"
+				 on-item-click="onItemClick"
+				 selection-able-function="onSelectionAbleFunction"
+				 use-dummy="true">
+			<cc-grid-toolbar title-text="약관 목록" >
+				<sc-button text="차수 증가" on-click="onRevIncTerms" disabled="[[formula('isNotTermsExists')]]" auth-s></sc-button>
+				<sc-button text="삭제"     on-click="onDeleteTerms" disabled="[[formula('isNotTermsExists')]]" auth-s></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-data-column data-field="ctmpl_nm"            header-text="약관 명"   width="250" text-align="left" style-name="link"></sc-data-column>
+				<sc-data-column data-field="termcnd_ren_revno"           header-text="차수"     width="50"  text-align="center" style-name="link"></sc-data-column>
+				<sc-date-column data-field="efct_st_dt" header-text="시작 일자"   width="100" text-align="center"></sc-date-column>
+				<sc-date-column data-field="efct_exp_dt"   header-text="종료 일자"   width="100" text-align="center"></sc-date-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="sys_id"></sc-grid-field>
+				<sc-grid-field data-field="ctmpl_uuid"></sc-grid-field>
+				<sc-grid-field data-field="termcnd_uuid"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-terms-list',
+
+            properties: {
+                // 코드 데이터
+                codes : {
+                    type : Object,
+					reset : false,
+                    value : function() {
+                        return {
+                        	termsTmpCls : []
+						};
+                    }
+                },
+				// 약관구분(Param 전달)
+				selectedItem : {
+                	type: Object,
+					value : function(){
+                		return {};
+					}
+				},
+				// 약관 목록 조회 결과
+				termsResultList: {
+                    type: Array,
+					value: function() {
+                      	return [];
+					},
+				}
+            },
+
+			formulas: {
+				// 약관목록 리스트 존재 여부
+				isNotTermsExists: function() {
+					return UT.isEmpty(this.termsResultList);
+				},
+			},
+
+			// 초기화 완료 후 호출 함수
+            initialized: function(){
+                var me = this;
+            },
+
+			// 그리드 Item Click Event
+            onItemClick: function(event) {
+                var me = this,
+                    data = event.detail.data,
+                    item = event.detail.item;
+
+                if(item.dataField === "label"){
+					// 약관구분 : 약관구분 클릭 시
+					me.set("selectedItem", data);
+					me.onFindTermsList();
+				}else if(item.dataField === "ctmpl_nm"){
+                	// 약관목록 : 약관명 클릭 시
+					data.isTermsExists = true;
+                    me.fire("selected-terms", data);
+                }else if(item.dataField === 'termcnd_ren_revno'){
+                    var popup = UT.popup('ep-terms-history', me, 650, 350, null, {titleText:'약관 동의 이력'});
+                    popup.show();
+                    popup.getWindowContent().load(data);
+                }
+            },
+
+			// 그리드 목록 선택 Function
+			onSelectionAbleFunction : function(data){
+            	var me = this;
+				var today = UT.formatDate(new Date(), "yyyyMMdd");
+
+            	// 시작일이 현재일보다 미래이면 선택 가능
+            	if(today <= data.efct_st_dt){
+            		return true;
+				}else{
+            		return false;
+				}
+			},
+
+			// 약관목록 조회
+			onFindTermsList: function(){
+				var me = this;
+				me.$.findList.body = {
+					termcnd_typ_ccd : me.get("selectedItem.data"),
+					lang_ccd : SCLocaleManager.getLocale()
+				}
+				UT.request(me.$.findList);
+			},
+
+			// 저장 후 약관목록 조회
+			onSaveAfterFindTermsList: function(){
+				var me = this;
+				me.$.saveAfterfindList.body = {
+					termcnd_typ_ccd : me.get("selectedItem.data")
+				}
+				UT.request(me.$.saveAfterfindList);
+			},
+
+			// 약관목록 차수증가 버튼 Click Event
+			onRevIncTerms: function(){
+            	var me = this;
+				this.fire("rev-inc-terms", me.get('selectedItem'));
+			},
+
+			// 약관목록 삭제 버튼 Click Event
+			onDeleteTerms: function(){
+                var me = this,
+                    provider = me.$.termsGridPanel.getDataProvider(),
+                    checked = provider.selectionCheckedItems();
+
+                // 선택된 항목이 없습니다.
+                if (checked.length === 0) {
+                    UT.alert("STD.N1600");
+                    return;
+                }
+
+				// 삭제 하시겠습니까?
+                UT.confirm("STD.N1300", function() {
+					me.$.deleteTermsInfo.body = {
+						deleteTermsList : checked,
+						termcnd_typ_ccd : me.get("selectedItem.data")
+					};
+					UT.request(me.$.deleteTermsInfo);
+                });
+            },
+
+			// 약관목록 조회 Callback Function
+			completeFindList : function(e, res){
+				var me = this;
+				var result = res.response;
+
+				var param = {
+					termcnd_typ_ccd : me.get("selectedItem.data"),
+					isTermsExists : UT.isEmpty(result) ? false : true
+				}
+				me.fire("selected-terms-cls", param);
+				me.applyFormula();
+			},
+
+			// 저장 후 약관목록 조회 Callback Function
+			completeSaveAfterFindTermsList : function(e, res){
+				var me = this;
+				var result = res.response;
+				me.applyFormula();
+			},
+
+			// 약관 목록 삭제 Callback Function
+			completeDeleteTerms: function(){
+                var me = this;
+
+				// 삭제하였습니다.
+				UT.alert("STD.N2500", function(){
+					me.onFindTermsList();
+					me.fire("delete-terms");
+				});
+            },
+        });
+	</script>
+</dom-module>

@@ -1,0 +1,519 @@
+<dom-module id="cc-image-listbox">
+    <style>
+        :host {
+            @apply(--fit-layout);
+        }
+        .imglistbox-wrapper {
+            width : 100%; 
+            height : 100%;
+            position : relative;
+        }
+        /* 기본 이미지 (등록된 이미지 없음) */
+        .default-wrapper {
+            border:1px solid silver;
+            box-sizing: border-box;
+            text-align: center;
+            overflow: hidden;
+            background: #fff;/*2019.03.04 pjsuny*/
+        }
+        /* image box area */
+        .imgbox-wrapper {
+            margin : 2px;
+            border:1px dotted silver;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        /* image */
+        .img-wrapper {
+            cursor : pointer;
+            margin : auto;
+        }
+        .img-text {
+            margin:auto;
+            font-weight:bold;
+            text-align:center;
+            width: 90%;
+        }
+        /* ovarlay */
+        .btn-overlay {
+            width: 100%;
+            line-height: 34px;
+            height: 34px;
+            position: absolute;
+            background-color: rgba(0,0,0,0.7);
+            text-align:center;
+        }
+        .btn-overlay sc-button {
+            margin: auto;
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            color: #ffffff;
+            font-weight: normal;
+            font-size: 12px;
+            vertical-align:middle;
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-color: rgba(255,255,255,0.3);
+            margin-left : 2px;
+        }
+        .btn-overlay sc-button:hover {
+            background-color:#1e5784;
+        }
+        .dock-bottom {
+            bottom: 0;
+        }
+        .dock-top {
+            top: 0;
+        }
+        .dock-bottom .moveBtn{
+            background-image : url('../../../../ui/assets/img/gly_srch_toggle_up.png');
+        }
+        .dock-top .moveBtn{
+            background-image : url('../../../../ui/assets/img/gly_srch_toggle_down.png');
+        }
+        .imageUploadBtn {
+            background-image : url('../../../../ui/assets/img/grid/icon_attach.png');
+        }
+    </style>
+    
+    <template>
+        <!-- 이미지 목록 조회 -->
+        <sc-ajax id="findImageList" url="upload/list.do"></sc-ajax>
+<!--  
+    ************************************************************************************************************
+    * UI Area
+    ************************************************************************************************************
+-->
+        <div id="imgListBoxWrapper" class="vbox imglistbox-wrapper" style="overflow:hidden;">
+            <!-- default image box -->
+            <div id="defaultImgWrapper" class="vbox flex default-wrapper" hidden="[[formula('imgListBoxVisible')]]">
+                <img name="imgWrapper" class="img-wrapper" width="73px" height="73px" src="../../../../ui/assets/img/no_profile.png" alt=""/><!-- 2019.03.04 pjsuny -->
+                <span class="img-text">No Image</span>
+            </div> 
+            <!-- imaget list box -->
+            <sc-sliding-listbox
+                        id="imgListWrapper"
+                        class="flex"
+                        hidden="[[!formula('imgListBoxVisible')]]"
+                        direction="vertical"
+                        button-type="[[buttonTypeValue]]"
+                        button-position="{{buttonPosition}}"
+                        hide-scrollbar="{{hideScrollbar}}"
+                        scroll-type="{{scrollType}}"
+                        scroll-size="{{scrollSize}}"
+                        scroll-speed="{{scrollSpeed}}"
+                        display-marker="{{displayMarker}}"
+                        on-click-item="_onClickItem"
+                        items="[[imageListData]]">
+                <template>
+                    <div id="imgBoxWrapper" class="vbox flex imgbox-wrapper">
+                        <img name="imgWrapper" class="img-wrapper" src="[[data]]" alt=""/>
+                        <span class="img-text" hidden="[[hideImageName]]">[[name]]</span>
+                    </div>
+                </template>
+            </sc-sliding-listbox>
+	        <!-- mouse over  upload area -->
+	        <div id="btnOverlay" class="btn-overlay dock-bottom" hidden="[[readOnly]]" style="display:none;">
+	            <sc-button class="imageUploadBtn"   on-click="_onClickUploadBtn"></sc-button>
+	            <sc-button class="moveBtn"          on-click="_onClickMoveBtn"></sc-button>
+	        </div>
+        </div>
+        
+        <!-- upload dialog -->
+        <sc-dialog id="dialog" title-text="이미지 첨부" title-align="left" style="width:600px;height:300px;" modal="true">
+            <cc-sub-title-bar>
+                <sc-button text="저장" on-click="onSave" hidden="[[readOnly]]"></sc-button>
+            </cc-sub-title-bar>
+            <sc-upload id="upload" class="h-200" 
+                        value="{{attGroupId}}" 
+                        editable="[[!readOnly]]" 
+                        max-total-file-count="[[maxImageCount]]" 
+                        max-total-file-size="[[maxfileSize]]" 
+                        extension="png,jpg,jpeg,gif"
+                        view-type="thumbnail" >
+            </sc-upload>
+        </sc-dialog>
+    </template>
+
+<!--  
+    ************************************************************************************************************
+    * Script Area
+    ************************************************************************************************************
+-->
+    <script>
+        Polymer({
+            is: "cc-image-listbox",
+            properties : {
+                /* sc-sliding-listbox options */
+                // button display type : alwaysOn, alwaysOff, overMouse
+                buttonType: {
+                    type: String,
+                    value: 'overMouse',
+                    observer : "_onChangeButtonType"
+                },
+                buttonTypeValue : {
+                    type: String,
+                    value: 'overMouse'
+                },
+                // button display position : relative, overlapped
+                buttonPosition: {
+                    type: String,
+                    value: 'overlapped'
+                },
+                // scroll type : smooth, stepwise
+                scrollType: {
+                    type: String,
+                    value: 'stepwise'
+                },
+                // scroll size : number
+                scrollSize: {
+                    type: Number,
+                    value:  10
+                },
+                // scroll speed : numer
+                scrollSpeed: {
+                    type: Number,
+                    value:  10
+                },
+                // scrollbar hidden : boolean
+                hideScrollbar:{
+                    type : Object,
+                    value : function(){
+                        return true;
+                    }
+                },
+                // selection marker visible : boolean
+                displayMarker: {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                /* sc-sliding-listbox options END */
+                
+                // 첨부파일 그룹 코드
+                grpCd : {
+                    type : String,
+                    value : null,
+                    notify : true,
+                    observer : "_onChangeGrpCd"
+                },
+                // 첨부파일 그룹 코드 값
+                attGroupId : {
+                    type: String,
+                    value: null
+                },
+                
+                // 이미지 목록 데이터
+                imageListData : {
+                    type: Array,
+                    value: function(){
+                        return [];
+                    }
+                },
+                // 이미지 첨부 수정 여부
+                readOnly : {
+                    type : Object,
+                    value : function(){
+                        return false;
+                    }
+                },
+                // 최대 이미지 수
+                maxImageCount : {
+                    type : Number,
+                    value : 10,
+                    observer: "_onChangeMaxImageCount"
+                },
+                maxfileSize : {
+                    type : Number,
+                    value: 0
+                },
+                // image box size 너비
+                imgContainerWidth:{
+                    type:Number,
+                    value:0
+                },
+                // image box size 높이
+                imgContainerHeight:{
+                    type:Number,
+                    value:0
+                },
+                // image name 숨김 여부
+                hideImageName: {
+                    type: Object,
+                    value: function(){
+                        return false;
+                    },
+                    observer: "_onChangeHideImageName" 
+                },
+                // overlay position
+                overlayPosition : {
+                    type: String,
+                    value: "bottom",    // top, bottom
+                    observer: "_onChangeOverlayPosition"
+                }
+            },
+            
+            formulas: {
+                imgListBoxVisible : function(){
+                    return UT.isNotEmpty(this.imageListData);
+                }
+            },
+            
+            behaviors: [
+                Polymer.SCResizableBehavior
+            ],
+            listeners : {
+                'sc-resize' : '_onResize'
+            },
+            _onResize: function(){
+                this.resizeImageList();
+            },
+            
+            attached : function(){
+            	if(!this._attachedCalled) {
+                    this._attachedCalled = true;
+                    //한번만 호출되도록 로직작성
+                    
+                    var me = this;
+                    var imgListBoxWrapper = me.$.imgListBoxWrapper;
+                    
+                    // image list box에 mouse event listner 추가
+                    imgListBoxWrapper.addEventListener("mouseover", function(){
+                        me.setOverlayEvent(true);
+                    });
+                    imgListBoxWrapper.addEventListener("mouseout", function(){
+                        me.setOverlayEvent(false);
+                    });
+                }else{
+	            	this.reloadImage();
+                }
+            },
+            
+            // 이미지 목록을 다시 로드 하기 위해 첨부그룹 코드 변경
+            reloadImage : function(){
+                var me = this;
+                
+                if(!me.get("grpCd")){
+                    me.set("imageListData", []);
+                    me.applyFormula("imgListBoxVisible");
+                    return;
+                }
+                
+                // 이미지 목록 조회
+                me.onSearch();
+            },
+            
+            // 이미지 경로
+            getImageUrl : function(id) {
+                return 'upload/download.do?id=' + encodeURIComponent(id);
+            },
+            
+            // overlay event 설정
+            setOverlayEvent : function(visible){
+                var me = this;
+                var btnOverlay = me.$.btnOverlay;
+                var setDisplayFunc = function(){
+                    btnOverlay.setAttribute("style", "");
+                };
+                var setHiddenFunc = function(){
+                    btnOverlay.setAttribute("style", "display:none;");
+                };
+
+                if(visible){
+                    btnOverlay.addEventListener("mouseover", setDisplayFunc);
+                    btnOverlay.addEventListener("mouseout", setHiddenFunc);
+                    setDisplayFunc();
+                }else{
+                    btnOverlay.removeEventListener("mouseover", setDisplayFunc);
+                    btnOverlay.removeEventListener("mouseout", setHiddenFunc);
+                    setHiddenFunc();
+                }
+            },
+            
+            // 레이아웃 설정
+            setLayoutImageList : function(){
+                var me = this;
+                
+                me.applyFormula("imgListBoxVisible");
+                
+                if(me.formula('imgListBoxVisible')){
+                    if(me.get("imageListData").length == 1){
+                        me.set("buttonTypeValue", "alwaysOff");
+                    }else{
+                        me.set("buttonTypeValue", me.buttonType);
+                    }
+                    // 이미지 resizing
+                    me.resizeImageList();
+                }
+            },
+            
+            // 이미지 resizing
+            resizeImageList : function(){
+                var me = this;
+                
+                if(!me.formula('imgListBoxVisible')){
+                    return;
+                }
+                
+                // imageListData가 존재하면 imgListBox reSizing
+                var contentComputedStyle = getComputedStyle(me.$.imgListBoxWrapper);
+                var width = Number(contentComputedStyle.width.replace('px','')) - 4,
+                    height = Number(contentComputedStyle.height.replace('px','')) - 4;
+                
+                // imageBox size 설정
+                var imageBoxes = me.$.imgListWrapper.querySelectorAll('div#imgBoxWrapper');
+                if(UT.isNotEmpty(imageBoxes)){
+                    for(var i=0; i<imageBoxes.length; i++){
+                        imageBoxes[i].setAttribute("style","width:"+ width + "px; height:" + height + "px;");
+                    }
+                }
+                
+                // image size 설정 box size * 0.8
+                var images = me.$.imgListWrapper.querySelectorAll('[name=imgWrapper]');
+                if(UT.isNotEmpty(images)){
+                    height = me.hideImageName ? height : height - 16;  
+                    for(var i=0; i<images.length; i++){
+                        images[i].setAttribute("style","width:"+ width+ "px; height:"+ height + "px;");
+                    }
+                }
+            },
+            
+            // 첨부 그룹코드 변경
+            _onChangeGrpCd : function(grpCd){
+                var me = this;
+                
+                if(!me.isAttached){
+                    return;
+                }
+                me.reloadImage();
+            },
+            // 최대 이미지 수 변경
+            _onChangeMaxImageCount : function(count){
+                var me = this;
+                if(count < 2){
+                    me.set("buttonType", "alwaysOff");
+                }
+            },
+            
+            // 이미지 이름 숨김 여부 변경
+            _onChangeHideImageName : function(value){
+                var me = this;
+                if(!me.isAttached){
+                    return;
+                }
+                me.resizeImageList();
+            },
+            
+            // buttonType 변경
+            _onChangeButtonType : function(type){
+                var me = this;
+                me.set("buttonTypeValue", type);
+            },
+            
+            // overlay 위치 변경
+            _onChangeOverlayPosition : function(pos){
+                var me = this;
+                var btnOverlay = me.$.btnOverlay,
+                    btn = me.$.overlayMoveBtn;
+                var removeStyle = (pos == "top") ? "dock-bottom" : "dock-top",
+                    addStyle = (pos == "top") ? "dock-top" : "dock-bottom";
+                
+                if(btnOverlay.classList.contains(removeStyle)){
+                    btnOverlay.classList.remove(removeStyle);
+                }
+                
+                if(!btnOverlay.classList.contains(addStyle)){
+                    btnOverlay.classList.add(addStyle);
+                }
+            },
+            
+            // 이미지 클릭 이벤트
+            _onClickItem: function(event, detail) {
+                var me = this;
+                
+                var viewerPopup = UT.popup('sc-image-viewer', me, 600, 500, {}, {});
+                var popupContent = viewerPopup.getWindowContent();
+                
+                popupContent.infoField = 'name';
+                popupContent.initData(me.imageListData, detail.index);
+                // 보여지는 이미지를 refresh 한다.
+                popupContent._refreshShowImage();
+                viewerPopup.show();
+                
+                // 추가 기능 필요 시 event 처리(다운로드 등)  
+                // me.fire("click-image", me.imageListData, detail.index);
+            },
+            
+            // overlay 이동 버튼 클릭 이벤트
+            _onClickMoveBtn : function(e){
+                var me = this;
+                var target = e.currentTarget,
+                    overlay = me.$.btnOverlay;
+                
+                if(target.classList.contains("dock-top") || overlay.classList.contains("dock-top")){
+                    me._onChangeOverlayPosition("bottom");
+                }else{
+                    me._onChangeOverlayPosition("top");
+                }
+            },
+            
+            // 이미지 첨부 버튼 클릭 이벤트
+            _onClickUploadBtn : function(e){
+                var me = this;
+                var uploader = me.$.upload;
+                var attGrpId = me.get("attGroupId"),
+                    grpCd = me.get("grpCd");
+
+                if (attGrpId != grpCd) {
+                    me.set("attGroupId", grpCd);
+                } else if (uploader.isDirty) {
+                    uploader.load();
+                }
+                me.$.dialog.show();
+            },
+            
+            // 이미지 목록 조회
+            onSearch : function(){
+                var me = this;
+                
+                me.$.findImageList.body = {
+                        groupId : me.grpCd
+                };
+                UT.request(me.$.findImageList, function(e, res){
+                    var result = res.response;
+                    for(var i=0;i<result.length;i++){
+                        // id를 포함한 array 바인딩 시 _applyConfig 오류 발생 
+                        // 이미지 경로 생성 및 id값 제거
+                        result[i].data = me.getImageUrl(result[i].id);
+                        result[i].id = undefined;
+                    }
+                    me.set("imageListData", result);
+                    me.setLayoutImageList();
+                });
+            },
+            
+            // 이미지 목록 저장
+            onSave: function() {
+                var me = this;
+
+                if (!me.$.upload.isDirty) {
+                    UT.alert("STD.N1700"); // 변경된 내용이 없습니다
+                    return;
+                }
+                
+                UT.confirm("STD.N1200", function() { // 저장하시겠습니까?
+                    me.$.upload.upload().then(function(uploader) {
+                        me.set("grpCd", uploader.value);
+                        me.$.dialog.hide();
+                        me.reloadImage();
+                        // 이미지 저장 완료 이벤트
+                        me.fire("saved-image", {file_count: uploader.totalFileCount});
+                    });
+                });
+            }
+        });
+    </script>
+
+</dom-module>

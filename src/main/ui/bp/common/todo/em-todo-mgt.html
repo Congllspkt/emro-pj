@@ -1,0 +1,39 @@
+<sc-link rel="import" href="es-todo-group-list.html"></sc-link>
+<sc-link rel="import" href="es-todo-factor-list.html"></sc-link>
+
+<dom-module id="em-todo-mgt">
+	<style>
+		:host {
+			@apply(--vbox-layout)
+		}
+	</style>
+	<template>
+		<cc-page-title-bar></cc-page-title-bar>
+		<div class="hbox flex">
+			<es-todo-group-list id="groupList" class="flex-3" on-show-factors="onShowFactors" on-load-groups="onLoadGroups"></es-todo-group-list>
+			<sc-splitter split-type="vertical"></sc-splitter>
+			<es-todo-factor-list id="factorList" class="flex-7"></es-todo-factor-list>
+		</div>
+	</template>
+	<script>
+	Polymer({
+		is : 'em-todo-mgt',
+		properties : {
+			
+		},
+		initialized : function() {
+			
+		},
+		onShowFactors : function(e, data) {
+			var me = this;
+			
+			me.$.factorList.load(data);
+		},
+		onLoadGroups : function(e, data) {
+			var me = this;
+			
+			me.$.factorList.load(data);
+		}
+	});
+	</script>
+</dom-module>

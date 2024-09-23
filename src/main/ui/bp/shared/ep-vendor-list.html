@@ -1,0 +1,417 @@
+<dom-module id="ep-vendor-list">
+	<!--
+	/**
+	 *
+	 *	@description : 협력사 검색 팝업
+	 *  <pre>
+	 
+				 //협력사 검색 팝업 구현 (예시는 RFX에서 사용하는방식)
+				onShowPopupVendor : function(){
+					//싱글 선택인지 멀티  선택팝업인지 조건처리
+					var me = this , singleSelectFlage = (me.rfxData.comp_typ_ccd==="C");
+					var itemRows = GRID.allRows(me.itemGridView, {exceptDeleted: true}); // 전체 아이템 데이터
+					var rows = GRID.allRows(me.vdGridView, {exceptDeleted: true}); // 전체 데이터
+					if (!me.rfxData.oorg_cd) {
+						UT.alert("STD.N3400"); //'운영조직을 선택하세요.'
+						return false;
+					}
+					if(singleSelectFlage && rows.length > 0){
+						UT.alert("STD.RFX1012");	//"수의계약은 하나의 협력사만 지정이 가능합니다."
+						return false;
+					}
+					var itemProvider = me.$.itemGridPanel.getDataProvider(),
+						itemRows = itemProvider.getItems();
+					var itemSGUniqueList = itemRows.reduce(function(a, b){
+						if(!UT.isEmpty(b.sg_cd) && a.indexOf(b.sg_cd) < 0){
+							a.push(b.sg_cd);
+						}
+						return a;
+					}, []);
+		
+					//popup defaultParam
+					var defaultParam = {
+							co_cd     : me.codes.param.co_cd,
+							oorg_cd : me.rfxData.oorg_cd,
+							conn_typ_ccd    : "POEO",
+							task_typ_ccd  : "RX",	 //RFX 담당자 정보 조회
+							item_sgs    : itemSGUniqueList
+					};
+					//popup옵션
+					var options = {
+							width : 1000,
+							hieght : 500,
+							singleSelect : singleSelectFlage,
+							defaultParam : defaultParam,
+							maximizable : true,
+							title : me.translate("협력사 검색")};
+					//협력사 검색 팝업을 호출한다.
+					UT.popupSelectObject("ep-vendor-list", me, function(selected) {
+						if(singleSelectFlage){
+							var row = {
+									vd_cd : selected.vd_cd,
+									erp_vd_cd : selected.erp_vd_cd,
+									vd_nm : selected.vd_nm
+								};
+							GRID.addRow(me.vdGridView, row);
+						}else{
+							me.onAddList(selected);
+						}
+					},options);
+				},
+				
+				
+			 //text-field를 포함한 팝업 호출은 dom : cc-vendor-search 참고
+	 * </pre>
+	 * @author : Yeon-u Kim
+	 * @FileName :
+	 * @Since 2016. 5. 10.
+	 * @변경이력 : [2016. 5. 10.] Yeon-u Kim 최초작성
+	 */
+	-->
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+	
+	<template>
+		<!-- 연결 운영조직 조회 -->
+		<sc-ajax id="findListOperationOrganizationByOperationOrganizationLink"
+				 url="findListOperationOrganizationByOperationOrganizationLink.do"
+				 last-response="{{codes.operOrgCd}}"
+				 on-response="completeFindOperationOrganizationLink">
+		</sc-ajax>
+		
+		<!-- 업무 유형 별 온보딩 유형 코드 조회 -->
+		<sc-ajax id="findListOnboardingTypeCodeByJob"
+				 url="findListOnboardingTypeCodeByJob.do"
+				 content-type="text/plain"
+				 on-response="completeFindOnboardingTypeCodeByJob">
+		</sc-ajax>
+
+		<!--  협력사 조회 -->
+		<sc-ajax id="findListVendorInfo"
+				 url="findListVendorInfo.do"
+				 body="{{findList.param}}"
+				 on-response="completeFindList">
+		</sc-ajax>
+		
+		<!--  코드 조회 code group-->
+		<sc-code-group id="codes">
+			<!--  국가코드-->
+			<sc-code code="C001" value="{{codes.natCd}}"></sc-code>
+			<!--  거래유형-->
+			<sc-code code="E902" value="{{codes.regTypCd}}"></sc-code>
+		</sc-code-group>
+		
+		<cc-search-condition-panel on-search="onFindList" validation-group="search" auth-r>
+			<cc-fieldset>
+				<sc-label text="운영조직"></sc-label>
+				<cc-operorg-combobox-field id="operorgcombobox" oper-unit-cd="{{param.ounit_cd}}" selected-index="0" value="{{param.oorg_cd}}" placeholder="필수" required="true" disabled="[[uiBind.isOperationOrganizationCode]]" reset="false"></cc-operorg-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="협력사 운영조직"></sc-label>
+				<sc-combobox-field id="operorgCombo" value="{{findList.param.oorg_cd}}" display-field="logic_org_nm"
+								   value-field="oorg_cd" items="{{codes.operOrgCd}}" placeholder="필수" required="true" readonly="[[disabledOperationOrganizationCode]]" reset="false"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="국가"></sc-label>
+				<sc-combobox-field value="{{findList.param.ctry_ccd}}" display-field="label" value-field="data"
+								   items="{{codes.natCd}}" placeholder="전체"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="온보딩 유형"></sc-label>
+				<sc-combobox-field value="{{findList.param.obd_typ_ccd}}" display-field="label" value-field="data"
+								   items="{{codes.setRegTypCd}}" placeholder="전체"></sc-combobox-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="구분"></sc-label>
+				<sc-radio-group-field value="{{findList.param.vendor_typ}}">
+					<sc-radio-field label="전체 협력사" input-value="ALL"></sc-radio-field>
+					<sc-radio-field label="SG 협력사" input-value="SG"></sc-radio-field>
+				</sc-radio-group-field>
+			</cc-fieldset>
+			<cc-fieldset>
+				<sc-label text="협력사"></sc-label>
+				<div class="field-box">
+					<sc-text-field value="{{findList.param.erp_vd_cd}}" class="w-100" on-enter="onFindList" placeholder="코드" validator-type="nospace"></sc-text-field>
+					<div class="hspace-2"></div>
+					<sc-text-field value="{{findList.param.vd_nm}}" on-enter="onFindList" placeholder="협력사 명"></sc-text-field>
+				</div>
+			</cc-fieldset>
+		</cc-search-condition-panel>
+		
+		<sc-grid id="gridPanel" class="flex" use-state="false" selection-mode="[[formula('selectionMode')]]"
+				 on-item-click="onItemClick">
+			<cc-grid-toolbar>
+				<sc-button text="선택" on-click="onSelectedList"></sc-button>
+			</cc-grid-toolbar>
+			<sc-grid-columns>
+				<sc-combobox-column data-field="obd_typ_ccd" header-text="온보딩 유형" width="80"
+									display-field="label" value-field="data" items="{{codes.setRegTypCd}}"></sc-combobox-column>
+				<sc-data-column data-field="disp_vd_cd" header-text="협력사 코드" width="100"></sc-data-column>
+				<sc-data-column data-field="disp_vd_nm" header-text="협력사 명" width="150" text-align="left" style-name="[[formula('linkProfile')]]"></sc-data-column>
+				<sc-data-column data-field="sg_nms" header-text="소싱그룹" width="100" text-align="left"></sc-data-column>
+				<sc-combobox-column data-field="ctry_ccd" header-text="국가" width="80"
+									display-field="label" value-field="data" items="{{codes.natCd}}"></sc-combobox-column>
+				<sc-data-column data-field="bizregno" header-text="사업자등록번호" width="120" item-label-function="itemBizRegNoLabelFn"></sc-data-column>
+				<sc-data-column data-field="chr_nm" header-text="담당자" width="100"></sc-data-column>
+				<sc-data-column data-field="tel" header-text="전화" width="100"></sc-data-column>
+				<sc-data-column data-field="mob" header-text="모바일" width="100"></sc-data-column>
+				<sc-data-column data-field="eml" header-text="이메일" width="180"></sc-data-column>
+			</sc-grid-columns>
+			<sc-grid-fields>
+				<sc-grid-field data-field="vd_cd"></sc-grid-field>
+				<sc-grid-field data-field="obd_typ_ccd"></sc-grid-field>
+				<sc-grid-field data-field="erp_vd_cd"></sc-grid-field>
+				<sc-grid-field data-field="disp_vd_cd"></sc-grid-field>
+				<sc-grid-field data-field="vd_cd"></sc-grid-field>
+				<sc-grid-field data-field="vd_nm"></sc-grid-field>
+				<sc-grid-field data-field="vd_nm_en"></sc-grid-field>
+				<sc-grid-field data-field="bizregno"></sc-grid-field>
+				<sc-grid-field data-field="dept_cd"></sc-grid-field>
+				<sc-grid-field data-field="dept_nm"></sc-grid-field>
+				<sc-grid-field data-field="corpno"></sc-grid-field>
+				<sc-grid-field data-field="ctry_ccd"></sc-grid-field>
+				<sc-grid-field data-field="chr_nm"></sc-grid-field>
+				<sc-grid-field data-field="tax_id"></sc-grid-field>
+				<sc-grid-field data-field="sg_nms"></sc-grid-field>
+			</sc-grid-fields>
+		</sc-grid>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'ep-vendor-list',
+			properties: {
+				titleText: {
+					type: Object,
+					value: function() {
+						return "협력사검색";
+					}
+				},
+				disabledOperationOrganizationCode: {
+					type: Boolean,
+					value: function() {
+						return false;
+					}
+				},
+				uiBind: {
+					type: Object,
+					value: function() {
+						return {
+							isOperationOrganizationCode: false
+						}
+					}
+				},
+				param: {
+					type: Object,
+					value: function() {
+						return {
+							task_typ_ccd: "PU",			//직무유형 C010
+							oper_org_cds: [],
+							oorg_cd: "",
+							co_cd: SCSessionManager.currentUser.co_cd,
+							item_sgs: [],
+							obd_job_type_code : "" // 온보딩 유형 코드 검색 Type
+						};
+					}
+				},
+				findList: {
+					type: Object,
+					value: function() {
+						return {
+							param: {
+								obd_typ_ccd: "OFC",				//협력사구분이 정규업체
+								task_typ_ccd: "PU",			//직무유형 C010
+								item_sgs: []
+							}
+						};
+					}
+				},
+				codes: {
+					type: Object,
+					value: function() {
+						return {
+							operOrgCd: [],
+							natCd: [],
+							regTypCd: [],
+							setRegTypCd : []
+						};
+					},
+					reset: false
+				},
+				singleSelect: {
+					type: Boolean,
+					value: false
+				},
+				linkProfile: {
+					type: Boolean,
+					value: true
+				},
+			},
+			formulas: {
+				selectionMode: function() {
+					var me = this;
+					return (me.get("singleSelect") ? "radio" : "check");
+				},
+				linkProfile: function() {
+					var me = this;
+					return (me.get("linkProfile") ? "link" : "");
+				}
+			},
+			observers: [
+				'onFindListOperationOrganizationCdByOperation(param.oorg_cd)',
+			],
+			//최초 호출
+			initialized: function() {
+				var me = this;
+			},
+			//code 조회  
+			onFindListOperationOrganizationCdByOperation: function() {
+				var me = this;
+				var param = me.get("param");
+				if(!UT.isEmpty(param.oorg_cd)) {
+					this.$.findListOperationOrganizationByOperationOrganizationLink.body = {
+						conn_typ_ccd: param.conn_typ_ccd,
+						oorg_cd: param.oorg_cd
+					};
+					
+					this.$.findListOperationOrganizationByOperationOrganizationLink.generateRequest();
+				}
+			},
+			onFindListOnboardingTypeCodeByJob: function() {
+				var me = this;
+				var param = me.get("param");
+				if(!UT.isEmpty(param.obd_job_type_code)) {
+					this.$.findListOnboardingTypeCodeByJob.body =param.obd_job_type_code;
+
+					this.$.findListOnboardingTypeCodeByJob.generateRequest();
+				}else{
+					var regTypCd = me.get("codes.regTypCd");
+					var setRegTypCd = UT.copy(regTypCd);
+					me.set("codes.setRegTypCd",setRegTypCd);
+				}
+			},
+			completeFindOperationOrganizationLink: function(el, res) {
+				var me         = this,
+					operOrgCds = me.get("codes.operOrgCd");
+				
+				if(operOrgCds.length > 0) {
+					me.set("findList.param.oorg_cd", operOrgCds[0].oorg_cd);
+					/*
+					if(operOrgCds.length === 1) {
+						// 연결된 대상 운영조직이 1건인 경우
+						me.set("disabledOperationOrganizationCode", true);
+					}
+					*/
+				}
+			},
+			completeFindOnboardingTypeCodeByJob: function(el, res) {
+				var me         = this;
+				var lastResponse = res.response;
+				var regTypCd = me.get("codes.regTypCd");
+				var setRegTypCd = UT.copy(regTypCd);
+
+				if(regTypCd.length > 0) {
+					for(var i=0; i < regTypCd.length; i++){
+						if(lastResponse.indexOf(regTypCd[i].data) == -1){
+							setRegTypCd.splice(i,1);
+						}
+					}
+				}
+
+				me.set("codes.setRegTypCd",setRegTypCd);
+			},
+			// 팝업 load 및 옵션 설정
+			load: function(options) {
+				var me = this;
+				options = options || {};
+				me.set("singleSelect", UT.isBoolean(options.singleSelect) ? options.singleSelect : false);
+				me.set("linkProfile", UT.isBoolean(options.linkProfile) ? options.linkProfile : true);
+				me.applyFormula();
+				if(UT.isObject(options.defaultParam)) {
+					//기본값 셋팅.
+					me.set("param", options.defaultParam);
+					me.set("uiBind.isOperationOrganizationCode", !UT.isEmpty(me.get("param.oorg_cd")));
+					//리스트 화면에서의 팝업 요청이 있을 경우 oper_org_cd가 list인 경우 oper_org_cds로 넘긴다. (cc-vendor-search참조)
+					if(!UT.isEmpty(me.get("param.oorg_cd")) && UT.isEmpty(me.get("param.oper_org_cds"))) {
+						//me.$.multi_oper_org_cd_y.style = "display:none";
+						me.set("uiBind.isOperationOrganizationCode", true);
+					}
+					if(!UT.isEmpty(me.get("param.oper_org_cds"))) {
+						me.set("param.oorg_cd", me.param.oper_org_cds[0]);
+					}
+					if(!UT.isString(options.defaultParam.ounit_cd)) {
+						me.set("param.ounit_cd", "PO");
+					}
+				} else {
+					me.set("param.ounit_cd","PO")
+				}
+				if(UT.isArray(options.dataRows)) { // 배열 데이터
+					me.$.gridPanel.setDataProvider(options.dataRows);
+				}
+
+				this.onFindListOnboardingTypeCodeByJob();
+			},
+			
+			// grid item-click 이벤트
+			onItemClick: function(event) {
+				var me   = this,
+					data = event.detail.data,
+					item = event.detail.item;
+				
+				if(me.linkProfile && item.dataField === 'disp_vd_nm') {
+					UT.popupVendor(me, data);
+				}
+			},
+			
+			getVendorListSgNmList: function(vendorList) {
+				var me = this;
+				var list = vendorList;
+				
+				return list;
+			},
+			
+			// 검색(조회)
+			onFindList: function() {
+				var me = this;
+				me.set("findList.param.task_typ_ccd", me.get("param.task_typ_ccd"));
+				me.set("findList.param.item_sgs", me.get("param.item_sgs"));
+				
+				if(!me.validate('search')) {
+					UT.alert("STD.E0000");
+					return;
+				}
+				UT.request(me.$.findListVendorInfo);
+			},
+			
+			// 검색(조회) 완료
+			completeFindList: function(e, res) {
+				var me = this;
+				
+				me.$.gridPanel.setDataProvider(res.response);
+			},
+			
+			// 선택 목록 반환
+			onSelectedList: function() {
+				var me = this, provider = me.$.gridPanel.getDataProvider();
+				var selected = provider.selectionCheckedItems();
+				
+				if(UT.isEmpty(selected)) {
+					UT.alert("STD.N1600");
+				} else {
+					me.fire("selected-items", selected);
+				}
+			},
+			itemBizRegNoLabelFn: UT.convertBizRegNoFn,
+			//닫기
+			onClose: function(e) {
+				var me = this;
+				
+				me.fire('close');
+				me.reset();
+			}
+		});
+	</script>
+</dom-module>

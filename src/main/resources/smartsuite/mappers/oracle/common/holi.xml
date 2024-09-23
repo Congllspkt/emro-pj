@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 
+HOL: 휴일정보
+ -->
+
+<mapper namespace="holi">
+
+<select id="findListHd" resultType="map">
+/* holi.findListHd */
+	SELECT HOL_UUID
+		, HOL_DT
+		, HOL_NM
+		, HOL_TYP_CCD
+		, MKCND_PRVDR_CD
+	FROM HOL
+	WHERE TEN_ID = #{g.tenant}
+	<if test="p.hol_typ_ccd != null">
+		AND HOL_TYP_CCD = #{p.hol_typ_ccd}
+	</if>
+	<if test="p.hol_nm != null and p.hol_nm !=''">
+	  	<bind name="nmPattern" value="'%' + p.hol_nm + '%'" />
+	    AND UPPER(HOL_NM) LIKE UPPER(#{nmPattern})
+	  </if>
+	<if test="p.from_hd_date != null">
+	    AND HOL_DT >= #{p.from_hd_date}
+	  </if>
+	  <if test="p.to_hd_date != null">
+	    <bind name="toDatePattern" value="g.getPlusDays(p.to_hd_date,1)"/>
+	    AND HOL_DT <![CDATA[<]]> #{toDatePattern}
+	  </if>
+</select>
+
+<select id="getCountHdByDate" resultType="int">
+/* holi.getCountHdByDate */
+	SELECT COUNT(HOL_UUID)
+	FROM HOL
+	WHERE TEN_ID = #{g.tenant}
+	AND HOL_DT = #{p.hol_dt}
+</select>
+
+<insert id="insertHd">
+/* holi.insertHd */
+	INSERT INTO HOL
+	<trim prefix="(" suffix=")" suffixOverrides=",">
+		TEN_ID
+		, HOL_UUID
+		, HOL_DT
+		, HOL_TYP_CCD
+		, HOL_NM
+		, MKCND_PRVDR_CD
+		, STS
+		, REGR_ID
+		, REG_DTTM
+	</trim>
+	VALUES
+	<trim prefix="(" suffix=")" suffixOverrides=",">
+		#{g.tenant}
+		, #{g.uuid}
+		, #{p.hol_dt}
+		, #{p.hol_typ_ccd}
+		, #{p.hol_nm}
+		, #{p.mkcnd_prvdr_cd}
+		, 'C'
+		, #{g.username}
+		, #{g.now}
+	</trim>
+</insert>
+
+<update id="updateHd">
+/* holi.updateHd */
+	UPDATE HOL
+	SET HOL_NM = #{p.hol_nm}
+		, HOL_DT = #{p.hol_dt}
+		, HOL_TYP_CCD = #{p.hol_typ_ccd}
+		, MKCND_PRVDR_CD = #{p.mkcnd_prvdr_cd}
+	WHERE TEN_ID = #{g.tenant}
+	AND HOL_UUID = #{p.hol_uuid}
+</update>
+
+<delete id="deleteHd">
+/* holi.deleteHd */
+	DELETE FROM HOL
+	WHERE TEN_ID = #{g.tenant}
+	AND HOL_UUID = #{p.hol_uuid}
+</delete>
+</mapper>

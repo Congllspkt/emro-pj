@@ -1,0 +1,335 @@
+<sc-link rel="import" href="em-board.html"></sc-link>
+<sc-link rel="import" href="ep-boardconfig-menu-list.html"></sc-link>
+
+<dom-module id="es-boardconfig-info">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+
+        <!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+		        <!-- 코드 -->
+       	<sc-code-group>
+            <sc-code code="C058" value="{{codes.boardTyp}}" ></sc-code>       <!-- 게시판유형 -->
+        </sc-code-group>
+        <!-- 게시판 상세정보 : 조회 -->
+        <sc-ajax id="findBoardAdminInfo"
+                 url="findBoardAdminInfo.do"
+                 body="{{searchParam}}"
+                 last-response="{{resultInfo}}">
+        </sc-ajax>
+
+        <!-- 게시판 상세정보 : 저장 -->
+        <sc-ajax id="saveBoardAdminInfo"
+                 url="saveBoardAdminInfo.do"
+                 on-response="completeSaveBoardAdminInfo">
+        </sc-ajax>
+
+        <!-- 게시판 상세정보 : 삭제 -->
+        <sc-ajax id="deleteBoardAdminInfo"
+                 url="deleteBoardAdminInfo.do"
+                 on-response="completeDeleteBoardAdminInfo">
+        </sc-ajax>
+
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+        <cc-sub-title-bar title-text="게시판 상세 정보">
+            <sc-button text="미리보기" on-click="onShowPreview" auth-r></sc-button>
+            <sc-button text="저장" on-click="onSaveBoardAdmin" auth-s></sc-button>
+            <sc-button text="삭제" on-click="onDeleteBoardAdmin" auth-s></sc-button>
+        </cc-sub-title-bar>
+
+        <cc-form-panel validation-group="save" label-width="140">
+            <cc-fieldset>
+                <sc-label text="게시판 명"></sc-label>
+                <sc-text-field required="true" max-length="100" value="{{resultInfo.bbd_nm}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="표시 명"></sc-label>
+                <sc-text-field required="true" max-length="100" value="{{resultInfo.bbd_dspy_nm}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="게시 대상 유형"></sc-label>
+                <div>
+                <sc-label text="구매사"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.board_typ_inside}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+                <sc-label text="협력사"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.board_typ_outside}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+                </div>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="페이지 목록 개수"></sc-label>
+                <sc-text-field required="true" max-length="38" strip-chars-re="/[^(0-9)]/" value="{{resultInfo.bbd_page_list_cnt}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="페이지 개수"></sc-label>
+                <sc-text-field required="true" max-length="38" strip-chars-re="/[^(0-9)]/" value="{{resultInfo.bbd_page_cnt}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="제목 길이"></sc-label>
+                <sc-text-field required="true" max-length="38" strip-chars-re="/[^(0-9)]/" value="{{resultInfo.pst_tit_len}}" readonly="[[!formula('isEditable')]]"></sc-text-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="첨부 보이기 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.ath_show_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="댓글 사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.cmnt_use_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="답글 사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.bbd_re_use_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isNoNotiEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="비밀글 사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.sectxt_use_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="게시 기간 사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.pstg_pd_use_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]" on-checkchange="onChangedPrdUseYn"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="게시글 번호 보이기 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.pst_no_show_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="조회수 보이기 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.vcnt_show_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="등록 일시 보이기 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.reg_dttm_show_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="작성자 보이기 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.crtr_show_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]"></sc-checkbox-field>
+            </cc-fieldset>
+            <cc-fieldset>
+                <sc-label text="회사별 게시판 사용 여부"></sc-label>
+                <sc-checkbox-field input-value="{{resultInfo.co_bbd_use_yn}}" checked-value="Y" un-checked-value="N" readonly="[[!formula('isEditable')]]" on-click="onClickCompanyBulletinBoardUseYn"></sc-checkbox-field>
+            </cc-fieldset>
+        </cc-form-panel>
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "es-boardconfig-info",
+            properties : {
+                /* // 에디터 유형 콤보
+                comboEditTypList : {
+                    type: Array,
+                    value: function() {
+                        return [{edit_typ_nm: "sc-editor", edit_typ_cd: "sc-editor"}];
+                    }
+                }, */
+                codes: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            boardTyp         : []
+                        }
+                    },
+                    reset: false
+                },
+                // 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 조회 결과
+                resultInfo : {
+                    type: Object,
+                    value : function(){
+                        return {};
+                    }
+                }
+            },
+
+            formulas: {
+                // 신규 상태
+                isNew : function() {
+                    return (this.resultInfo && this.resultInfo.is_new === true);
+                },
+                // 수정 상태
+                isMod: function() {
+                    return (this.resultInfo && !UT.isEmpty(this.resultInfo.bbd_uuid));
+                },
+
+                // 수정 가능 상태
+                isEditable: function() {
+                    return (this.formula('isNew') || this.formula('isMod'));
+                },
+                
+                isNoNotiEditable: function(){
+                	return (this.formula('isEditable') && this.resultInfo.pstg_pd_use_yn === "N");
+                }
+            },
+
+            load: function(data) {
+                var me = this;
+
+                if(data.is_new === true) {
+                    me.set("resultInfo", data);
+                    me.applyFormula();
+                } else {
+                    me.set("searchParam", data);
+                    me.onSearch();
+                }
+            },
+            
+            onChangedPrdUseYn: function(e){
+            	var me = this, checked = e.detail;
+            	me.set("resultInfo.bbd_re_use_yn","N");
+            	me.applyFormula('isNoNotiEditable');
+            },
+
+            // 게시판 상세정보 : 조회
+            onSearch: function(){
+                var me = this;
+
+                UT.request(me.$.findBoardAdminInfo, function(e, res) {
+                	var result = res.response;
+                	if(!UT.isEmpty(result.pstg_subj_typ)){
+						switch(result.pstg_subj_typ){
+						case "ALL" :
+							me.set("resultInfo.board_typ_inside", "Y");
+							me.set("resultInfo.board_typ_outside", "Y");
+							break;
+						case "BUYER" :
+							me.set("resultInfo.board_typ_inside", "Y");
+							me.set("resultInfo.board_typ_outside", "N");
+							break;
+						case "VD" :
+							me.set("resultInfo.board_typ_inside", "N");
+							me.set("resultInfo.board_typ_outside", "Y");
+							break;
+						default :
+							break;
+						}
+                	} else {
+						me.set("resultInfo.board_typ_inside", "N");
+						me.set("resultInfo.board_typ_outside", "N");
+                	}
+                    me.applyFormula();
+                });
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+
+                // 게시판 상세정보 초기화
+                me.reset();
+                me.applyFormula();
+            },
+            
+            onShowPreview: function() {
+                var me = this;
+
+                if(!me.formula('isMod')){
+                    UT.alert("STD.ADM1007"); // "저장 후 미리보기를 할 수 있습니다."
+                    return;
+                }
+
+           		var previewPopup = UT.popup('em-board', me, "60%", "80%", {}, {titleText : "게시판 미리보기"});
+                previewPopup.show();
+                previewPopup.getWindowContent().load({bbd_uuid: me.resultInfo.bbd_uuid});
+            },
+
+            // 게시판 상세정보 : 저장
+            onSaveBoardAdmin : function(){
+                var me = this;
+
+                if(!me.formula('isEditable')){
+                    UT.alert(me.translate("STD.E1012",null,'게시판명'),null,true); //"'{0}'을(를) 선택하십시오"
+                    return;
+                }
+
+                // 저장 유효성 체크
+                if(!me.validate('save')){
+                    UT.alert("STD.E0000"); // 입력하신 정보를 다시 확인하여 주세요.
+                    return;
+                }
+
+                UT.confirm("STD.N1200", function() { // 저장 하시겠습니까?
+                	if(me.resultInfo.board_typ_inside == "Y" && me.resultInfo.board_typ_outside == "Y"){
+                		me.set("resultInfo.pstg_subj_typ", "ALL");
+                	} else if(me.resultInfo.board_typ_inside == "Y" && me.resultInfo.board_typ_outside == "N") {
+                		me.set("resultInfo.pstg_subj_typ", "BUYER");
+                	} else if(me.resultInfo.board_typ_inside == "N" && me.resultInfo.board_typ_outside == "Y") {
+                		me.set("resultInfo.pstg_subj_typ", "VD");
+                	} else {
+                		me.set("resultInfo.pstg_subj_typ", "");
+                	}
+                    me.$.saveBoardAdminInfo.body = {
+                        boardAdminInfo : me.resultInfo
+                    };
+                    UT.request(me.$.saveBoardAdminInfo);
+                });
+            },
+
+            // 게시판 상세정보 : 저장 완료
+            completeSaveBoardAdminInfo :function(){
+                var me = this;
+                UT.completeAlert("", function(){// 저장하였습니다.
+                    me.fire("clear");
+                });
+
+            },
+
+            // 게시판 상세정보 : 삭제
+            onDeleteBoardAdmin : function(){
+                var me = this;
+
+                // 한번 저장된 게시판만 삭제가능
+                if(!me.formula('isMod')){
+                    UT.alert("STD.ADM1009"); // "저장 후 삭제를 할 수 있습니다."
+                    return;
+                }
+
+                UT.confirm("STD.N1300", function() { // "삭제 하시겠습니까?"
+                    me.$.deleteBoardAdminInfo.body = {
+                        boardAdminInfo : me.resultInfo
+                    };
+                    UT.request(me.$.deleteBoardAdminInfo);
+                });
+            },
+
+            // 게시판 상세정보 : 삭제 완료
+            completeDeleteBoardAdminInfo:function(){
+                var me = this;
+                UT.alert("STD.N2500", function(){ // 삭제하였습니다.
+                    me.fire("clear");
+                });
+            },
+            onClickCompanyBulletinBoardUseYn: function(){
+                var me = this;
+                me.fire("change-company-use", me.resultInfo);
+            }
+
+        });
+    </script>
+
+</dom-module>

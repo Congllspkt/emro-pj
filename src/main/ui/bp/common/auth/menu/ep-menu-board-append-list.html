@@ -1,0 +1,422 @@
+<dom-module id="ep-menu-board-append-list">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+        <!-- 코드 조회 -->
+        <sc-code-group>
+            <sc-code code="C002" value="{{codes.langCd}}" ></sc-code> <!-- 언어코드 -->
+            <sc-code code="C016" value="{{codes.usrCls}}" ></sc-code> <!-- 사용자 유형 -->
+        </sc-code-group>
+
+        <!-- 목록 조회 -->
+        <sc-ajax id="findList" url="findListMenu.do" body="{{findList.param}}" on-response="completeFindList"></sc-ajax>
+        <!-- 목록 삭제 -->
+        <sc-ajax id="deleteList" url="deleteListMenu.do" on-response="completeDeleteList"></sc-ajax>
+        <!-- 목록 저장 -->
+        <sc-ajax id="saveList" url="saveListMenu.do" on-response="completeSaveList"></sc-ajax>
+
+		<sc-ajax id="findBoardAdminList"
+				 url="findBoardAdminList.do"
+				 body="{{searchParam}}"
+				 last-response="{{resultList}}">
+		</sc-ajax>
+
+        <!-- 역할 -->
+        <cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<div class="hbox flex">
+			<div class="vbox flex-4">
+				<cc-sub-title-bar title-text="게시판 목록"></cc-sub-title-bar>
+				<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+					<cc-fieldset>
+						<sc-label text="게시판 명" ></sc-label></th>
+						<sc-text-field value="{{searchParam.bbd_nm}}" on-enter="onSearch"></sc-text-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="게시판 표시 명" ></sc-label></th>
+						<sc-text-field value="{{searchParam.bbd_dspy_nm}}" on-enter="onSearch"></sc-text-field>
+					</cc-fieldset>
+				</cc-search-condition-panel>
+
+			<sc-grid id="gridPanelBoardInfoList" data-provider="{{resultList}}" class="flex" use-selection="false" use-state="false"
+					 on-item-click="onItemClick">
+				<cc-grid-toolbar></cc-grid-toolbar>
+				<sc-grid-columns>
+					<sc-data-column data-field="bbd_uuid" header-text="게시판 아이디" width="90" text-align="center"></sc-data-column>
+					<sc-data-column data-field="bbd_nm" header-text="게시판 명" width="180" text-align="left" style-name="link"></sc-data-column>
+					<sc-data-column data-field="bbd_dspy_nm" header-text="게시판 표시 명" width="180" text-align="left"></sc-data-column>
+				</sc-grid-columns>
+			</sc-grid>
+			</div>
+			<div class="hspace-10"></div>
+			<div class="vbox flex-6">
+				<cc-sub-title-bar title-text="메뉴목록">
+				</cc-sub-title-bar>
+				<cc-search-condition-panel on-search="onSearch" search-condition-cls="label-row" auth-r>
+					<cc-fieldset>
+						<sc-label text="사용자 유형" ></sc-label>
+						<sc-combobox-field id="usrClsCombo" value="{{findList.param.usr_typ_ccd}}" items="{{codes.usrCls}}" display-field="label" value-field="data" required="true"
+										   selected-index="0">
+						</sc-combobox-field>
+					</cc-fieldset>
+					<cc-fieldset>
+						<sc-label text="언어" ></sc-label></th>
+						<sc-combobox-field value="{{findList.param.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data"
+										   selected-index="0">
+						</sc-combobox-field>
+					</cc-fieldset>
+				</cc-search-condition-panel>
+
+				<sc-grid id="gridPanelMenuList" is-tree="true" class="flex" use-state="false" on-selection-checked="onSelectionChecked" selection-able-function="onSelectionAbleFunction"
+						 on-item-click="onDataCellClicked" editable="true">
+					<cc-grid-toolbar>
+						<sc-button text="펼침"         on-click="onExpandAll"     auth-r></sc-button>
+						<sc-button text="접기"         on-click="onCollapseAll"   auth-r></sc-button>
+						<sc-button text="현재노드 추가" on-click="onAddCurrentRow" auth-s></sc-button>
+						<sc-button text="하위노드 추가" on-click="onAddChildRow"   auth-s></sc-button>
+						<sc-button text="삭제"         on-click="onDeleteList"    auth-s></sc-button>
+						<sc-button text="저장"         on-click="onSaveList"      auth-s></sc-button>
+					</cc-grid-toolbar>
+					<sc-grid-columns>
+						<sc-data-column	data-field="menu_nm"	header-text="메뉴 명"	width="250"	text-align="left" item-editable-function="onInsertEditable" required="true" max-length="100"	></sc-data-column>
+						<sc-data-column	data-field="lang_ccd_menu_nm"	header-text="다국어 메뉴 명"	width="200"	text-align="left" item-editable-function="onInsertEditable" visible="[[!formula('isKoKr')]]"	></sc-data-column>
+						<sc-data-column	data-field="menu_cd"	header-text="메뉴 코드"	width="100"	item-editable-function="onMenuCdEditable" required="true" max-length="18"></sc-data-column>
+						<sc-data-column	data-field="menu_url"	header-text="메뉴 URL"	width="250"	text-align="left" item-editable-function="onInsertEditable"	max-length="128" 	></sc-data-column>
+						<sc-data-column	data-field="menu_sort"	header-text="메뉴 정렬"	width="50" item-editable-function="onInsertEditable"	max-length="4" data-type="number" format-type="integer" validator-type="integer"></sc-data-column>
+						<sc-checkbox-column	data-field="use_yn"	header-text="사용 여부"	width="100"	item-editable-function="onInsertEditable"></sc-checkbox-column>
+					</sc-grid-columns>
+					<sc-grid-fields>
+						<sc-grid-field	data-field="tree"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="ml_menu_cd"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="ml_menu_cd2"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="par_menu_cd"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="lang_ccd"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="lang_ccd2"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="usr_typ_ccd"	data-type="text"></sc-grid-field>
+						<sc-grid-field	data-field="map_cnt"	data-type="number"></sc-grid-field>
+					</sc-grid-fields>
+				</sc-grid>
+			</div>
+	     </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-menu-board-append-list",
+            properties: {
+                findList: {
+                    type: Object,
+                    value: function() {
+                        return {
+                            info: {},
+                            param: {}
+                        };
+                    }
+                },
+                codes: {
+                    type: Object,
+                    value: function(){
+                        return {
+                            usrCls: [],
+                                langCd: []
+                        };
+                    },
+                    reset: false
+                },
+                boardInfo: {
+                	type: Object,
+                	value: function(){
+                		return {};
+                	}
+                },
+				searchParam: {
+					type : Object,
+					value : function(){
+						return {};
+					}
+				},
+            },
+
+            formulas:{
+                isKoKr: function(){
+                    var lang = this.findList.param.lang_ccd;
+                    return (lang === "ko_KR" || lang === "");
+                }
+            },
+			initialized : function() {
+				var me = this;
+				// 게시판 목록 조회
+				me.onSearch();
+				me.onFindList();
+			},
+
+            load: function(param){
+				var me = this;
+				// 게시판 목록 조회
+				me.onSearch();
+				me.onFindList();
+            },
+
+            // 그룹코드 속성 : 속성코드 editable 제어
+            onMenuCdEditable: function(data, item) {
+                var me = this,
+                    provider = me.$.gridPanelMenuList.getDataProvider();
+                return (provider.getItemState(item.nodeIndex) == "created");
+            },
+
+            onSelectionChecked: function(event){
+                var me = this,detail = event.detail,
+                    checked = detail.checked,  //체크하여 변경된값
+                    nodeIndex = detail.nodeIndex;
+                if(checked)
+                	// selectionChild(nodeIndex, checked, recursive, checkableOnly);
+                    me.$.gridPanelMenuList.selectionChild(nodeIndex, checked, true);
+            },
+            
+            onSelectionAbleFunction: function(data){
+            	var me = this;
+                // data= row의 data
+				var bddUuid = me.get("boardInfo.bbd_uuid");
+				var menuUrl = data.menu_url;
+
+				if(null != menuUrl && menuUrl != ""){
+					return (menuUrl.indexOf("bbd_uuid="+bddUuid) > -1);
+				}else{
+					return "";
+				}
+            },
+            
+            onInsertEditable: function(data, item) {
+                var me = this,
+                provider = me.$.gridPanelMenuList.getDataProvider();
+                if(provider.getItemState(item.nodeIndex) == "created"){
+                	me.$.gridPanelMenuList.setSelectionable(item.nodeIndex,true);
+                }
+           		 return (provider.getItemState(item.nodeIndex) == "created");
+        	},
+            
+            onDataCellClicked: function(e){
+                var me = this,
+                    item = e.detail.item,
+                    data = e.detail.data,
+                    provider = this.$.gridPanelMenuList.getDataProvider();
+                if (provider.getItemState(item.nodeIndex) === "created") {
+                    return;
+                }
+				var childIndexes = provider.getChildIndexes(item.nodeIndex);
+				if (item.dataField=== "menu_cd" && (!childIndexes || childIndexes.length === 0)) { // leaf 노드
+					me.fire("selected-menu", data);
+				}
+            },
+
+            // 조회
+            onFindList: function() {
+                var me = this;
+                var lang = me.get("findList.param.lang_ccd");
+
+                if(!me.$.usrClsCombo.validate()){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+                UT.request(me.$.findList);
+            },
+
+            // 조회 완료
+            completeFindList: function(e, res) {
+                var me = this,
+                    result = res.response,
+                    lang = me.get("findList.param.lang_ccd");
+
+                me.set("findList.info", UT.copy(me.get("findList.param")));  // 검색조건 저장
+                var hier = new CCHierachicalData();
+                var hierachiDatas = hier.HierachyTransformByKey(result, "menu_cd", "par_menu_cd", "children", "ROOT", null, true);
+                me.$.gridPanelMenuList.setHierachyDataProvider(hierachiDatas, "children");
+
+                me.applyFormula();
+            },
+
+            //저장
+            onSaveList: function() {
+                var me = this,
+                    message = "STD.N1200", // 저장 하시겠습니까?
+                    provider = this.$.gridPanelMenuList.getDataProvider();
+
+                //그리드 validation
+                if(!me.$.gridPanelMenuList.validate()){
+                    UT.alert("STD.E0000");
+                    return;
+                }
+
+                UT.confirm(message, function() {
+                    var created = provider.getNewItems();
+                    me.$.saveList.body = {
+                        insertMenus: created,
+                        autoMenuFuncAndUrlYn: "N"
+                    };
+                    UT.request(me.$.saveList);
+                });
+            },
+
+            // 저장 완료
+            completeSaveList: function() {
+                var me = this;
+
+				UT.completeAlert("", function(){ // 저장하였습니다.
+					me.onFindList();
+				});
+            },
+
+            //삭제
+            onDeleteList: function() {
+                var me = this,
+                    message = "STD.N1300", // 삭제 하시겠습니까?
+                    provider = this.$.gridPanelMenuList.getDataProvider();
+                var checked = provider.selectionCheckedIndexes();
+                if (checked && checked.length > 0) {
+                    UT.confirm(message, function() {
+                        var deleted = provider.removeItems();
+						if(UT.isNotEmpty(deleted)){
+							me.$.deleteList.body = {
+								deleteMenus: deleted
+							};
+							UT.request(me.$.deleteList);
+						}
+                    });
+                }
+                else{
+                    UT.alert("STD.N1600"); // 선택된 항목이 없습니다
+                }
+            },
+
+            // 삭제 완료
+            completeDeleteList: function() {
+                var me = this,
+                    message = "STD.N2500"; // 삭제하였습니다.
+
+                UT.alert(message, function(){
+                    me.onFindList();
+                });
+            },
+
+            // 펼침
+            onExpandAll:function(){
+                var me = this;
+                me.$.gridPanelMenuList.expandAll();
+            },
+
+            // 접기
+            onCollapseAll:function(){
+                var me = this;
+                me.$.gridPanelMenuList.collapseAll();
+            },
+
+            // 현재노드추가
+            onAddCurrentRow: function() {
+                var me = this,
+                    grid = me.$.gridPanelMenuList,
+                    provider = me.$.gridPanelMenuList.getDataProvider();
+
+                cell = grid.getCurrentCell();
+                var parentIndex = (cell === null) ? -1 : provider.getParentIndex(cell.nodeIndex);
+                var parentItem = {};
+                if(parentIndex > -1){
+                    parentItem = provider.getParentItem(cell.nodeIndex);
+                }
+
+				var boardUuid = me.get("boardInfo.bbd_uuid");
+
+				if(UT.isEmpty(boardUuid)){
+					UT.alert("STD.ADM1063");
+					return;
+				}
+				var data = {
+					menu_url: "ui/bp/common/board/em-board.html?bbd_uuid="+boardUuid,
+					usr_typ_ccd: me.findList.info.usr_typ_ccd,
+					lang_ccd: 'ko_KR',
+					lang_ccd2: me.findList.info.lang_ccd,
+					par_menu_cd: (parentIndex > -1) ? parentItem.menu_cd: "ROOT"
+				};
+				provider.addChildItem(parentIndex, data);
+
+            },
+
+            // 하위 노드 추가
+            onAddChildRow: function() {
+                var me = this,
+                    grid = me.$.gridPanelMenuList,
+                    provider = grid.getDataProvider();
+
+                cell = grid.getCurrentCell();
+                
+                if(cell === null) {
+                	UT.alert("STD.N1600");
+                	return;
+                }
+                
+                var parentIndex = cell.nodeIndex;
+                var parentItem = {};
+                if(parentIndex > -1){
+                    parentItem = provider.getItemAt(parentIndex);
+                }
+
+                if (parentIndex < 0) { // 현재 노드가 없으면 하위 노드 추가를 할 수 없다.
+                	UT.alert("STD.N1600");
+                    return;
+                }
+                
+                if(provider.getItemState(parentIndex) == "created"){
+                    UT.alert("STD.N1800"); // 신규 노드에는 하위노드를 추가할 수 없습니다.
+                    return;
+                }
+
+				var boardUuid = me.get("boardInfo.bbd_uuid");
+				if(UT.isEmpty(boardUuid)){
+					UT.alert("STD.ADM1063");
+					return;
+				}
+                
+                var data = {
+                	menu_url: "ui/bp/common/board/em-board.html?bbd_uuid="+boardUuid,
+                    usr_typ_ccd: me.findList.info.usr_typ_ccd,
+                    lang_ccd: 'ko_KR',
+                    lang_ccd2: me.findList.info.lang_ccd,
+                    par_menu_cd: (parentIndex > -1) ? parentItem.menu_cd: "ROOT"
+                };
+
+                var newNodeIndex = provider.addChildItem(cell.nodeIndex, data);
+                grid.expand(parentIndex);
+                grid.setCurrentCell({nodeIndex: newNodeIndex});
+            },
+
+			onFindBoardAdminDetail: function(e, data) {
+				var me = this;
+				setParam = UT.copy(data);
+				me.set("boardInfo",setParam);
+				me.onFindList();
+			},
+
+			// 게시판 목록 : 조회
+			onSearch : function() {
+				var me = this;
+				UT.request(me.$.findBoardAdminList);
+			},
+			onItemClick: function(event) {
+				var me = this,
+						data = event.detail.data,
+						item = event.detail.item;
+
+				if(item.dataField === "bbd_nm"){
+					me.set("boardInfo",data);
+				}
+			},
+
+		});
+    </script>
+
+</dom-module>

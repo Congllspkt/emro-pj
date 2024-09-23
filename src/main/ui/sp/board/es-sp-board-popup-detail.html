@@ -1,0 +1,225 @@
+<dom-module id="es-sp-board-popup-detail">
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+
+    </style>
+
+    <template>
+
+        <!--
+            ************************************************************************************************************
+            * Service Area
+            ************************************************************************************************************
+        -->
+findBoardPopupInfo
+        <!-- 게시글 조회 -->
+        <sc-ajax id="findBoardPopupInfo"
+                 url="findBoardPopupInfo.do"
+                 body="{{searchParam}}"
+                 last-response="{{boardInfo}}"
+                 on-response="completeFindBoardPopupInfo">
+        </sc-ajax>
+
+        <!-- 게시글 댓글 조회 -->
+        <sc-ajax id="findBoardCommentPopupList"
+                 url="findBoardCommentPopupList.do"
+                 body="{{searchParam}}"
+                 last-response="{{boardComntList}}"
+                 on-response="completeFindBoardCommentPopupList">
+        </sc-ajax>
+
+        <!--
+            ************************************************************************************************************
+            * UI Area
+            ************************************************************************************************************
+        -->
+
+        <!-- 게시물 작성 폼 -->
+
+        <sc-toolbar>
+            <sc-spacer></sc-spacer>
+            <sc-button text="목록" on-click="onShowBoardList" ></sc-button>
+        </sc-toolbar>
+        <div class="page flex">
+            <table class="tb-form">
+                <colgroup>
+                    <col style="width:150px">
+                    <col>
+                    <col style="width:150px">
+                    <col>
+                </colgroup>
+                <tr>
+                    <th><sc-label text="제목"></sc-label></th>
+                    <td>
+                        <sc-text-field value="{{boardInfo.pst_tit}}" readonly="true"></sc-text-field>
+                    </td>
+                    <th><sc-label text="작성자"></sc-label></th>
+                    <td>
+                        <sc-label text="{{boardInfo.crtr_nm}}" i18n-disabled></sc-label>
+                    </td>
+                </tr>
+            </table>
+
+
+            <!-- DEXT5 에디터 -->
+            <sc-panel title-text="내용">
+                <sc-editor id="editorPanel" class="h-300" value="{{boardInfo.pst_cont}}" editable="false"></sc-editor>
+            </sc-panel>
+
+            <!-- DEXT5 업로드 -->
+            <sc-panel title-text="첨부파일">
+                <sc-upload id="uploadPanel" class="h-150" value="{{boardInfo.athg_uuid}}" editable="false"></sc-upload>
+            </sc-panel>
+
+            <!-- 댓글 -->
+            <table id="boardComnt" style="width:100%" hidden="[[!formula('isComntUseYn')]]"></table>
+
+        </div>
+
+    </template>
+
+    <!--
+        ************************************************************************************************************
+        * Script Area
+        ************************************************************************************************************
+    -->
+    <script>
+        Polymer({
+            is: "es-sp-board-popup-detail",
+            properties : {
+
+                // 게시글 조회 조건
+                searchParam: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+                // 게시글 정보
+                boardInfo: {
+                    type: Object,
+                    value: function(){
+                        return{};
+                    }
+                },
+
+                // 댓글 조회결과
+                boardComntList: {
+                    type: Object,
+                    value: function(){
+                        return {};
+                    }
+                },
+
+            },
+
+            /******************************
+             * 초기화 설정
+             ******************************/
+
+            load: function(data) {
+                var me = this;
+                me.searchParam = {
+                    bbd_uuid : data.bbd_uuid,
+                    pst_no : data.pst_no
+                };
+                UT.request(me.$.findBoardPopupInfo);
+            },
+
+            // 초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+            },
+
+            // 게시물 조회 완료
+            completeFindBoardPopupInfo: function(){
+                var me = this;
+
+                me.$.editorPanel.syncValue();
+                // 게시물 댓글 조회
+                me.onSearchBoardComnt();
+            },
+
+            // 목록
+            onShowBoardList: function(){
+                var me = this;
+                me.fire('show-boardlist', me.searchParam);
+                Array.prototype.forEach.call(document.querySelectorAll("#boardComnt tr"), function(node) {
+                   node.parentNode.removeChild(node);
+                });
+
+                me.reset();
+            },
+
+            /******************************
+             * 댓글
+             ******************************/
+            // 댓글 조회
+            onSearchBoardComnt: function(){
+                var me = this;
+                // 댓글 초기화
+                Array.prototype.forEach.call(document.querySelectorAll("#boardComnt tr"), function(node) {
+                    node.parentNode.removeChild(node);
+                });
+
+                UT.request(me.$.findBoardCommentPopupList);
+            },
+
+            // 댓글 조회 완료
+            completeFindBoardCommentPopupList: function(){
+                var me = this;
+                me.onAddBoardComnt();
+            },
+
+            // 댓글 생성
+            onAddBoardComnt: function(){
+                var me = this,
+                    resultLength = me.boardComntList.length;
+
+                if(resultLength > 0){
+                    for(var i=0; i<resultLength; i++){
+                        me.onAddComnt(i);
+                    }
+                }
+                me.onAddComnt(resultLength);
+            },
+
+            // 댓글 tr 생성
+            onAddComnt: function(index){
+                var me = this,
+                    result = me.boardComntList,
+                    comntItem = result[index];
+
+                if(comntItem){
+                    var tr = '<tr><th width="100px"><sc-label text='+ comntItem.crtr_nm +' i18n-disabled></sc-label></th>'
+                        + '<td id="areaTd'+index+'" style="padding:3px 0;"></td>';
+
+                    // 게시판 관리자 역할 또는 작성자와 로그인사용자가 같을경우에만 수정,삭제 버튼 생성
+                    if( me.formula('isAdmin') || curUser.usr_id === comntItem.regr_id) {
+                        tr = tr + '<td style="padding-left:5px;"><sc-button id="updComment' + index + '" text="수정"></sc-button>'
+                            + '<sc-button id="delComment' + index + '" text="삭제"></sc-button></td></tr>';
+                    }
+                    var area = this._createTextAreaField(index, comntItem);
+                    $('#boardComnt').append(tr);
+                    $('#areaTd'+index).append(area);
+                }
+
+            },
+
+            // textarea-field 동적 생성
+            _createTextAreaField: function(index, comntItem) {
+                var textAreaField = document.createElement('sc-textarea-field');
+                textAreaField.id = "taComntCont"+index;
+                textAreaField.maxLength = "500";
+                textAreaField.value = comntItem.cmnt_cont;
+                return textAreaField;
+            },
+
+        });
+    </script>
+
+</dom-module>

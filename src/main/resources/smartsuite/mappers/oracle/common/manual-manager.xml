@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="manual-manager">
+
+
+<select id="findListSelectionLanguageManualMenu" resultType="java.util.Map">
+	/* manual.findListSelectionLanguageManualMenu */
+		SELECT
+			MM.PAR_MENU_CD,
+			MM.TEN_ID,
+			MM.MENU_CD,
+			MM.MENU_URL,
+			MM.USR_TYP_CCD,
+			MM.MENU_SORT,
+			MM.USE_YN,
+			MM.RMK,
+			MM.STS,
+			MM.MODR_ID,
+			MM.MOD_DTTM,
+			ML.MENU_NM,
+			#{g.locale}                      AS LANG_CCD,
+			ML.MENU_CD                       AS ML_MENU_CD,
+			ML2.MENU_NM                      AS LANG_CCD_MENU_NM,
+			#{p.lang_ccd}                     AS LANG_CCD2,
+			ML2.MENU_CD                      AS ML_MENU_CD2
+			, CASE WHEN MNL.MENU_CD IS NULL THEN 'N'
+			ELSE 'Y' END AS REG_YN
+			, MNL.MNL_AUTO_PSTG_YN
+			, MNL.MNL_AUTO_PSTG_ST_DTTM
+			, MNL.MNL_AUTO_PSTG_EXP_DTTM
+		FROM MENU MM
+		LEFT OUTER JOIN MENU_MULTLANG ML
+		ON (
+			MM.TEN_ID = ML.TEN_ID
+			AND MM.MENU_CD = ML.MENU_CD
+			AND ML.LANG_CCD =  #{g.locale}
+		)
+		LEFT OUTER JOIN MENU_MULTLANG ML2
+		ON (
+			MM.TEN_ID = ML2.TEN_ID
+			AND MM.MENU_CD = ML2.MENU_CD
+			AND ML2.LANG_CCD = #{p.lang_ccd}
+		)
+		LEFT OUTER JOIN (SELECT * FROM (SELECT  ROW_NUMBER()
+								OVER(PARTITION BY MENU_CD,LANG_CCD,MNL_TYP_CCD ORDER BY MNL_REVNO DESC) AS RNUM
+								,A.*
+			                   FROM MNL A
+			                  WHERE TEN_ID = #{g.tenant}
+			                    AND LANG_CCD = #{p.lang_ccd}) B
+			                    WHERE B.RNUM = 1) MNL
+		ON (
+			MNL.TEN_ID = MM.TEN_ID
+			AND MNL.MENU_CD = ML2.MENU_CD
+			AND MNL.LANG_CCD = #{p.lang_ccd}
+		)
+		WHERE MM.TEN_ID = #{g.tenant}
+		<if test="p.menu_cd != null and p.menu_cd != ''">
+		AND MM.MENU_CD = #{p.menu_cd}
+		</if>
+		AND MM.STS != 'D'
+		<if test="p.usr_typ_ccd != null and p.usr_typ_ccd != ''">
+		AND MM.USR_TYP_CCD = #{p.usr_typ_ccd}
+		</if>
+		ORDER BY MM.MENU_SORT
+	</select>
+	<!-- MNL(메뉴얼 관리) INSERT -->
+	<insert id="insertNextRevisionManualInfo">
+	/* manual.insertNextRevisionManualInfo */
+	      INSERT INTO MNL
+	      (
+            TEN_ID	    /*시스템 아이디 */
+           ,MENU_CD	    /*메뉴 코드 */
+           ,MNL_REVNO	    /*매뉴얼 차수 */
+           ,LANG_CCD     /*언어 코드*/
+           ,MNL_TYP_CCD	    /*매뉴얼 유형 */
+           ,MNL_PSTG_REVNO	    /*게시 차수 */
+           ,MNL_ATHG_UUID	/*매뉴얼 첨부 번호 */
+           ,ORIG_MNL_ATHG_UUID  /*원본파일첨부 번호 */
+           ,MNL_CONT	/*매뉴얼 내용 */
+           ,REGR_ID	    /*등록자 아이디 */
+           ,REG_DTTM	    /*등록 일시 */
+           ,MNL_AUTO_PSTG_YN
+           ,MNL_AUTO_PSTG_ST_DTTM
+           ,MNL_AUTO_PSTG_EXP_DTTM
+	      )
+	      VALUES
+	      (
+            #{g.tenant}         /*시스템 아이디 */
+           ,#{p.menu_cd}	    /*메뉴 코드 */
+           ,(
+             SELECT CASE WHEN MAX(MNL_REVNO) IS NULL THEN 1 ELSE MAX(MNL_REVNO)+1 END
+               FROM MNL
+              WHERE TEN_ID  = #{g.tenant}
+                AND MENU_CD = #{p.menu_cd}
+                AND LANG_CCD = #{p.lang_ccd}
+            )                   /*메뉴얼 차수*/
+           ,#{p.lang_ccd}        /*언어 코드*/
+           ,#{p.mnl_typ_ccd}	    /*매뉴얼 유형 */
+           ,#{p.mnl_pstg_revno}   		/*게시 차수 */
+           ,#{p.mnl_athg_uuid}	    /*매뉴얼 첨부 번호 */
+           ,#{p.orig_mnl_athg_uuid}	    /*원본 매뉴얼 첨부 번호 */
+           ,#{p.mnl_cont}	    /*매뉴얼 내용 */
+           ,#{g.username}	    /*등록자 아이디 */
+           ,#{g.now}	        /*등록 일시 */
+           ,#{p.mnl_auto_pstg_yn}
+           ,#{p.mnl_auto_pstg_st_dttm}
+           ,#{p.mnl_auto_pstg_exp_dttm}
+	      )
+	</insert>
+	
+	<!-- MNL(메뉴얼 관리) UPDATE -->
+	<update id="updateSelectionRevisionManualInfo">
+	/* manual.updateSelectionRevisionManualInfo */
+	       UPDATE MNL
+	          SET MODR_ID = #{g.tenant}
+	             ,MOD_DTTM = #{g.now}
+			     ,MNL_TYP_CCD = #{p.mnl_typ_ccd}	    /*매뉴얼 유형 */
+	             ,MNL_PSTG_REVNO = #{p.mnl_pstg_revno}	    /*게시 차수 */
+                 ,MNL_ATHG_UUID = #{p.mnl_athg_uuid}	/*매뉴얼 첨부 번호 */
+                 ,ORIG_MNL_ATHG_UUID = #{p.orig_mnl_athg_uuid}	/*원본파일 첨부 번호 */
+                 ,MNL_CONT = #{p.mnl_cont}	    /*매뉴얼 내용 */
+                 ,MNL_AUTO_PSTG_YN = #{p.mnl_auto_pstg_yn}
+                 ,MNL_AUTO_PSTG_ST_DTTM = #{p.mnl_auto_pstg_st_dttm}
+                 ,MNL_AUTO_PSTG_EXP_DTTM = #{p.mnl_auto_pstg_exp_dttm}
+            WHERE TEN_ID  = #{g.tenant}
+              AND MENU_CD = #{p.menu_cd}
+              AND MNL_REVNO = #{p.mnl_revno}
+              AND LANG_CCD = #{p.lang_ccd}
+	</update>
+	
+	<!-- MNL(메뉴얼 관리) 메뉴 별 다국어 메뉴얼 현황 조회 -->
+	<select id="findListAllLanguageManual" resultType="map">
+	/* manual.findListAllLanguageManual */
+        SELECT LANG.TEN_ID
+             , LANG.DTLCD    AS LANG_CCD
+             , LANG.DTLCD_SORT
+             , #{p.menu_cd}   AS MENU_CD
+             , UMNL.MNL_REVNO
+             , UMNL.MNL_TYP_CCD
+             , UMNL.MNL_PSTG_REVNO
+             , UMNL.MODR_ID
+             , UMNL.MOD_DTTM
+             , CASE WHEN UMNL.MENU_CD IS NULL THEN 'N'
+				ELSE 'Y' END AS REG_YN
+             , UMNL.MNL_AUTO_PSTG_YN
+             , UMNL.MNL_AUTO_PSTG_ST_DTTM
+             , UMNL.MNL_AUTO_PSTG_EXP_DTTM
+          FROM DTLCD LANG
+          LEFT OUTER JOIN ( SELECT A.TEN_ID, A.MENU_CD, A.MNL_REVNO, A.LANG_CCD
+                                 , A.MNL_TYP_CCD, A.MNL_PSTG_REVNO, A.REGR_ID, A.REG_DTTM, A.MODR_ID, A.MOD_DTTM
+                                 , A.MNL_AUTO_PSTG_YN, A.MNL_AUTO_PSTG_ST_DTTM, A.MNL_AUTO_PSTG_EXP_DTTM
+                              FROM MNL A
+                             INNER JOIN ( SELECT M.TEN_ID, M.MENU_CD, M.LANG_CCD, MAX(M.MNL_REVNO) AS MNL_REVNO
+                                            FROM MNL M
+                                           WHERE M.TEN_ID  = #{g.tenant}
+                                             AND M.MENU_CD = #{p.menu_cd}
+                                           GROUP BY M.TEN_ID, M.MENU_CD, M.LANG_CCD
+                                        ) B
+                                ON A.TEN_ID  = B.TEN_ID
+                               AND A.MENU_CD = B.MENU_CD
+                               AND A.MNL_REVNO = B.MNL_REVNO
+                               AND A.LANG_CCD = B.LANG_CCD
+                             WHERE A.TEN_ID  = #{g.tenant}
+                               AND A.MENU_CD = #{p.menu_cd}
+                          ) UMNL
+            ON UMNL.TEN_ID  = LANG.TEN_ID
+           AND UMNL.LANG_CCD = LANG.DTLCD
+         WHERE LANG.TEN_ID = #{g.tenant}
+           AND LANG.CCD = 'C002'
+         ORDER BY LANG.DTLCD_SORT
+	</select>
+	
+	<!-- MNL(메뉴얼 관리) 조회 -->
+	<resultMap type="map" id="resultMap-findLastRevisionManualInfo">
+        <result property="mnl_cont" column="MNL_CONT" jdbcType="CLOB" javaType="string" />
+    </resultMap>
+	<select id="findLastRevisionManualInfo" resultMap="resultMap-findLastRevisionManualInfo">
+	/* manual.findLastRevisionManualInfo */
+           SELECT TEN_ID	  /*시스템 아이디 */
+                 ,MENU_CD	  /*메뉴 코드 */
+                 ,MNL_REVNO	  /*매뉴얼 차수 */
+                 ,LANG_CCD     /*언어 코드*/
+                 ,MNL_TYP_CCD	  /*매뉴얼 유형 */
+                 ,MNL_PSTG_REVNO	  /*게시 차수 */
+                 ,MNL_ATHG_UUID  /*매뉴얼 첨부 번호 */
+                 ,ORIG_MNL_ATHG_UUID   /*원본 매뉴얼 첨부 번호 */
+                 ,MNL_CONT	  /*매뉴얼 내용 */
+                 ,REGR_ID	  /*등록자 아이디 */
+                 ,REG_DTTM	  /*등록 일시 */
+                 ,MODR_ID	  /*수정자 아이디 */
+                 ,MOD_DTTM	  /*수정 일시 */
+                 ,MNL_AUTO_PSTG_YN
+                 ,MNL_AUTO_PSTG_ST_DTTM
+                 ,MNL_AUTO_PSTG_EXP_DTTM
+             FROM MNL
+            WHERE TEN_ID  = #{g.tenant}
+              AND MENU_CD = #{p.menu_cd}
+		<choose>
+			<when test='p.mnl_revno != null and p.mnl_revno != ""'>
+              AND MNL_REVNO = #{p.mnl_revno}
+			</when>
+			<otherwise>
+			  AND MNL_REVNO = (SELECT MAX(MNL_REVNO)
+			                   FROM MNL
+			                  WHERE TEN_ID = #{g.tenant}
+			                    AND MENU_CD = #{p.menu_cd}
+			                    AND LANG_CCD = #{p.lang_ccd}
+			                )
+			</otherwise>
+		</choose>
+		      AND LANG_CCD = #{p.lang_ccd}
+	</select>
+	
+	<!-- MNL(메뉴얼 관리) 메뉴얼 차수 콤보 데이터 조회 -->
+	<select id="findListRevisionManualComboboxItem" resultType="map">
+	/* manual.findListRevisionManualComboboxItem */
+           SELECT MNL_REVNO AS DATA
+                 ,MNL_REVNO AS LABEL
+             FROM MNL
+            WHERE TEN_ID  = #{g.tenant}
+              AND MENU_CD = #{p.menu_cd}
+              AND LANG_CCD = #{p.lang_ccd}
+         ORDER BY MNL_REVNO DESC
+	</select>
+
+
+    <!-- 메뉴 삭제 시 메뉴얼 삭제 ( MENU_CD ) -->
+    <delete id="deleteManualInfo">
+            DELETE FROM MNL
+            WHERE TEN_ID = #{g.tenant}
+            AND MENU_CD = #{p.menu_cd}
+    </delete>
+
+    <select id="getCountManualInfo" resultType="int">
+        SELECT COUNT(*)
+        FROM MNL
+        WHERE TEN_ID = #{g.tenant}
+          AND MENU_CD = #{p.menu_cd}
+    </select>
+</mapper>

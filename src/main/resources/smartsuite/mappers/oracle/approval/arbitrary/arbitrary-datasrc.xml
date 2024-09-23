@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="arbitrary-datasrc">
+
+    <select id="selectList_Code" resultType="map">
+    /* arbitrary-datasrc.selectList_Code: 공통코드 목록 - 예시 */
+    SELECT DT.TEN_ID
+         , DT.CCD
+         , DT.DTLCD AS DATA
+         , DL.DTLCD_NM AS LABEL
+         , DT.DTLCD_SORT
+      FROM DTLCD DT
+     INNER JOIN DTLCD_MULTLANG DL
+        ON DT.TEN_ID = DL.TEN_ID
+       AND DT.CCD = DL.CCD
+       AND DT.DTLCD = DL.DTLCD
+       AND DL.LANG_CCD = #{g.locale}
+     WHERE DT.TEN_ID = #{g.tenant}
+       AND DT.USE_YN = 'Y'
+       AND DT.STS != 'D'
+       <if test='p.ccd != null and p.ccd != ""'>
+       AND DT.CCD = #{p.ccd}
+       </if>
+       <if test='p[p.parm_key] != null and p[p.parm_key] != ""'>
+           <bind name="DTLCD" value="p[p.parm_key]" />
+       AND DT.DTLCD = #{DTLCD}
+       </if>
+       <if test='p[p.parm_nm] != null and p[p.parm_nm] != ""'>
+           <bind name="dtlcd_nm" value="p[p.parm_nm]" />
+       AND DL.DTLCD_NM = #{dtlcd_nm}
+       </if>
+     ORDER
+        BY DT.DTLCD_SORT ASC
+    </select>
+
+    <select id="selectList_Plant" resultType="map">
+    /* arbitrary-datasrc.selectList_Plant: 플랜트 목록 - 예시 */
+    SELECT 'plant_001' AS plant_id
+         , 'plant name 1' AS plant_nm
+      FROM DUAL
+
+     UNION ALL
+    SELECT 'plant_002' AS plant_id
+         , 'plant name 2' AS plant_nm
+      FROM DUAL
+
+     UNION ALL
+    SELECT 'plant_003' AS plant_id
+         , 'plant name 3' AS plant_nm
+      FROM DUAL
+    </select>
+
+    <select id="selectList_Item" resultType="map">
+    /* arbitrary-datasrc.selectList_Item: 자재 목록 - 예시 */
+    SELECT 'item_001' AS item_id
+         , 'item name 1' AS item_nm
+      FROM DUAL
+
+     UNION ALL
+    SELECT 'item_002' AS item_id
+         , 'item name 2' AS item_nm
+      FROM DUAL
+
+     UNION ALL
+    SELECT 'item_003' AS item_id
+         , 'item name 3' AS item_nm
+      FROM DUAL
+    </select>
+
+    <select id="selectList_Dept" resultType="map">
+    /* arbitrary-datasrc.selectList_Dept: 부서 목록 - 예시 */
+        SELECT  DEPT.TEN_ID
+        , DEPT.DEPT_CD
+        , CASE WHEN 'en_US' = #{g.locale} THEN DEPT.DEPT_NM_EN
+        ELSE DEPT.DEPT_NM
+        END AS DISP_DEPT_NM
+        , DEPT.DEPT_NM
+        , DEPT.DEPT_NM_EN
+        , DEPT.PAR_DEPT_CD
+        , DEPT.USE_YN
+        , DEPT.RMK
+        , DEPT.STS
+        , DEPT.REGR_ID
+        , DEPT.REG_DTTM
+        , DEPT.MODR_ID
+        , DEPT.MOD_DTTM
+        , 1 AS RECURSIVE_LEVEL
+        , DEPT.DEPT_CD AS TREE
+        FROM DEPT DEPT
+        INNER JOIN LOGIC_ORG_DEPT_MAPG ODM
+        ON DEPT.TEN_ID = ODM.TEN_ID
+        AND DEPT.DEPT_CD = ODM.DEPT_CD
+        INNER JOIN LOGIC_ORG LOGIC_ORG
+        ON DEPT.TEN_ID = LOGIC_ORG.TEN_ID
+        AND ODM.LOGIC_ORG_TYP_CCD = LOGIC_ORG.LOGIC_ORG_TYP_CCD
+        AND ODM.LOGIC_ORG_CD = LOGIC_ORG.LOGIC_ORG_CD
+        WHERE DEPT.TEN_ID = #{g.tenant}
+        <if test='p.logic_org_cd != null and p.logic_org_cd != ""'>
+            AND LOGIC_ORG.LOGIC_ORG_CD = #{p.logic_org_cd}
+        </if>
+        <if test="p.dept_cd != null and p.dept_cd != ''">
+            <bind name="deptCdPattern" value="'%' + p.dept_cd + '%'"/>
+            AND DEPT.DEPT_CD LIKE UPPER(#{deptCdPattern})
+        </if>
+        <if test="p.dept_nm != null and p.dept_nm != ''">
+            <bind name="deptNmPattern" value="'%' + p.dept_nm + '%'" />
+            AND (UPPER(DEPT.DEPT_NM_EN) LIKE UPPER(#{deptNmPattern}) OR UPPER(DEPT.DEPT_NM) LIKE UPPER(#{deptNmPattern}))
+        </if>
+        AND DEPT.STS != 'D'
+        ORDER BY DEPT.DEPT_CD
+    </select>
+
+    <select id="selectList_OORG" resultType="map">
+    	/* arbitrary-datasrc.selectList_OORG */
+        SELECT A.TEN_ID
+        ,A.OORG_CD
+        , CONCAT(CONCAT(CONCAT('[', OUNIT.OUNIT_NM), '] '), C.LOGIC_ORG_NM) AS OORG_NM
+        ,B.PARNODE_OORG_CD
+        ,B.OUNIT_CD
+        ,B.LOGIC_ORG_TYP_CCD
+        ,B.LOGIC_ORG_CD
+        ,B.PARNODE_LOGIC_ORG_CD
+        ,B.CHDNODE_YN
+        ,A.USE_YN
+        ,B.LOGIC_ORG_CD AS CO_CD
+        ,B.USE_YN AS ORG_USE_YN
+        , CASE WHEN 'en_US' = #{g.locale} THEN C.LOGIC_ORG_NM_EN
+        ELSE C.LOGIC_ORG_NM
+        END AS LOGIC_ORG_NM
+        FROM OORG_USR A
+        INNER JOIN OORG B
+        ON B.TEN_ID       = A.TEN_ID
+        AND B.OORG_CD  = A.OORG_CD
+        INNER JOIN LOGIC_ORG C
+        ON C.TEN_ID     = B.TEN_ID
+        AND C.LOGIC_ORG_TYP_CCD = B.LOGIC_ORG_TYP_CCD
+        AND C.LOGIC_ORG_CD     = B.LOGIC_ORG_CD
+        INNER JOIN DTLCD_MULTLANG DTLML
+        ON DTLML.TEN_ID = A.TEN_ID
+        AND DTLML.CCD =  'C079'
+        AND DTLML.LANG_CCD = 'ko_KR'
+        AND B.LOGIC_ORG_TYP_CCD = DTLML.DTLCD
+        INNER JOIN OUNIT OUNIT
+        ON B.TEN_ID = OUNIT.TEN_ID
+        AND B.OUNIT_CD = OUNIT.OUNIT_CD
+        WHERE A.TEN_ID       = #{g.tenant}
+        AND A.USR_ID       = #{g.username}
+        --AND A.USE_YN       = 'Y' /* 운영조직-사용자 use_yn 사용안함(null). insert/delete */
+        <if test="p.ccd != null and p.ccd !=''">
+            AND B.OUNIT_CD = #{p.ccd}
+        </if>
+        AND B.USE_YN       = 'Y'
+        AND B.STS         != 'D'
+        AND C.USE_YN       = 'Y'
+        AND C.STS         != 'D'
+        ORDER BY A.OORG_CD
+    </select>
+
+    <select id="selectList_Company" resultType="map">
+        SELECT LOGIC_ORG_CD
+             , CASE WHEN 'en_US' = #{g.locale} THEN LOGIC_ORG_NM_EN
+                    ELSE LOGIC_ORG_NM END AS LOGIC_ORG_NM
+        FROM LOGIC_ORG
+        WHERE TEN_ID = #{g.tenant}
+          AND LOGIC_ORG_TYP_CCD = 'COMPANY'
+          AND USE_YN = 'Y'
+          AND STS != 'D'
+        ORDER BY LOGIC_ORG_CD
+    </select>
+    
+    <select id="selectList_VendorType" resultType="map">
+    	/* arbitrary-datasrc.selectList_VendorType */
+		SELECT VT.TEN_ID /* 시스템 아이디 */
+		      ,VT.TYP_CD /* 유형코드 */
+		      ,VT.VD_TYP_NM /* 협력사 유형 명 LOC */
+		      ,VT.VD_TYP_EN_NM /* 협력사 유형 영문명 */
+		      ,VT.EVAL_BAS_CD /* 평가시트 적용 단위 코드 */
+		      ,VT.REG_EVAL_TARG_YN /* 등록평가 대상여부 */
+		      ,VT.SPR_EVAL_TARG_YN /* 정기평가 대상여부 */
+		  FROM ESSVDTP VT /* VT : 협력사 유형 */
+		 WHERE VT.TEN_ID = #{g.tenant}
+		   AND VT.STS != 'D'
+		   AND VT.USE_YN = 'Y'
+		 ORDER BY VT.TYP_CD
+    </select>
+    
+    <select id="selectList_EvalType" resultType="map">
+    	/* arbitrary-datasrc.selectList_EvalType */
+		SELECT TEN_ID /* 시스템아이디 */
+		      ,EVAL_TYP_ID /* 평가업무구분아이디 */
+		      ,OORG_CD /* SRM 운영단위 */
+		      ,EVAL_TYP_CD /* 평가업무구분코드 */
+		      ,EVAL_KIND_CD /* 평가종류코드 */
+		      ,EVAL_KIND_NM /* 평가종류명 */
+		      ,EVAL_CYCL_CD /* 평가 주기 코드 */
+		  FROM ESREVTP EVTP /* EVTP : 평가업무구분 */
+		 WHERE EVTP.STS != 'D'
+		   AND EVTP.Use_Yn = 'Y'
+		   AND EVTP.TEN_ID = #{g.tenant}
+	       <if test='p.oorg_cd != null and p.oorg_cd != ""'>
+		   AND EVTP.OORG_CD = {p.oorg_cd}
+		   </if>
+		 ORDER BY EVTP.SORT_ORD DESC
+    </select>
+    
+</mapper>

@@ -1,0 +1,354 @@
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>한국정보인증(주) SecuKit TAX Sample - TAX Sign</title>
+
+    <!-- KICA SecuKit NXS -->
+    <link rel="stylesheet" type="text/css" href="../SecuKitTAX/WebUI/css/base.css" />
+    <script type="text/javascript" src="../SecuKitTAX/WebUI/js/jquery-1.8.2.min.js"></script>
+    <script type="text/javascript" src="../SecuKitTAX/KICA/config/nx_config.js"></script>
+    <script type="text/javascript" src="../SecuKitTAX/KICA/config/LoadSecukitnx.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            // KICA WebUI append
+            $('#KICA_SECUKITNXDIV_ID').append(KICA_SECUKITNXDIV);
+            secunx_Loading();
+        };
+
+        function SecuKitNX_Ready(res) {
+            if (res) {
+                alert('SecuKitTAX Ready');
+            }
+        }
+    </script>
+    <!-- //KICA SecuKit NXS -->
+
+    <script type="text/javascript">
+
+        // 함수 호출 결과값 리턴
+        function SecuKitNXS_RESULT(cmd, res) {
+            // Error Check
+            var Err = 999;
+            try {
+                // Error Code가 포함되었는지 확인
+                Err = res.ERROR_CODE;
+            } catch (e) {
+                console.log(e);
+            }
+
+            if (Err === undefined) {
+                var val = null;
+                switch (cmd) {
+                    
+                case 'DocForTax':
+
+                	var cmd ="DocForTaxRes.signXMLDocumentForTax";
+                	var Data ={
+                			'originalText':document.getElementById('OriginalMessage').value,
+                			'certID':certListInfo.getCertID()
+                	};
+                	var param = JSON.stringify(Data);
+                	secukitnxInterface.SecuKitNXS(cmd, param);
+                	break;
+                	
+                case 'DocForTaxRes':
+                	document.getElementById('taxSignMessage').value = res.signXMLDocumentForTax;
+                	
+                	var certString = 'MIIFWzCCBEOgAwIBAgIEBGDn1DANBgkqhkiG9w0BAQsFADBKMQswCQYDVQQGEwJL'
+                		+'UjENMAsGA1UECgwES0lDQTEVMBMGA1UECwwMQWNjcmVkaXRlZENBMRUwEwYDVQQD'
+                		+'DAxzaWduR0FURSBDQTUwHhcNMTgwNjE4MDAwNzAzWhcNMTkwNzE2MTQ1OTU5WjCB'
+                		+'izELMAkGA1UEBhMCS1IxDTALBgNVBAoMBEtJQ0ExEzARBgNVBAsMCmxpY2Vuc2Vk'
+                		+'Q0ExFTATBgNVBAsMDOuTseuhneq4sOq0gDEZMBcGA1UECwwQS0lDQeqzoOqwneyE'
+                		+'vO2EsDERMA8GA1UECwwI7IS87YSwUkExEzARBgNVBAMMCuq5gOyjvOyYgTcwggEi'
+                		+'MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCksNXI9TNolP7IyI7WSKAl2B5N'
+                		+'VUwA81TpnaJSja86tHvFf9oH6jzzN8wDVd9OeaIZAmo3y/+s9ZhbXX9ZOFzsUtop'
+                		+'6xqhEVFwzz4c6FRTHlnmhxpL/maWRxkYrCTBfyQp7tP8LVflr6nSeOPxWiyamsqj'
+                		+'/Mv9IDb11tPY8EqnrXLTSJsEKWR8POslkDvJYNL9TLomwsUvKsGSyQFkxogSm76e'
+                		+'ifFykB4D5+rJMsOHVrxonURCxnWKEtUN1Jk9ZdrEqfR43ru7v8rksAIpva3ae4SA'
+                		+'YcLHu+lkF1KnzbRDou2VSmfMBOdhkeF1OyC31F46oGN/QskCSLVZl3sCMA57AgMB'
+                		+'AAGjggIFMIICATCBjwYDVR0jBIGHMIGEgBTYvjrsRZnFnuOc6oEf0h0SsDY+iKFo'
+                		+'pGYwZDELMAkGA1UEBhMCS1IxDTALBgNVBAoMBEtJU0ExLjAsBgNVBAsMJUtvcmVh'
+                		+'IENlcnRpZmljYXRpb24gQXV0aG9yaXR5IENlbnRyYWwxFjAUBgNVBAMMDUtJU0Eg'
+                		+'Um9vdENBIDSCAhAdMB0GA1UdDgQWBBT9ys+F/KXeEOxgChoUNybDANUmUDAOBgNV'
+                		+'HQ8BAf8EBAMCBSAwFwYDVR0gBBAwDjAMBgoqgxqMmkQFAgECMH8GA1UdEQR4MHaB'
+                		+'FXB1cmUyNzEzQHNpZ25nYXRlLmNvbaBdBgkqgxqMmkQKAQGgUDBODAnquYDso7zs'
+                		+'mIEwQTA/BgoqgxqMmkQKAQEBMDEwCwYJYIZIAWUDBAIBoCIEIIaq8b7J5mQIQTcQ'
+                		+'MzWCLafj0ivjsYZPob0qFggIBzR8MF4GA1UdHwRXMFUwU6BRoE+GTWxkYXA6Ly9s'
+                		+'ZGFwLnNpZ25nYXRlLmNvbTozODkvb3U9ZHA3cDY0NjAsb3U9Y3JsZHAsb3U9QWNj'
+                		+'cmVkaXRlZENBLG89S0lDQSxjPUtSMEQGCCsGAQUFBwEBBDgwNjA0BggrBgEFBQcw'
+                		+'AYYoaHR0cDovL29jc3Auc2lnbmdhdGUuY29tOjkwMjAvT0NTUFNlcnZlcjANBgkq'
+                		+'hkiG9w0BAQsFAAOCAQEAf7S+fadSTokZSpmfjOXDgtGtVF9J7TlI30+nb2zvdmF4'
+                		+'xKnkKIBqXnlX6M7YzQP3i2Y7Ob+8e5bl5Z5R1N1n3S5fgYKXRF+/5n5KTVsO09iz'
+                		+'ddf05Re9jZIJfSN/1MuZhDtXheWsBAG8nNYkSYp4RJ0AbLJT12yAkWy/WPXLCLYS'
+                		+'yRUghAKKaIPehCkHU0/LEGFiYQeWRyto9zT2xSjC3mYhLFjA6Ekd93fwroSAPNwZ'
+                		+'jwKTipWODKMg2hsU3jDkB8edsprV8ZSwRhuZcKMnPF7Zy5cnITA11orDGAGhXaSJ'
+                		+'ycP+O9ds7kHEx78SxHkfPRTmYIRC6qDau1FejEJnEw==';
+                	var cmd ="GetKeyRandomRes.getKeyRandom";
+                	var Data ={
+                			'certString':certString,
+                			'certID':certListInfo.getCertID()
+                	};
+                	var param = JSON.stringify(Data);
+                	secukitnxInterface.SecuKitNXS(cmd, param);
+                	
+                	break;
+                	
+                	
+                	// random키는 서버인증서로 암호화 되서 reutn이 된다. 
+                	// return된 값은 서버에서 복호화를 한후 new String()으로 형 변환 한다.
+                case 'GetKeyRandomRes':
+                	document.getElementById('randomValue').value = res.getKeyRandom;
+                	
+                	 var certType = 'SignCert';                                               // 서명용 : SignCert, 암호화용 : EncryptCert
+                     var certID = certListInfo.getCertID();                                   // 선택된 인증서 ID
+
+                     var isViewVID = '1';													 // 0 : VID 추출 안함,  1 : VID 추출
+                     var cmd = 'Get_CertInfo_Result.viewCertInfomationWithVID';
+                     var Data = {
+                         'certType': certType,
+                         'certID': certID,
+                         'isViewVID': isViewVID
+                     };
+                     var param = JSON.stringify(Data);
+                     secukitnxInterface.SecuKitNXS(cmd, param);
+                	
+                	break;
+                 
+                case 'Get_CertInfo_Result' : 
+                	document.getElementById('certdn').value = res.userDN;
+                	document.getElementById('validateto').value =  res.validateTo;
+                	document.getElementById('random').value =  res.vidRandom;
+
+                	 var ssn = "1111111119";     // 신원확인 정보 ( 개인 : 주민등록번호, 사업자 : 사업자번호)
+                     var certID = certListInfo.getCertID();              // 선택된 인증서 ID
+                     
+                     var cmd = 'Check_SSN_Result.verifyVID';
+                     var Data = {
+                         'ssn': ssn,
+                         'certID': certID
+                     };
+                     var param = JSON.stringify(Data);
+                     secukitnxInterface.SecuKitNXS(cmd, param);
+                     break;
+                     
+                case 'Get_CertInfo_Result' :
+                	if(res.verifyVID == false){
+                		alert("아직 vid 없다");
+                	}
+                	alert("res.verifyVID");
+                    break;
+                	
+                    default: break;
+                }
+
+            } else {
+                // Error Message 출력
+                hideNXBlockLayer(); KICA_Error.init();
+                KICA_Error.setError(res.ERROR_CODE, res.ERROR_MESSAGE);
+                var errorMsg = KICA_Error.getError();
+                alert(errorMsg);
+            }
+        }
+
+        function documentTax(){
+        	//로직 구분
+            processLogic.init();
+            processLogic.setProcessLogic('DocForTax');
+
+            // 인증서 선택창 호출
+            NX_ShowDialog();
+        }
+        
+        /*
+        function keyRandom(){
+        	//로직 구분
+            processLogic.init();
+            processLogic.setProcessLogic('GetKeyRandom');
+
+            // 인증서 선택창 호출
+            NX_ShowDialog();
+        }
+        function certinfo(){
+        	//로직 구분
+            processLogic.init();
+            processLogic.setProcessLogic('CertInfo');
+
+            // 인증서 선택창 호출
+            NX_ShowDialog();
+        }
+*/
+    </script>
+
+    <style type="text/css">
+        #SampleBox dl {
+            text-align: left;
+            width: 700px;
+            margin: auto;
+        }
+
+        #SampleBox dt {
+            text-align: left;
+            line-height: 17px;
+            padding: 5px;
+            font-weight: bold;
+            border-bottom: 1px solid #fff;
+            font-size: 15px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <!-- 한국정보인증 WebUI DIV 영역 -->
+    <div id="KICA_SECUKITNXDIV_ID"></div>
+
+    <div id="SampleBox">
+        <dl>
+            <dt>TAX Signed Sample</dt>
+
+            <br />
+
+            
+            <br />
+            <dt>전자세금계산서 원본문자열</dt>
+            <dd><textarea id="OriginalMessage" name="OriginalMessage" rows="8" cols="64"><?xml version="1.0" encoding="UTF-8"?>
+<TaxInvoice xmlns="urn:kr:or:kec:standard:Tax:ReusableAggregateBusinessInformationEntitySchemaModule:1:0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:kr:or:kec:standard:Tax:ReusableAggregateBusinessInformationEntitySchemaModule:1:0 http://www.kec.or.kr/standard/Tax/TaxInvoiceSchemaModule_1.0.xsd">
+	<ExchangedDocument>
+		<ID>123456789012345678901234</ID>
+		<IssueDateTime>20090402104522</IssueDateTime>
+		<ReferencedDocument>
+			<ID>123456789012345678901234</ID>
+		</ReferencedDocument>
+	</ExchangedDocument>
+	<TaxInvoiceDocument>
+		<IssueID>200904020000000011111111</IssueID>
+		<TypeCode>0101</TypeCode>
+		<DescriptionText>test</DescriptionText>
+		<IssueDateTime>20090402</IssueDateTime>
+		<AmendmentStatusCode>01</AmendmentStatusCode>
+		<PurposeCode>01</PurposeCode>
+		<ReferencedImportDocument>
+			<ID>123456789012345</ID>
+			<ItemQuantity>123456</ItemQuantity>
+			<AcceptablePeriod>
+				<StartDateTime>20090402</StartDateTime>
+				<EndDateTime>20090402</EndDateTime>
+			</AcceptablePeriod>
+		</ReferencedImportDocument>
+	</TaxInvoiceDocument>
+	<TaxInvoiceTradeSettlement>
+		<InvoicerParty>
+			<ID>1234567890123</ID>
+			<TypeCode>1234567890123456789012345678901234567890</TypeCode>
+			<NameText>1234567890123456789012345678901234567890123456789012345678901234567890</NameText>
+			<ClassificationCode>1234567890123456789012345678901234567890</ClassificationCode>
+			<SpecifiedOrganization>
+				<TaxRegistrationID>1234</TaxRegistrationID>
+			</SpecifiedOrganization>
+			<SpecifiedPerson>
+				<NameText>홍길동</NameText>
+			</SpecifiedPerson>
+			<DefinedContact>
+				<DepartmentNameText>1234567890123456789012345678901234567890</DepartmentNameText>
+				<PersonNameText>123456789012345678901234567890</PersonNameText>
+				<TelephoneCommunication>12345678901234567890</TelephoneCommunication>
+				<URICommunication>1234567890123456789012345678901234567890</URICommunication>
+			</DefinedContact>
+			<SpecifiedAddress>
+				<LineOneText>123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</LineOneText>
+			</SpecifiedAddress>
+		</InvoicerParty>
+		<InvoiceeParty>
+			<ID>1234567890123</ID>
+			<TypeCode>1234567890123456789012345678901234567890</TypeCode>
+			<NameText>123456789012345678901234567890</NameText>
+			<ClassificationCode>1234567890123456789012345678901234567890</ClassificationCode>
+			<SpecifiedOrganization>
+				<TaxRegistrationID>1234</TaxRegistrationID>
+				<BusinessTypeCode>01</BusinessTypeCode>
+			</SpecifiedOrganization>
+			<SpecifiedPerson>
+				<NameText>123456789012345678901234567890</NameText>
+			</SpecifiedPerson>
+			<PrimaryDefinedContact>
+				<DepartmentNameText>1234567890123456789012345678901234567890</DepartmentNameText>
+				<PersonNameText>123456789012345678901234567890</PersonNameText>
+				<TelephoneCommunication>12345678901234567890</TelephoneCommunication>
+				<URICommunication>1234567890123456789012345678901234567890</URICommunication>
+			</PrimaryDefinedContact>
+			<SecondaryDefinedContact>
+				<DepartmentNameText>1234567890123456789012345678901234567890</DepartmentNameText>
+				<PersonNameText>123456789012345678901234567890</PersonNameText>
+				<TelephoneCommunication>12345678901234567890</TelephoneCommunication>
+				<URICommunication>1234567890123456789012345678901234567890</URICommunication>
+			</SecondaryDefinedContact>
+			<SpecifiedAddress>
+				<LineOneText>123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</LineOneText>
+			</SpecifiedAddress>
+		</InvoiceeParty>
+		<BrokerParty>
+			<ID>1234567890123</ID>
+			<TypeCode>1234567890123456789012345678901234567890</TypeCode>
+			<NameText>1234567890123456789012345678901234567890123456789012345678901234567890</NameText>
+			<ClassificationCode>1234567890123456789012345678901234567890</ClassificationCode>
+			<SpecifiedOrganization>
+				<TaxRegistrationID>1234</TaxRegistrationID>
+			</SpecifiedOrganization>
+			<SpecifiedPerson>
+				<NameText>123456789012345678901234567890</NameText>
+			</SpecifiedPerson>
+			<DefinedContact>
+				<DepartmentNameText>1234567890123456789012345678901234567890</DepartmentNameText>
+				<PersonNameText>123456789012345678901234567890</PersonNameText>
+				<TelephoneCommunication>12345678901234567890</TelephoneCommunication>
+				<URICommunication>1234567890123456789012345678901234567890</URICommunication>
+			</DefinedContact>
+			<SpecifiedAddress>
+				<LineOneText>123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</LineOneText>
+			</SpecifiedAddress>
+		</BrokerParty>
+		<SpecifiedPaymentMeans>
+			<TypeCode>10</TypeCode>
+			<PaidAmount>123456789012345</PaidAmount>
+		</SpecifiedPaymentMeans>
+		<SpecifiedMonetarySummation>
+			<ChargeTotalAmount>-12345678901235678</ChargeTotalAmount>
+			<TaxTotalAmount>-12345678912345678</TaxTotalAmount>
+			<GrandTotalAmount>-12345678901245678</GrandTotalAmount>
+		</SpecifiedMonetarySummation>
+	</TaxInvoiceTradeSettlement>
+	<TaxInvoiceTradeLineItem>
+		<SequenceNumeric>01</SequenceNumeric>
+		<DescriptionText>1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</DescriptionText>
+		<InvoiceAmount>1234567890123456</InvoiceAmount>
+		<ChargeableUnitQuantity>999999999.99</ChargeableUnitQuantity>
+		<InformationText>123456789012345678901234567890123456789012345678901234567890</InformationText>
+		<NameText>1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</NameText>
+		<PurchaseExpiryDateTime>20090402</PurchaseExpiryDateTime>
+		<TotalTax>
+			<CalculatedAmount>1234567890123456</CalculatedAmount>
+		</TotalTax>
+		<UnitPrice>
+			<UnitAmount>12345678901235.99</UnitAmount>
+		</UnitPrice>
+	</TaxInvoiceTradeLineItem>
+</TaxInvoice></textarea></dd>
+
+            <dd>
+                <input type="button" style='width: 250px;' value="Document For Tax" onclick="documentTax();" />
+            </dd>
+            <br />
+            <dd><textarea id="taxSignMessage" name="taxSignMessage" rows="10" cols="64"></textarea></dd>
+
+       
+			<br />
+                       암호화 된 random 값<br><dd><textarea id="randomValue" name="randomValue" rows="10" cols="64"></textarea></dd><br><br>
+                       인증서 DN<br><dd><textarea id="certdn" name="certdn" rows="10" cols="64"></textarea></dd><br><br>
+                       인증서 만료일<br><dd><textarea id="validateto" name="validateto" rows="10" cols="64"></textarea></dd><br><br>
+                       인증서 random(암호화 안됨)<br><dd><textarea id="random" name="random" rows="10" cols="64"></textarea></dd>
+       
+        </dl>
+    </div>
+</body>
+</html>

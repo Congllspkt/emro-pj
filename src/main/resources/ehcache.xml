@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd">
+
+	<diskStore path="java.io.tmpdir" />
+
+	<!-- cmmn-code -->
+	<cache name="cmmn-code"
+		maxElementsInMemory="700"
+        eternal="false"
+        overflowToDisk="false"
+        timeToIdleSeconds="300"
+        timeToLiveSeconds="600"
+        diskPersistent="false"
+        diskExpiryThreadIntervalSeconds="600"
+        memoryStoreEvictionPolicy="LRU">
+	</cache>
+	
+	<cache name="workplace-setup"
+		maxElementsInMemory="10000"
+        eternal="true"
+        overflowToDisk="true"
+        diskPersistent="true"
+        diskExpiryThreadIntervalSeconds="600"
+        memoryStoreEvictionPolicy="LRU">
+	</cache>
+	
+	<cache name="cmmn_prec_format"
+		maxElementsInMemory="700"
+        eternal="false"
+        overflowToDisk="false"
+        timeToIdleSeconds="300"
+        timeToLiveSeconds="600"
+        diskPersistent="false"
+        diskExpiryThreadIntervalSeconds="600"
+        memoryStoreEvictionPolicy="LRU">
+	</cache>
+</ehcache>

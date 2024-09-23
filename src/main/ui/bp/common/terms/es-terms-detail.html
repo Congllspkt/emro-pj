@@ -1,0 +1,365 @@
+<dom-module id="es-terms-detail">
+	<style>
+		:host {
+			@apply(--vbox-layout);
+		}
+	</style>
+
+	<template>
+		<!-- 코드 조회 -->
+		<sc-request-group init>
+			<sc-code-group>
+				<!-- 약관 구분 -->
+				<sc-code code="C054" value="{{codes.termsClsCd}}"></sc-code>
+				<sc-code code="C002" value="{{codes.langCd}}"></sc-code> <!-- 언어코드 -->
+			</sc-code-group>
+			<!-- 콤보박스 템플릿 목록 -->
+			<sc-ajax id="findCommonTemplateCode" url="findListTermsTextModeTemplateComboboxItem.do"
+					 last-response="{{codes.template}}">
+			</sc-ajax>
+		</sc-request-group>
+
+		<!-- 조회 -->
+		<sc-ajax id="findTermsDetailInfoByTermsConditionsId"
+				 url="findTermsDetailInfoByTermsConditionsId.do"
+				 on-response="completeFindTerms">
+		</sc-ajax>
+		<sc-ajax id="findTermsMultiLangTemplate"
+				 url="findTermsMultiLangDetailInfoByTermsConditionsId.do"
+				 on-response="completeFindTermsMulti">
+		</sc-ajax>
+
+		<!-- 템플릿 조회 -->
+		<sc-ajax id="findTemplateBaseInfoByTemplateBaseId"
+				 url="findTemplateBaseInfoByTemplateBaseId.do"
+				 on-response="completeFindInfoTmp">
+		</sc-ajax>
+
+		<!-- 약관구분 Max Rev 조회 -->
+		<sc-ajax id="findLastRevisionTermsMasterAndContentByTermsConditionClassCode"
+				 url="findLastRevisionTermsMasterAndContentByTermsConditionClassCode.do"
+				 on-response="completeFindMaxTerms">
+		</sc-ajax>
+
+		<!-- 저장  -->
+		<sc-ajax id="saveTerms"
+				 url="saveTerms.do"
+				 body="{{termsInfo}}"
+				 on-response="completeSaveInfo">
+		</sc-ajax>
+
+		<cc-auth-checker check-list="auth-r, auth-s"></cc-auth-checker>
+
+		<div class="vbox flex">
+			<cc-sub-title-bar title-text="상세 정보">
+				<sc-button text="저장" on-click="onSaveInfo" disabled="[[!formula('isEndDtEditable')]]" auth-s></sc-button>
+			</cc-sub-title-bar>
+
+			<cc-form-panel validation-group="save" label-width="120">
+				<cc-fieldset>
+					<sc-label text="약관 템플릿 언어"></sc-label>
+					<sc-combobox-field value="{{termsInfo.lang_ccd}}" items="{{codes.langCd}}" display-field="label" value-field="data"
+									   required="true" placeholder="필수" on-change="onChangeTemplateLangCode">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="약관 명"></sc-label>
+					<sc-text-field value="{{termsInfo.ctmpl_nm}}" max-length="100"
+								   readonly="[[!formula('isEndDtEditable')]]" required="[[formula('isEndDtEditable')]]"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="구분"></sc-label>
+					<sc-combobox-field display-field="label" value-field="data" items="{{codes.termsClsCd}}"
+									   readonly="true"
+									   value="{{termsInfo.termcnd_typ_ccd}}" placeholder="선택">
+					</sc-combobox-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="차수"></sc-label>
+					<sc-text-field value="{{termsInfo.termcnd_ren_revno}}" readonly="true"></sc-text-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="적용 기간"></sc-label>
+					<div class="field-box">
+						<sc-date-field value="{{termsInfo.efct_st_dt}}" string-date="true"
+									   required="[[formula('isStartDtEditable')]]" readonly="[[!formula('isStartDtEditable')]]"></sc-date-field>
+						&nbsp;~&nbsp;
+						<sc-date-field value="{{termsInfo.efct_exp_dt}}" string-date="true"
+									   required="[[formula('isEndDtEditable')]]" readonly="[[!formula('isEndDtEditable')]]"></sc-date-field>
+					</div>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="신규 가입 사용 여부"></sc-label>
+					<sc-checkbox-field label="적용" input-value="{{termsInfo.new_join_use_yn}}" checked-value="Y" un-checked-value="N"
+									   readonly="[[!formula('isStartDtEditable')]]"></sc-checkbox-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="필수 동의 여부"></sc-label>
+					<sc-checkbox-field label="필수" input-value="{{termsInfo.mand_cnst_yn}}" checked-value="Y" un-checked-value="N"
+									   readonly="[[!formula('isStartDtEditable')]]"></sc-checkbox-field>
+				</cc-fieldset>
+				<cc-fieldset> 
+					<sc-label text="템플릿 구분"></sc-label>
+					<sc-combobox-field display-field="basc_ctmpl_nm" value-field="basc_ctmpl_cd"
+									   items="{{codes.template}}" value="{{termsInfo.basc_ctmpl_cd}}"
+									   placeholder="선택"
+									   required="[[formula('isStartDtEditable')]]"
+									   readonly="[[!formula('isStartDtEditable')]]"
+									   on-select="onFindTmp">
+					</sc-combobox-field>
+				</cc-fieldset>
+			</cc-form-panel>
+
+			<div class="vspace-10"></div>
+
+			<!-- 템플릿 에디터 -->
+			<cc-source-editor id="editor"
+							  class="flex"
+							  value="{{termsInfo.ctmpl_cont}}"
+							  editable="true"
+							  view-hidden="false"
+							  value-type="String"
+							  readonly="[[!formula('isEndDtEditable')]]">
+			</cc-source-editor>
+		</div>
+	</template>
+
+	<script>
+        Polymer({
+            is: 'es-terms-detail',
+
+            properties:{
+                // 코드 데이터
+                codes: {
+                    type: Object,
+                    reset: false,
+                    value: function() {
+                        return {
+							termsClsCd : [],
+							template : [],
+                        };
+                    }
+                },
+                // 약관 상세 정보
+                termsInfo: {
+                    type: Object,
+                    value: function() {
+                        return {
+							isTermsExists : false,
+							termcnd_typ_ccd : ""
+						};
+                    }
+                },
+				tmpChangeReady: {
+					type: Boolean,
+					value: false
+				},
+				// 목록 존재 여부 Flag
+				isTermsExistsFlag : {
+                	type: Boolean,
+					value : false
+				},
+            },
+
+            formulas: {
+				// 시작일이 현재일보다 미래 여부
+				isStartDtFuter : function(){
+					var today = UT.formatDate(new Date(), "yyyyMMdd");
+					var startDt = this.termsInfo.efct_st_dt;
+					return (today < startDt);
+				},
+				// 종료일이 현재일보다 미래 여부
+				isEndDtFuter : function(){
+					var today = UT.formatDate(new Date(), "yyyyMMdd");
+					var endDt = this.termsInfo.efct_exp_dt;
+					return (today <= endDt);
+				},
+                // 수정 가능 상태(내용/시작일)
+                isStartDtEditable: function() {
+                    return  ((UT.isNotEmpty(this.termsInfo.termcnd_typ_ccd) && !this.isTermsExistsFlag) || this.formula('isStartDtFuter'));
+                },
+				// 수정 가능한 상태(종료일)
+                isEndDtEditable: function() {
+                    return ((UT.isNotEmpty(this.termsInfo.termcnd_typ_ccd) && !this.isTermsExistsFlag) || this.formula('isEndDtFuter'));
+                },
+            },
+
+			// Load
+            load: function(data) {
+            	var me = this;
+            	me.onClear();
+
+				me.set("isTermsExistsFlag", data.isTermsExists);  // 약관목록 존재 여부
+				me.set("termsInfo.termcnd_typ_ccd", data.termcnd_typ_ccd);    // 약관 구분
+				me.set("termsInfo.lang_ccd", SCLocaleManager.getLocale());    // 약관 구분
+				if(!UT.isEmpty(data.termcnd_uuid)){
+					me.onFindTerms(data);
+				}else{
+					if(!data.isTermsExists){
+						me.set("termsInfo.termcnd_ren_revno", 1);
+					}
+					me.$.editor.focus();
+					me.applyFormula();
+				}
+            },
+			onChangeTemplateLangCode:function(e) {
+				var me = this;
+				if(me.get("tmpChangeReady")) {
+
+					me.set("termsInfo.lang_ccd",me.get("termsInfo.lang_ccd") == null? SCLocaleManager.getLocale() : me.get("termsInfo.lang_ccd"));
+
+					me.$.findCommonTemplateCode.body = {
+						lang_ccd : me.get("termsInfo.lang_ccd") == null? SCLocaleManager.getLocale() : me.get("termsInfo.lang_ccd")
+					}
+					me.$.findCommonTemplateCode.request();
+					me.$.findTermsMultiLangTemplate.body = me.get("termsInfo");
+					UT.request(me.$.findTermsMultiLangTemplate);
+				}
+			},
+
+
+			// 차수 증가
+			onRevIncTerms : function(data) {
+				var me = this;
+				me.$.findLastRevisionTermsMasterAndContentByTermsConditionClassCode.body = {
+					termcnd_typ_ccd : data.data,
+					lang_ccd : data.lang_ccd == null? SCLocaleManager.getLocale() : data.lang_ccd
+				};
+				UT.request(me.$.findLastRevisionTermsMasterAndContentByTermsConditionClassCode);
+			},
+
+            //초기화
+            onClear: function(){
+                var me = this;
+                me.reset();
+				me.$.editor.reset();
+                me.applyFormula();
+            },
+
+            // 템플릿 상세 조회
+            onFindTerms: function(data){
+                var me = this;
+				me.$.findTermsDetailInfoByTermsConditionsId.body = {
+					ctmpl_uuid : data.ctmpl_uuid,
+					termcnd_uuid  : data.termcnd_uuid,
+					lang_ccd : SCLocaleManager.getLocale()
+				};
+				me.set("tmpChangeReady", false);
+                UT.request(me.$.findTermsDetailInfoByTermsConditionsId);
+            },
+
+            // 약관 상세 조회 완료
+            completeFindTerms: function(e, res){
+                var me = this,
+						result = res.response;
+				var langCcd = me.get("termsInfo.lang_ccd");
+				me.set("termsInfo",result);
+				if(UT.isEmpty(me.get("termsInfo.lang_ccd"))) me.set("termsInfo.lang_ccd",langCcd );
+				me.set("tmpChangeReady", true);
+                me.applyFormula();
+                me.$.editor.focus();
+            },
+			completeFindTermsMulti: function(e, res){
+                var me = this,
+						result = res.response;
+
+				var langCcd = me.get("termsInfo.lang_ccd");
+				if(UT.isNotEmpty(result)){
+					if(UT.isEmpty(result.lang_ccd)) me.set("termsInfo.lang_ccd",langCcd );
+					me.set("termsInfo.ctmpl_nm",result.ctmpl_nm)
+					me.set("termsInfo.termcnd_typ_ccd",result.termcnd_typ_ccd)
+					me.set("termsInfo.termcnd_ren_revno",result.termcnd_ren_revno)
+					me.set("termsInfo.efct_st_dt",result.efct_st_dt)
+					me.set("termsInfo.efct_exp_dt",result.efct_exp_dt)
+					me.set("termsInfo.new_join_use_yn",result.new_join_use_yn)
+					me.set("termsInfo.mand_cnst_yn",result.mand_cnst_yn)
+					me.set("termsInfo.basc_ctmpl_cd",result.basc_ctmpl_cd)
+					me.set("termsInfo.ctmpl_cont",result.ctmpl_cont)
+				}else{
+					me.set("termsInfo.lang_ccd",langCcd );
+				}
+
+				me.applyFormula();
+				me.set("tmpChangeReady", true);
+                me.$.editor.focus();
+            },
+
+            // 저장 버튼 Click Event
+            onSaveInfo: function(){
+                var me = this;
+
+                // Validation Check
+                if(!me.validate()){
+					// 입력하신 정보를 다시 확인하여 주세요.
+                    UT.alert("STD.E0000");
+                    return;
+                }
+                // 날짜 Check
+				var termsInfo = me.get("termsInfo");
+				var today = UT.formatDate(new Date(), "yyyyMMdd");
+				if(UT.toNumber(termsInfo.efct_st_dt) > UT.toNumber(termsInfo.efct_exp_dt)){
+					UT.alert("STD.ADM1051"); // 유효하지 않은 적용기간입니다.
+					return;
+				}else if(UT.toNumber(termsInfo.efct_exp_dt) < UT.toNumber(today)){
+					UT.alert("STD.ADM1052"); // 유효하지 않은 적용기간입니다. 현재일 이상 입력하세요.
+					return;
+				}
+				// 저장 하시겠습니까?
+                UT.confirm("STD.N1200", function() {
+                    me.$.editor.syncValue();
+                    UT.request(me.$.saveTerms);
+                })
+            },
+
+            // 저장 완료
+            completeSaveInfo: function(e, res){
+                var me = this,
+                    result = res.response;
+
+				var termsInfo = result.resultData;
+				UT.completeAlert();              // 저장하였습니다.
+				me.set("isTermsExistsFlag", true);  // 약관목록 존재 여부
+				me.onFindTerms(termsInfo);
+				me.fire("save-terms");
+            },
+
+			// 템플릿 구분 Combobox Select Event
+			onFindTmp : function(event) {
+            	var me = this;
+				var item = event.detail.selectedItem;
+				var termsInfo = me.get('termsInfo');
+
+				// 신규인 경우 템플릿 기초 테이블 접근(basc_ctmpl_cd)
+				if(UT.isEmpty(termsInfo.termcnd_uuid)){
+					me.set("termsInfo.ctmpl_cont", "");
+					me.$.findTemplateBaseInfoByTemplateBaseId.body = {
+						basc_ctmpl_cd :  item.basc_ctmpl_cd,
+						termcnd_typ_ccd  :  termsInfo.termcnd_typ_ccd,
+						lang_ccd : SCLocaleManager.getLocale()
+					};
+					UT.request(me.$.findTemplateBaseInfoByTemplateBaseId);
+				}
+			},
+
+			// 템플릿 조회 Callback Function
+			completeFindInfoTmp: function(e, res){
+				var me = this,
+					result = res.response;
+				me.set("termsInfo.ctmpl_cont", result.basc_ctmpl_cont);
+			},
+
+			// 약관구분 Max Rev 조회 Callback Function
+			completeFindMaxTerms : function(e, res){
+            	var me = this,
+            	    result = res.response;
+				if(UT.isNotEmpty(result)){
+					me.set("termsInfo", result);
+				}
+				me.set("isTermsExistsFlag", false);
+				me.set("termsInfo.lang_ccd", SCLocaleManager.getLocale());    // 언어 구분
+				me.$.editor.focus();
+				me.applyFormula();
+			}
+        });
+	</script>
+</dom-module>

@@ -1,0 +1,72 @@
+<dom-module id="cc-validation-summary">
+<style>
+	:host {
+				display: block;
+			}
+</style>
+    <template>
+	
+		<cc-collapse-panel title-text="Validation Summary"
+						   host-cls="form-grid-container"
+						   class="border-box" collapsible="true">
+		
+			<div class="form-container">
+				<div id="formGrid" class="hbox">
+					<content></content>
+				</div>
+			</div>
+	
+		</cc-collapse-panel>
+
+
+	</template>
+	<script>
+	
+		Polymer({ 
+    		is: 'cc-validation-summary',
+			
+			className : 'CCFormPanel',
+			
+			behaviors: [
+				Polymer.SCElementBehavior,
+				Polymer.CCPanelMediatorBehavior,
+				Polymer.SCCSSClassStyleBehavior
+			],
+			
+			properties: {
+				titleText: {
+					type: String
+				},
+			},
+			
+			get _formGridElement() {
+				if(!this._formGridEl) {
+					this._formGridEl = this.querySelector('#formGrid');
+				}
+				return this._formGridEl;
+			},
+			
+			onChangeFormGridWrapCssClass: function(newValue, oldValue){
+				if(oldValue){
+					this.removeCls(this._formGridElement, oldValue);	
+				}
+				if(newValue == "label-column"){
+					this.set("labelWidth", this.freeLabelWidth); 
+				}
+				this.addCls( 
+						this._formGridElement,
+						this.combindCssClass(this.defaultFormCls, this.formCls));
+			},
+
+			onChangeColumn: function(newValue, oldValue){
+				this._formGridEl.classList.add(this.columnCls+newValue);
+				//this.addCls(this, this.columnCls+newValue);
+			},
+
+			onChangeCollapsible: function(newValue, oldValue){
+			}
+			
+	  	});
+	
+	</script>
+</dom-module>

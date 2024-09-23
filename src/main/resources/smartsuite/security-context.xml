@@ -1,0 +1,787 @@
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+             xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:p="http://www.springframework.org/schema/p"
+             xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+
+	http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd"
+             default-lazy-init="true">
+	
+	<http request-matcher-ref="noSessionManageRequest" entry-point-ref="delegatingAuthenticationEntryPoint" authentication-manager-ref="defaultAuthenticationManager">
+		<csrf request-matcher-ref="csrfRequestMatcher"/>
+		<request-cache ref="requestCache"/>
+		<headers>
+			<header name="Content-Security-Policy" value="default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' data:; object-src 'self' 'unsafe-inline' 'unsafe-eval' data:; img-src 'self' 'unsafe-inline' 'unsafe-eval' data:"/>
+			<frame-options policy="SAMEORIGIN"/>
+		</headers>
+	</http>
+	
+	<!-- 서울보증보험 연계시 url 제외(csrf, session 제외) -->
+	<http request-matcher-ref="guaranteeManageRequest" entry-point-ref="delegatingAuthenticationEntryPoint" authentication-manager-ref="defaultAuthenticationManager">
+		<csrf request-matcher-ref="csrfRequestMatcher"/>
+		<request-cache ref="requestCache"/>
+		<headers>
+			<header name="Content-Security-Policy" value="default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' data:; object-src 'self' 'unsafe-inline' 'unsafe-eval' data:; img-src 'self' 'unsafe-inline' 'unsafe-eval' data:"/>
+		</headers>
+	</http>
+	
+	<http auto-config="true" disable-url-rewriting="true" 
+		entry-point-ref="delegatingAuthenticationEntryPoint" 
+		use-expressions="true"
+		authentication-manager-ref="defaultAuthenticationManager">
+		<intercept-url pattern="/logoutSuccess.do" access="permitAll" />
+		<form-login login-page="/login.do" login-processing-url="/loginProcess.do"
+			username-parameter="username" password-parameter="password" 
+			authentication-success-handler-ref="authenticationSuccessHandler"
+			authentication-failure-handler-ref="authenticationFailureHandler" />
+		<form-login login-page="/loginKr.do" login-processing-url="/loginProcess.do"
+			username-parameter="username" password-parameter="password"
+			authentication-success-handler-ref="authenticationSuccessHandler"
+			authentication-failure-handler-ref="authenticationFailureHandler" />
+		<form-login login-page="/loginEn.do" login-processing-url="/loginProcess.do"
+			username-parameter="username" password-parameter="password"
+			authentication-success-handler-ref="authenticationSuccessHandler"
+			authentication-failure-handler-ref="authenticationFailureHandler" />
+		<form-login login-page="/spLogin.do" login-processing-url="/spLoginProcess.do"
+					username-parameter="username" password-parameter="password"
+					authentication-success-handler-ref="supplierAuthenticationSuccessHandler"
+					authentication-failure-handler-ref="supplierAuthenticationFailureHandler" />
+		<form-login login-page="/spLoginKr.do" login-processing-url="/spLoginProcess.do"
+					username-parameter="username" password-parameter="password"
+					authentication-success-handler-ref="supplierAuthenticationSuccessHandler"
+					authentication-failure-handler-ref="supplierAuthenticationFailureHandler" />
+		<form-login login-page="/spLoginEn.do" login-processing-url="/spLoginProcess.do"
+					username-parameter="username" password-parameter="password"
+					authentication-success-handler-ref="supplierAuthenticationSuccessHandler"
+					authentication-failure-handler-ref="supplierAuthenticationFailureHandler" />
+		<logout logout-url="/logoutProcess.do" success-handler-ref="logoutSuccessHandler"
+			invalidate-session="true" delete-cookies="JSESSIONID" />
+
+		<custom-filter before="FORM_LOGIN_FILTER" ref="customAuthenticationProcessingFilters" />
+
+		<!-- tenancy-context.xml -->
+		<custom-filter after="FIRST" ref="tenantFilter"/>
+		<!-- tenancy-context.xml -->
+					
+		<custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
+		<custom-filter before="SECURITY_CONTEXT_FILTER" ref="decrytRequestFilter" />
+		<custom-filter after="SECURITY_CONTEXT_FILTER" ref="xssRequestFilter" />
+		<custom-filter before="SESSION_MANAGEMENT_FILTER" ref="sessionInvalidateFilter" />
+		<session-management 
+			session-authentication-strategy-ref="sessionAuthenticationStrategy" />
+		<csrf request-matcher-ref="csrfRequestMatcher"/>
+		<request-cache ref="requestCache"/>
+		<headers>
+			<header name="Content-Security-Policy" value="default-src 'self' http://localhost https://127.0.0.1:15018 https://127.0.0.1:14315 http://127.0.0.1:14319 data: 'unsafe-inline' 'unsafe-eval' ; script-src 'self' https://127.0.0.1:15018 https://127.0.0.1:14315 http://127.0.0.1:14319 data: 'unsafe-inline' 'unsafe-eval' blob:; object-src 'self' data: 'unsafe-inline' 'unsafe-eval' ; img-src 'self' http://www.unisign.co.kr https://127.0.0.1:15018 https://127.0.0.1:14315 http://127.0.0.1:14319 http://www.sgic.co.kr data: 'unsafe-inline' 'unsafe-eval' blob:;"/>
+			<frame-options policy="SAMEORIGIN"/>
+		</headers>
+	</http>
+	
+	<!-- parameter decryt 필터 -->
+	<beans:bean id="decrytRequestFilter" class="smartsuite.security.web.filter.DecryptRequestFilter">
+		<beans:property name="cipherUtil">
+			<beans:ref bean="cipherUtil"/>
+		</beans:property>
+	</beans:bean>
+	
+	<!-- XSS 요청 필터 -->
+	<beans:bean id="xssRequestFilter" class="smartsuite.security.web.filter.advanced.XssRequestFilter">
+		<!-- Request matcher 설정 -->
+		<beans:property name="requestMatcher">
+			<beans:bean class="org.springframework.security.web.util.matcher.OrRequestMatcher">
+				<beans:constructor-arg>
+					<beans:list>
+						<!-- Workflow -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/workflow/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 메일 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/mail/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/bidtemplate/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/bidtemplate/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+
+						<!-- 인터페이스 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/**/ifproxy/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 템플릿 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/tmp/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 이용약관 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/terms/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 게시판 -->
+						<!--<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/board/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>-->
+						
+						<!-- shared -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/shared/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 결재 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/**/approval/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/bp/common/approval/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- 전자계약 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					        <beans:constructor-arg>
+					            <beans:value>/ui/bp/edoc/contract/**</beans:value>
+					        </beans:constructor-arg>
+					    </beans:bean>
+					    <!-- 다국어 -->
+					    <beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					        <beans:constructor-arg>
+					            <beans:value>/i18n/getByKeys.do</beans:value>
+					        </beans:constructor-arg>
+					    </beans:bean>
+					    
+					    <!-- 다국어 -->
+					    <beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					        <beans:constructor-arg>
+					            <beans:value>/ui/bp/common/code/multilang/**</beans:value>
+					        </beans:constructor-arg>
+					    </beans:bean>
+					    
+					    <!-- 메뉴얼 -->
+					    <beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					        <beans:constructor-arg>
+					            <beans:value>/**/popupHelpManual.do</beans:value>
+					        </beans:constructor-arg>
+					    </beans:bean>
+					    
+					    <!-- 메뉴얼 -->
+					    <beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					        <beans:constructor-arg>
+					            <beans:value>/ui/bp/common/manual/**</beans:value>
+					        </beans:constructor-arg>
+					    </beans:bean>
+					    
+					    <!-- 예외처리 추가 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/**/infoRenewRequest.do</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+						
+						<!-- CSR 관리 -->
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/ui/common/csr/**</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+
+						<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+							<beans:constructor-arg>
+								<beans:value>/pro/fi/**.do</beans:value>
+							</beans:constructor-arg>
+						</beans:bean>
+
+					</beans:list>
+					
+				</beans:constructor-arg>
+			</beans:bean>
+		</beans:property>
+	
+		<!-- 필터 액션 설정 -->
+		<beans:property name="filterAction">
+			<!-- HTML Escape 방식의 필터 -->
+			<!--<beans:bean class="smartsuite.security.web.filter.advanced.action.XssEscapeAction" />-->
+			
+			<!-- 교체 방식의 필터 -->
+			<!-- 
+			<beans:bean class="smartsuite.security.web.filter.advanced.action.WhitelistReplace">
+				<beans:property name="tagWhitelist">
+					<beans:list>
+						<beans:value>div</beans:value>
+						<beans:value>sc-*</beans:value>
+						<beans:value>*-emro</beans:value>
+						<beans:value>object</beans:value>
+					</beans:list>
+				</beans:property>
+				
+				<beans:property name="attrWhitelist">
+					<beans:list>
+						<beans:value>style</beans:value>
+						<beans:value>onload</beans:value>
+					</beans:list>
+				</beans:property>
+				
+				<beans:property name="replaceTagString">
+					<beans:value>[[TAG]]</beans:value>
+				</beans:property>
+				
+				<beans:property name="replaceAttrString">
+					<beans:value>[[ATTR]]</beans:value>
+				</beans:property>
+			</beans:bean>
+			-->
+
+			<beans:bean class="smartsuite.security.web.filter.advanced.action.XssReplaceAction">
+				<beans:property name="actionType">
+					<beans:value>BLACKLIST</beans:value>
+				</beans:property>
+
+				<beans:property name="tagList">
+					<beans:list>
+						<beans:value>body</beans:value>
+						<beans:value>button</beans:value>
+						<beans:value>embed</beans:value>
+						<beans:value>iframe</beans:value>
+						<beans:value>meta</beans:value>
+						<beans:value>object</beans:value>
+						<beans:value>script</beans:value>
+						<beans:value>link</beans:value>
+						<beans:value>base</beans:value>
+						<beans:value>detail</beans:value>
+					</beans:list>
+				</beans:property>
+
+				<beans:property name="useEscapeHtml">
+					<beans:value type="java.lang.Boolean">false</beans:value>
+				</beans:property>
+
+				<beans:property name="attrList">
+					<beans:list>
+						<beans:value>onload</beans:value>
+						<beans:value>onmouseover</beans:value>
+						<beans:value>onmouseenter</beans:value>
+						<beans:value>data</beans:value>
+						<beans:value>href</beans:value>
+						<beans:value>formaction</beans:value>
+						<beans:value>ontoggle</beans:value>
+					</beans:list>
+				</beans:property>
+
+				<beans:property name="replaceTagString">
+					<beans:value>BLOCKEDTAG</beans:value>
+				</beans:property>
+
+				<beans:property name="replaceAttrString">
+					<beans:value>BLOCKEDATTR</beans:value>
+				</beans:property>
+			</beans:bean>
+		</beans:property>
+	</beans:bean>
+
+	
+	<!-- csrf 필터 예외처리 url -->
+	<beans:bean id="csrfRequestMatcher" class="org.springframework.security.web.util.matcher.AndRequestMatcher">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="smartsuite.security.spring.web.util.matcher.NegatedOrRequestMatcher">
+					<beans:constructor-arg>
+						<beans:array>
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/index.do" />
+							</beans:bean>
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/sp/edoc/contract/findSignContract.do" />
+							</beans:bean>
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/sp/edoc/contract/saveSign.do" />
+							</beans:bean>
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/rest/api/**" />
+							</beans:bean>
+							<!-- 서울보증보험 보증서 수신 url -->
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/sgic/recv.do" />
+							</beans:bean>
+							<!-- SSO 표준화 URL(POST 방식) CSRF 필터 예외 처리-->
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/ssoLoginProcess.do" />
+							</beans:bean>
+							<!-- 가온소프트 모바일 POC용 (테스트 입니다.!)-->
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/mobileLogin.do" />
+							</beans:bean>
+							<!-- 가온소프트 모바일 POC용 (테스트 입니다.!)-->
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/mobile/**" />
+							</beans:bean>
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/pro/fi/**.do" />
+							</beans:bean>
+							<!-- 간편서명 -->
+							<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+								<beans:constructor-arg value="/eformSignLogin.do" />
+							</beans:bean>
+						</beans:array>
+					</beans:constructor-arg>
+				</beans:bean>
+				<!-- Spring Security CSRF Matcher GET, HEAD, TRACE, OPTIONS . -->
+				<beans:bean class="smartsuite.security.spring.web.util.matcher.DefaultRequiresCsrfMatcher" />
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+
+	<beans:bean id="noSessionManageRequest" class="org.springframework.security.web.util.matcher.OrRequestMatcher">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/index.do" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/login.do" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/newVendor.do" />
+				</beans:bean>
+				<!-- 엑셀 업로드 url -->
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/multipart/importexcel.do" />
+				</beans:bean>
+				<!-- 모바일 로그인 -->
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/mobileLogin.do" />
+				</beans:bean>
+				<!-- 모바일 요청 -->
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/mobile/**" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/pro/fi/**.do" />
+				</beans:bean>
+				<!-- 간편서명 -->
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/eformSignLogin.do" />
+				</beans:bean>
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	<!-- 서울보증보험 온라인 연계시 사용 -->
+	<beans:bean id="guaranteeManageRequest" class="org.springframework.security.web.util.matcher.OrRequestMatcher">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="org.springframework.security.web.util.matcher.AntPathRequestMatcher">
+					<beans:constructor-arg value="/sgic/recv.do" />
+				</beans:bean>
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	<authentication-manager id="defaultAuthenticationManager">
+		<authentication-provider ref="defaultAuthenticationProvider" />
+	</authentication-manager>
+	
+	<beans:bean id="requestCache" class="org.springframework.security.web.savedrequest.HttpSessionRequestCache" />
+	
+	<!-- 패스워드 암호화 -->
+	<!-- SHA-512 해시 함수를 이용한  암호화 클래스-->
+	<beans:bean id="shaPasswordEncryptor" class="smartsuite.security.core.authentication.encryption.ShaPasswordEncryptor"></beans:bean>
+	
+	<!-- 세션단위로 관리하는 솔트제공자 -->
+	<beans:bean id="httpSessionSaltSource" class="smartsuite.security.spring.web.authentication.dao.HttpSessionSaltSource">
+		<beans:constructor-arg>
+			<!-- sha 해시함수 솔트 생성자 -->
+			<beans:bean class="smartsuite.security.core.authentication.encryption.salt.SimpleSaltGenerator"></beans:bean>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	<!-- PasswordEncoder 인터페이스를 구현하여 패스워드 인증처리 구현 -->	
+	<beans:bean id="passwordEncorder" class="smartsuite.security.spring.core.authentication.encoding.ProxyPasswordEncoder"
+			p:saltSource-ref="httpSessionSaltSource">
+		<beans:constructor-arg ref="shaPasswordEncryptor"/>
+	</beans:bean>
+	<!-- 패스워드 암호화 -->
+	
+	<!-- 데이터 암,복호화 -->
+	<!-- AES 암호화 키 생성 클래스 -->
+	<beans:bean id="aesKeyGenerator" class="smartsuite.security.core.crypto.AESSecretKeyGenerator"></beans:bean>
+	
+	<!-- AES 암호화 iv 생성 클래스 -->
+	<beans:bean id="ivParameterGenerator" class="smartsuite.security.core.crypto.AESIvParameterGenerator"></beans:bean>
+	
+	<!-- AES 암호화 알고리즘 유틸 클래스 -->
+	<beans:bean id="cipherUtil" class="smartsuite.security.core.crypto.AESCipherUtil">
+		<beans:constructor-arg name="keyGenerator" ref="aesKeyGenerator"></beans:constructor-arg>
+		<beans:constructor-arg name="specGenerator" ref="ivParameterGenerator"></beans:constructor-arg>
+	</beans:bean>
+
+
+	<!-- 견적 입찰 용 RSA 암호화 키 생성 클래스로 키 사이즈는 1024를 기본값으로 사용하며 생성자를 통해 고정키로 변경할 수 있습니다. -->
+	<beans:bean id="bidRsaKeyGenerator" class="smartsuite.app.common.security.FixedBidRSAKeyGenerator"></beans:bean>
+
+	<!-- 견적 입찰 용 RSA 암호화 알고리즘 유틸 클래스 -->
+	<beans:bean class="smartsuite.app.common.security.BidRSACipherUtil">
+		<beans:constructor-arg name="bidKeyGenerator" ref="bidRsaKeyGenerator"></beans:constructor-arg>
+	</beans:bean>
+	<!-- 데이터 암,복호화 -->
+	
+	<!-- 패스워드 로그인 방식에서 사용하는 기본 UserDetailsService -->
+	<beans:bean id="defaultUserDetailsService" class="smartsuite.security.userdetails.DefaultUserDetailsService" p:withoutPassword="false"></beans:bean>
+	<!-- 패스워드 없이 로그인 하는 방식에서 사용하는 UserDetailsService (sso / 공동인증서 로그인 등) -->
+	<beans:bean id="withoutPwUserDetailsService" class="smartsuite.security.userdetails.DefaultUserDetailsService" p:withoutPassword="true"></beans:bean>
+
+	<beans:bean id="defaultAuthenticationProvider"
+		class="org.springframework.security.authentication.dao.DaoAuthenticationProvider"
+		p:hideUserNotFoundExceptions="false"
+		p:userDetailsService-ref="defaultUserDetailsService"
+		p:passwordEncoder-ref="passwordEncorder">
+		<beans:property name="preAuthenticationChecks">
+			<beans:bean class="smartsuite.security.account.spring.DefaultPreAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<beans:property name="postAuthenticationChecks">
+			<beans:bean class="smartsuite.security.account.spring.DefaultPostAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<!-- <beans:property name="authoritiesMapper">
+			<beans:bean
+				class="smartsuit.security.HierarchicalAuthorityMergeAuthoritiesMapper" />
+		</beans:property> -->
+	</beans:bean>
+
+	<!-- Supplier 로그인 -->
+	<beans:bean id="supplierUserDetailsService" class="smartsuite.security.userdetails.SupplierUserDetailsService" p:withoutPassword="false"></beans:bean>
+
+	<beans:bean id="supplierAuthenticationProvider"
+				class="org.springframework.security.authentication.dao.DaoAuthenticationProvider"
+				p:hideUserNotFoundExceptions="false"
+				p:userDetailsService-ref="supplierUserDetailsService"
+				p:passwordEncoder-ref="passwordEncorder">
+		<beans:property name="preAuthenticationChecks">
+			<beans:bean class="smartsuite.security.account.spring.SupplierPreAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<beans:property name="postAuthenticationChecks">
+			<beans:bean class="smartsuite.security.account.spring.SupplierPostAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<!-- <beans:property name="authoritiesMapper">
+			<beans:bean
+				class="smartsuit.security.HierarchicalAuthorityMergeAuthoritiesMapper" />
+		</beans:property> -->
+	</beans:bean>
+
+	<beans:bean id="supplierAuthenticationFailureHandler"
+				class="smartsuite.security.authentication.SupplierAuthenticationFailureHandler"
+				autowire="byType">
+		<beans:property name="defaultFailureUrl" value="/spLoginFailure.do" />
+	</beans:bean>
+
+	<beans:bean id="supplierAuthenticationSuccessHandler"
+				class="smartsuite.security.authentication.SupplierAuthenticationSuccessHandler"
+				autowire="byType">
+		<beans:property name="defaultTargetUrl" value="/afterSpLogin.do" />
+		<!-- 최초 요청 url 로 리다이렉트 여부 -->
+		<!-- <beans:property name="alwaysUseDefaultTargetUrl" value="false" /> -->
+	</beans:bean>
+
+	<authentication-manager id="supplierAuthenticationManager">
+		<authentication-provider ref="supplierAuthenticationProvider" />
+	</authentication-manager>
+	
+	<authentication-manager id="certificateAuthenticationManager"
+	                        erase-credentials="true">
+		<authentication-provider ref="certificateAuthenticationProvider" />
+	</authentication-manager>
+	
+	<beans:bean id="certificateAuthenticationProvider"
+	            class="smartsuite.security.authentication.ExistenceOnlyAuthenticationProvider">
+		<!-- userDetailService 지정 -->
+		<beans:property name="hideUserNotFoundExceptions"
+		                value="false" />
+		<beans:property name="userDetailsService"
+		                ref="supplierUserDetailsService" />
+		<!--
+		<beans:property name="preAuthenticationChecks">
+			<beans:bean class="smartsuite.app.bp.admin.account.spring.DefaultPreAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<beans:property name="postAuthenticationChecks">
+			<beans:bean class="smartsuite.app.bp.admin.account.spring.DefaultPostAuthenticationChecks"></beans:bean>
+		</beans:property>
+		 -->
+	</beans:bean>
+
+
+	<beans:bean id="authenticationFailureHandler"
+		class="smartsuite.security.authentication.DefaultAuthenticationFailureHandler"
+		autowire="byType">
+		<beans:property name="defaultFailureUrl" value="/loginFailure.do" />
+	</beans:bean>
+
+	<beans:bean id="authenticationSuccessHandler"
+		class="smartsuite.security.authentication.DefaultAuthenticationSuccessHandler"
+		autowire="byType">
+		<beans:property name="defaultTargetUrl" value="/afterLogin.do" />
+		<!-- 최초 요청 url 로 리다이렉트 여부 -->
+		<!-- <beans:property name="alwaysUseDefaultTargetUrl" value="false" /> -->
+	</beans:bean>
+	
+	<beans:bean id="usernameOnlyAuthenticationSuccessHandler"
+		class="smartsuite.security.authentication.UsernameOnlyAuthenticationSuccessHandler"
+		autowire="byType">
+		<beans:property name="defaultTargetUrl" value="/afterLogin.do" />
+		<beans:property name="singlePageTargetUrl" value="/afterSinglePageLogin.do" />
+		<!-- 최초 요청 url 로 리다이렉트 여부 -->
+        <beans:property name="alwaysUseDefaultTargetUrl" value="false" />
+	</beans:bean>	
+	
+	<beans:bean id="usernameOnlyAuthenticationFailureHandler"
+		class="smartsuite.security.authentication.UsernameOnlyAuthenticationFailureHandler"
+		autowire="byType">
+		<beans:property name="defaultFailureUrl" value="/loginFailure.do" />
+	</beans:bean>	
+	
+	<beans:bean id="ssoAuthenticationSuccessHandler"
+		class="smartsuite.security.authentication.SsoAuthenticationSuccessHandler"
+		autowire="byType">
+		<beans:property name="defaultTargetUrl" value="/afterLogin.do" />
+		<beans:property name="singlePageTargetUrl" value="/afterSinglePageLogin.do" />
+	</beans:bean>	
+
+	<beans:bean id="ssoAuthenticationFailureHandler"
+		class="smartsuite.security.authentication.SsoAuthenticationFailureHandler"
+		autowire="byType">
+		<beans:property name="defaultFailureUrl" value="/loginFailure.do" />
+	</beans:bean>
+		
+	 <beans:bean id="certificateAuthenticationSuccessHandler"
+		class="smartsuite.security.authentication.CertificateAuthenticationSuccessHandler"
+		autowire="byType">
+		<beans:property name="defaultTargetUrl" value="/afterLogin.do" />
+		<beans:property name="singlePageTargetUrl" value="/afterSinglePageLogin.do" />
+	</beans:bean>	
+
+	<beans:bean id="certificateAuthenticationFailureHandler"
+		class="smartsuite.security.authentication.CertificateAuthenticationFailureHandler"
+		autowire="byType">
+		<beans:property name="defaultFailureUrl" value="/loginFailure.do" />
+	</beans:bean>
+	
+	<!-- 중복로그인 필터로 SessionRegistry 인터페이스를 구현체 생성자 인자로 추가해야 하며 ExpiredSessionStrategy 인터페이스 구현체를  expiredSessionStrategy 프로퍼티에 주입해야 합니다. -->
+	<beans:bean id="concurrencyFilter"
+		class="smartsuite.security.spring.web.session.ConcurrentSessionFilter">
+		<beans:constructor-arg ref="sessionRegistryImpl"/>
+		<!-- ExpiredSessionStrategy 인터페이스 구현체 -->
+		<beans:property name="expiredSessionStrategy">
+			<beans:bean class="smartsuite.security.spring.web.session.SimpleExpiredSessionStrategy">
+				<!-- 일반적인 페이지 요청에 대한 처리 -->
+				<beans:property name="expiredSessionUrl" value="/sessionExpired.do"/>
+				<!-- 중복로그인 기본 메세지 -->
+				<beans:property name="expiredSessionErrorMessage" value="중복로그인 되었습니다."/>
+			</beans:bean>
+		</beans:property>
+	</beans:bean>
+	
+	<!-- logout 성공시 핸들러 -->
+	<beans:bean id="logoutSuccessHandler" class="smartsuite.security.authentication.LogoutSuccessHandler"/>
+	
+	<!-- 세션 무효화 처리 필터 -->
+	<beans:bean id="sessionInvalidateFilter" 
+		class="smartsuite.security.spring.web.session.SessionInvalidateFilter">
+		<!-- InvalidSessionStrategy 인터페이스 구현체 -->
+		<beans:property name="invalidSessionStrategy">
+				<!-- InvalidSessionStrategy 구현체로 요청유형에 따라 invalidate 방식이 다름 -->
+				<beans:bean class="smartsuite.security.spring.web.session.SimpleInvalidSessionStrategy">
+					<!-- 일반적인 페이지 요청에 대한 처리 -->
+					<beans:property name="invalidSessionUrl" value="/invalidSession.do"/>
+					<!-- 세션 무효화 기본 메세지 -->
+					<beans:property name="invalidSessionErrorMessage" value="장시간 사용하지 않아 연결이 종료되었습니다."/>
+				</beans:bean>
+		</beans:property>
+	</beans:bean>
+	
+	<!-- 세션객체와 퍼시스터를 연결하는 스프링 프레임워크 아답터 클래스 
+		SessionRegistryService 인터페이스의 스프링 프레임워크 구현체로  SessionPersister 인터페이스를 이용하여 퍼시스턴스 영역을 프로젝트에 따라 구현할 수 있도록 제공합니다.  -->
+	<beans:bean id="sessionRegistryService" class="smartsuite.security.spring.session.service.SessionRegistryServiceImpl">
+		<beans:property name="sessionPersister">
+			<!-- Memory 에 적재하는 세션 퍼시스터 구현체 -->
+			<beans:bean class="smartsuite.security.session.persist.MemorySessionPersister"/>
+		</beans:property>
+	</beans:bean>
+	
+	<!-- 스프링 SessionRegistry 구현체 -->
+	<beans:bean id="sessionRegistryImpl" 
+				class="smartsuite.security.spring.core.session.SessionRegistryImpl">
+		<!-- SessionRegistryService 인터페이스 구현체   -->
+		<beans:property name="sessionRegistryService" ref="sessionRegistryService"/>
+	</beans:bean>
+	
+	<!-- 세션 인증처리 -->
+	<beans:bean id="sessionAuthenticationStrategy"
+		class="org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="smartsuite.security.spring.web.authentication.session.ConcurrentSessionControlAuthenticationPersistStrategy">
+					<beans:constructor-arg name="sessionRegistry" ref="sessionRegistryImpl" />
+					<beans:constructor-arg name="sessionRegistryService" ref="sessionRegistryService" />
+					<!-- 최대 허용 수 -->
+					<beans:property name="maximumSessions" value="1" />
+					<!-- 중복로그인 처리방식 true(에러발생) false(정상로그인) -->
+					<beans:property name="exceptionIfMaximumExceeded" value="false" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy">
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy">
+					<beans:constructor-arg name="sessionRegistry" ref="sessionRegistryImpl" />
+				</beans:bean>
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+
+	<beans:bean id="customAuthenticationProcessingFilters" class="org.springframework.web.filter.CompositeFilter">
+	    <beans:property name="filters">
+	        <beans:list>
+ 	        	<beans:ref bean="defaultLoginAuthenticationProcessingFilter"/>
+				<beans:ref bean="spLoginAuthenticationProcessingFilter"/>
+                <!-- <beans:ref bean="usernameOnlyAuthenticationProcessingFilter"/>-->
+                <beans:ref bean="ssoAuthenticationProcessingFilter"/>  
+				 <beans:ref bean="certificateAuthenticationProcessingFilter"/>
+	        </beans:list>
+	    </beans:property>
+	</beans:bean>
+
+	<beans:bean id="spLoginAuthenticationProcessingFilter" class="smartsuite.security.authentication.SupplierLoginAuthenticationProcessingFilter"
+				p:usernameParameter="username" p:passwordParameter="password"
+				p:sessionAuthenticationStrategy-ref="sessionAuthenticationStrategy"
+				p:authenticationManager-ref="supplierAuthenticationManager"
+				p:authenticationSuccessHandler-ref="supplierAuthenticationSuccessHandler"
+				p:authenticationFailureHandler-ref="supplierAuthenticationFailureHandler">
+		<beans:constructor-arg>
+			<beans:value>/spLoginProcess.do</beans:value>
+		</beans:constructor-arg>
+	</beans:bean>
+
+
+	<beans:bean id="defaultLoginAuthenticationProcessingFilter" class="smartsuite.security.authentication.DefaultLoginAuthenticationProcessingFilter"
+		p:usernameParameter="username" p:passwordParameter="password"
+		p:sessionAuthenticationStrategy-ref="sessionAuthenticationStrategy"
+		p:authenticationManager-ref="defaultAuthenticationManager"
+		p:authenticationSuccessHandler-ref="authenticationSuccessHandler"
+		p:authenticationFailureHandler-ref="authenticationFailureHandler">
+		<beans:constructor-arg>
+			<beans:value>/loginProcess.do</beans:value>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	<beans:bean id="usernameOnlyAuthenticationProcessingFilter"
+		class="smartsuite.security.authentication.UsernameOnlyAuthenticationProcessingFilter"
+		p:sessionAuthenticationStrategy-ref="sessionAuthenticationStrategy"
+	 	p:authenticationManager-ref="existenceOnlyAuthenticationManager"
+		p:authenticationSuccessHandler-ref="usernameOnlyAuthenticationSuccessHandler"
+		p:authenticationFailureHandler-ref="usernameOnlyAuthenticationFailureHandler">
+		<beans:constructor-arg>
+			<beans:value>/usernameOnlyLoginProcess.do</beans:value>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	<beans:bean id="ssoAuthenticationProcessingFilter"
+		class="smartsuite.security.authentication.SsoAuthenticationProcessingFilter"
+		p:sessionAuthenticationStrategy-ref="sessionAuthenticationStrategy"
+	 	p:authenticationManager-ref="existenceOnlyAuthenticationManager"
+		p:authenticationSuccessHandler-ref="ssoAuthenticationSuccessHandler"
+		p:authenticationFailureHandler-ref="ssoAuthenticationFailureHandler">
+		<beans:constructor-arg>
+			<beans:value>/ssoLoginProcess.do</beans:value>
+		</beans:constructor-arg>
+	</beans:bean>
+	
+	 <beans:bean id="certificateAuthenticationProcessingFilter"
+		class="smartsuite.security.authentication.CertificateAuthenticationProcessingFilter"
+		p:sessionAuthenticationStrategy-ref="sessionAuthenticationStrategy"
+	 	p:authenticationManager-ref="certificateAuthenticationManager"
+		p:authenticationSuccessHandler-ref="certificateAuthenticationSuccessHandler"
+		p:authenticationFailureHandler-ref="certificateAuthenticationFailureHandler">
+		<beans:constructor-arg>
+			<beans:value>/certificateLoginProcess.do</beans:value>
+		</beans:constructor-arg>
+	</beans:bean>
+
+	<authentication-manager id="existenceOnlyAuthenticationManager"
+		erase-credentials="true">
+		<authentication-provider ref="existenceOnlyAuthenticationProvider" />
+	</authentication-manager>
+	
+	<!-- 존재하면 인증시키는 AuthenticationProvider -->
+	<beans:bean id="existenceOnlyAuthenticationProvider"
+		class="smartsuite.security.authentication.ExistenceOnlyAuthenticationProvider">
+		<!-- userDetailService 지정 -->
+		<beans:property name="hideUserNotFoundExceptions"
+			value="false" />
+		<beans:property name="userDetailsService"
+			ref="withoutPwUserDetailsService" />
+		<!-- 
+		<beans:property name="preAuthenticationChecks">
+			<beans:bean class="smartsuite.app.bp.admin.account.spring.DefaultPreAuthenticationChecks"></beans:bean>
+		</beans:property>
+		<beans:property name="postAuthenticationChecks">
+			<beans:bean class="smartsuite.app.bp.admin.account.spring.DefaultPostAuthenticationChecks"></beans:bean>
+		</beans:property>
+		 -->
+	</beans:bean>
+		
+		
+	<beans:bean id="delegatingAuthenticationEntryPoint"
+		class="org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint">
+		<beans:constructor-arg>
+			<beans:map>
+				<!-- Ajax 일 때 403 forbidden 처리 -->
+				<beans:entry key="hasHeader('X-Requested-With','XMLHttpRequest')">
+					<beans:bean class="org.springframework.security.web.authentication.Http403ForbiddenEntryPoint"></beans:bean>
+				</beans:entry>
+			</beans:map>
+		</beans:constructor-arg>
+		<beans:property name="defaultEntryPoint">
+			<beans:bean
+				class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+				<beans:constructor-arg>
+					<beans:value>/login.do</beans:value>
+				</beans:constructor-arg>
+			</beans:bean>
+		</beans:property>
+	</beans:bean>
+	
+	<beans:bean class="smartsuite.security.SecurityProviderImpl" />
+	
+	<beans:bean class="smartsuite.security.authentication.DefaultPasswordGenerator"/>
+	
+	<beans:bean class="smartsuite.security.account.info.AccountInitializer" lazy-init="false"></beans:bean>
+	
+	<beans:bean id="methodSecurityExpressionHandler" class="smartsuite.security.account.spring.AccountMethodSecurityExpressionHandler"></beans:bean>
+	
+	<global-method-security secured-annotations="enabled" pre-post-annotations="enabled">
+		<expression-handler ref="methodSecurityExpressionHandler"/>
+	</global-method-security>
+
+</beans:beans>
