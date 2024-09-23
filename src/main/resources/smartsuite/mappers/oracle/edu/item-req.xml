@@ -484,15 +484,10 @@
 			, REQ.ITEMCAT_LVL_3_CD        /*분류3 코드*/
 			, REQ.ITEMCAT_LVL_4_CD        /*분류4 코드*/
 			, REQ.ITEMCAT_LVL_5_CD        /*분류5 코드*/
-			, REQ.SG_CD           /*소싱그룹 코드*/
 			, REQ.ATHG_UUID          /*첨부 번호*/
 			, REQ.IMG_ATHG_UUID      /*이미지 첨부 번호*/
-			, REQ.DWG_NO      /*도면 번호*/
-			, REQ.MFGR_CD        /*제조사 코드*/
 			, REQ.MFGR_NM        /*제조사 명*/
 			, REQ.MDL_NO          /*모델 번호*/
-			, REQ.HS_NO           /*HS 번호*/
-			, REQ.REP_ITEM_CD_YN       /*대표 코드 여부*/
 			, REQ.RMK             /*비고*/
 			, REQ.REQR_ID          /*요청자 아이디*/
 			, REQ.REQ_DTTM          /*요청 일시*/

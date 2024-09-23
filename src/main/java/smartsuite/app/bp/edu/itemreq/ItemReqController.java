@@ -29,16 +29,6 @@ public class ItemReqController {
 	@Inject
 	CmsCommonService cmsCommonService;
 
-	/**
-	 * 품목 등록 요청 운영조직 초기값
-	 *
-	 * @param
-	 * @return the list
-	 */
-	@RequestMapping(value = "findListInitItemRegReqOorg.do")
-	public @ResponseBody List<Map<String, Object>> findListInitItemRegReqOorg(@RequestBody Map<String, Object> param) {
-		return cmsCommonService.findListInitItemRegReqOorg(param);
-	}
 
 	/**
 	 * 품목 등록 요청 조회
@@ -82,17 +72,6 @@ public class ItemReqController {
 	@RequestMapping(value = "findInfoCopyItemReq.do")
 	public @ResponseBody Map<String, Object> findInfoCopyItemReq(@RequestBody Map<String, Object> param) {
 		return itemReqService.findInfoCopyItemReq(param);
-	}
-
-	/**
-	 * 배정 속성 목록 조회
-	 *
-	 * @param
-	 * @return the map
-	 */
-	@RequestMapping(value = "findListItemAsgnAttrByItemreq.do")
-	public @ResponseBody List<Map<String, Object>> findListItemAsgnAttrByItemreq(@RequestBody Map<String, Object> param) {
-		return cmsCommonService.findListItemAsgnAttr(param);
 	}
 
 	/**

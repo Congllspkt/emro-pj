@@ -146,10 +146,7 @@ public class ItemReqService {
 
 		// 기본 정보
 		Map<String, Object> reqInfo = (Map<String, Object>)param.getOrDefault("reqInfo", Maps.newHashMap());
-		// 속성 정보
-		List<Map<String, Object>> asgnAttrList = (List<Map<String, Object>>)param.getOrDefault("asgnAttrList", Lists.newArrayList());
-		// 운영 정보 목록
-		List<Map<String, Object>> oorgList = (List<Map<String, Object>>)param.getOrDefault("oorgList", Lists.newArrayList());
+		
 		// 등록요청 번호
         Object itemRegReqNo = reqInfo.get("item_reg_req_no");
 
@@ -200,7 +197,8 @@ public class ItemReqService {
 			}
 
 			// 품목마스터 등록요청 & 품목 운영 정보 등록 요청 저장
-			cmsCommonService.insertItemRegReqWithOorg(reqInfo, oorgList);
+			//cmsCommonService.insertItemRegReqWithOorg(reqInfo, oorgList);
+			cmsCommonService.insertItemRegReq(reqInfo);
 		} else {
 			//품목등록요청정보가 존재하면
 			if (cmsCommonService.checkStsApvd(reqInfo)) {
@@ -214,23 +212,23 @@ public class ItemReqService {
 					reqInfo.put("req_item_cd", itemCd);
 				}
 
-				if (asgnAttrList.size() > 0) {
-					// 속성 값에 품목 번호를 추가한다.
-					for (Map attr : asgnAttrList) {
-						attr.put("item_cd", itemCd);
-					}
-				}
+				/*
+				 * if (asgnAttrList.size() > 0) { // 속성 값에 품목 번호를 추가한다. for (Map attr :
+				 * asgnAttrList) { attr.put("item_cd", itemCd); } }
+				 */
 			}
 
-			cmsCommonService.updateItemRegReqWithOorg(reqInfo, oorgList);
+			//cmsCommonService.updateItemRegReqWithOorg(reqInfo, oorgList);
+			cmsCommonService.updateItemRegReq(reqInfo);
 		}
-		cmsCommonService.insertItemIattrRegReqAfterDelete(reqInfo, asgnAttrList, itemRegReqNo);
+		//cmsCommonService.insertItemIattrRegReqAfterDelete(reqInfo, asgnAttrList, itemRegReqNo);
 
 
 		// 품목담당자가 등록(승인) 처리 및 구매담당자 품목등록요청시 표준품목존재할경우
 		if(cmsCommonService.checkStsApvd(reqInfo) && !cmsCommonService.checkReqTypChg(reqInfo)){
-			this.insertItemWithOorg(reqInfo, oorgList);
-			cmsCommonService.insertItemIattrAfterDelete(reqInfo, asgnAttrList);
+			//this.insertItemWithOorg(reqInfo, oorgList);
+			//cmsCommonService.insertItemIattrAfterDelete(reqInfo, asgnAttrList);
+			this.insertItem(reqInfo);
         }
 
 		Map returnMap = Maps.newHashMap();

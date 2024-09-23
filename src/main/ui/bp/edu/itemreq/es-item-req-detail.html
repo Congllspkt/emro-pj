@@ -33,26 +33,20 @@
 		</sc-ajax>
 		
 		<!-- 배정속성 정보 조회 -->
-		<sc-ajax id="findListItemAsgnAttrByItemreq"
+		<!-- <sc-ajax id="findListItemAsgnAttrByItemreq"
 				 url="findListItemAsgnAttrByItemreq.do"
 				 on-response="completeFindListItemAsgnAttrByItemreq">
-		</sc-ajax>
+		</sc-ajax> -->
 		
 		<!-- 저장 -->
 		<sc-ajax id="saveInfoItemReq"
 				 url="saveInfoItemReq.do"
 				 on-response="completeSaveInfoItemReq"></sc-ajax>
-		
-		<!-- 유사도 조회 -->
-		<sc-ajax id="findListItemSimilarity"
-				 url="findListItemSimilarity.do"
-				 on-response="completeFindListItemSimilarity"></sc-ajax>
-		
-		
+
 		<!-- 기능 권한에 따른 버튼 제어 -->
 		<cc-page-title-bar title-text="품목 요청 정보">
 			<sc-button text="입력 초기화" hidden="[[!formula('editable')]]" on-click="onClear" auth-s></sc-button>
-			<sc-button text="품목 복사" hidden="true" on-click="onPopItemCopy" auth-s></sc-button> <!--hidden="[[!formula('editable')]]"-->
+			<sc-button text="품목 복사" hidden="[[!formula('editable')]]" on-click="onPopItemCopy" auth-s></sc-button> <!--hidden="[[!formula('editable')]]"-->
 			<sc-button text="저장" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
 			<sc-button text="등록 요청" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
 			<sc-button text="등록 승인" hidden="[[!formula('isEditableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
@@ -191,53 +185,7 @@
 			
 			<!-- 개별 속성 동적생성 영역 -->
 			<div id="eachAttr"></div>
-			
-			<cc-form-panel title-text="중복/유사 품목 조회" collapsible="true" column="1" hidden="[[!formula('isViewSimilarity')]]">
-				<cc-fieldset validation-group="similarity">
-					<div class="field-box">
-						<sc-label text="유사 품목 수(최대)"></sc-label>
-						<sc-number-field class="w-150 align-right" value="{{similarityOptions.num_topk}}" min-value="0" input-cover="true" format-type="integer" default-value="5" decimal-precision="0" hide-trigger="true" required="true"></sc-number-field>
-						<span style="padding:0 10px"></span>
-						<sc-label text="유사도"></sc-label>
-						<sc-number-field class="w-150 align-right" value="{{similarityOptions.similarity}}" min-value="0" input-cover="true" format-type="qty" default-value="95" required="true"></sc-number-field>
-						<sc-label text="% 이상"></sc-label>
-						<span style="padding:0 10px"></span>
-						<sc-button text="중복/유사 품목 조회" on-click="onFindListItemSimilarity" veto-fixed-size></sc-button>
-					</div>
-				</cc-fieldset>
-				<sc-grid id="gridPanel" class="h-400" editable="false"
-						 data-provider="{{similarityList}}"
-						 use-state="false"
-						 use-selection="false">
-					<cc-grid-toolbar></cc-grid-toolbar>
-					<sc-grid-columns>
-						<sc-data-column data-field="topk_prob" header-text="유사도" width="80" text-align="center" format-type="percentDecimal" item-style-function="onItemStyle"></sc-data-column>
-						<sc-data-column data-field="topk_code" header-text="품목 코드" width="150" editable="false"></sc-data-column>
-						<sc-data-column data-field="item_nm" header-text="품목명" width="200" text-align="left" editable="false" visible="false"></sc-data-column>
-						<sc-data-column data-field="cate_path" header-text="분류" width="220" text-align="left" editable="false" visible="false"></sc-data-column>
-						<sc-data-column data-field="topk_desc" header-text="품목 규격" width="500" text-align="left"></sc-data-column>
-						<sc-data-column data-field="unit_cd" header-text="단위" width="50" editable="false" visible="false"></sc-data-column>
-						<sc-data-column data-field="cur" header-text="통화" width="70" editable="false" visible="false"></sc-data-column>
-						<sc-data-column data-field="po_item_price" header-text="최근PO단가" width="125" format-type="amt" text-align="right" visible="false"></sc-data-column>
-						<sc-date-column data-field="po_cre_date" header-text="PO일자" width="100" editable="false" visible="false"></sc-date-column>
-						<sc-data-column data-field="price_cntr_no" header-text="장기계약번호" width="120" editable="false" visible="false"></sc-data-column>
-						<sc-data-column data-field="sg_path" header-text="SG정보(경로)" width="280" text-align="left" visible="false"></sc-data-column>
-						<sc-combobox-column data-field="cls" header-text="구분" width="90" items="[[codes.mtClsCd]]" display-field="label" value-field="data" visible="false"></sc-combobox-column>
-					</sc-grid-columns>
-					<sc-grid-fields>
-						<sc-grid-field data-field="cntr_rev" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="cntr_item_id" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="cntr_item_lno" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="auto_po_yn" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="po_no" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="po_rev" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="auto_po_yn" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="cate_cd" data-type="text"></sc-grid-field>
-						<sc-grid-field data-field="cate_nm" data-type="text"></sc-grid-field>
-					</sc-grid-fields>
-				</sc-grid>
-			</cc-form-panel>
-			
+	
 			<cc-form-panel form-cls="label-column" style="margin-top:5px;">
 				<cc-fieldset>
 					<sc-label text="첨부파일"></sc-label>
@@ -386,15 +334,7 @@
 					// 요청 유형(C:변경), 변경요청내용 폼 visible처리
 					return reqTyp === "CHG";
 				},
-				isExistItemDoctor: function() {
-					return SCModuleManager.exist('item-doctor');
-				},
-				isExistAsgnAttr: function() {
-					return !UT.isEmpty(this.get("asgnAttrList"));
-				},
-				isViewSimilarity: function() {
-					return this.formula('isExistItemDoctor') && this.formula('editable') && this.formula('isExistAsgnAttr');
-				},
+
 				isItemAdmin: function() {
 					var me = this;
 					var isBoolean = false;
@@ -452,7 +392,7 @@
 				}
 				
 				//운영 조직 추가
-				UT.request(me.$.findListInitItemRegReqOorg);
+				//UT.request(me.$.findListInitItemRegReqOorg);
 				
 				me.set("isInitLoad", false);
 				me.applyFormula();
@@ -565,7 +505,7 @@
 						itemcat_lvl: 4
 					};
 					
-					UT.request(me.$.findListItemAsgnAttrByItemreq);
+					//UT.request(me.$.findListItemAsgnAttrByItemreq);
 					
 				} else {
 					me.set("reqInfo.item_spec", "");
@@ -917,14 +857,14 @@
 				}
 				
 				//oorgList 세팅
-				var provider = me.$.oorgGridPanel.getDataProvider();
-				var oorgList = provider.filterItems({use_yn : "Y"});
+				/* var provider = me.$.oorgGridPanel.getDataProvider();
+				var oorgList = provider.filterItems({use_yn : "Y"}); */
 
 				// request body에 데이타 셋팅
 				me.$.saveInfoItemReq.body = {
 					reqInfo: me.get("reqInfo"),
-					asgnAttrList: me.get("asgnAttrList"),
-					oorgList : oorgList
+					/* asgnAttrList: me.get("asgnAttrList"),
+					oorgList : oorgList */
 				};
 				
 				switch(progSts) {
