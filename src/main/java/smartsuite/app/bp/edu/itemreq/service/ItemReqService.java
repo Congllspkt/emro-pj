@@ -93,22 +93,12 @@ public class ItemReqService {
 	public ResultMap deleteListItemReq(Map<String, Object> param) {
 		List<Map<String, Object>> deleteList = (List<Map<String, Object>>)param.getOrDefault("deleteList", Lists.newArrayList());
 		for(Map<String, Object> row : deleteList){
-			this.deleteItemOorgRegReq(row);
 			this.deleteItemRegReq(row);
 		}
 
 		return ResultMap.SUCCESS();
 	}
 
-	/**
-	 * 품목 운영조직 등록 요청 삭제 (단건)
-	 *
-	 * @param
-	 * @return the void
-	 */
-	public void deleteItemOorgRegReq(Map<String, Object> param) {
-		itemReqRepository.deleteItemOorgRegReq(param);
-	}
 
 	/**
 	 * 품목 등록 요청 삭제 (단건)

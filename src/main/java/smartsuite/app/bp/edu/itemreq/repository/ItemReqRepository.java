@@ -24,10 +24,6 @@ public class ItemReqRepository {
 		return new QueryFloaterStream(sqlSession, NAMESPACE + "findListItemReq", param);
 	}
 
-	public void deleteItemOorgRegReq(Map<String, Object> param) {
-		sqlSession.delete(NAMESPACE + "deleteItemOorgRegReq", param);
-	}
-
 	public void deleteItemRegReq(Map<String, Object> param) {
 		sqlSession.delete(NAMESPACE + "deleteItemRegReq", param);
 	}

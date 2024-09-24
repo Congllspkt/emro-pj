@@ -426,13 +426,7 @@
 		AND ITEMCAT.USE_YN = 'Y'
 		ORDER BY ITEMCAT.SCR_DSPY_ORD, GRPG.IATTR_GRP_CD
 	</select>
-	<delete id="deleteItemOorgRegReq">
-		/* item-req.deleteItemOorgRegReq : 품목 운영조직 등록 요청 삭제 */
-		DELETE FROM ITEM_OORG_REG_REQ
-		WHERE TEN_ID  = #{g.tenant}
-		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
-		AND OORG_CD = #{p.oorg_cd}
-	</delete>
+
 	<delete id="deleteItemRegReq">
 		/* item-req.deleteItemRegReq : 품목 등록 요청 삭제 */
 		DELETE FROM ITEM_REG_REQ_EDU
