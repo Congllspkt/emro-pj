@@ -556,101 +556,110 @@
 			</otherwise>
 		</choose>
 	</select>
-	<insert id="insertItem">
-		/* item-common.insertItem : 품목마스터 insert */
-		INSERT INTO ITEM (
-			TEN_ID						/*시스템 아이디*/
-			, ITEM_CD					/*품목 코드*/
-			, REQ_ITEM_CD				/*요청 품목 코드*/
-			, ITEM_REG_REQ_NO			/*등록요청번호*/
-			, ITEM_NM					/*품목 명*/
-			, ITEM_NM_EN				/*품목 영문 명*/
-			, ITEM_SIMWORD				/*유사어*/
-			, ITEM_SPEC					/*규격*/
-			, UOM_CCD					/*기본 단위 코드*/
-			, ITEMCAT_LVL_1_CD			/*분류1 코드*/
-			, ITEMCAT_LVL_2_CD			/*분류2 코드*/
-			, ITEMCAT_LVL_3_CD			/*분류3 코드*/
-			, ITEMCAT_LVL_4_CD			/*분류4 코드*/
-			, ITEMCAT_LVL_5_CD			/*분류5 코드*/
-			, SG_CD						/*소싱그룹 코드*/
-			, ATHG_UUID					/*첨부 번호*/
-			, IMG_ATHG_UUID				/*이미지 첨부 번호*/
-			, DWG_NO					/*도면 번호*/
-			, MFGR_CD					/*제조사코드*/
-			, MFGR_NM					/*제조사 명*/
-			, MDL_NO					/*모델 번호*/
-			, HS_NO						/*HS 번호*/
-			, REP_ITEM_CD_YN			/*대표코드*/
-			, USE_YN					/*사용 여부*/
-			, RMK						/*비고*/
-			, STS						/*상태*/
-			, REGR_ID					/*등록자 아이디*/
-			, REG_DTTM					/*등록 일시*/
-			, MODR_ID					/*수정자 아이디*/
-			, MOD_DTTM					/*수정 일시*/
+	
+	<insert id="insertItemRegReq">
+		/* cms-common.insertItemRegReq : 품목 등록 요청 테이블 insert */
+		INSERT INTO ITEM_REG_REQ_EDU (
+			TEN_ID /*시스템 아이디 */
+			, ITEM_REG_REQ_NO /*등록 요청 번호 */
+			, REQ_TYP_CCD /*요청 유형 */
+			, ITEM_CD /*품목 코드 */
+			, ITEM_NM /*품목 명 */
+			, ITEM_NM_EN /*품목 영문 명 */
+			, ITEM_SIMWORD /*동의어 */
+			, ITEM_SPEC /*규격 */
+			, UOM_CCD /*기본 단위 코드 */
+			, ITEMCAT_LVL_1_CD /*분류1 코드 */
+			, ITEMCAT_LVL_2_CD /*분류2 코드 */
+			, ITEMCAT_LVL_3_CD /*분류3 코드 */
+			, ITEMCAT_LVL_4_CD /*분류4 코드 */
+			, ITEMCAT_LVL_5_CD /*분류5 코드 */
+			, ATHG_UUID /*첨부 번호 */
+			, IMG_ATHG_UUID /*이미지 첨부 번호 */
+			, MFGR_NM /*제조사 명 */
+			, MDL_NO /*모델 번호 */
+			, RMK /*비고 */
+			, REQR_ID /*요청자 아이디 */
+			, REQ_DTTM /*요청 일시 */
+			, APVR_ID /*승인자 아이디 */
+			, APVD_DTTM /*승인 일시 */
+			, ITEM_REG_REQ_RET_RSN /*반려 사유 */
+			, ITEM_REG_REQ_STS_CCD /*진행 상태 T:임시저장,P:요청,C:승인,B:반려*/
+			, STS /*상태*/
+			, REGR_ID /*등록자 아이디 */
+			, REG_DTTM /*등록 일시 */
+			, MODR_ID /*수정자 아이디 */
+			, MOD_DTTM /*수정 일시 */
 		) VALUES (
-			#{g.tenant}					/*시스템 아이디*/
-			, #{p.item_cd}				/*품목 코드*/
-			, #{p.req_item_cd}			/*요청 품목 코드*/
-			, #{p.item_reg_req_no}		/*등록요청번호*/
-			, #{p.item_nm}				/*품목 명*/
-			, #{p.item_nm_en}			/*품목 영문 명*/
-			, #{p.item_simword}			/*유사어*/
-			, #{p.item_spec}			/*규격*/
-			, #{p.uom_ccd}				/*기본 단위 코드*/
-			, #{p.itemcat_lvl_1_cd}		/*분류1 코드*/
-			, #{p.itemcat_lvl_2_cd}		/*분류2 코드*/
-			, #{p.itemcat_lvl_3_cd}		/*분류3 코드*/
-			, #{p.itemcat_lvl_4_cd}		/*분류4 코드*/
-			, #{p.itemcat_lvl_5_cd}		/*분류5 코드*/
-			, #{p.sg_cd}				/*소싱그룹 코드*/
-			, #{p.athg_uuid}			/*첨부 번호*/
-			, #{p.img_athg_uuid}		/*이미지 첨부 번호*/
-			, #{p.dwg_no}				/*도면 번호*/
-			, #{p.mfgr_cd}				/*제조사코드*/
-			, #{p.mfgr_nm}				/*제조사명*/
-			, #{p.mdl_no}				/*모델 번호*/
-			, #{p.hs_no}				/*HS 번호*/
-			, #{p.rep_item_cd_yn}		/*대표코드*/
-			, 'Y'						/*사용여부*/
-			, #{p.rmk}					/*비고*/
-			, 'C'						/*상태*/
-			, #{g.username}				/*등록자 아이디*/
-			, #{g.now}					/*등록 일시*/
-			, #{g.username}				/*수정자 아이디*/
-			, #{g.now}					/*수정 일시*/
+			#{g.tenant} /*시스템 아이디 */
+			, #{p.item_reg_req_no} /*등록 요청 번호 */
+			, #{p.req_typ_ccd} /*요청 유형 */
+			, #{p.item_cd} /*품목 코드 */
+			, #{p.item_nm} /*품목 명 */
+			, #{p.item_nm_en} /*품목 영문 명 */
+			, #{p.item_simword} /*동의어 */
+			, #{p.item_spec} /*규격 */
+			, #{p.uom_ccd} /*구매 단위 코드 */
+			, #{p.itemcat_lvl_1_cd} /*분류1 코드 */
+			, #{p.itemcat_lvl_2_cd} /*분류2 코드 */
+			, #{p.itemcat_lvl_3_cd} /*분류3 코드 */
+			, #{p.itemcat_lvl_4_cd} /*분류4 코드 */
+			, #{p.itemcat_lvl_5_cd} /*분류5 코드 */
+			, #{p.athg_uuid} /*첨부 번호 */
+			, #{p.img_athg_uuid} /*이미지 첨부 번호 */
+			, #{p.mfgr_nm} /*제조사 명 */
+			, #{p.mdl_no} /*모델 번호 */
+			, #{p.rmk} /*비고 */
+			, #{g.username} /*요청자 아이디 */
+			, #{g.now} /*요청 일시 */
+			, #{p.apvr_id} /*승인자 아이디 */
+			, #{p.apvd_dttm} /*승인 일시 */
+			, #{p.item_reg_req_ret_rsn} /*반려 사유 */
+			, #{p.item_reg_req_sts_ccd} /*진행 상태 t:임시저장,p:요청,c:승인,b:반려*/
+			, 'C' /*상태*/
+			, #{g.username} /*등록자 아이디 */
+			, #{g.now} /*등록 일시 */
+			, #{g.username} /*수정자 아이디 */
+			, #{g.now} /*수정 일시 */
 		)
 	</insert>
-	<insert id="insertItemOorg">
-		/* item-common.insertItemOorg : 품목 운영조직 INSERT */
-		INSERT INTO ITEM_OORG (
-			TEN_ID
-			, OORG_CD
-			, ITEM_CD
-			, ITEM_LDTM
-			, QTA_YN
-			, TL_YN
-			, RMK
-			, STS
-			, REGR_ID
-			, REG_DTTM
-			, MODR_ID
-			, MOD_DTTM
-		) VALUES (
-			#{g.tenant}
-			, #{p.oorg_cd}
-			, #{p.item_cd}
-			, CAST(#{p.item_ldtm} AS FLOAT  )
-			, #{p.qta_yn}
-			, #{p.tl_yn}
-			, #{p.rmk}
-			, 'C'
-			, #{g.username}
-			, #{g.now}
-			, #{g.username}
-			, #{g.now}
-		)
-	</insert>
+	
+	<update id="updateItemRegReq">
+		/* cms-common.updateItemRegReq : 품목 등록 요청 update */
+		UPDATE ITEM_REG_REQ_EDU SET
+			STS                  = 'U'
+			, MODR_ID              = #{g.username} /*수정자 아이디*/
+			, MOD_DTTM             = #{g.now} /*수정 일시*/
+			, REQ_TYP_CCD          = #{p.req_typ_ccd} /*요청 유형*/
+			, ITEM_CD              = #{p.item_cd} /*품목 코드*/
+			, ITEM_NM              = #{p.item_nm} /*품목 명*/
+			, ITEM_NM_EN           = #{p.item_nm_en} /*품목 영문 명*/
+			, ITEM_SIMWORD         = #{p.item_simword} /*동의어*/
+			, ITEM_SPEC            = #{p.item_spec} /*규격*/
+			, UOM_CCD              = #{p.uom_ccd} /*기본 단위 코드*/
+			, ITEMCAT_LVL_1_CD     = #{p.itemcat_lvl_1_cd} /*분류1 코드*/
+			, ITEMCAT_LVL_2_CD     = #{p.itemcat_lvl_2_cd} /*분류2 코드*/
+			, ITEMCAT_LVL_3_CD     = #{p.itemcat_lvl_3_cd} /*분류3 코드*/
+			, ITEMCAT_LVL_4_CD     = #{p.itemcat_lvl_4_cd} /*분류4 코드*/
+			, ITEMCAT_LVL_5_CD     = #{p.itemcat_lvl_5_cd} /*분류5 코드*/
+			, ATHG_UUID            = #{p.athg_uuid} /*첨부 번호*/
+			, IMG_ATHG_UUID        = #{p.img_athg_uuid} /*이미지 첨부 번호*/
+			, MFGR_NM              = #{p.mfgr_nm} /*제조사 명*/
+			, MDL_NO               = #{p.mdl_no} /*모델 번호*/
+			, RMK                  = #{p.rmk} /*비고*/
+			, APVR_ID              = CASE WHEN #{p.item_reg_req_sts_ccd} = 'APVD' THEN #{g.username}
+			                              WHEN #{p.item_reg_req_sts_ccd} = 'RET' THEN #{g.username}
+										ELSE #{p.aprv_id}
+									END /*승인자 아이디*/
+			, APVD_DTTM            = CASE WHEN #{p.item_reg_req_sts_ccd} = 'APVD' THEN #{g.now}
+			                              WHEN #{p.item_reg_req_sts_ccd} = 'RET' THEN #{g.now}
+										ELSE APVD_DTTM
+									END /*승인 일시*/
+			, ITEM_REG_REQ_RET_RSN = #{p.item_reg_req_ret_rsn} /*반려 사유*/
+			, ITEM_REG_REQ_STS_CCD = #{p.item_reg_req_sts_ccd} /*진행 상태 T:임시저장,P:요청,C:승인,B:반려*/
+		WHERE TEN_ID = #{g.tenant}
+		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
+	</update>
+	
 	
 </mapper>

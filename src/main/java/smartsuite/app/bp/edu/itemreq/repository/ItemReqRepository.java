@@ -60,11 +60,12 @@ public class ItemReqRepository {
 		return sqlSession.selectOne(NAMESPACE + "checkItemMasterDuplicate", param);
 	}
 	
-	public void insertItem(Map<String, Object> param) {
-		sqlSession.insert(NAMESPACE + "insertItem", param);
+	public void insertItemRegReq(Map<String, Object> param) {
+		sqlSession.insert(NAMESPACE + "insertItemRegReq", param);
 	}
-
-	public void insertItemOorg(Map<String, Object> param) {
-		sqlSession.insert(NAMESPACE + "insertItemOorg", param);
+	
+	public void updateItemRegReq(Map<String, Object> param) {
+		sqlSession.update(NAMESPACE + "updateItemRegReq", param);
 	}
+	
  }

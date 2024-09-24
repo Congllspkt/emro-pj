@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import smartsuite.app.bp.edu.itemreq.service.ItemReqService;
-import smartsuite.app.bp.edu.cmsCommon.service.CmsCommonService;
 
 import smartsuite.app.common.shared.ResultMap;
 import smartsuite.data.FloaterStream;
@@ -25,9 +24,6 @@ public class ItemReqController {
 
 	@Inject
 	ItemReqService itemReqService;
-
-	@Inject
-	CmsCommonService cmsCommonService;
 
 
 	/**
@@ -107,14 +103,4 @@ public class ItemReqController {
 		return itemReqService.saveInfoItemReq(param);
 	}
 
-	/**
-	 * Item-doctor 연동 유사도 조회
-	 *
-	 * @param
-	 * @return the resultmap
-	 */
-	@RequestMapping(value = "findListItemSimilarity.do")
-	public @ResponseBody ResultMap findListItemSimilarity(@RequestBody Map<String, Object> param) {
-		return cmsCommonService.findListItemSimilarity(param);
-	}
 }
