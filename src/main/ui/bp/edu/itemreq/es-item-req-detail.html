@@ -49,7 +49,8 @@
 			<sc-button text="Copy Request" hidden="[[!formula('editable')]]" hidden="[[!formula('editable')]]" on-click="onPopItemCopy" auth-s></sc-button>
 			<sc-button text="Save" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
 			<sc-button text="Request" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
-			<sc-button text="Register" hidden="[[!formula('isEditableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
+			<sc-button text="Approve" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
+			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
 			<sc-button text="Close" on-click="onClose"></sc-button>
 		</cc-page-title-bar>
 		
@@ -278,27 +279,6 @@
 						return SCSessionManager.userDetails;
 					}
 				},
-				
-				similarityOptions: {
-					type: Object,
-					value: function() {
-						return {};
-					}
-				},
-				
-				similarityList: {
-					type: Array,
-					value: function() {
-						return [];
-					}
-				},
-				
-				oorgList: {
-					type: Array,
-					value: function() {
-						return [];
-					}
-				}
 			},
 			
 			formulas: {
@@ -341,14 +321,19 @@
 					var info = me.get("sessionInfo.authorities");
 					
 					for(var i in info) {
-						if(info[i].authority == 'I100') {
+						if(info[i].authority == 'A200') {
 							isBoolean = true;
 						}
 					}
 					return isBoolean;
 				},
-				isEditableAndItemAdmin: function() {
-					return this.formula('editable') && this.formula('isItemAdmin');
+				isApprovable: function() {
+					var me = this;
+					var progSts = me.get("reqInfo.item_reg_req_sts_ccd");
+					return progSts === "APVL_REQG";
+				},
+				isApprovableAndItemAdmin: function() {
+					return this.formula('isApprovable') && this.formula('isItemAdmin');
 				},
 				isExistPro: function() {
 					return SCModuleManager.exist('pro');
@@ -855,16 +840,10 @@
 						}
 					}
 				}
-				
-				//oorgList 세팅
-				/* var provider = me.$.oorgGridPanel.getDataProvider();
-				var oorgList = provider.filterItems({use_yn : "Y"}); */
-
+	
 				// request body에 데이타 셋팅
 				me.$.saveInfoItemReq.body = {
 					reqInfo: me.get("reqInfo"),
-					/* asgnAttrList: me.get("asgnAttrList"),
-					oorgList : oorgList */
 				};
 				
 				switch(progSts) {
@@ -987,10 +966,15 @@
 			},
 			
 			//등록 버튼 클릭
-			onReg: function() {
+			onApprove: function() {
 				var me = this;
 				// 승인
 				me.doSave("APVD");
+			},
+			onReject: function() {
+				var me = this;
+				// 승인
+				me.doSave("RET");
 			},
 			
 			// 규격 정보 세팅
@@ -1029,116 +1013,7 @@
 				
 				return strSpec;
 			},
-			
-			onFindListItemSimilarity : function() {
-				var me = this;
-				var param = new Object();
-				
-				// 1. 품목명 && 분류 && 유사도 option validation
-				if(!me.validate('similarity')) {
-					UT.alert("STD.E0000");
-					return;
-				}
-				
-				// 2. 속성에 대한 validation
-				var validate = false;
-				for(var i=0,len=me.asgnAttrList.length; i<len; i++) {
-					if(UT.isNotEmpty(me.asgnAttrList[i].iattr_inp_val)){
-						validate = true;
-						break;
-					}
-				}
-				if(!validate) {
-					UT.alert("STD.CMS1014"); //유사도 검색을 위해 하나 이상의 속성값을 입력해주세요.
-					return;
-				}
-				
-				// 2. data 가공
-				var inputs = me.asgnAttrList.reduce(function(pre, attrInfo) {
-					if(UT.isNotEmpty(attrInfo.iattr_inp_val)){
-						var data = {
-							seq : 0,
-							item_nm : me.reqInfo.item_nm,
-							class_cd : me.reqInfo.item_nm,
-							attr_cd : attrInfo.iattr_cd,
-							attr_val : attrInfo.iattr_inp_val
-						}
-						pre.push(data);
-					}
-					return pre;
-				}, []);
-				
-				var options = new Object();
-				options.similarity = me.get("similarityOptions.similarity");
-				options.num_topk = me.get("similarityOptions.num_topk");
-				
-				me.$.findListItemSimilarity.body = {
-					options : options,
-					inputs : inputs
-				};
-				UT.request(me.$.findListItemSimilarity);
-			},
-			
-			completeFindListItemSimilarity : function(e, res) {
-				var me = this;
-				var result = res.response;
-				
-				if(result.success) {
-					me.set("similarityList", result.resultList);
-					return;
-				} else {
-					UT.alert("STD.E9999");// 오류가 발생하였습니다.\n관리자에게 문의하세요
-					return;
-				}
-			},
-			
-			onItemStyle: function(data) {
-				var similarity = data.topk_prob;
-				if(similarity >= 95){
-					return {
-						background : "#cf5d5b",
-						fontWeight : "bold"
-					};
-				}else if(similarity >= 90){
-					return {
-						background : "#e4af4e",
-						fontWeight : "bold"
-					};
-				} else {
-					return {
-						background : "#98bf55",
-						fontWeight : "bold"
-					};
-				}
-			},
-			
-			////////////////////////////////////
-			//////////////oorgList//////////////
-			////////////////////////////////////
-			onItemEditEnd : function(e, detail) {
-				var me = this;
-				var data = detail.data;
-				var item = detail.item;
-				var grid = me.$.oorgGridPanel;
-				var provider = grid.getDataProvider();
-				
-				if(item.dataField == "use_yn" && data.use_yn == "N") {
-					provider.setItemAt(item.rowIndex, {"tl_yn" : "N", "qta_yn" : "N"});
-				}
-			},
-			onItemEditbleFunction : function(data, item) {
-				return data["use_yn"] == "Y";
-			},
-			
-			// 사용여부 배경색 지정
-			onItemStyleFunction: function(data, item) {
-				var me = this;
-				
-				if(item.dataField == "use_yn") {
-					return {"background": "#FFFFFF"};
-				}
-			}
-			
+	
 		});
 	</script>
 </dom-module>
