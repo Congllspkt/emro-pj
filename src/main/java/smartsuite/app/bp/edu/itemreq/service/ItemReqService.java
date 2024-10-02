@@ -203,6 +203,9 @@ public class ItemReqService {
 				 * asgnAttrList) { attr.put("item_cd", itemCd); } }
 				 */
 			}
+			else if (this.checkStsRet(reqInfo)) {
+				reqInfo.put("req_typ_ccd", "CHG");
+			}
 
 			//cmsCommonService.updateItemRegReqWithOorg(reqInfo, oorgList);
 			this.updateItemRegReq(reqInfo);
@@ -460,6 +463,16 @@ public class ItemReqService {
 		return "APVL_REQG".equals(param.get("item_reg_req_sts_ccd"));
 	}
 
+	/**
+	 * 거부(RET)인증 확인
+	 *
+	 * @param
+	 * @return the boolean
+	 */
+	public Boolean checkStsRet(Map param) {
+		return "RET".equals(param.get("item_reg_req_sts_ccd"));
+	}
+	
 	/**
 	 * 상태가 승인(APVD) 인지 check
 	 *
