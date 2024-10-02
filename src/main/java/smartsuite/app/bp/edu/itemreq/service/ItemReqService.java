@@ -157,10 +157,10 @@ public class ItemReqService {
         }
 
 		// 상태 체크 (결재 요청중, 승인 인 경우 수정할 수 없다)
-		resultMap = this.checkExistedApvdAndReqgWithResult(reqInfo);
-		if(resultMap.isFail()) {
-			return ResultMap.FAIL(resultMap.getResultMessage());
-		}
+//		resultMap = this.checkExistedApvdAndReqgWithResult(reqInfo);
+//		if(resultMap.isFail()) {
+//			return ResultMap.FAIL(resultMap.getResultMessage());
+//		}
 
 		resultMap = this.setReqInfoWhenApvdReqgOrApvd(reqInfo, isNew);
 
@@ -197,7 +197,7 @@ public class ItemReqService {
 					reqInfo.put("item_cd", itemCd);
 					reqInfo.put("req_item_cd", itemCd);
 				}
-
+				reqInfo.put("req_typ_ccd", "CHG");
 				/*
 				 * if (asgnAttrList.size() > 0) { // 속성 값에 품목 번호를 추가한다. for (Map attr :
 				 * asgnAttrList) { attr.put("item_cd", itemCd); } }
