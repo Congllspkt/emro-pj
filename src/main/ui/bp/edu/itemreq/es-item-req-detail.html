@@ -49,8 +49,8 @@
 			<sc-button text="Copy Request" hidden="[[!formula('editable')]]" hidden="[[!formula('editable')]]" on-click="onPopItemCopy" auth-s></sc-button>
 			<sc-button text="Save" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
 			<sc-button text="Request" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
-			<sc-button text="Approve" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
-			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReg" auth-s></sc-button>
+			<sc-button text="Approve" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onApprove" auth-s></sc-button>
+			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReject" auth-s></sc-button>
 			<sc-button text="Close" on-click="onClose"></sc-button>
 		</cc-page-title-bar>
 		
