@@ -10,14 +10,7 @@
 	</style>
 	
 	<template>
-		<!-- <sc-request-group id="codes" init>
-			<sc-ajax url="findListOperationOrganizationByUser.do"
-					 body="IO"
-					 content-type="text/plain"
-					 last-response="{{codes.oorgCd}}">
-			</sc-ajax>
-		</sc-request-group> -->
-		
+
 		<!-- 품목등록 조회 -->
 		<sc-ajax id="findInfoAllItemReq"
 				 url="findInfoAllItemReq.do"
@@ -31,13 +24,7 @@
 				 body="{{searchParam}}"
 				 on-response="completeFindInfoCopyItemReq">
 		</sc-ajax>
-		
-		<!-- 배정속성 정보 조회 -->
-		<!-- <sc-ajax id="findListItemAsgnAttrByItemreq"
-				 url="findListItemAsgnAttrByItemreq.do"
-				 on-response="completeFindListItemAsgnAttrByItemreq">
-		</sc-ajax> -->
-		
+	
 		<!-- 저장 -->
 		<sc-ajax id="saveInfoItemReq"
 				 url="saveInfoItemReq.do"
@@ -335,15 +322,6 @@
 				isApprovableAndItemAdmin: function() {
 					return this.formula('isApprovable') && this.formula('isItemAdmin');
 				},
-				isExistPro: function() {
-					return SCModuleManager.exist('pro');
-				},
-				isExistItemCd: function() {
-					return !UT.isEmpty(this.get("reqInfo.item_cd"));
-				},
-				isVisibleYn: function() {
-					return this.formula('isExistItemCd') && this.formula('isExistPro');
-				}
 			},
 			
 			observers: ["onChangeItemCatLvl4Cd(reqInfo.itemcat_lvl_4_cd)"],
@@ -497,20 +475,6 @@
 				}
 			},
 			
-			completeFindListItemAsgnAttrByItemreq : function(e, res) {
-				var me = this;
-				var result = res.response;
-				me.set("asgnAttrList", result);
-				
-				if(UT.isNotEmpty(result)) {
-					me.onMakeAsgnAttr(me.get("asgnAttrList"));
-				}
-				
-				me.applyFormula('isViewSimilarity');
-				me.set("similarityList", new Array());
-				me.$.gridPanel.doContentElementResize();
-			},
-			
 			//분류값에 따라 동적생성된 속성 정보를 화면에서 제거한다.
 			removeAttrChild: function() {
 				var me = this;
@@ -520,239 +484,6 @@
 				
 				// 속성 정보 동적 node 삭제
 				me.removeChildByTagName(me.$.eachAttr, "cc-form-panel");
-			},
-			
-			// 배정속성 조회 callback
-			onMakeAsgnAttr: function(asgnAttrList) {
-				var me             = this;
-				var result         = asgnAttrList;
-				var commonAttrList = []; // 공통속성 List
-				var eachAttrList   = []; // 개별속성 List
-				
-				for(var i = 0, len = result.length; i < len; i++) {
-					var attr = result[i];
-					attr.indexId = i; //추후 조회를 위한 index 입력
-					(attr.comm_yn == "Y") ? commonAttrList.push(attr) : eachAttrList.push(attr); //공통,개별 속성 판단 후 데이터 분기처리
-				}
-				
-				me.set("commonAttrList", commonAttrList);
-				me.set("eachAttrList", eachAttrList);
-				
-				// 공통속성 Panel 생성
-				if(commonAttrList.length > 0) {
-					var commonAttrPanel = me.createCcFormPanel(me.$.commonAttr, commonAttrList);
-					commonAttrPanel.titleText = me.translate("공통 속성"); 	// 속성그룹명
-					commonAttrPanel.i18nDisabled = true;
-				}
-				
-				// 개별속성
-				var eachAttrGrp = {};
-				
-				// 개별속성 객체에 속성그룹코드별로 배열을 세팅한다.
-				for(var i = 0; i < eachAttrList.length; i++) {
-					var key = eachAttrList[i].iattr_grp_cd;
-					if(typeof (eachAttrGrp[key]) == "undefined") {
-						eachAttrGrp[key] = [];
-					}
-					
-					eachAttrGrp[key].push(eachAttrList[i]);
-				}
-				
-				// 개별 속성 종류별로 Panel 생성
-				var eachAttrPanel;
-				for(var key in eachAttrGrp) {
-					if(eachAttrGrp.hasOwnProperty(key)) {
-						var arrtList = eachAttrGrp[key];
-						var eachAttrPanel = me.createCcFormPanel(me.$.eachAttr, arrtList);
-						eachAttrPanel.titleText = me.translate("개별 속성") + " - " + arrtList[0].disp_iattr_grp_nm; //속성그룹명
-						eachAttrPanel.i18nDisabled = true;
-					}
-				}
-				
-				// 속성정보를 조합하여 규격에 보여준다.
-				if(UT.isEmpty(me.get("reqInfo.item_spec"))) {
-					me.buildSpec();
-				}
-				
-				// 저장된 속성값이 세팅되지 않게 한다.
-				me.set("attrSetModeYn", "N");
-			},
-			
-			createCcFormPanel : function(target, attrList) {
-				var me = this;
-				var panel = document.createElement("cc-form-panel");
-				
-				me.appendCcFieldSet(panel, attrList);
-				me.domAppendChild(target, panel);
-				
-				return panel;
-			},
-			
-			appendCcFieldSet : function(panel, attrList) {
-				var me = this;
-				var progSts = me.get("reqInfo.item_reg_req_sts_ccd");
-				var attrSetModeYn = me.get("attrSetModeYn");
-				
-				for(var i in attrList) {
-					var item = attrList[i], label, input, combo;
-					
-					fieldSet = document.createElement('cc-fieldset');
-					label = document.createElement('sc-label');
-					label.text = item.asgd_iattr_nm; // 배정속성명
-					label.setAttribute("i18n-disabled", true); //동적 생성 컬럼에 대해서 다국어 적용 X
-					me.domAppendChild(fieldSet, label);
-
-					var inputList = item.lov_inp_val;
-					// 입력값목록 존재 시 (data type과 상관없음. 콤보박스로 생성)
-					if(inputList) {
-						var comboValues = inputList.split('/');
-						var comboList = [];
-						
-						for(var i = 0; i < comboValues.length; i++) {
-							var row = {
-								label: comboValues[i]
-								, data: comboValues[i]
-							};
-							
-							comboList.push(row);
-						}
-						
-						combo = document.createElement('sc-combobox-field');
-						combo.displayField = "label";
-						combo.valueField = "data";
-						combo.items = comboList;
-						combo.placeholder = "선택";
-						combo.classList.add('attrValues');
-						combo.classList.add('w-200');
-						
-						// 필수 여부
-						if(item.mand_yn == "Y") {
-							combo.required = true;
-						} else {
-							combo.required = false;
-						}
-						
-						// (등록요청or승인) and 품목등록요청화면
-						if(progSts == "APVL_REQG" || progSts == "APVD") {
-							combo.disabled = true;
-						}
-						
-						// 데이터가 존재하는 경우 기본값 세팅 안함.
-						if(item.iattr_inp_val) {
-							combo.value = (attrSetModeYn == "Y") ? item.iattr_inp_val : item.dflt_val;
-						} else {
-							combo.value = item.dflt_val;
-						}
-						
-						combo.addEventListener('change', function() {
-							me.buildSpec();
-						});
-						
-						me.domAppendChild(fieldSet, combo);
-						
-					} else {
-						if(item.dat_typ_ccd === "NUMC") {
-							input = document.createElement('sc-number-field');
-							// 입력값 범위
-							input.minValue = item.inp_val_st;
-							input.maxValue = item.inp_val_ed;
-							input.maxLength = 13;
-							input.style = 'vertical-align: top;';
-						} else {
-							input = document.createElement('sc-text-field');
-							
-							// 입력값 최대 길이
-							input.maxLength = item.inp_val_len;
-						}
-						input.classList.add('attrValues');
-						
-						// 데이터가 존재하는 경우 기본값 세팅 안함.
-						if(item.iattr_inp_val && attrSetModeYn == "Y") {
-							var attrVal = item.iattr_inp_val;
-							
-							if(item.dat_typ_ccd === "NUMC") {
-								if(!Number.isNaN(Number(attrVal))) {
-									input.value = attrVal;
-								}
-							} else {
-								input.value = attrVal;
-							}
-						} else if(item.dflt_val) {
-							var basVal = item.dflt_val;
-							
-							if(item.dat_typ_ccd === "NUMC") {
-								if(!Number.isNaN(Number(basVal))) {
-									input.value = basVal;
-								}
-							} else {
-								input.value = basVal;
-							}
-						}
-						
-						// 필수 여부
-						if(item.mand_yn == "Y") {
-							input.required = true;
-						} else {
-							input.required = false;
-						}
-						
-						// (등록요청or승인) and 품목등록요청화면
-						if(progSts == "APVL_REQG" || progSts == "APVD") {
-							input.disabled = true;
-						}
-						
-						input.addEventListener('change', function() {
-							me.buildSpec();
-						});
-						
-						input.classList.add('w-200');
-						me.domAppendChild(fieldSet, input);
-					}
-					
-					// 속성 유형이 UOM 이면 단위 콤보 생성
-					if(item.iattr_uom_use_yn == "Y") {
-						var unitGrpCd = item.iattr_uom_cls_ccd;
-						
-						var comCode = item[unitGrpCd];
-						
-						combo = document.createElement('sc-combobox-field');
-						combo.displayField = "label";
-						combo.valueField = "data";
-						combo.items = comCode;
-						combo.placeholder = "선택";
-						combo.classList.add('w-200');
-						combo.id = "unitValues" + item.indexId;
-						combo.style.marginLeft = "5px";
-						
-						// 필수 여부
-						if(item.mand_yn == "Y") {
-							combo.required = true;
-						} else {
-							combo.required = false;
-						}
-						
-						// 데이터가 존재하는 경우 기본값 세팅 안함.
-						if(item.iattr_uom_ccd) {
-							if(attrSetModeYn == "Y") {
-								combo.value = item.iattr_uom_ccd;
-							} else {
-								combo.value = item.dflt_val;
-							}
-						}
-						
-						// (등록요청or승인) and 품목등록요청화면
-						if(progSts == "APVL_REQG" || progSts == "APVD") {
-							combo.disabled = true;
-						}
-						
-						combo.addEventListener('change', function() {
-							me.buildSpec();
-						});
-						me.domAppendChild(fieldSet, combo);
-					}
-
-					me.domAppendChild(panel, fieldSet);
-				}
 			},
 
 			//target에 element를 추가한다.
