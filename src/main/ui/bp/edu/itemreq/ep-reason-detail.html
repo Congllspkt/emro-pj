@@ -1,0 +1,30 @@
+<dom-module id="ep-reason-detail">
+
+    <style>
+        :host {
+            @apply(--vbox-layout);
+        }
+    </style>
+
+    <template>
+    	<sc-label text="reason"></sc-label>
+		<sc-textarea-field  value="{{reasonStr}}" style="height:150px" readonly="true"></sc-textarea-field>
+					
+    </template>
+
+    <script>
+        Polymer({
+            is: "ep-reason-detail",
+            properties: {
+            	reasonStr: {
+					type: String,
+					value: ""
+				}
+            }, 
+            load: function(param) {
+				var me = this;
+				me.set("reasonStr", param.item_reg_req_ret_rsn);			},
+        });
+    </script>
+
+</dom-module>
