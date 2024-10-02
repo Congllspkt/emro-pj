@@ -286,11 +286,7 @@ public class ItemReqService {
 
 			// 변경요청이 아닌 경우, 변경요청인 경우는 제외
 			if (this.checkNullObject(reqInfo.get("item_chg_req_cont"))) {
-				resultMap = this.checkItemMasterDuplicateWithResult(reqInfo);
-
-				if (resultMap.isFail()) {
-					return ResultMap.FAIL(resultMap.getResultMessage());
-				} else {
+	
 					// Rule Engine 적용 : 구매담당자가 승인 시 프로세스 종료 여부
 					// 등록요청(APVL_REQG)
 					if (this.checkStsApvdReqg(reqInfo) && "true".equals(reqInfo.get("is_buyer"))
@@ -304,7 +300,7 @@ public class ItemReqService {
 						isNew = true;
 						reqInfo.put("apvr_id", userInfo.get("usr_id"));
 					}
-				}
+				
 			}
 		}
 		if(this.checkStsApvd(reqInfo)){
@@ -414,25 +410,7 @@ public class ItemReqService {
 		resultMap.setResultData(itemInfo);
 		return ResultMap.SUCCESS(resultMap.getResultData());
 	}
-	
-	//nhatlt
-	public ResultMap checkItemMasterDuplicateWithResult(Map param) {
-		ResultMap resultMap = ResultMap.getInstance();
 
-		Map item = this.checkItemMasterDuplicate(param);
-		if((Integer)item.get("cnt") > 0) {
-			String resultMsg = messageUtil.getCodeMessage("STD.N2101", item.get("item_cd"), null, LocaleContextHolder.getLocale());
-			resultMap.setResultMessage(resultMsg);
-			return resultMap.FAIL(resultMap.getResultMessage());
-		}
-
-		return ResultMap.SUCCESS(item);
-	}
-	
-	public Map<String, Object> checkItemMasterDuplicate(Map param) {
-		return itemReqRepository.checkItemMasterDuplicate(param);
-	}
-	
 	public void insertItemRegReq(Map<String, Object> param) {
 		itemReqRepository.insertItemRegReq(param);
 	}

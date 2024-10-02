@@ -515,41 +515,7 @@
 		<result column="CNT" javaType="integer" property="cnt"/>
 		<result column="ITEM_CD" javaType="string" property="item_cd"/>
 	</resultMap>
-	<select id="checkItemMasterDuplicate" resultMap="resultMap-findDuplicate">
-		/* item-common.checkItemMasterDuplicate : 품목 마스터 정보 중복 확인 */
-		SELECT
-		    COUNT(1) AS CNT
-			, MAX(ITEM_CD) AS ITEM_CD
-		FROM ITEM
-		WHERE ITEM_NM = #{p.item_nm}
-		<if test="p.item_cd != null and p.item_cd != &quot;&quot;">
-			AND ITEM_CD != #{p.item_cd}
-		</if>
-		<choose>
-			<when test="p.item_spec != null and p.item_spec != &quot;&quot;">
-				AND ITEM_SPEC = #{p.item_spec}
-			</when>
-			<otherwise>
-				AND ITEM_SPEC IS NULL
-			</otherwise>
-		</choose>
-		<choose>
-			<when test="p.mdl_no != null and p.mdl_no != &quot;&quot;">
-				AND MDL_NO = #{p.mdl_no}
-			</when>
-			<otherwise>
-				AND MDL_NO IS NULL
-			</otherwise>
-		</choose>
-		<choose>
-			<when test="p.mfgr_nm != null and p.mfgr_nm!= &quot;&quot;">
-				AND MFGR_NM = #{p.mfgr_nm}
-			</when>
-			<otherwise>
-				AND MFGR_NM IS NULL
-			</otherwise>
-		</choose>
-	</select>
+	
 	
 	<insert id="insertItemRegReq">
 		/* cms-common.insertItemRegReq : 품목 등록 요청 테이블 insert */

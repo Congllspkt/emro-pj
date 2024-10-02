@@ -51,11 +51,7 @@ public class ItemReqRepository {
 	public int findCntProgressingItemRegReq(Map<String, Object> param) {
 		return sqlSession.selectOne(NAMESPACE + "findCntProgressingItemRegReq", param);
 	}
-	
-	public Map<String, Object> checkItemMasterDuplicate(Map<String, Object> param) {
-		return sqlSession.selectOne(NAMESPACE + "checkItemMasterDuplicate", param);
-	}
-	
+
 	public void insertItemRegReq(Map<String, Object> param) {
 		sqlSession.insert(NAMESPACE + "insertItemRegReq", param);
 	}
