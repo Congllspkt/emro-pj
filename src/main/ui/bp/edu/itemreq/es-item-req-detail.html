@@ -699,10 +699,10 @@
 				me.doSave("APVD");
 			},
 			
-			onReject: function(data) {
+			onReject: function(e, data) {
 				var me = this;
 				
-				me.set("reqInfo", data.detail);
+				me.set("reqInfo", data);
 				// 승인
 				me.doSave("RET");
 			},
