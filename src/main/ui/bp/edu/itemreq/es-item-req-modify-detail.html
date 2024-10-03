@@ -6,14 +6,7 @@
 	</style>
 
 	<template>
-		<sc-request-group id="codes" init>
-			<sc-ajax url="findListOperationOrganizationByUser.do"
-					 body="IO"
-					 content-type="text/plain"
-					 last-response="{{codes.oorgCd}}">
-			</sc-ajax>
-		</sc-request-group>
-		
+
 		<!-- 품목등록 조회 -->
 		<sc-ajax id="findInfoModifyItemReq"
 				 url="findInfoModifyItemReq.do"
@@ -170,25 +163,7 @@
 					<sc-upload id="fileUpload" class="h-200" value="{{itemInfo.athg_uuid}}" editable="false"></sc-upload>
 				</cc-fieldset>
 			</cc-form-panel>
-			
-			<sc-grid id="oorgGridPanel" class="h-300" collapsible="true"
-					 editable="false"
-					 use-state="false"
-					 use-selection="false"
-					 data-provider="{{oorgList}}">
-				<cc-grid-toolbar title-text="운영조직">
-				</cc-grid-toolbar>
-				<sc-grid-columns>
-					<sc-combobox-column data-field="oorg_cd" header-text="운영조직" width="200" display-field="logic_org_nm" value-field="oorg_cd" items="{{codes.oorgCd}}"></sc-combobox-column>
-					<sc-checkbox-column data-field="use_yn" header-text="사용 여부" width="120" text-align="center" checked-value="Y" un-checked-value="N"
-										editable="true" display-box="true" display-checkbox="false" hide-unchecked-mark="true" item-style-function="onItemStyleFunction"></sc-checkbox-column>
-					<sc-checkbox-column data-field="bpa_yn" 	header-text="BPA 여부"		width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
-					<sc-checkbox-column data-field="mult_vd_yn" header-text="멀티 협력사 여부"	width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
-					<sc-checkbox-column data-field="qta_subj_yn" 	header-text="쿼터 여부"	width="120" editable="false" checked-value="Y" un-checked-value="N" display-checkbox="false" visible="[[formula('isExistPro')]]"></sc-checkbox-column>
-					<sc-checkbox-column data-field="tl_yn" 		header-text="Touchless 여부"	width="120" editable="true"	 checked-value="Y" un-checked-value="N" display-checkbox="false"></sc-checkbox-column>
-					<sc-checkbox-column data-field="qta_yn" 	header-text="쿼터 대상 여부"		width="120" editable="true"	 checked-value="Y" un-checked-value="N" display-checkbox="false"></sc-checkbox-column>
-				</sc-grid-columns>
-			</sc-grid>
+
 		</div>
 	</template>
 
