@@ -56,6 +56,7 @@
 		
 		onSave: function() {
 			var me = this;
+
 			me.fire("reject", me.itemReqInfo);
 			me.$.rejectReasonDialog.close();
 		}

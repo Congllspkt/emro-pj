@@ -454,12 +454,6 @@
 				
 				if(itemcatCd) {
 					me.set("asgnAttrList", new Array());
-					me.$.findListItemAsgnAttrByItemreq.body = {
-						itemcat_cd: itemcatCd,
-						itemcat_lvl: 4
-					};
-					
-					//UT.request(me.$.findListItemAsgnAttrByItemreq);
 					
 				} else {
 					me.set("reqInfo.item_spec", "");
@@ -699,15 +693,15 @@
 			
 			onReject: function(data) {
 				var me = this;
-
-				me.set("reqInfo", data);
+				
+				me.set("reqInfo", data.detail);
 				// 승인
 				me.doSave("RET");
 			},
 			
 			showRejectReasonPopup: function() {
 				var me = this;
-
+				
 				me.$.rejectReasonPopup.load(me.reqInfo);
 			},
 			
