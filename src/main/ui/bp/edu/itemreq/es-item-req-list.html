@@ -102,8 +102,7 @@
 				<sc-group-column  hide-child-headers="true" 	header-text="요청 상태" width="150">
 
 				<sc-combobox-column data-field="item_reg_req_sts_ccd" width="100" display-field="label" value-field="data" items="{{codes.progStsList}}"></sc-combobox-column>
-				<sc-image-column data-field="click_link" width="50"  text-align="center" image-change-function="onImageChange"></sc-image-column>
-
+				<sc-image-column data-field="icon_reject" width="50" text-align="center" image-change-function="imageChangeFunction"></sc-image-column>
 				</sc-group-column>
 			
 			
@@ -202,7 +201,7 @@
 				} else {
 					me.fire("show-detail", data);
 				}
-			} else if (item.dataField === "btn_select" && data["item_reg_req_sts_ccd"] === "RET") {
+			} else if (item.dataField === "icon_reject" && data["item_reg_req_sts_ccd"] === "RET") {
 				me.showRejectReasonPopup(data);
 			}
 		},
@@ -257,6 +256,14 @@
 				return "link";
 			}else{
 				return "";
+			}
+		},
+		
+		imageChangeFunction: function(data, item) {
+			var dataField = item.dataField;
+
+			if(dataField === "icon_reject" && data["item_reg_req_sts_ccd"] === "RET") {
+				return "link";
 			}
 		},
 		
