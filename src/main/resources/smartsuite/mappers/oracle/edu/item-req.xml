@@ -161,6 +161,7 @@
 		</if>
 		ORDER BY REQ.MOD_DTTM DESC
 	</select>
+
 	<select id="findInfoItemReq" resultType="map">
 		/* item-req.findInfoItemReq :품목 등록 요청 상세 */
 		SELECT
@@ -360,72 +361,6 @@
 		WHERE REQ.TEN_ID     = #{g.tenant}
 		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
 	</select>
-	<select id="findListItemAsgnAttrByItemIattrRegReq" resultType="map">
-		/* item-req.findListItemAsgnAttrByItemIattrRegReq : 요청된 분류 기반으로 배정된 속성 조회 */
-		SELECT
-		    REQ.TEN_ID
-			, REQ.IATTR_GRP_CD
-			, REQ.IATTR_CD
-			, REQ.IATTR_UUID
-			, GRPG.ASGD_IATTR_NM
-			, GRPG.ASGD_IATTR_NM_EN
-			, GRPG.ASGD_IATTR_NM
-			, GRPG.IATTR_UOM_USE_YN
-			, GRPG.MAND_YN
-			, GRPG.DAT_TYP_CCD
-			, GRPG.INP_VAL_LEN
-			, GRPG.DFLT_VAL
-			, GRPG.LIST_SHOW_YN
-			, IATTR.IATTR_NM
-			, IATTR.IATTR_NM_EN
-			, ITEMCAT.SCR_DSPY_ORD
-			, ITEMCAT.ITEMCAT_CD
-			, ITEMCAT.ITEMCAT_LVL
-			, ITEMCAT.RMK
-			, ITEMCAT.IH_ITEMCAT_LVL
-			, GRP.IATTR_GRP_NM
-			, GRP.IATTR_GRP_NM_EN
-			, CASE WHEN 'en_US' = #{g.locale} THEN GRP.IATTR_GRP_NM_EN
-			    ELSE GRP.IATTR_GRP_NM
-			    END DISP_IATTR_GRP_NM
-			, ITEMCAT.USE_YN
-			, IATTR.EXPLN_TYP_CCD
-			, IATTR.IATTR_UOM_CLS_CCD
-			, IATTR.COMM_YN
-			, IATTR.LOV_INP_VAL
-			, IATTR.INP_VAL_ST
-			, IATTR.INP_VAL_ED
-			, IATTR.INP_VAL_SAMP
-			, REQ.IATTR_INP_VAL
-			, REQ.IATTR_UOM_CCD
-		FROM ITEM_IATTR_REG_REQ_EDU REQ
-		INNER JOIN ITEMCAT_IATTR ITEMCAT
-		ON ITEMCAT.TEN_ID = REQ.TEN_ID
-		AND ITEMCAT.ITEMCAT_CD = REQ.ITEMCAT_CD
-		AND ITEMCAT.IATTR_GRP_CD = REQ.IATTR_GRP_CD
-		AND ITEMCAT.IATTR_CD = REQ.IATTR_CD
-		AND ITEMCAT.IATTR_UUID = REQ.IATTR_UUID
-		AND ITEMCAT.STS != 'D'
-		INNER JOIN IATTR_GRPG GRPG
-		ON GRPG.TEN_ID = ITEMCAT.TEN_ID
-		AND GRPG.IATTR_GRP_CD = ITEMCAT.IATTR_GRP_CD
-		AND GRPG.IATTR_CD = ITEMCAT.IATTR_CD
-		AND GRPG.IATTR_UUID = ITEMCAT.IATTR_UUID
-		AND GRPG.STS != 'D'
-		INNER JOIN IATTR_GRP GRP
-		ON GRP.TEN_ID = GRPG.TEN_ID
-		AND GRP.IATTR_GRP_CD = GRPG.IATTR_GRP_CD
-		AND GRP.STS != 'D'
-		INNER JOIN IATTR IATTR
-		ON IATTR.TEN_ID = GRP.TEN_ID
-		AND IATTR.IATTR_CD = GRPG.IATTR_CD
-		AND IATTR.STS != 'D'
-		WHERE REQ.TEN_ID = #{g.tenant}
-		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
-		AND REQ.STS != 'D'
-		AND ITEMCAT.USE_YN = 'Y'
-		ORDER BY ITEMCAT.SCR_DSPY_ORD, GRPG.IATTR_GRP_CD
-	</select>
 
 	<delete id="deleteItemRegReq">
 		/* item-req.deleteItemRegReq : 품목 등록 요청 삭제 */
@@ -433,6 +368,7 @@
 		WHERE TEN_ID  = #{g.tenant}
 		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
 	</delete>
+
 	<select id="checkExistedItemRegReq" resultType="int">
 		/* item-req.checkExistedItemRegReq : 결재 요청중이거나 작성중인 데이터가 있는 지 확인 */
 		SELECT
@@ -443,24 +379,7 @@
 		AND ITEM_REG_REQ_STS_CCD IN ('CRNG', 'APVL_REQG') /* 작성중, 결재 요청중 */
 		AND STS != 'D'
 	</select>
-	<select id="checkExistedApvdAndReqg" resultType="int">
-		/* item-req.checkExistedApvdAndReqg : 결재 요청중이거나 승인 중인 데이터가 있는 지 확인 */
-		SELECT
-				CAST(COUNT(ITEM_REG_REQ_NO) AS NUMERIC) AS CNT  FROM ITEM_REG_REQ_EDU
-		WHERE TEN_ID = #{g.tenant}
-		AND ITEM_REG_REQ_NO = #{p.item_reg_req_no}
-		AND ITEM_REG_REQ_STS_CCD IN ('APVL_REQG', 'APVD') /* 결재 요청중, 승인 */
-		AND STS != 'D'
-	</select>
-	<select id="findCntProgressingItemRegReq" resultType="int">
-		/* item-req.findCntProgressingItemRegReq : 진행중인 품목등록요청 데이터 확인 */
-		SELECT
-				CAST(COUNT(ITEM_REG_REQ_NO) AS NUMERIC) AS CNT  FROM ITEM_REG_REQ
-		WHERE TEN_ID = #{g.tenant}
-		AND ITEM_CD = #{p.item_cd}
-		AND ITEM_REG_REQ_STS_CCD IN ('CRNG', 'APVL_REQG') /* 작성중, 승인요청중 */
-		AND STS != 'D'
-	</select>
+
 	<select id="findInfoItemRegReq" resultType="map">
 		/* item-req.findInfoItemRegReq : 품목 등록 요청 상세 */
 		SELECT
@@ -510,15 +429,9 @@
 		WHERE REQ.TEN_ID = #{g.tenant}
 		AND REQ.ITEM_REG_REQ_NO = #{p.item_reg_req_no}
 	</select>
-	
-	<resultMap id="resultMap-findDuplicate" type="map">
-		<result column="CNT" javaType="integer" property="cnt"/>
-		<result column="ITEM_CD" javaType="string" property="item_cd"/>
-	</resultMap>
-	
-	
+
 	<insert id="insertItemRegReq">
-		/* cms-common.insertItemRegReq : 품목 등록 요청 테이블 insert */
+		/* insertItemRegReq : 품목 등록 요청 테이블 insert */
 		INSERT INTO ITEM_REG_REQ_EDU (
 			TEN_ID /*시스템 아이디 */
 			, ITEM_REG_REQ_NO /*등록 요청 번호 */
@@ -585,7 +498,7 @@
 	</insert>
 	
 	<update id="updateItemRegReq">
-		/* cms-common.updateItemRegReq : 품목 등록 요청 update */
+		/* updateItemRegReq : 품목 등록 요청 update */
 		UPDATE ITEM_REG_REQ_EDU SET
 			STS                  = 'U'
 			, MODR_ID              = #{g.username} /*수정자 아이디*/

@@ -2,13 +2,11 @@ package smartsuite.app.bp.edu.itemreq.repository;
 
 import org.apache.ibatis.session.SqlSession;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import smartsuite.data.FloaterStream;
 import smartsuite.mybatis.QueryFloaterStream;
 
 import javax.inject.Inject;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -32,24 +30,12 @@ public class ItemReqRepository {
 		return sqlSession.selectOne(NAMESPACE + "findInfoItemReq", param);
 	}
 
-	public List<Map<String, Object>> findListItemAsgnAttrByItemIattrRegReq(Map<String, Object> param) {
-		return sqlSession.selectList(NAMESPACE + "findListItemAsgnAttrByItemIattrRegReq", param);
-	}
-
 	public int checkExistedItemRegReq(Map<String, Object> param) {
 		return sqlSession.selectOne(NAMESPACE + "checkExistedItemRegReq", param);
 	}
 
-	public int checkExistedApvdAndReqg(Map<String, Object> param) {
-		return sqlSession.selectOne(NAMESPACE + "checkExistedApvdAndReqg", param);
-	}
-
 	public Map<String, Object> findInfoItemRegReq(Map<String, Object> param) {
 		return sqlSession.selectOne(NAMESPACE + "findInfoItemRegReq", param);
-	}
-
-	public int findCntProgressingItemRegReq(Map<String, Object> param) {
-		return sqlSession.selectOne(NAMESPACE + "findCntProgressingItemRegReq", param);
 	}
 
 	public void insertItemRegReq(Map<String, Object> param) {

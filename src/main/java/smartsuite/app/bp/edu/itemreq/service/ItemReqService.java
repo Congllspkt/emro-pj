@@ -6,12 +6,11 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import smartsuite.app.bp.edu.itemreq.repository.ItemReqRepository;
 import smartsuite.app.common.message.MessageUtil;
@@ -55,12 +54,7 @@ public class ItemReqService {
 	 */
 	public Map<String, Object> findInfoAllItemReq(Map<String, Object> param) {
 		Map<String, Object> resultMap = Maps.newHashMap();
-//		List<Map<String, Object>> asgnAttrList = this.findListItemAsgnAttrByItemIattrRegReq(param);
-
 		resultMap.put("reqInfo", this.findInfoItemReq(param));
-//		resultMap.put("oorgList", cmsCommonService.findListItemRegReqOorg(param));
-//		resultMap.put("asgnAttrList", cmsCommonService.addInfoUomList(asgnAttrList));
-
 		return resultMap;
 	}
 
@@ -72,16 +66,6 @@ public class ItemReqService {
 	 */
 	public Map<String, Object> findInfoItemReq(Map<String, Object> param) {
 		return itemReqRepository.findInfoItemReq(param);
-	}
-
-	/**
-	 * 품목 등록 요청 상세 (배정된 정보)
-	 *
-	 * @param
-	 * @return the map
-	 */
-	public List<Map<String, Object>> findListItemAsgnAttrByItemIattrRegReq(Map<String, Object> param) {
-		return itemReqRepository.findListItemAsgnAttrByItemIattrRegReq(param);
 	}
 
 	/**
@@ -156,12 +140,6 @@ public class ItemReqService {
         	}
         }
 
-		// 상태 체크 (결재 요청중, 승인 인 경우 수정할 수 없다)
-//		resultMap = this.checkExistedApvdAndReqgWithResult(reqInfo);
-//		if(resultMap.isFail()) {
-//			return ResultMap.FAIL(resultMap.getResultMessage());
-//		}
-
 		resultMap = this.setReqInfoWhenApvdReqgOrApvd(reqInfo, isNew);
 
 		if(resultMap.isFail()) {
@@ -235,19 +213,6 @@ public class ItemReqService {
 		return ResultMap.SUCCESS();
 	}
 
-	public ResultMap checkExistedApvdAndReqgWithResult(Map<String, Object> param) {
-		ResultMap resultMap = ResultMap.getInstance();
-
-		if(this.checkExistedApvdAndReqg(param)){
-			resultMap.setResultMessage("STD.E9400");
-			return ResultMap.FAIL(resultMap.getResultMessage());
-		}
-
-		return ResultMap.SUCCESS();
-	}
-
-
-
 	/**
 	 * 품목 등록 요청 저장
 	 * 작성중이거나 승인요청중인 건이 있는지 체크(count)
@@ -257,10 +222,6 @@ public class ItemReqService {
 	 */
 	public Boolean checkExistedItemRegReq(Map<String, Object> param){
 		return itemReqRepository.checkExistedItemRegReq(param) > 0;
-	}
-
-	public Boolean checkExistedApvdAndReqg(Map<String, Object> param){
-		return itemReqRepository.checkExistedApvdAndReqg(param) > 0;
 	}
 
 	/**
@@ -369,49 +330,6 @@ public class ItemReqService {
 		}
 
 		return result;
-	}
-
-	/**
-	 * EVENT 진행중인 품목등록요청 데이터 확인
-	 *
-	 * @param
-	 * @return int
-	 */
-	public int findCntProgressingItemRegReq(Map<String, Object> param) {
-		return itemReqRepository.findCntProgressingItemRegReq(param);
-	}
-
-	/**
-	 * EVENT 품목 변경 요청 저장
-	 *
-	 * @param
-	 * @return resultmap
-	 */
-	public ResultMap saveInfoChangeItemReq(Map<String, Object> param) {
-		ResultMap resultMap = ResultMap.getInstance();
-		Map<String, Object> itemInfo = (Map<String, Object>) param.getOrDefault("itemInfo", Maps.newHashMap());
-		Object itemRegReqNo = itemInfo.get("item_reg_req_no");
-
-		itemInfo.put("req_typ_ccd", "CHG");
-
-		resultMap = this.checkExistedItemRegReqWithResult(itemInfo);
-		if(resultMap.isFail()) {
-			return ResultMap.FAIL(resultMap.getResultMessage());
-		}
-
-		if(null == this.findInfoItemRegReq(itemInfo)) {
-			// 등록 요청 번호 채번
-			if(null == itemRegReqNo || "".equals(itemRegReqNo)) {
-				itemRegReqNo = sharedService.generateDocumentNumber("RM");
-				itemInfo.put("item_reg_req_no", itemRegReqNo);
-			}
-			this.insertItemRegReq(itemInfo);
-		} else {
-			this.updateItemRegReq(itemInfo);
-		}
-
-		resultMap.setResultData(itemInfo);
-		return ResultMap.SUCCESS(resultMap.getResultData());
 	}
 
 	public void insertItemRegReq(Map<String, Object> param) {
