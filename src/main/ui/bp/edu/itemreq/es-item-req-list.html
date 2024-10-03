@@ -195,12 +195,7 @@
 			var	item = event.detail.item;
 			
 			if(item.dataField === "item_reg_req_no") {
-				//요청유형
-				if(data.req_typ_ccd === "CHG") {
-					me.fire("show-modify-detail", data);
-				} else {
-					me.fire("show-detail", data);
-				}
+				me.fire("show-detail", data);
 			} else if (item.dataField === "icon_reject" && data["item_reg_req_sts_ccd"] === "RET") {
 				me.showRejectReasonPopup(data);
 			}

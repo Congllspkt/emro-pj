@@ -265,7 +265,7 @@
 					var editable = false;
 					var progSts = me.get("reqInfo.item_reg_req_sts_ccd") || "CRNG";
 					// 작성중 또는 반려
-					if(progSts === "CRNG" || progSts === "RET") {
+					if(progSts === "CRNG") {
 						editable = true;
 					}
 					return editable;
