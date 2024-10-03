@@ -590,7 +590,7 @@
 						message = "STD.N1200";
 				}
 				UT.confirm(message || "STD.N1200", function() {
-					Promise.all([me.$.fileUpload.upload(), me.$.imgUpload.upload()]).then(function() {
+					Promise.all([me.$.fileUpload.upload()]).then(function() {
 						UT.request(me.$.saveInfoItemReq);
 					});
 				});
