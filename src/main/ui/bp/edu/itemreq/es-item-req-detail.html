@@ -29,13 +29,15 @@
 
 		<!-- 기능 권한에 따른 버튼 제어 -->
 		<cc-page-title-bar title-text="품목 요청 정보">
-			<sc-button text="Clear" hidden="[[!formula('editable')]]" on-click="onClear" auth-s></sc-button>
-			<sc-button text="Copy Request" hidden="[[!formula('editable')]]" hidden="[[!formula('editable')]]" on-click="onPopItemCopy" auth-s></sc-button>
-			<sc-button text="Save" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
-			<sc-button text="Request" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
-			<sc-button text="Approve" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onApprove" auth-s></sc-button>
-			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="showRejectReasonPopup" auth-s></sc-button>
-			<sc-button text="Close" on-click="onClose"></sc-button>
+			<sc-button text="입력 초기화" hidden="[[!formula('editable')]]" on-click="onClear" auth-s></sc-button>
+			<sc-button text="품목 복사" hidden="[[!formula('editable')]]" on-click="onPopItemCopy" auth-s></sc-button>
+			<sc-button text="저장" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
+			<sc-button text="등록 요청" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
+
+			<!-- only show for item manager role -->
+			<sc-button text="반려" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="showRejectReasonPopup" auth-s></sc-button>
+			<sc-button text="등록 승인" hidden="[[!formula('isEditableOrApprovableAndItemAdmin')]]" on-click="onApprove" auth-s></sc-button>
+			<sc-button text="닫기" on-click="onClose"></sc-button>
 		</cc-page-title-bar>
 		
 		<cc-auth-checker check-list="auth-r,auth-s"></cc-auth-checker>
@@ -312,6 +314,12 @@
 				},
 				isApprovableAndItemAdmin: function() {
 					return this.formula('isApprovable') && this.formula('isItemAdmin');
+				},
+				isEditableAndItemAdmin: function() {
+					return this.formula('editable') && this.formula('isItemAdmin');
+				},
+				isEditableOrApprovableAndItemAdmin: function() {
+					return (this.formula('editable') || this.formula('isApprovable')) && this.formula('isItemAdmin');
 				},
 			},
 			
