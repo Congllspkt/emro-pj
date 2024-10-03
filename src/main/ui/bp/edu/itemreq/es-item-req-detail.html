@@ -2,13 +2,11 @@
 <sc-link rel="import" href="/ui/bp/itemMaster/itemcommon/ep-item-master-search-list.html"></sc-link>
 
 <dom-module id="es-item-req-detail">
-	
 	<style>
 		:host {
 			@apply(--vbox-layout);
 		}
 	</style>
-	
 	<template>
 
 		<!-- 품목등록 조회 -->
@@ -24,7 +22,6 @@
 				 body="{{searchParam}}"
 				 on-response="completeFindInfoCopyItemReq">
 		</sc-ajax>
-	
 		<!-- 저장 -->
 		<sc-ajax id="saveInfoItemReq"
 				 url="saveInfoItemReq.do"
@@ -37,7 +34,7 @@
 			<sc-button text="Save" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
 			<sc-button text="Request" hidden="[[!formula('editable')]]" on-click="onRegRequest" auth-s></sc-button>
 			<sc-button text="Approve" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onApprove" auth-s></sc-button>
-			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="onReject" auth-s></sc-button>
+			<sc-button text="Reject" hidden="[[!formula('isApprovableAndItemAdmin')]]" on-click="showRejectReasonPopup" auth-s></sc-button>
 			<sc-button text="Close" on-click="onClose"></sc-button>
 		</cc-page-title-bar>
 		
@@ -167,13 +164,11 @@
 					<sc-textarea-field max-length="128" readonly="[[!formula('editable')]]" value="{{reqInfo.rmk}}"></sc-textarea-field>
 				</cc-fieldset>
 			</cc-form-panel>
-	
 			<!-- 공통 속성 동적생성 영역 -->
 			<div id="commonAttr"></div>
 			
 			<!-- 개별 속성 동적생성 영역 -->
 			<div id="eachAttr"></div>
-	
 			<cc-form-panel form-cls="label-column" style="margin-top:5px;">
 				<cc-fieldset>
 					<sc-label text="첨부파일"></sc-label>
@@ -182,8 +177,9 @@
 			</cc-form-panel>
 
 		</div>
+		
+		<ep-item-reject-reason id="rejectReasonPopup" on-reject="onReject"></ep-item-reject-reason>
 	</template>
-	
 	<script>
 		Polymer({
 			is: 'es-item-req-detail',
@@ -566,7 +562,6 @@
 						}
 					}
 				}
-	
 				// request body에 데이타 셋팅
 				me.$.saveInfoItemReq.body = {
 					reqInfo: me.get("reqInfo"),
@@ -593,6 +588,10 @@
 					Promise.all([me.$.fileUpload.upload()]).then(function() {
 						UT.request(me.$.saveInfoItemReq);
 					});
+				}, function() {
+					if (progSts === "RET") {
+						me.set("reqInfo.item_reg_req_ret_rsn", null);
+					}
 				});
 			},
 			
@@ -697,10 +696,19 @@
 				// 승인
 				me.doSave("APVD");
 			},
-			onReject: function() {
+			
+			onReject: function(data) {
 				var me = this;
+
+				me.set("reqInfo", data);
 				// 승인
 				me.doSave("RET");
+			},
+			
+			showRejectReasonPopup: function() {
+				var me = this;
+
+				me.$.rejectReasonPopup.load(me.reqInfo);
 			},
 			
 			// 규격 정보 세팅
@@ -739,7 +747,6 @@
 				
 				return strSpec;
 			},
-	
 		});
 	</script>
 </dom-module>

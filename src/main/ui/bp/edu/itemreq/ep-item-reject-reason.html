@@ -1,0 +1,64 @@
+<dom-module id="ep-item-reject-reason">
+	<style>
+		:host {
+			div.wrap_btn_right {
+				display: flex;
+			    align-items: center;
+			    justify-content: right;
+			    height: 28px;
+			}
+			
+			#reasonBox {
+				border: 1px solid grey;
+				margin-top: 8px;
+				padding: 20px;
+			}
+		}
+	</style>
+	<template>
+		<sc-dialog id="rejectReasonDialog" title="반려 사유" title-align="left" style="width:600px;height:300px;" modal="true">
+			<div class="wrap_btn_right">
+				<sc-button id="saveReason" text="반려" hidden="[[!formula('editable')]]" on-click="onSave" auth-s></sc-button>
+			</div>
+			<div id="reasonBox">
+				<sc-label text="사유"></sc-label>
+				<sc-textarea-field max-length="1000" class="h-100" disabled="[[!formula('editable')]]" value="{{itemReqInfo.item_reg_req_ret_rsn}}" required="[[formula('editable')]]"></sc-textarea-field>
+			</div>
+		</sc-dialog>
+	</template>
+	<script>
+	Polymer({
+		is: 'ep-item-reject-reason',
+		
+		properties: {
+			itemReqInfo: {
+				type: Object,
+				value: function() {
+					return {};
+				}
+			}
+		},
+		
+		formulas: {
+			editable: function() {
+				return this.itemReqInfo.item_reg_req_ret_rsn === null;
+			}
+		},
+		
+		load: function(data) {
+			var me = this;
+			
+			me.set("itemReqInfo", UT.copy(data));
+			me.applyFormula();
+			me.$.rejectReasonDialog.show();
+			
+		},
+		
+		onSave: function() {
+			var me = this;
+			me.fire("reject", me.itemReqInfo);
+			me.$.rejectReasonDialog.close();
+		}
+	});
+	</script>
+</dom-module>

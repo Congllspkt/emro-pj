@@ -1,6 +1,4 @@
-<sc-link rel="import" href="ep-reason-detail.html"></sc-link>
-
-
+<sc-link rel="import" href="ep-item-reject-reason.html"></sc-link>
 
 <dom-module id="es-item-req-list">
 
@@ -136,6 +134,7 @@
 			</sc-grid-fields>
 		</sc-grid>
 
+		<ep-item-reject-reason id="rejectReasonPopup"></ep-item-reject-reason>
     </template>
 
     <script>
@@ -203,14 +202,8 @@
 				} else {
 					me.fire("show-detail", data);
 				}
-			} else if (item.dataField === "click_link" && data.item_reg_req_sts_ccd === "RET") {
-				var aprvPopup = UT.popup('ep-reason-detail', me, 600, 300, {
-					'close': function(popup, e) {
-						popup.close();
-					}
-				},{titleText : "reason datail"});
-				aprvPopup.show();
-				aprvPopup.getWindowContent().load({"item_reg_req_ret_rsn": data.item_reg_req_ret_rsn});
+			} else if (item.dataField === "btn_select" && data["item_reg_req_sts_ccd"] === "RET") {
+				me.showRejectReasonPopup(data);
 			}
 		},
 		
@@ -266,6 +259,11 @@
 				return "";
 			}
 		},
+		
+		showRejectReasonPopup: function(data) {
+			var me = this;
+			me.$.rejectReasonPopup.load(data);
+		}
 	});
     </script>
 
