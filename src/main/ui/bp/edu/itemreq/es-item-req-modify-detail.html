@@ -169,11 +169,6 @@
 					<sc-label text="첨부파일"></sc-label>
 					<sc-upload id="fileUpload" class="h-200" value="{{itemInfo.athg_uuid}}" editable="false"></sc-upload>
 				</cc-fieldset>
-				
-				<cc-fieldset>
-					<sc-label text="이미지 파일"></sc-label>
-					<sc-upload id="imgUpload" class="h-200" value="{{itemInfo.img_athg_uuid}}" image-only="true" view-type="thumbnail" editable="false"></sc-upload>
-				</cc-fieldset>
 			</cc-form-panel>
 			
 			<sc-grid id="oorgGridPanel" class="h-300" collapsible="true"
@@ -226,26 +221,11 @@
                         return {};
                     }
                 },
-
-                // 배정속성
-                asgnAttrList: {
-                    type: Array,
-                    value: function () {
-                        return [];
-                    }
-                },
 				
 				isChanged: {
 					type: Boolean,
 					value: false
 				},
-				
-				oorgList: {
-					type: Array,
-					value: function() {
-						return [];
-					}
-				}
             },
             formulas: {
                 isEditable: function () {
@@ -322,13 +302,6 @@
                         me.applyFormula();
                     }
 					
-					if(result.oorgList) {
-						me.set("oorgList", result.oorgList);
-					}
-
-                    if(result.asgnAttrList) {
-                        me.set("asgnAttrList", result.asgnAttrList);
-                    }
                 }
 
             },
@@ -360,16 +333,10 @@
                     UT.alert("STD.E0000");
                     return;
                 }
-				
-				//oorgList 세팅
-				var provider = me.$.oorgGridPanel.getDataProvider();
-				var oorgList = provider.filterItems({use_yn : "Y"});
 
                 // request body에 데이타 셋팅
                 me.$.saveInfoModifyItemReq.body = {
                     reqInfo: me.get("itemInfo")
-                    , asgnAttrList: me.get("asgnAttrList")
-					, oorgList : oorgList
                 };
 
 				switch(progSts) {
@@ -424,17 +391,6 @@
 				me.reset();
 			},
 			
-			////////////////////////////////////
-			//////////////oorgList//////////////
-			////////////////////////////////////
-			// 인쇄컬럼 배경색 지정
-			onItemStyleFunction: function(data, item) {
-				var me = this;
-				
-				if(item.dataField == "use_yn") {
-					return {"background": "#FFFFFF"};
-				}
-			}
         });
 	</script>
  </dom-module>
